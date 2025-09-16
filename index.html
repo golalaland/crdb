@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Global Chat</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #000;
+  color: #fff;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 0;
+}
+#login-container, #chat-container { width: 100%; max-width: 480px; padding: 20px; }
+.hidden { display: none; }
+input, button { padding: 10px; margin: 5px; border-radius: 5px; border: none; }
+input { width: calc(100% - 24px); }
+button { background: #ff4b2b; color: #fff; cursor: pointer; }
+#chat-feed { height: 400px; overflow-y: auto; background: #111; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+.message { margin-bottom: 8px; }
+.reactions button { background: none; border: none; cursor: pointer; margin-right: 4px; color: #ff4b2b; }
+#reward-popup { position: fixed; top: 20px; right: 20px; background: gold; color: black; padding: 10px 20px; border-radius: 6px; display: none; }
+#logout-btn { background: #555; margin-top: 10px; }
+.admin-buttons { display: none; margin-top: 5px; }
+#login-buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+#login-buttons button { width: 100%; font-size: 16px; padding: 12px; border-radius: 8px; transition: background 0.2s ease; }
+#login-buttons button:hover { background: #ff7150; }
+@media (min-width: 400px) { #login-buttons { flex-direction: row; } }
+</style>
+</head>
+<body>
+
+<!-- Login / Signup -->
+<div id="login-container">
+  <h2>Login / Signup</h2>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+  <div id="login-buttons">
+    <button id="login-btn">Login</button>
+    <button id="signup-btn">Sign Up</button>
+  </div>
+  <p id="login-msg"></p>
+</div>
+
+<!-- Chat -->
+<div id="chat-container" class="hidden">
+  <h2>Global Chat</h2>
+  <p>Stars: <span id="stars-count">0</span></p>
+  <div id="chat-feed"></div>
+  <div id="chat-input">
+    <input type="text" id="message" placeholder="Type a message...">
+    <button id="send-btn">Send</button>
+  </div>
+  <button id="logout-btn">Logout</button>
+</div>
+
+<div id="reward-popup">🎉 You earned 1 Star!</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, collection, addDoc, onSnapshot, query, orderBy, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-firestore.js";
+
+// --- Firebase config ---
+const firebaseConfig = {
+  apiKey: "AIzaSyDmj1SQvIqI_A83EivlJfDg2z-kyUYIyrM",
+  authDomain: "xixichatroomdb.firebaseapp.com",
+  projectId: "xixichatroomdb",
+  storageBucket: "xixichatroomdb.firebasestorage.app",
+  messagingSenderId: "727244293530",
+  appId: "1:727244293530:web:29559cbcc18b49831b2623"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// --- Elements ---
+const loginContainer = document.getElementById("login-container");
+const chatContainer = document.getElementById("chat-container");
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
+const loginBtn = document.getElementById("login-btn");
+const signupBtn = document.getElementById("signup-btn");
+const loginMsg = document.getElementById("login-msg");
+const messageInput = document.getElementById("message");
+const sendBtn = document.getElementById("send-btn");
+const chatFeed = document.getElementById("chat-feed");
+const starsCount = document.getElementById("stars-count");
+const rewardPopup = document.getElementById("reward-popup");
+const logoutBtn = document.getElementById("logout-btn");
+
+let currentUser = null;
+let isAdmin = false;
+let rewardInterval = null;
+
+// --- Signup ---
+signupBtn.onclick = async () => {
+  loginMsg.textContent = "";
+  try {
+    const userCred = await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+    const uid = userCred.user.uid;
+    await setDoc(doc(db, "users", uid), {
+      email: emailInput.value,
+      displayName: emailInput.value.split("@")[0],
+      admin: false,
+      stars: 0
+    });
+    loginMsg.textContent = "Signup successful!";
+    console.log("Signup:", uid);
+  } catch (err) {
+    console.error("Signup error:", err.code, err.message);
+    loginMsg.textContent = err.message;
+  }
+};
+
+// --- Login ---
+loginBtn.onclick = async () => {
+  loginMsg.textContent = "";
+  try {
+    const userCred = await signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+    loginMsg.textContent = "Login successful!";
+    console.log("Login:", userCred.user.uid);
+  } catch (err) {
+    console.error("Login error:", err.code, err.message);
+    loginMsg.textContent = err.message;
+  }
+};
+
+// --- Auth state ---
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUser = user;
+    loginContainer.classList.add("hidden");
+    chatContainer.classList.remove("hidden");
+
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+    starsCount.textContent = userDoc.data().stars;
+    isAdmin = userDoc.data().admin || false;
+
+    startRewardTimer();
+    loadChat();
+  } else {
+    currentUser = null;
+    isAdmin = false;
+    loginContainer.classList.remove("hidden");
+    chatContainer.classList.add("hidden");
+    clearInterval(rewardInterval);
+  }
+});
+
+// --- Chat ---
+async function loadChat() {
+  const messagesRef = collection(db, "global-messages");
+  const q = query(messagesRef, orderBy("timestamp", "asc"));
+  onSnapshot(q, (snap) => {
+    chatFeed.innerHTML = "";
+    snap.forEach(docSnap => {
+      const data = docSnap.data();
+      const msgDiv = document.createElement("div");
+      msgDiv.classList.add("message");
+      msgDiv.textContent = `${data.senderName}: ${data.text}`;
+      chatFeed.appendChild(msgDiv);
+    });
+    chatFeed.scrollTop = chatFeed.scrollHeight;
+  });
+}
+
+// --- Send message ---
+sendBtn.onclick = async () => {
+  const text = messageInput.value.trim();
+  if (!text) return;
+  messageInput.value = "";
+  await addDoc(collection(db, "global-messages"), {
+    text,
+    senderId: currentUser.uid,
+    senderName: currentUser.email.split("@")[0],
+    timestamp: new Date()
+  });
+};
+
+// --- Rewards ---
+function startRewardTimer() {
+  rewardInterval = setInterval(async () => {
+    const userRef = doc(db, "users", currentUser.uid);
+    await updateDoc(userRef, { stars: increment(1) });
+    const docSnap = await getDoc(userRef);
+    starsCount.textContent = docSnap.data().stars;
+    rewardPopup.style.display = "block";
+    setTimeout(() => rewardPopup.style.display = "none", 2000);
+  }, 5 * 60 * 1000); // 5 minutes
+}
+
+// --- Logout ---
+logoutBtn.onclick = () => signOut(auth);
+</script>
+
+</body>
+</html>
