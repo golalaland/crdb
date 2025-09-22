@@ -1,211 +1,415 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Live Streaming Chat</title>
-  <style>
-    body {
-      margin:0; font-family:sans-serif; background:#111; color:#fff;
-      display:flex; flex-direction:column; height:100vh;
-    }
-    #auth, #chatroom { display:none; }
-    #auth.active, #chatroom.active { display:block; }
-    #messages {
-      flex:1; overflow-y:auto; padding:10px;
-    }
-    .msg { margin:4px 0; padding:6px 10px; border-radius:6px; background:#222; }
-    .msg.me { background:#333; }
-    .msg.highlight { background:#ff0; color:#000; font-weight:bold; box-shadow:0 0 10px #ff0; }
-    .meta { font-size:0.8em; margin-right:6px; }
-    #chatControls {
-      display:flex; padding:10px; background:#000;
-    }
-    #chatControls input {
-      flex:1; padding:8px; border:none; border-radius:4px;
-    }
-    #chatControls button {
-      margin-left:6px; padding:8px 12px; border:none; border-radius:4px;
-      cursor:pointer; font-weight:bold;
-    }
-    #topbar {
-      display:flex; justify-content:space-between; align-items:center;
-      padding:8px 12px; background:rgba(255,255,255,0.08);
-      backdrop-filter:blur(6px); border-bottom:1px solid rgba(255,255,255,0.2);
-    }
-    #starPopup {
-      position:fixed; top:10px; left:50%; transform:translateX(-50%);
-      background:#222; padding:10px 18px; border-radius:6px;
-      border:1px solid #555; display:none; z-index:1000;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Xixi — Live Stream 💸</title>
+<link rel="icon" href="data:," />
+<style>
+:root{
+  --bg:#000;
+  --card:#111;
+  --muted:#aaa;
+  --accent:#FF1493; 
+  --glass: rgba(255,255,255,0.03);
+  --highlight: rgba(255,20,147,0.3);
+}
+html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;color:#fff;background:var(--bg);}
+#appWrapper{transform: scale(1);transform-origin: top center;width: 100%;height: 100%;display:flex;justify-content:center;}
+.app{display:flex;flex-direction:column;height:100%;gap:10px;padding:10px;box-sizing:border-box;width:100%;max-width:480px;}
+.brand{font-weight:700;font-size:24px;color:var(--accent);text-align:center;}
+.room-desc{font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px;}
+#authBox{margin-bottom:10px;text-align:center;}
+#authBox button.btn{background:var(--accent);color:#000;border:0;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px;}
+#center{flex:1;display:flex;flex-direction:column;gap:4px;}
+#videoContainer{width:100%;aspect-ratio:16/9;background:#111;border-radius:10px;overflow:hidden;position:sticky;top:0;z-index:5;}
+#videoContainer iframe{width:100%;height:100%;border:0;border-radius:10px;}
+#guestMsg{font-size:20px;font-weight:700;margin:4px 0;color:var(--accent);text-align:center;font-family:'Segoe UI',sans-serif;}
+#messages{flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:4px;border-radius:8px;background:#000;margin-bottom:4px;}
+.msg{padding:5px 6px;border-radius:8px;background:var(--glass);max-width:85%;display:flex;gap:4px;align-items:center;opacity:0;animation:fadeInUp 0.25s forwards;justify-content:flex-start;position:relative;}
+.msg.me{background:rgba(255,20,147,0.1);}
+.msg.highlight{background:var(--highlight);font-weight:700;box-shadow:0 0 10px var(--accent);transform:translateZ(0);}
+.msg .meta{font-weight:700;font-size:13px;}
+.msg .content{font-size:11px;color:#fff;white-space:pre-wrap;}
+.send-area{display:flex;align-items:center;gap:4px;background:var(--card);padding:10px;position:sticky;bottom:0;z-index:10;border-top:1px solid rgba(255,255,255,0.05);border-radius:18px;}
+.send-area input{flex:1;padding:10px;border-radius:999px;border:1px solid rgba(255,255,255,0.1);background:#111;color:#fff;font-size:13px;outline:none;}
+.send-area input::placeholder{color:var(--muted);}
+.send-area input:focus{border-color:var(--accent);box-shadow:0 0 8px rgba(255,20,147,0.4);}
+.send-area button.btn{padding:10px 16px;border-radius:999px;background:var(--accent);color:#000;cursor:pointer;font-weight:600;font-size:13px;}
+.profile{display:none;flex-direction:column;gap:3px;margin-top:10px;}
+.profile .small{font-size:11px;color:var(--muted);}
+.stats{font-size:10px;font-weight:700;color:var(--accent);}
+.stats span{font-weight:400;color:#fff;font-family:monospace;font-size:12px;}
+.profile-card{background:var(--glass);padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);}
+.badge{font-size:11px;margin-left:3px;background:none;color:#fff;padding:0;}
+.cash-earned .badge{display:none;}
+.button-vertical{display:flex;flex-direction:column;gap:4px;margin-top:4px;}
+.button-vertical button{padding:6px 8px;font-weight:700;background:var(--accent);color:#000;border:none;border-radius:6px;cursor:pointer;font-size:12px;}
+.redeem-btn{display:none;background:var(--accent);color:#000;font-size:10px;padding:3px 6px;border-radius:6px;cursor:pointer;font-weight:600;margin-left:auto;text-decoration:none;}
+.star-popup{position:fixed;left:50%;top:18%;transform:translateX(-50%);background:var(--card);padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);display:none;z-index:1000;color:var(--accent);font-size:13px;white-space:nowrap;text-align:center;max-width:90%;}
+.admin-panel{display:none;margin-top:6px;padding:5px;background:#111;border-radius:8px;border:1px solid rgba(255,20,147,0.3);flex-direction:column;gap:3px;}
+.admin-panel button{padding:5px;background:var(--accent);color:#000;border:none;border-radius:6px;cursor:pointer;margin:1px 0;font-size:11px;}
+@keyframes fadeInUp{to{opacity:1;transform:translateY(0);}}
+@keyframes fadeInOut{0%{opacity:0;}10%{opacity:1;}90%{opacity:1;}100%{opacity:0;}}
+</style>
 </head>
 <body>
-  <div id="auth" class="active">
-    <button id="googleSignInBtn">Sign in with Google</button>
-  </div>
+  <div id="appWrapper">
+    <div class="app">
+      <div class="brand">乂丨乂丨</div>
+      <div class="room-desc">
+        Live Stream 💸 — Chat. Own your vibe.
+        <span id="onlineCount" style="color:var(--accent);font-weight:600;"></span>
+      </div>
 
-  <div id="chatroom">
-    <div id="topbar">
-      <div>Stars: <span id="starCount">0</span> | Cash: ₦<span id="cashCount">0</span></div>
-      <div>
-        <button id="buzzBtn">BUZZ 🚨</button>
-        <button id="tipBtn">TIP 💸</button>
-        <button id="redeemBtn">Redeem</button>
+      <div id="center">
+        <div id="videoContainer">
+          <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+        </div>
+
+        <div id="guestMsg"></div>
+        <div id="authBox">
+          <button id="googleSignInBtn" class="btn">Sign in with Google</button>
+        </div>
+
+        <div id="messages"></div>
+
+        <div class="send-area" id="sendArea" style="display:none;">
+          <input type="text" id="messageInput" placeholder="Type your message..." />
+          <button id="sendBtn" class="btn">Send</button>
+        </div>
+
+        <div class="button-vertical" id="actionButtons" style="display:none;">
+          <button id="buzzBtn">BUZZ 🚨</button>
+          <button id="tipBtn">TIP 💸</button>
+        </div>
+      </div>
+
+      <div class="profile" id="profileBox">
+        <div class="profile-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <strong id="profileName">GUEST 0000</strong>
+              <div class="stats">STARS COLLECTED: 
+                <span id="starCount">0</span> 
+                <span class="badge">⭐</span>
+              </div>
+              <div class="stats cash-earned">CASH EARNED: 
+                <span id="cashCount">₦0</span> 
+                <span class="badge">₦</span>
+              </div>
+            </div>
+            <a href="#" target="_blank" class="redeem-btn" id="redeemBtn" style="display:inline-block;font-size:10px;">Redeem</a>
+          </div>
+        </div>
+
+        <div class="admin-panel" id="adminPanel">
+          <h3 style="margin:0;color:#fff;text-align:center;font-size:12px;">⚡ Admin Dashboard ⚡</h3>
+          <div class="admin-section" style="border-top:1px solid rgba(255,255,255,0.2);padding-top:4px;">
+            <strong style="color:#fff;font-size:11px;">User Management:</strong>
+            <button id="giveStarAdmin">⭐ Gift Stars</button>
+            <button id="giveCashAdmin">💸 Gift Cash</button>
+            <button id="kickUser">❌ Kick User</button>
+          </div>
+
+          <div class="admin-section" style="border-top:1px solid rgba(255,255,255,0.2);padding-top:4px;">
+            <strong style="color:#fff;font-size:11px;">Chat Control:</strong>
+            <button id="setTimeoutAdmin">⏱ Set Chat Timeout</button>
+            <button id="deleteAllAdmin">🗑 Delete All Messages</button>
+            <button id="broadcastMsg">📢 Broadcast Message</button>
+          </div>
+
+          <div class="admin-section" style="border-top:1px solid rgba(255,255,255,0.2);padding-top:4px;">
+            <strong style="color:#fff;font-size:11px;">Economy & Auto-Star:</strong>
+            <button id="globalStars">🌟 Gift Stars Bonus</button>
+            <button id="globalCash">💰 Gift Cash Bonus</button>
+            <button id="toggleAutoStar">⚡ Toggle Auto-Star</button>
+          </div>
+
+          <div class="admin-section" style="border-top:1px solid rgba(255,255,255,0.2);padding-top:4px;">
+            <button id="viewActiveUsers">👥 View Online Users</button>
+            <button id="adminLogoutBtn">🚪 Logout</button>
+          </div>
+        </div>
+
       </div>
     </div>
-    <div id="messages"></div>
-    <div id="chatControls">
-      <input id="messageInput" placeholder="Type a message..."/>
-      <button id="sendBtn">Send</button>
-    </div>
   </div>
 
-  <div id="starPopup"></div>
+  <div class="star-popup" id="starPopup">
+    <div id="starText">You've just earned +1 star! ⭐</div>
+    <div style="text-align:right;margin-top:4px"><button id="closeStar" class="ghost">Close</button></div>
+  </div>
 
   <script type="module">
+    // Firebase imports
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getDatabase, ref, onDisconnect, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-    // ---------------- FIREBASE CONFIG ----------------
+    // ---------- CONFIG ----------
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
+      authDomain: "metaverse-1010.firebaseapp.com",
+      projectId: "metaverse-1010",
+      storageBucket: "metaverse-1010.firebasestorage.app",
+      messagingSenderId: "1044064238233",
+      appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
+      measurementId: "G-S77BMC266C",
+      databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
     };
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const rtdb = getDatabase(app);
 
+    // ---------- STATE ----------
     let currentUser = null;
+    let userColors = {};
+    const dailyStarCap = 500;
+    let autoStarEnabled = true;
 
-    // ---------------- AUTH ----------------
-    document.getElementById("googleSignInBtn").addEventListener("click", async ()=>{
+    // ---------- HELPERS ----------
+    function generateGuestName(){return "GUEST " + Math.floor(1000+Math.random()*9000);}
+    function getColorForUser(chatId){
+      if(!userColors[chatId]){
+        const c=["#FF6B6B","#FF1493","#FF69B4","#FF85C0","#FF00FF"];
+        userColors[chatId]=c[Math.floor(Math.random()*c.length)];
+      }
+      return userColors[chatId];
+    }
+    function formatNumberWithCommas(n){return new Intl.NumberFormat('en-NG').format(n);}
+
+    setPersistence(auth,browserLocalPersistence).catch(()=>{});
+
+    // Greetings
+    const guestGreetingEl = document.getElementById('guestMsg');
+    const greetings = ["HELLO","HOLA","BONJOUR","こんにちは","CIAO","안녕하세요","你好","SALUT","OLÁ"];
+    let greetIndex=0;
+    function showGreeting(){
+      guestGreetingEl.textContent=greetings[greetIndex];
+      guestGreetingEl.style.animation="fadeInOut 3s linear";
+      greetIndex=(greetIndex+1)%greetings.length;
+      setTimeout(showGreeting,3000);
+    }
+    showGreeting();
+
+    // Sign-in button
+    document.getElementById("googleSignInBtn").addEventListener("click", async () => {
       const provider = new GoogleAuthProvider();
-      try { await signInWithPopup(auth, provider); } 
-      catch(err){ alert(err.message); }
+      try {
+        await signInWithPopup(auth, provider);
+        // after sign-in, onAuthStateChanged will run and reveal UI
+      } catch (e) {
+        console.error(e);
+        alert("Sign-in failed. Check console.");
+      }
     });
 
-    onAuthStateChanged(auth, async user=>{
+    // Presence (RTDB)
+    const onlineCountEl = document.getElementById("onlineCount");
+    const presenceRef = ref(rtdb,"presence");
+    function setupPresence(user){
+      const userRef = ref(rtdb,"presence/"+user.uid);
+      set(userRef,true);
+      onDisconnect(userRef).remove();
+    }
+    onValue(presenceRef,snap=>{
+      const val=snap.val()||{};
+      onlineCountEl.textContent = `(${Object.keys(val).length} online)`;
+    });
+
+    // star popup
+    function showStarPopup(text){
+      const popup = document.getElementById("starPopup");
+      document.getElementById("starText").innerText = text;
+      popup.style.display = "block";
+      setTimeout(()=>{ popup.style.display="none"; }, 2000);
+    }
+    document.getElementById("closeStar").addEventListener("click",()=>{document.getElementById("starPopup").style.display="none";});
+
+    // AUTH state changes
+    onAuthStateChanged(auth, async user => {
       if(user){
-        currentUser = user;
-        document.getElementById("auth").classList.remove("active");
-        document.getElementById("chatroom").classList.add("active");
         const userRef = doc(db,"users",user.uid);
         const snap = await getDoc(userRef);
         if(!snap.exists()){
-          await setDoc(userRef,{stars:20,cash:0,chatId:user.displayName||"Guest"});
-          currentUser.stars = 20;
-          currentUser.cash = 0;
-          currentUser.chatId = user.displayName||"Guest";
-        } else {
-          const d=snap.data();
-          currentUser.stars=d.stars||0;
-          currentUser.cash=d.cash||0;
-          currentUser.chatId=d.chatId||user.displayName||"Guest";
+          await setDoc(userRef,{chatId:"",email:user.email,stars:0,cash:0,isAdmin:false,lastStarReset:Date.now()});
         }
-        updateUI();
-      } else {
-        document.getElementById("auth").classList.add("active");
-        document.getElementById("chatroom").classList.remove("active");
-      }
-    });
+        const userData = (await getDoc(userRef)).data();
+        currentUser = {uid:user.uid,...userData};
 
-    function updateUI(){
-      document.getElementById("starCount").textContent=currentUser.stars;
-      document.getElementById("cashCount").textContent=currentUser.cash;
-    }
-    function showStarPopup(msg){
-      const el=document.getElementById("starPopup");
-      el.textContent=msg; el.style.display="block";
-      setTimeout(()=>el.style.display="none",2000);
-    }
+        // presence
+        try{ setupPresence(user); }catch(e){console.warn("presence failed",e);}
 
-    function generateGuestName(){ return "Guest"+Math.floor(Math.random()*1000); }
+        // reveal UI
+        document.getElementById("authBox").style.display="none";
+        document.getElementById("guestMsg").style.display="none";
+        document.getElementById("sendArea").style.display="flex";
+        document.getElementById("profileBox").style.display="flex";
+        document.getElementById("actionButtons").style.display="flex";
+        document.getElementById("redeemBtn").style.display="inline-block";
+        document.getElementById("profileName").innerText=currentUser.chatId||generateGuestName();
 
-    function getColorForUser(name){
-      const colors=["#f66","#6f6","#66f","#ff6","#6ff","#f6f","#fff"];
-      let hash=0;
-      for(let i=0;i<name.length;i++) hash=name.charCodeAt(i)+((hash<<5)-hash);
-      return colors[Math.abs(hash)%colors.length];
-    }
+        // watch user doc for live star/cash updates & daily reset
+        onSnapshot(userRef, docSnap=>{
+          const d=docSnap.data()||{};
+          currentUser.stars = d.stars || 0;
+          currentUser.cash = d.cash || 0;
+          const now = Date.now();
+          const lastReset = d.lastStarReset || 0;
+          if(new Date(lastReset).toDateString() !== new Date(now).toDateString()){
+            // reset stars for new day
+            updateDoc(userRef,{stars:0,lastStarReset:now}).catch(()=>{});
+            currentUser.stars = 0;
+          }
+          document.getElementById("starCount").innerText = formatNumberWithCommas(currentUser.stars);
+          document.getElementById("cashCount").innerText = "₦"+formatNumberWithCommas(currentUser.cash);
+          // admin panel visibility
+          document.getElementById("adminPanel").style.display = d.isAdmin ? "flex" : "none";
+        });
 
-    // ---------------- FIRESTORE MESSAGES ----------------
-    const messagesDiv = document.getElementById("messages");
-    const messagesQuery = query(collection(db,"messages_livestreaming"), orderBy("timestamp","asc")); 
+        // auto add +5 stars every 60 seconds (livestream rule)
+        setInterval(async ()=>{
+          if(!currentUser || !autoStarEnabled) return;
+          if(currentUser.stars < dailyStarCap){
+            const userRefInner = doc(db,"users",currentUser.uid);
+            const newStars = Math.min(currentUser.stars + 5, dailyStarCap);
+            try{ await updateDoc(userRefInner,{stars:newStars}); } catch(e){ console.warn("auto-star update failed",e); }
+          }
+        },60000);
 
-    onSnapshot(messagesQuery, snap=>{
-      messagesDiv.innerHTML="";
-      snap.forEach(doc=>{
-        const m=doc.data();
-        const div=document.createElement("div");
-        div.classList.add("msg");
-        if(currentUser && m.uid===currentUser.uid) div.classList.add("me");
-        if(m.highlight) div.classList.add("highlight");
-        const color=getColorForUser(m.chatId||"Guest");
-        div.innerHTML=`<span class="meta" style="color:${color}">${m.chatId||"Guest"}:</span> <span class="content">${m.content}</span>`;
-        messagesDiv.appendChild(div);
-      });
-      messagesDiv.scrollTop=messagesDiv.scrollHeight;
-    });
+        // ---------------- FIRESTORE MESSAGES (ROOM-SPECIFIC) ----------------
+        const messagesDiv = document.getElementById("messages");
+        const messagesQuery = query(collection(db,"messages_livestreaming"), orderBy("timestamp","asc")); // <--- uses messages_livestreaming
+        onSnapshot(messagesQuery, (snapshot) => {
+          messagesDiv.innerHTML = "";
+          snapshot.forEach((docSnap) => {
+            const m = docSnap.data();
+            const div = document.createElement("div");
+            div.classList.add("msg");
+            if(m.uid === currentUser.uid) div.classList.add("me");
+            if(m.highlight) div.classList.add("highlight");
+            const color = getColorForUser(m.chatId || "Guest");
+            div.innerHTML = `
+              <span class="meta" style="color:${color}">${m.chatId || "Guest"}:</span> 
+              <span class="content">${m.content}</span>
+            `;
+            messagesDiv.appendChild(div);
+          });
+          messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        });
 
-    document.getElementById("sendBtn").addEventListener("click", async ()=>{
-      const val=document.getElementById("messageInput").value.trim();
-      if(!val) return;
-      document.getElementById("messageInput").value="";
-      await addDoc(collection(db,"messages_livestreaming"),{
-        content:val,
-        uid:currentUser.uid,
-        chatId:currentUser.chatId||generateGuestName(),
-        timestamp:serverTimestamp(),
-        highlight:false
-      });
-    });
+        // SEND MESSAGE (free)
+        document.getElementById("sendBtn").addEventListener("click", async () => {
+          const inputEl = document.getElementById("messageInput");
+          const val = inputEl.value.trim();
+          if(!val) return;
+          inputEl.value = "";
+          try {
+            await addDoc(collection(db,"messages_livestreaming"),{
+              content: val,
+              uid: currentUser.uid,
+              chatId: currentUser.chatId || generateGuestName(),
+              timestamp: serverTimestamp(),
+              highlight: false
+            });
+          } catch(e){
+            console.error("Send failed",e);
+            alert("Message failed to send. Check console.");
+          }
+        });
 
-    document.getElementById("buzzBtn").addEventListener("click", async ()=>{
-      if(currentUser.stars<10){
-        showStarPopup("Not enough stars to create a BUZZ! 🚨");
-        return;
-      }
-      const val=document.getElementById("messageInput").value.trim();
-      if(!val){
-        showStarPopup("Type a message to BUZZ! 🚨");
-        return;
-      }
-      await updateDoc(doc(db,"users",currentUser.uid),{stars:currentUser.stars-10});
-      currentUser.stars-=10; updateUI();
-      await addDoc(collection(db,"messages_livestreaming"),{
-        content:val,
-        uid:currentUser.uid,
-        chatId:currentUser.chatId||generateGuestName(),
-        timestamp:serverTimestamp(),
-        highlight:true
-      });
-      showStarPopup("BUZZ 🚨 sent!");
-      document.getElementById("messageInput").value="";
-    });
+        // BUZZ 🚨: costs 10 stars, highlight for 10s, shows popup if insufficient
+        document.getElementById("buzzBtn").addEventListener("click", async () => {
+          if(!currentUser) return;
+          if(currentUser.stars < 10){
+            showStarPopup("Not enough stars to create a BUZZ! 🚨");
+            return;
+          }
+          const inputEl = document.getElementById("messageInput");
+          const val = inputEl.value.trim();
+          if(!val){
+            showStarPopup("Type a message to BUZZ! 🚨");
+            return;
+          }
+          // deduct stars
+          const userRef = doc(db,"users",currentUser.uid);
+          try{
+            await updateDoc(userRef,{stars: currentUser.stars - 10});
+            currentUser.stars -= 10; // optimistic update for UI
+            document.getElementById("starCount").innerText = formatNumberWithCommas(currentUser.stars);
+          }catch(e){ console.error("Failed to deduct stars",e); showStarPopup("Error processing BUZZ"); return; }
 
-    document.getElementById("tipBtn").addEventListener("click", ()=>{
-      alert("TIP 💸 clicked — placeholder for payment link.");
-    });
+          // add highlighted message and then clear highlight after 10s
+          try{
+            const docRef = await addDoc(collection(db,"messages_livestreaming"),{
+              content: val,
+              uid: currentUser.uid,
+              chatId: currentUser.chatId || generateGuestName(),
+              timestamp: serverTimestamp(),
+              highlight: true
+            });
 
-    document.getElementById("redeemBtn").addEventListener("click", ()=>{
-      alert("Redeem clicked — placeholder for cashout flow.");
-    });
+            showStarPopup("BUZZ 🚨 sent!");
+            inputEl.value = "";
 
-    // ---------------- STAR GENERATION ----------------
-    setInterval(async ()=>{
-      if(!currentUser) return;
-      if(currentUser.stars<50){
-        currentUser.stars++;
-        await updateDoc(doc(db,"users",currentUser.uid),{stars:currentUser.stars});
-        updateUI();
-      }
-    },60000);
+            // schedule removal of highlight after 10 seconds
+            setTimeout(async ()=>{
+              try { await updateDoc(doc(db,"messages_livestreaming",docRef.id),{highlight:false}); }
+              catch(e){ console.warn("Failed to clear highlight",e); }
+            },10000);
+          }catch(e){
+            console.error("Failed to send BUZZ message",e);
+            showStarPopup("BUZZ failed");
+          }
+        });
+
+        // TIP placeholder
+        document.getElementById("tipBtn").addEventListener("click", ()=>{
+          // placeholder link and popup
+          window.open("https://your-placeholder-link.com","_blank");
+          showStarPopup("YOU ROCK!! 🌟🚨");
+        });
+
+        // Redeem placeholder (small themed button)
+        document.getElementById("redeemBtn").addEventListener("click", ()=>{
+          showStarPopup("Redeem clicked — placeholder");
+        });
+
+        // Admin buttons (basic wiring - you can expand)
+        document.getElementById("giveStarAdmin").addEventListener("click", async ()=>{
+          const u = prompt("UID to gift 50 stars to:");
+          if(!u) return;
+          try{
+            const ur = doc(db,"users",u);
+            const sDoc = await getDoc(ur);
+            if(!sDoc.exists()) return alert("User not found");
+            const s = (sDoc.data().stars||0)+50;
+            await updateDoc(ur,{stars:s});
+            alert("Gifted 50 stars");
+          }catch(e){console.error(e); alert("Failed");}
+        });
+        document.getElementById("giveCashAdmin").addEventListener("click", async ()=>{
+          const u = prompt("UID to gift ₦ to:");
+          const amt = Number(prompt("Amount to gift (₦):"));
+          if(!u || !amt) return;
+          try{
+            const ur = doc(db,"users",u);
+            const sDoc = await getDoc(ur);
+            if(!sDoc.exists()) return alert("User not found");
+            const newCash = (sDoc.data().cash||0)+amt;
+            await updateDoc(ur,{cash:newCash});
+            alert("Gifted cash");
+          }catch(e){console.error(e);alert("Failed");}
+        });
+        document.getElementById("deleteAllAdmin").addEventListener("click", ()=>{ alert("Delete all messages - admin action placeholder"); });
+        document.getElementById("broadcastMsg").addEventListener("click", ()=>{ alert("Broadcast placeholder"); });
+
+      } // end if user
+    }); // end onAuthStateChanged
+
   </script>
 </body>
 </html>
