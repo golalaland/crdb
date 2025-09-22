@@ -1,9 +1,9 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Xixi — Money Talk 💸</title>
+  <title>Xixi — Live Streaming 💖</title>
   <link rel="icon" href="data:," />
   <style>
     :root{
@@ -87,7 +87,7 @@
     <div class="app">
       <div class="brand">乂丨乂丨</div>
       <div class="room-desc">
-        Money Talk 💸 — Chat. Own your vibe.
+        Live Streaming Room 💖 — Chat with stars
         <span id="onlineCount" style="color:var(--accent);font-weight:600;"></span>
       </div>
 
@@ -128,35 +128,8 @@
         </div>
 
         <div class="admin-panel" id="adminPanel">
-          <h3 style="margin:0;color:#fff;text-align:center;font-size:12px;">⚡ Admin Dashboard ⚡</h3>
-
-          <div class="admin-section" style="border-top:1px solid rgba(255,255,255,0.2);padding-top:4px;">
-            <strong style="color:#fff;font-size:11px;">User Management:</strong>
-            <button id="giveStarAdmin">⭐ Gift Stars</button>
-            <button id="giveCashAdmin">💸 Gift Cash</button>
-            <button id="kickUser">❌ Kick User</button>
-          </div>
-
-          <div class="admin-section" style="border-top:1px solid rgba(255,255,255,0.2);padding-top:4px;">
-            <strong style="color:#fff;font-size:11px;">Chat Control:</strong>
-            <button id="setTimeoutAdmin">⏱ Set Chat Timeout</button>
-            <button id="deleteAllAdmin">🗑 Delete All Messages</button>
-            <button id="broadcastMsg">📢 Broadcast Message</button>
-          </div>
-
-          <div class="admin-section" style="border-top:1px solid rgba(255,255,255,0.2);padding-top:4px;">
-            <strong style="color:#fff;font-size:11px;">Economy & Auto-Star:</strong>
-            <button id="globalStars">🌟 Gift Stars Bonus</button>
-            <button id="globalCash">💰 Gift Cash Bonus</button>
-            <button id="toggleAutoStar">⚡ Toggle Auto-Star</button>
-          </div>
-
-          <div class="admin-section" style="border-top:1px solid rgba(255,255,255,0.2);padding-top:4px;">
-            <button id="viewActiveUsers">👥 View Online Users</button>
-            <button id="adminLogoutBtn">🚪 Logout</button>
-          </div>
+          <!-- Admin dashboard buttons here -->
         </div>
-
       </div>
     </div>
   </div>
@@ -296,14 +269,14 @@
           if(!currentUser || !autoStarEnabled) return;
           if(currentUser.stars < dailyStarCap){
             const userRef = doc(db,"users",currentUser.uid);
-            const newStars = Math.min(currentUser.stars + 1, dailyStarCap);
+            const newStars = Math.min(currentUser.stars + 5, dailyStarCap);
             await updateDoc(userRef,{stars:newStars});
           }
-        },10000);
+        },60000); // +5 stars every 60 seconds
 
-        // ---------------- FIXED FIRESTORE MESSAGING ----------------
+        // ---------------- FIRESTORE MESSAGING ----------------
         const messagesDiv = document.getElementById("messages");
-        const messagesQuery = query(collection(db, "messages"), orderBy("timestamp","asc"));
+        const messagesQuery = query(collection(db, "messages_livestreaming"), orderBy("timestamp","asc"));
         onSnapshot(messagesQuery, (snapshot) => {
           messagesDiv.innerHTML = ""; // clear to prevent duplicates
           snapshot.forEach((doc) => {
@@ -329,7 +302,7 @@
           inputEl.value = "";
 
           try {
-            await addDoc(collection(db, "messages"), {
+            await addDoc(collection(db, "messages_livestreaming"), {
               content: val,
               uid: currentUser.uid,
               chatId: currentUser.chatId || generateGuestName(),
