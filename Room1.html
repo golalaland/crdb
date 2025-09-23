@@ -151,7 +151,18 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     <div id="starText">You've just earned +1 star! ⭐</div>
   </div>
 <script type="module">
-/* ====== Full page JS: Firebase + UI logic (updated per your requests) ====== */
+/* ---------- Room-specific chat collection ---------- */
+const ROOM_NAME = "room1"; // change this for each room file
+const CHAT_COLLECTION = "messages_" + ROOM_NAME; // e.g., messages_room1
+const PRESENCE_PATH = "presence_" + ROOM_NAME; // optional, for online count
+
+/* ---------- Firebase & Imports ---------- */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, ... } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, ... } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getDatabase, ... } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+/* ---------- rest of your code ---------- *//* ====== Full page JS: Firebase + UI logic (updated per your requests) ====== */
 
 /* ---------- Imports ---------- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
