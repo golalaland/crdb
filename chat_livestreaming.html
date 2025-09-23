@@ -22,8 +22,21 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 #greeting{font-size:13px;text-align:center;font-weight:600;margin-bottom:6px;color:var(--accent);}
 #helloText{font-size:20px;font-weight:800;text-align:center;margin:6px 0;color:#fff;transition:color .2s ease;}
 #center{flex:1;display:flex;flex-direction:column;gap:6px;}
-#videoContainer{width:100%;aspect-ratio:16/9;background:#111;border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,0.6);}
+
+/* 🔥 1. Sticky video frame */
+#videoContainer{
+  width:100%;
+  aspect-ratio:16/9;
+  background:#111;
+  border-radius:10px;
+  overflow:hidden;
+  box-shadow:0 6px 18px rgba(0,0,0,0.6);
+  position:sticky;
+  top:0;
+  z-index:100;
+}
 #videoContainer iframe{width:100%;height:100%;border:0;border-radius:10px;}
+
 #guestMsg{font-size:16px;font-weight:700;margin:4px 0;color:var(--accent);text-align:center;}
 #messages{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px;border-radius:8px;background:#000;margin-bottom:4px;}
 /* compact message layout: username + message on same line */
@@ -51,7 +64,16 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .profile-left{display:flex;flex-direction:column;gap:4px;}
 .profile-name{font-weight:800;}
 .profile-label{color:var(--accent);font-weight:800;font-size:12px;}
-.profile-value{color:#fff;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;font-weight:700;}
+
+/* 🔥 2. Stars/Cash counts — not bold + closer star */
+.profile-value{
+  color:#fff;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
+  font-weight:400; /* normal, not bold */
+}
+.profile-value span,
+.profile-value .icon{margin-left:2px;}
+
 .profile-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;}
 .small-btn{padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.06);border:0;color:#fff;cursor:pointer;font-weight:700;}
 
@@ -106,7 +128,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
               <div id="profileName" class="profile-name">GUEST 0000</div>
               <div>
                 <span class="profile-label">STARS COLLECTED:</span>
-                <span class="profile-value"> <span id="starCount">0</span> ⭐️</span>
+                <span class="profile-value"><span id="starCount">0</span>⭐️</span>
               </div>
             </div>
             <div class="profile-actions">
@@ -116,7 +138,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
           </div>
           <div>
             <span class="profile-label">CASH EARNED:</span>
-            <span class="profile-value"> ₦<span id="cashCount">0</span></span>
+            <span class="profile-value">₦<span id="cashCount">0</span></span>
           </div>
         </div>
       </div>
@@ -127,7 +149,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   <div class="star-popup" id="starPopup">
     <div id="starText">You've just earned +1 star! ⭐</div>
   </div>
-
 <script type="module">
 /* ====== Full page JS: Firebase + UI logic (updated per your requests) ====== */
 
