@@ -103,15 +103,15 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 </div>
 
 <script type="module">
-/* ---------- Imports ---------- */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getDatabase, ref as rtdbRef, set as rtdbSet, onDisconnect, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { 
+    getAuth, GoogleAuthProvider, 
+    signInWithPopup, signInWithRedirect, getRedirectResult 
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-/* ---------- Config ---------- */
-const firebaseConfig = {
-  apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
+  // 🔑 Your Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
   projectId: "metaverse-1010",
   storageBucket: "metaverse-1010.firebasestorage.app",
@@ -119,12 +119,38 @@ const firebaseConfig = {
   appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
   measurementId: "G-S77BMC266C"
 };
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-setPersistence(auth, browserLocalPersistence).catch(()=>{});
-const db = getFirestore(app);
-const rtdb = getDatabase(app);
 
+  // 🚀 Init
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  // 🔄 Handle redirect results (if popup failed earlier)
+  getRedirectResult(auth)
+    .then((result) => {
+      if (result) {
+        console.log("✅ Signed in with redirect:", result.user);
+      }
+    })
+    .catch((error) => {
+      console.error("Redirect error:", error.message);
+    });
+
+  // 🎯 Login button
+  document.getElementById("loginBtn").addEventListener("click", async () => {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      console.log("✅ Signed in with popup:", result.user);
+    } catch (error) {
+      if (error.code === "auth/popup-blocked") {
+        console.warn("⚠️ Popup blocked, falling back to redirect...");
+        signInWithRedirect(auth, provider);
+      } else {
+        console.error("❌ Sign-in error:", error.message);
+      }
+    }
+  });
+</script>
 /* ---------- Room Collection ---------- */
 const ROOM_ID = "room1";  // change to room2, room3 for duplication
 const CHAT_COLLECTION = `messages_${ROOM_ID}`;
