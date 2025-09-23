@@ -173,15 +173,43 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 </div>
 
 <script type="module">
-// ==================== Full JS: HELLO rotation, Daily username color, Firebase setup ====================
+/* ==============================
+   XiXi Live Stream JS Module
+   ============================== */
 
-// Firebase imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getDatabase, ref as rtdbRef, set as rtdbSet, onDisconnect, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import {
+  getAuth,
+  setPersistence,
+  browserLocalPersistence,
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  collection,
+  addDoc,
+  serverTimestamp,
+  onSnapshot,
+  query,
+  orderBy,
+  increment,
+  arrayUnion
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getDatabase,
+  ref as rtdbRef,
+  set as rtdbSet,
+  onDisconnect,
+  onValue
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// Firebase config
+/* ---------- Firebase config ---------- */
 const firebaseConfig = {
   apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
@@ -189,7 +217,6 @@ const firebaseConfig = {
   storageBucket: "metaverse-1010.firebasestorage.app",
   messagingSenderId: "1044064238233",
   appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
-  measurementId: "G-S77BMC266C",
   databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
 };
 
@@ -199,35 +226,7 @@ setPersistence(auth, browserLocalPersistence).catch(()=>{});
 const db = getFirestore(app);
 const rtdb = getDatabase(app);
 
-// State
-let currentUser = null;
-let userDocUnsub = null;
-let messagesUnsub = null;
-let usersUnsub = null;
-const CHAT_COLLECTION = "messages_livestreaming";
-const BUZZ_COST = 10;
-const AUTO_STAR_ADD = 5;
-const DAILY_STAR_CAP = 500;
-
-// Helpers
-function generateGuestName(){ return "GUEST " + Math.floor(1000 + Math.random()*9000); }
-function formatNumberWithCommas(n){ return new Intl.NumberFormat('en-NG').format(n || 0); }
-function randomColor(){ const colors = ["#FFD700","#FF69B4","#87CEEB","#90EE90","#FFB6C1","#FFA07A","#8A2BE2","#00BFA6","#F4A460"]; return colors[Math.floor(Math.random()*colors.length)]; }
-function showStarPopup(text){ const popup = document.getElementById("starPopup"); document.getElementById("starText").innerText = text; popup.style.display = "block"; setTimeout(()=>{ popup.style.display = "none"; }, 1700); }
-
-// HELLO rotation
-const greetings = ["HELLO","HOLA","BONJOUR","CIAO","HALLO","こんにちは","你好","안녕하세요","SALUT","OLÁ","NAMASTE","MERHABA"];
-let helloIndex = 0;
-const helloEl = document.getElementById("helloText");
-function rotateHello(){
-  if(!helloEl || helloEl.style.display==="none") return;
-  helloEl.innerText = greetings[helloIndex++ % greetings.length];
-  helloEl.style.color = randomColor();
-}
-rotateHello();
-setInterval(rotateHello,1500);
-
-// UI refs
+/* ---------- DOM Elements ---------- */
 const googleBtn = document.getElementById("googleSignInBtn");
 const authBox = document.getElementById("authBox");
 const messagesEl = document.getElementById("messages");
@@ -242,92 +241,227 @@ const cashCountEl = document.getElementById("cashCount");
 const tipBtn = document.getElementById("tipBtn");
 const redeemBtn = document.getElementById("redeemBtn");
 const onlineCountEl = document.getElementById("onlineCount");
+const helloEl = document.getElementById("helloText");
 
-// Presence
+/* ---------- State ---------- */
+let currentUser = null;
+let userDocUnsub = null;
+let messagesUnsub = null;
+let usersUnsub = null;
+let lastMessagesArray = [];
+const CHAT_COLLECTION = "messages_livestreaming";
+const BUZZ_COST = 10;
+const AUTO_STAR_ADD = 5;
+const DAILY_STAR_CAP = 500;
+
+/* ---------- Helpers ---------- */
+function generateGuestName(){ return "GUEST " + Math.floor(1000 + Math.random()*9000); }
+function formatNumber(n){ return new Intl.NumberFormat('en-NG').format(n||0); }
+function randomColor(){ const colors=["#FFD700","#FF69B4","#87CEEB","#90EE90","#FFB6C1","#FFA07A","#8A2BE2","#00BFA6","#F4A460"]; return colors[Math.floor(Math.random()*colors.length)]; }
+function showStarPopup(text){ const popup=document.getElementById("starPopup"); document.getElementById("starText").innerText=text; popup.style.display="block"; setTimeout(()=>{popup.style.display="none";},1700); }
+
+/* ---------- Greetings rotation ---------- */
+const greetings=["HELLO","HOLA","BONJOUR","CIAO","HALLO","こんにちは","你好","안녕하세요","SALUT","OLÁ","NAMASTE","MERHABA"];
+let helloIndex=0;
+function rotateHello(){
+  if(!helloEl || helloEl.style.display==="none") return;
+  helloEl.innerText=greetings[helloIndex++ % greetings.length];
+  helloEl.style.color=randomColor();
+}
+rotateHello();
+setInterval(rotateHello,1500);
+
+/* ---------- Presence ---------- */
 function setupPresence(user){
   try{
     const pRef = rtdbRef(rtdb,"presence/"+user.uid);
     rtdbSet(pRef,true).catch(()=>{});
     onDisconnect(pRef).remove().catch(()=>{});
-  }catch(e){ console.warn("presence error", e); }
+  }catch(e){console.warn("Presence error",e);}
 }
-onValue(rtdbRef(rtdb,"presence"), snap=>{
-  const val = snap.val()||{};
-  onlineCountEl.innerText = `(${Object.keys(val).length} online)`;
+onValue(rtdbRef(rtdb,"presence"),snap=>{
+  const val=snap.val()||{};
+  onlineCountEl.innerText=`(${Object.keys(val).length} online)`;
 });
 
-// User color map
-const userColors = {};
+/* ---------- User Colors ---------- */
+const userColors={};
 async function setupUsersListener(){
   if(usersUnsub) usersUnsub();
-  usersUnsub = onSnapshot(collection(db,"users"), (snap)=>{
+  usersUnsub = onSnapshot(collection(db,"users"),snap=>{
     snap.forEach(d=>{
-      const data = d.data()||{};
-      userColors[d.id] = data.usernameColor || "#ffffff";
+      const data=d.data()||{};
+      userColors[d.id]=data.usernameColor||"#ffffff";
     });
-    if(lastMessagesArray.length) renderMessagesFromArray(lastMessagesArray);
+    if(lastMessagesArray.length) renderMessages(lastMessagesArray);
   });
 }
 
-// Daily username color
-async function assignDailyUsernameColor(userRef, data){
-  const today = new Date().toISOString().split("T")[0];
-  try{
-    if(!data || !data.lastColorDate || data.lastColorDate!==today){
-      const newColor = randomColor();
-      await updateDoc(userRef,{usernameColor:newColor,lastColorDate:today});
-      userColors[userRef.id]=newColor;
-      return newColor;
-    }
-    userColors[userRef.id]=data.usernameColor||randomColor();
-    return data.usernameColor;
-  }catch(e){ console.warn("assign color error",e); return "#ffffff"; }
+/* ---------- Daily color assign ---------- */
+async function assignDailyColor(userRef,data){
+  const today=new Date().toISOString().split("T")[0];
+  if(!data || data.lastColorDate!==today){
+    const newColor=randomColor();
+    try{ await updateDoc(userRef,{usernameColor:newColor,lastColorDate:today}); userColors[userRef.id]=newColor; return newColor; }catch(e){ console.warn(e); }
+  }
+  return data.usernameColor||randomColor();
 }
 
-// Google Sign-In
-googleBtn.addEventListener("click", async e=>{
-  e.preventDefault();
-  const provider = new GoogleAuthProvider();
-  const res = await signInWithPopup(auth,provider);
-  currentUser = res.user;
+/* ---------- Auth ---------- */
+googleBtn.addEventListener("click", async ()=>{
+  const provider=new GoogleAuthProvider();
+  try{ await signInWithPopup(auth,provider); }
+  catch(err){ console.error("Sign-in failed",err); alert("Sign-in failed: "+(err.message||err)); }
 });
 
-// On auth state
+/* ---------- Send & Buzz ---------- */
+sendBtn.addEventListener("click", async ()=>{
+  if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
+  const txt=messageInputEl.value.trim();
+  if(!txt){ showStarPopup("Type a message first"); return; }
+  try{
+    await addDoc(collection(db,CHAT_COLLECTION),{
+      content:txt,
+      uid:currentUser.uid,
+      chatId:currentUser.chatId,
+      timestamp:serverTimestamp()
+    });
+    messageInputEl.value="";
+  }catch(e){ console.error(e); showStarPopup("Send failed"); }
+});
+
+buzzBtn.addEventListener("click", async ()=>{
+  if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
+  const userRef=doc(db,"users",currentUser.uid);
+  const snap=await getDoc(userRef);
+  const userData=snap.exists()?snap.data():{};
+  const stars=userData.stars||0;
+  if(stars<BUZZ_COST){ showStarPopup("Not enough stars to BUZZ"); return; }
+  const txt=messageInputEl.value.trim();
+  if(!txt){ showStarPopup("Type message to BUZZ"); return; }
+  try{
+    await updateDoc(userRef,{stars:increment(-BUZZ_COST)});
+    const glowColor=randomColor();
+    await addDoc(collection(db,CHAT_COLLECTION),{
+      content:txt,
+      uid:currentUser.uid,
+      chatId:currentUser.chatId,
+      timestamp:serverTimestamp(),
+      highlight:true,
+      buzzColor:glowColor,
+      buzzDuration:60000
+    });
+    showStarPopup("BUZZ sent!");
+    messageInputEl.value="";
+  }catch(e){ console.error(e); showStarPopup("BUZZ failed"); }
+});
+
+/* ---------- Tip & Redeem ---------- */
+tipBtn.addEventListener("click",()=>{ window.open("https://your-placeholder-payment-link.com","_blank"); showStarPopup("Thanks! Tip clicked 💵"); });
+redeemBtn.addEventListener("click",()=>{ window.open("https://xixi.live","_blank"); showStarPopup("Redeem clicked"); });
+
+/* ---------- Auto-star ---------- */
+setInterval(async ()=>{
+  if(!currentUser) return;
+  const userRef=doc(db,"users",currentUser.uid);
+  const snap=await getDoc(userRef);
+  const data=snap.exists()?snap.data():{};
+  const curr=data.stars||0;
+  if(curr<DAILY_STAR_CAP) await updateDoc(userRef,{stars:Math.min(curr+AUTO_STAR_ADD,DAILY_STAR_CAP)});
+},60000);
+
+/* ---------- Message rendering ---------- */
+function renderMessages(arr){
+  messagesEl.innerHTML="";
+  arr.forEach(item=>{
+    const m=item.data;
+    const wrapper=document.createElement("div");
+    wrapper.className="msg";
+    const meta=document.createElement("span");
+    meta.className="meta";
+    meta.textContent=m.chatId||"Guest";
+    meta.style.color=(m.uid && userColors[m.uid])?userColors[m.uid]:"#ffffff";
+    const content=document.createElement("span");
+    if(m.highlight || m.buzzColor){
+      content.className="buzz-content content";
+      content.style.background=m.buzzColor||randomColor();
+      content.textContent=" "+(m.content||"");
+      content.style.color="#000";
+      const glowColor=m.buzzColor||randomColor();
+      const duration=(1+Math.random()*1.5)+"s";
+      content.style.setProperty("--glow-color",glowColor);
+      content.style.animation=`buzzGlow ${duration} infinite`;
+      setTimeout(()=>{ content.style.animation=""; m.glowEnded=true; }, m.buzzDuration||60000);
+    }else{
+      content.className="content";
+      content.textContent=" "+(m.content||"");
+    }
+    wrapper.appendChild(meta);
+    wrapper.appendChild(content);
+    messagesEl.appendChild(wrapper);
+  });
+  messagesEl.scrollTop=messagesEl.scrollHeight;
+}
+
+/* ---------- Auth state ---------- */
 onAuthStateChanged(auth, async user=>{
   if(user){
-    currentUser = user;
-    authBox.style.display="none";
-    sendAreaEl.style.display="flex";
-    profileBoxEl.style.display="flex";
-
-    const userRef = doc(db,"users",user.uid);
-    const snap = await getDoc(userRef);
-    let data = snap.exists()?snap.data():null;
-
+    setupPresence(user);
+    const userRef=doc(db,"users",user.uid);
+    let snap=await getDoc(userRef);
     if(!snap.exists()){
       await setDoc(userRef,{
-        displayName: user.displayName || generateGuestName(),
-        usernameColor: randomColor(),
-        lastColorDate: "",
-        stars: 0,
-        cash: 0,
-        createdAt: serverTimestamp()
+        chatId:user.displayName||generateGuestName(),
+        stars:100,
+        cash:0,
+        usernameColor:randomColor(),
+        lastColorDate:new Date().toISOString().split("T")[0],
+        isAdmin:false,
+        lastStarReset:Date.now(),
+        badges:[]
       });
-      data = (await getDoc(userRef)).data();
+      snap=await getDoc(userRef);
     }
+    let userData=snap.data();
+    const today=new Date().toISOString().split("T")[0];
+    if(!userData.lastColorDate || userData.lastColorDate!==today){
+      userData.usernameColor=randomColor();
+      await updateDoc(userRef,{usernameColor:userData.usernameColor,lastColorDate:today});
+    }
+    currentUser={ uid:user.uid, chatId:userData.chatId||user.displayName||generateGuestName(), stars:userData.stars||0, cash:userData.cash||0, usernameColor:userData.usernameColor||randomColor(), isAdmin:userData.isAdmin||false };
+    if(helloEl) helloEl.style.display="none";
+    if(authBox) authBox.style.display="none";
+    sendAreaEl.style.display="flex";
+    profileBoxEl.style.display="block";
+    profileNameEl.innerText=currentUser.chatId;
+    profileNameEl.style.color=currentUser.usernameColor;
+    starCountEl.innerText=formatNumber(currentUser.stars);
+    cashCountEl.innerText=formatNumber(currentUser.cash);
 
-    const color = await assignDailyUsernameColor(userRef,data);
-    profileNameEl.style.color = color;
-    profileNameEl.innerText = data.displayName || generateGuestName();
+    if(userDocUnsub) userDocUnsub();
+    userDocUnsub=onSnapshot(userRef,snap=>{
+      const d=snap.data();
+      currentUser.stars=d.stars||0;
+      currentUser.cash=d.cash||0;
+      starCountEl.innerText=formatNumber(currentUser.stars);
+      cashCountEl.innerText=formatNumber(currentUser.cash);
+      if(d.usernameColor){ profileNameEl.style.color=d.usernameColor; userColors[userRef.id]=d.usernameColor; }
+    });
 
-    starCountEl.innerText = formatNumberWithCommas(data.stars||0);
-    cashCountEl.innerText = formatNumberWithCommas(data.cash||0);
+    if(messagesUnsub) messagesUnsub();
+    const messagesQuery=query(collection(db,CHAT_COLLECTION),orderBy("timestamp","asc"));
+    messagesUnsub=onSnapshot(messagesQuery,snap=>{
+      lastMessagesArray=snap.docs.map(d=>({id:d.id,data:d.data()}));
+      renderMessages(lastMessagesArray);
+    });
 
-    setupPresence(user);
-    setupUsersListener();
+    await setupUsersListener();
+
+  }else{
+    currentUser=null;
+    sendAreaEl.style.display="none";
+    profileBoxEl.style.display="none";
+    authBox.style.display="block";
   }
 });
-
 </script>
-</body>
-</html>
