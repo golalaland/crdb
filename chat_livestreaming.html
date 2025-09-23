@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Xixi — Live Stream 💸</title>
-<link rel="icon" href="data:," />
 <style>
 :root{
   --bg:#000;
@@ -14,202 +13,120 @@
   --glass: rgba(255,255,255,0.03);
   --btn-backdrop: rgba(255,20,147,0.15);
 }
-
-/* overall layout */
-html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;color:#fff;background:var(--bg);}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Roboto,Arial;color:#fff;background:var(--bg);}
 #appWrapper{width:100%;height:100%;display:flex;justify-content:center;}
 .app{display:flex;flex-direction:column;height:100%;gap:10px;padding:10px;box-sizing:border-box;width:100%;max-width:480px;}
 .brand{font-weight:700;font-size:24px;color:var(--accent);text-align:center;}
-.room-desc{font-size:11px;color:var(--muted);text-align:center;margin-bottom:6px;}
 #greeting{font-size:13px;text-align:center;font-weight:600;margin-bottom:6px;color:var(--accent);}
-#helloText{font-size:20px;font-weight:800;text-align:center;margin:6px 0;color:#fff;transition:color .2s ease;z-index:1500;position:relative;}
 #center{flex:1;display:flex;flex-direction:column;gap:6px;}
-
-/* Sticky video frame */
-#videoContainer{
-  width:100%;
-  aspect-ratio:16/9;
-  background:#111;
-  border-radius:10px;
-  overflow:hidden;
-  box-shadow:0 6px 18px rgba(0,0,0,0.6);
-  position:sticky;
-  top:0;
-  z-index:100;
-}
+#videoContainer{width:100%;aspect-ratio:16/9;background:#111;border-radius:10px;overflow:hidden;position:sticky;top:0;z-index:100;}
 #videoContainer iframe{width:100%;height:100%;border:0;border-radius:10px;}
-
-#guestMsg{font-size:16px;font-weight:700;margin:4px 0;color:var(--accent);text-align:center;}
 #messages{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px;border-radius:8px;background:#000;margin-bottom:4px;}
 .msg{padding:8px 10px;border-radius:8px;background:var(--glass);max-width:100%;display:flex;gap:8px;align-items:center;}
 .msg.me{background:rgba(255,20,147,0.06);}
 .msg .meta{font-weight:700;font-size:13px;white-space:nowrap;}
-.msg .content{font-size:13px;color:#fff;white-space:pre-wrap;word-break:break-word;display:inline-block;}
-.buzz-content{font-weight:800;font-size:14px;color:#000;padding:6px 8px;border-radius:8px;display:inline-block;position: relative;transition: box-shadow 0.3s ease;}
-
-/* Buzz messages glow */
+.msg .content{font-size:13px;color:#fff;white-space:pre-wrap;word-break:break-word;}
+.buzz-content{font-weight:800;font-size:14px;color:#000;padding:6px 8px;border-radius:8px;position:relative;transition:box-shadow 0.3s ease;}
 @keyframes buzzGlow {
-  0% { box-shadow: 0 0 4px var(--glow-color, #FF1493), 0 0 8px var(--glow-color, #FF1493); }
-  50% { box-shadow: 0 0 12px var(--glow-color, #FF69B4), 0 0 24px var(--glow-color, #FF69B4); }
-  100% { box-shadow: 0 0 4px var(--glow-color, #FF1493), 0 0 8px var(--glow-color, #FF1493); }
+  0%{box-shadow:0 0 4px var(--glow-color,#FF1493),0 0 8px var(--glow-color,#FF1493);}
+  50%{box-shadow:0 0 12px var(--glow-color,#FF69B4),0 0 24px var(--glow-color,#FF69B4);}
+  100%{box-shadow:0 0 4px var(--glow-color,#FF1493),0 0 8px var(--glow-color,#FF1493);}
 }
-
 .send-area{display:flex;align-items:center;gap:8px;background:var(--card);padding:10px;position:sticky;bottom:10px;z-index:20;border-top:1px solid rgba(255,255,255,0.04);border-radius:999px;}
 .send-area input{flex:1;padding:12px;border-radius:999px;border:1px solid rgba(255,255,255,0.06);background:#0e0e0e;color:#fff;font-size:14px;outline:none;}
 .send-area input::placeholder{color:var(--muted);}
-.send-area input:focus{border-color:var(--accent);box-shadow:0 0 14px rgba(255,20,147,0.12);}
 .send-btn{padding:10px 14px;border-radius:999px;background:var(--accent);color:#000;cursor:pointer;font-weight:700;border:0;font-size:14px;}
 .buzz-btn{padding:10px 12px;border-radius:999px;background:#1d1d1d;color:var(--accent);cursor:pointer;font-weight:700;font-size:14px;border:1px solid rgba(255,20,147,0.18);}
 .buzz-btn:hover{animation:buzzPulse 1.5s infinite;}
 @keyframes buzzPulse{0%{box-shadow:0 0 0 0 rgba(255,20,147,0.18)}70%{box-shadow:0 0 0 12px rgba(255,20,147,0)}100%{box-shadow:0 0 0 0 rgba(255,20,147,0)}}
-
-/* profile glass bar */
 .profile{display:none;flex-direction:column;gap:8px;margin-top:10px;}
 .profile-card{background:var(--glass);padding:6px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);display:flex;flex-direction:column;gap:4px;}
 .profile-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .profile-left{display:flex;flex-direction:column;gap:2px;}
 .profile-name{font-weight:800;font-size:13px;color:#fff;}
 .profile-label{color:var(--accent);font-weight:800;font-size:10px;}
-
-/* Stars/Cash counts — monospace */
-.profile-value{
-  color:#fff;
-  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
-  font-weight:400;
-  font-size:11px;
-}
-.profile-value .icon,
-.profile-value span + .icon,
-.profile-value span .icon { font-size:10px;margin-left:2px;vertical-align:middle; }
+.profile-value{color:#fff;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"Roboto Mono","Courier New",monospace;font-weight:400;font-size:11px;}
 .profile-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;}
 .small-btn{padding:6px 10px;border-radius:8px;background:var(--btn-backdrop);border:0;color:#fff;cursor:pointer;font-weight:700;font-size:12px;text-decoration:none;}
-#redeemBtn{text-decoration:none;}
-
-/* star popup */
 .star-popup{position:fixed;left:50%;top:18%;transform:translateX(-50%);background:var(--card);padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);display:none;z-index:1000;color:var(--accent);font-size:13px;white-space:nowrap;text-align:center;}
-.onlineCount{font-size:11px;color:var(--muted);}
-
-/* Google Sign-In Button Styling */
 #authBox{display:flex;justify-content:center;margin:16px 0;position:relative;z-index:2000;}
 .google-btn{display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;font-weight:700;font-size:12px;padding:6px 14px;border-radius:20px;background:linear-gradient(135deg,#FF1493,#FF69B4);color:#fff;box-shadow:0 3px 10px rgba(255,20,147,0.35);white-space:nowrap;transition:transform 0.2s ease,box-shadow 0.2s ease;}
 .google-btn:hover{transform:translateY(-1px);box-shadow:0 6px 15px rgba(255,20,147,0.45);}
-.google-btn:active{transform:translateY(1px);box-shadow:0 2px 8px rgba(255,20,147,0.25);}
 .google-icon{display:flex;align-items:center;justify-content:center;width:14px;height:14px;font-size:10px;font-weight:bold;color:#fff;background:rgba(255,255,255,0.15);border-radius:50%;flex-shrink:0;}
 .btn-text{display:inline-block;}
-
-/* HELLO Animation */
-@keyframes helloMove {
-  0% { transform: translateY(-10px); opacity: 0; }
-  50% { transform: translateY(0px); opacity: 1; }
-  100% { transform: translateY(10px); opacity: 0; }
-}
-#helloText.animate { display:block; animation:helloMove 1.5s ease-in-out infinite; }
-
+@keyframes helloFade{0%{opacity:0;transform:translateY(-10px);}50%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(10px);}}
+#helloText{font-size:20px;font-weight:800;text-align:center;margin:6px 0;z-index:1500;position:relative;}
+#helloText.animate{animation:helloFade 2s ease-in-out infinite;}
 </style>
 </head>
 <body>
 <div id="appWrapper">
-  <div class="app">
-    <div class="brand">乂丨乂丨</div>
-    <div id="greeting">Welcome to the vibe ✨</div>
-
-    <div id="center">
-      <div id="videoContainer">
-        <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
-      </div>
-
-      <div id="helloText" aria-live="polite">HELLO</div>
-
-      <div class="room-desc">Live Stream 💸 — Chat. Own your vibe.
-        <span id="onlineCount" class="onlineCount"></span>
-      </div>
-
-      <div id="guestMsg"></div>
-
-     <!-- Google Sign-In Button -->
+<div class="app">
+<div class="brand">乂丨乂丨</div>
+<div id="greeting">Welcome to the vibe ✨</div>
+<div id="center">
+<div id="videoContainer">
+<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+</div>
+<div id="helloText" aria-live="polite"></div>
 <div id="authBox">
-  <a id="googleSignInBtn" class="google-btn" href="#">
-    <span class="google-icon">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 533.5 544.3" width="18" height="18">
-        <path fill="#4285F4" d="M533.5 278.4c0-17.6-1.6-34.5-4.6-50.9H272v95.8h147.3c-6.3 34.1-25.6 63-54.7 82.3v68h88.3c51.7-47.6 81.6-117.8 81.6-195.2z"/>
-        <path fill="#34A853" d="M272 544.3c73.8 0 135.8-24.4 181-66.2l-88.3-68c-24.5 16.5-55.7 26.2-92.7 26.2-71.2 0-131.5-48.1-153-112.9H30v70.9C75.2 488 167.1 544.3 272 544.3z"/>
-        <path fill="#FBBC05" d="M119 324.4c-5.4-16.3-8.4-33.7-8.4-51.4s3-35 8.4-51.4V150.7H30C10.7 192.3 0 236.5 0 278.4s10.7 86.1 30 127.7l89-81.7z"/>
-        <path fill="#EA4335" d="M272 108.6c39.9 0 75.5 13.7 103.6 40.7l77.8-77.8C406.8 24.7 344.8 0 272 0 167.1 0 75.2 56.3 30 150.7l89 70.9c21.5-64.8 81.8-112.9 153-112.9z"/>
-      </svg>
-    </span>
-    <span class="btn-text">Sign in with Google</span>
-  </a>
+<a id="googleSignInBtn" class="google-btn" href="#">
+<span class="google-icon">G</span>
+<span class="btn-text">Sign in with Google</span>
+</a>
 </div>
-
-      <div id="messages"></div>
-
-      <div class="send-area" id="sendArea" style="display:none;">
-        <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" />
-        <button id="buzzBtn" class="buzz-btn" title="Send BUZZ 🚨">🚨</button>
-        <button id="sendBtn" class="send-btn">Send</button>
-      </div>
-
-    </div>
-
-    <div class="profile" id="profileBox">
-      <div class="profile-card">
-        <div class="profile-top">
-          <div class="profile-left">
-            <div id="profileName" class="profile-name">GUEST 0000</div>
-            <div>
-              <span class="profile-label">STARS COLLECTED:</span>
-              <span class="profile-value"><span id="starCount">0</span>⭐️</span>
-            </div>
-          </div>
-          <div class="profile-actions">
-            <a id="redeemBtn" class="small-btn" href="https://xixi.live" target="_blank">Redeem</a>
-            <button id="tipBtn" class="small-btn">💵</button>
-          </div>
-        </div>
-        <div>
-          <span class="profile-label">CASH EARNED:</span>
-          <span class="profile-value">₦<span id="cashCount">0</span></span>
-        </div>
-      </div>
-    </div>
-
-  </div>
+<div id="messages"></div>
+<div class="send-area" id="sendArea" style="display:none;">
+<input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" />
+<button id="buzzBtn" class="buzz-btn" title="Send BUZZ 🚨">🚨</button>
+<button id="sendBtn" class="send-btn">Send</button>
 </div>
-
-<div class="star-popup" id="starPopup">
-  <div id="starText">You've just earned +1 star! ⭐</div>
 </div>
+<div class="profile" id="profileBox">
+<div class="profile-card">
+<div class="profile-top">
+<div class="profile-left">
+<div id="profileName" class="profile-name">GUEST 0000</div>
+<div>
+<span class="profile-label">STARS COLLECTED:</span>
+<span class="profile-value"><span id="starCount">0</span>⭐️</span>
+</div>
+</div>
+<div class="profile-actions">
+<a id="redeemBtn" class="small-btn" href="#">Redeem</a>
+<button id="tipBtn" class="small-btn">💵</button>
+</div>
+</div>
+<div>
+<span class="profile-label">CASH EARNED:</span>
+<span class="profile-value">₦<span id="cashCount">0</span></span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="star-popup" id="starPopup"><div id="starText"></div></div>
+
 <script type="module">
-// ---------- Firebase Auth & Firestore Setup ----------
+// ---------------- Firebase Setup ----------------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getAuth, GoogleAuthProvider, signInWithPopup,
-  setPersistence, browserLocalPersistence, onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {
-  getFirestore, doc, setDoc, getDoc, updateDoc, collection,
-  addDoc, query, orderBy, onSnapshot, serverTimestamp, increment
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, setPersistence, browserLocalPersistence, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, orderBy, onSnapshot, serverTimestamp, increment, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ---------- Config ----------
 const firebaseConfig = {
-  apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
-  authDomain: "metaverse-1010.firebaseapp.com",
-  projectId: "metaverse-1010",
-  storageBucket: "metaverse-1010.firebasestorage.app",
-  messagingSenderId: "1044064238233",
-  appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
-  measurementId: "G-S77BMC266C"
+  apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
+  authDomain: "metaverse-1010.firebaseapp.com",
+  projectId: "metaverse-1010",
+  storageBucket: "metaverse-1010.firebasestorage.app",
+  messagingSenderId: "1044064238233",
+  appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
+  measurementId: "G-S77BMC266C"
 };
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+setPersistence(auth, browserLocalPersistence);
 
-// ---------- Ensure Persistence ----------
-await setPersistence(auth, browserLocalPersistence);
-
-// ---------- Elements ----------
 const googleBtn = document.getElementById("googleSignInBtn");
 const profileBox = document.getElementById("profileBox");
 const sendArea = document.getElementById("sendArea");
@@ -222,202 +139,83 @@ const starPopupEl = document.getElementById("starPopup");
 const starTextEl = document.getElementById("starText");
 const starCountEl = document.getElementById("starCount");
 const cashCountEl = document.getElementById("cashCount");
+const helloTextEl = document.getElementById("helloText");
 
 const CHAT_COLLECTION = "chats";
-const BUZZ_COST = 1; // stars cost for BUZZ
-
-// ---------- Helper Functions ----------
-function randomColor() {
-  const colors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"];
-  return colors[Math.floor(Math.random()*colors.length)];
-}
-
-function showStarPopup(text) {
-  starTextEl.textContent = text;
-  starPopupEl.style.display = "block";
-  setTimeout(() => { starPopupEl.style.display = "none"; }, 2000);
-}
-
+const BUZZ_COST = 1;
 let currentUser = null;
-const userColors = {}; // optional: assign unique colors per user
+let helloInterval = null;
+const helloWords = ["HELLO","こんにちは","你好","Ndewo","Bawo","Sannu"];
+const helloColors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A","#FFD700"];
+
+// ---------- HELLO Animation ----------
+function showRandomHello(){ helloTextEl.textContent = helloWords[Math.floor(Math.random()*helloWords.length)]; helloTextEl.style.color = helloColors[Math.floor(Math.random()*helloColors.length)]; }
+function startHelloAnimation(){ helloTextEl.style.display="block"; helloTextEl.classList.add("animate"); showRandomHello(); helloInterval=setInterval(showRandomHello,2000); }
+function stopHelloAnimation(){ helloTextEl.style.display="none"; helloTextEl.classList.remove("animate"); clearInterval(helloInterval); }
+
+// ---------- Star popup ----------
+function showStarPopup(text){ starTextEl.textContent=text; starPopupEl.style.display="block"; setTimeout(()=>{starPopupEl.style.display="none";},2000); }
 
 // ---------- Google Sign-in ----------
 const provider = new GoogleAuthProvider();
-googleBtn.addEventListener("click", async (e) => {
-  e.preventDefault();
-  if(auth.currentUser){
-    showStarPopup("Already signed in!");
-    return;
-  }
-  try {
-    const result = await signInWithPopup(auth, provider);
-    const user = result.user;
-
-    // Save user in Firestore
-    await setDoc(doc(db, "users", user.uid), {
-      name: user.displayName || "GUEST",
-      email: user.email,
-      stars: 0,
-      cash: 0,
-      chatId: (user.displayName?.replace(/\s+/g,'') || "GUEST") + Math.floor(Math.random()*9999)
-    }, { merge: true });
-
-    // Immediately update UI
-    setupUserUI(user);
-
-  } catch (err) {
-    console.error("Sign-in failed:", err);
-    showStarPopup("Sign-in failed!");
-  }
-});
+googleBtn.addEventListener("click", async (e)=>{ e.preventDefault(); try{ const result = await signInWithPopup(auth,provider); const user=result.user; await setDoc(doc(db,"users",user.uid),{name:user.displayName,email:user.email,stars:0,cash:0,chatId:user.displayName.replace(/\s+/g,'')+Math.floor(Math.random()*9999)}, {merge:true}); }catch(err){console.error(err);showStarPopup("Sign-in failed!");} });
 
 // ---------- Auth State ----------
-onAuthStateChanged(auth, async (user) => {
-  if(user){
-    currentUser = user;
-    setupUserUI(user);
-  } else {
-    currentUser = null;
-    profileBox.style.display = "none";
-    sendArea.style.display = "none";
-  }
+onAuthStateChanged(auth, async (user)=>{
+  if(user){ currentUser=user; profileBox.style.display="flex"; sendArea.style.display="flex"; googleBtn.style.display="none"; stopHelloAnimation(); profileNameEl.textContent=user.displayName; const snap=await getDoc(doc(db,"users",user.uid)); if(snap.exists()){ const data=snap.data(); starCountEl.textContent=data.stars||0; cashCountEl.textContent=data.cash||0; } }else{ currentUser=null; profileBox.style.display="none"; sendArea.style.display="none"; googleBtn.style.display="flex"; startHelloAnimation(); }
 });
 
-// ---------- Setup User UI ----------
-async function setupUserUI(user){
-  profileBox.style.display = "flex";
-  sendArea.style.display = "flex";
-
-  profileNameEl.textContent = user.displayName || "GUEST";
-
-  // Load user data
-  const snap = await getDoc(doc(db, "users", user.uid));
-  if(snap.exists()){
-    const data = snap.data();
-    starCountEl.textContent = data.stars || 0;
-    cashCountEl.textContent = data.cash || 0;
-    // Ensure chatId is present
-    if(!data.chatId){
-      await updateDoc(doc(db,"users",user.uid), {
-        chatId: (user.displayName?.replace(/\s+/g,'') || "GUEST") + Math.floor(Math.random()*9999)
-      });
-    }
-  }
-}
-
-// ---------- Render Messages ----------
+// ---------- Render messages ----------
 function renderMessagesFromArray(arr){
-  messagesEl.innerHTML = "";
-  arr.forEach(item => {
-    const m = item.data;
-    const wrapper = document.createElement("div");
-    wrapper.className = "msg";
-    if(m.uid === currentUser?.uid) wrapper.classList.add("me");
-
-    const meta = document.createElement("span");
-    meta.className = "meta";
-    meta.textContent = m.chatId || "Guest";
-    meta.style.color = (m.uid && userColors[m.uid]) ? userColors[m.uid] : "#ffffff";
-
-    const content = document.createElement("span");
-    if(m.highlight || m.buzzColor){
-      content.className = "buzz-content content";
-      content.style.background = m.buzzColor || randomColor();
-      content.style.color = "#000";
-      content.textContent = " " + (m.content || "");
-      if(!m.glowEnded){
-        content.style.setProperty("--glow-color", m.buzzColor || randomColor());
-        content.style.animation = `buzzGlow ${(1 + Math.random()*1.5)}s infinite`;
-        setTimeout(async () => {
-          content.style.animation = "";
-          m.glowEnded = true;
-          try {
-            const msgRef = doc(db, CHAT_COLLECTION, item.id);
-            await updateDoc(msgRef, { glowEnded: true });
-          } catch(e){ console.warn("Error ending glow", e); }
-        }, m.buzzDuration || 60000);
-      }
-    } else {
-      content.className = "content";
-      content.textContent = " " + (m.content || "");
-    }
-
-    wrapper.appendChild(meta);
-    wrapper.appendChild(content);
-    messagesEl.appendChild(wrapper);
+  messagesEl.innerHTML="";
+  arr.forEach(item=>{
+    const m=item.data;
+    const wrapper=document.createElement("div");
+    wrapper.className="msg";
+    if(m.uid===currentUser?.uid) wrapper.classList.add("me");
+    const meta=document.createElement("span"); meta.className="meta"; meta.textContent=m.chatId||"Guest";
+    const content=document.createElement("span");
+    if(m.highlight||m.buzzColor){ content.className="buzz-content content"; content.style.background=m.buzzColor||"#FF1493"; content.style.color="#000"; content.textContent=" "+(m.content||""); if(!m.glowEnded){ content.style.setProperty("--glow-color", m.buzzColor||"#FF1493"); content.style.animation=`buzzGlow ${(1+Math.random()*1.5)}s infinite`; setTimeout(()=>{ content.style.animation=""; m.glowEnded=true; }, m.buzzDuration||60000); } }else{ content.className="content"; content.textContent=" "+(m.content||""); }
+    wrapper.appendChild(meta); wrapper.appendChild(content); messagesEl.appendChild(wrapper);
   });
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+  messagesEl.scrollTop=messagesEl.scrollHeight;
 }
 
-// ---------- Real-time Listener ----------
-const chatQuery = query(collection(db, CHAT_COLLECTION), orderBy("timestamp", "asc"));
-onSnapshot(chatQuery, (snapshot) => {
-  const messagesArray = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
-  renderMessagesFromArray(messagesArray);
-});
+// ---------- Real-time listener ----------
+const chatQuery=query(collection(db,CHAT_COLLECTION),orderBy("timestamp","asc"));
+onSnapshot(chatQuery,snapshot=>{ const messagesArray=snapshot.docs.map(doc=>({id:doc.id,data:doc.data()})); renderMessagesFromArray(messagesArray); });
 
-// ---------- Send Message ----------
-sendBtn.addEventListener("click", async () => {
+// ---------- Send message ----------
+sendBtn.addEventListener("click", async ()=>{
   if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
-  const txt = messageInputEl.value.trim();
+  const txt=messageInputEl.value.trim();
   if(!txt){ showStarPopup("Type a message first"); return; }
-
-  try {
-    await addDoc(collection(db, CHAT_COLLECTION), {
-      content: txt,
-      uid: currentUser.uid,
-      chatId: currentUser.chatId || currentUser.displayName || "Guest",
-      timestamp: serverTimestamp(),
-      highlight: false,
-      glowEnded: true
-    });
-    messageInputEl.value = "";
-  } catch(err){
-    console.error("Send message error", err);
-    showStarPopup("Failed to send message");
-  }
+  try{ await addDoc(collection(db,CHAT_COLLECTION),{content:txt,uid:currentUser.uid,chatId:currentUser.displayName,timestamp:serverTimestamp(),highlight:false,glowEnded:true}); messageInputEl.value=""; }catch(err){ console.error(err); showStarPopup("Failed to send message"); }
 });
 
 // ---------- BUZZ ----------
-buzzBtn.addEventListener("click", async () => {
+buzzBtn.addEventListener("click", async ()=>{
   if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
-
-  const userRef = doc(db, "users", currentUser.uid);
-  const snap = await getDoc(userRef);
-  const userData = snap.exists() ? snap.data() : {};
-  const currentStars = userData.stars || 0;
-
-  if(currentStars < BUZZ_COST){ showStarPopup("Not enough stars to create a BUZZ! 🚨"); return; }
-
-  const txt = messageInputEl.value.trim();
+  const userRef=doc(db,"users",currentUser.uid);
+  const snap=await getDoc(userRef);
+  const userData=snap.exists()?snap.data():{};
+  const currentStars=userData.stars||0;
+  if(currentStars<BUZZ_COST){ showStarPopup("Not enough stars!"); return; }
+  const txt=messageInputEl.value.trim();
   if(!txt){ showStarPopup("Type a message to BUZZ! 🚨"); return; }
-
-  try {
-    await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
-
-    const glowColor = randomColor();
-    await addDoc(collection(db, CHAT_COLLECTION), {
-      content: txt,
-      uid: currentUser.uid,
-      chatId: currentUser.chatId || currentUser.displayName || "Guest",
-      timestamp: serverTimestamp(),
-      highlight: true,
-      buzzColor: glowColor,
-      buzzDuration: 60000,
-      glowEnded: false
-    });
-
-    showStarPopup("BUZZ 🚨 sent!");
-    messageInputEl.value = "";
-
-  } catch(err){
-    console.error("Buzz send error", err);
-    showStarPopup("Failed to send BUZZ 🚨");
-  }
+  try{
+    await updateDoc(userRef,{ stars: increment(-BUZZ_COST) });
+    const glowColor=helloColors[Math.floor(Math.random()*helloColors.length)];
+    await addDoc(collection(db,CHAT_COLLECTION),{content:txt,uid:currentUser.uid,chatId:currentUser.displayName,timestamp:serverTimestamp(),highlight:true,buzzColor:glowColor,buzzDuration:60000,glowEnded:false});
+    showStarPopup("BUZZ 🚨 sent!"); messageInputEl.value="";
+  }catch(err){ console.error(err); showStarPopup("Failed to send BUZZ 🚨"); }
 });
 
-// ---------- Enter Key Support ----------
-messageInputEl.addEventListener("keydown", (e) => {
-  if(e.key === "Enter") sendBtn.click();
-});
+// ---------- Enter key support ----------
+messageInputEl.addEventListener("keypress",(e)=>{if(e.key==="Enter") sendBtn.click();});
+
+// Start hello animation initially
+startHelloAnimation();
 </script>
+</body>
+</html>
