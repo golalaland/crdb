@@ -330,31 +330,93 @@ onAuthStateChanged(auth,async user=>{
 });
 
 /* Message render */
+/* ---------- Buzz + Send ---------- */
+buzzBtn.addEventListener("click", async () => {
+  if (!currentUser) { showStarPopup("Sign in to BUZZ"); return; }
+  const txt = messageInputEl.value.trim();
+  if (!txt) { showStarPopup("Type a message to BUZZ! 🚨"); return; }
+
+  const userRef = doc(db, "users", currentUser.uid);
+  const snapshot = await getDoc(userRef);
+  const userData = snapshot.exists() ? snapshot.data() : {};
+  if ((userData.stars || 0) < BUZZ_COST) { showStarPopup("Not enough stars to create a BUZZ! 🚨"); return; }
+
+  await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
+
+  const colors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"];
+  const glowColor = colors[Math.floor(Math.random()*colors.length)];
+
+  await addDoc(collection(db, CHAT_COLLECTION), {
+    content: txt,
+    uid: currentUser.uid,
+    chatId: currentUser.chatId,
+    timestamp: serverTimestamp(),
+    highlight: true,
+    buzzColor: glowColor,
+    buzzDuration: 60000,
+    glowEnded: false
+  });
+
+  showStarPopup("BUZZ 🚨 sent!");
+  messageInputEl.value = "";
+});
+
+sendBtn.addEventListener("click", async () => {
+  if (!currentUser) { showStarPopup("Sign in to send messages"); return; }
+  const txt = messageInputEl.value.trim();
+  if (!txt) { showStarPopup("Type a message first"); return; }
+
+  await addDoc(collection(db, CHAT_COLLECTION), {
+    content: txt,
+    uid: currentUser.uid,
+    chatId: currentUser.chatId,
+    timestamp: serverTimestamp(),
+    highlight: false,   // normal messages
+    glowEnded: true
+  });
+
+  messageInputEl.value = "";
+});
+
+/* ---------- Message Rendering ---------- */
 function renderMessagesFromArray(arr){
-  messagesEl.innerHTML="";
-  arr.forEach(item=>{
-    const m=item.data;
-    const wrapper=document.createElement("div"); wrapper.className="msg";
-    const meta=document.createElement("span"); meta.className="meta"; meta.textContent=m.chatId||"Guest";
-    meta.style.color=(m.uid&&userColors[m.uid])?userColors[m.uid]:"#fff";
-    const content=document.createElement("span");
-    if(m.highlight||m.buzzColor){
-      content.className="buzz-content content"; content.textContent=" "+(m.content||"");
-      content.style.background=m.buzzColor||"#FF1493"; content.style.color="#000";
-      if(!m.glowEnded){
-        content.style.setProperty("--glow-color",m.buzzColor||"#FF1493");
-        content.style.animation=`buzzGlow ${(1+Math.random()*1.5)}s infinite`;
-        setTimeout(async ()=>{
-          content.style.animation="";
-          m.glowEnded=true;
-          await updateDoc(doc(db,CHAT_COLLECTION,item.id),{glowEnded:true});
-        },m.buzzDuration||60000);
-      }
-    } else { content.className="content"; content.textContent=" "+(m.content||""); }
-    wrapper.appendChild(meta); wrapper.appendChild(content);
+  messagesEl.innerHTML = "";
+  arr.forEach(item => {
+    const m = item.data;
+    const wrapper = document.createElement("div");
+    wrapper.className = "msg";
+
+    const meta = document.createElement("span");
+    meta.className = "meta";
+    meta.textContent = m.chatId || "Guest";
+    meta.style.color = (m.uid && userColors[m.uid]) ? userColors[m.uid] : "#fff";
+
+    const content = document.createElement("span");
+    content.className = "content";
+    content.textContent = " " + (m.content || "");
+
+    // Handle BUZZ glow
+    if (m.highlight && !m.glowEnded) {
+      content.className = "buzz-content content";
+      content.style.background = m.buzzColor || "#FF1493";
+      content.style.color = "#000";
+      content.style.setProperty("--glow-color", m.buzzColor || "#FF1493");
+      content.style.animation = `buzzGlow ${(1+Math.random()*1.5)}s infinite`;
+
+      // Fade out glow after duration
+      setTimeout(async () => {
+        content.style.animation = "";
+        m.glowEnded = true;
+        const msgRef = doc(db, CHAT_COLLECTION, item.id);
+        await updateDoc(msgRef, { glowEnded: true });
+      }, m.buzzDuration || 60000);
+    }
+
+    wrapper.appendChild(meta);
+    wrapper.appendChild(content);
     messagesEl.appendChild(wrapper);
   });
-  messagesEl.scrollTop=messagesEl.scrollHeight;
+  messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 </script>
 </body>
