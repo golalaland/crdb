@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
 <title>Xixi — Live Stream 💸</title>
 <link rel="icon" href="data:," />
-<style>
-:root{
+<style>:root{
   --bg:#000;
   --card:#111;
   --muted:#aaa;
@@ -22,10 +21,10 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .brand{font-weight:700;font-size:24px;color:var(--accent);text-align:center;}
 .room-desc{font-size:11px;color:var(--muted);text-align:center;margin-bottom:6px;}
 #greeting{font-size:13px;text-align:center;font-weight:600;margin-bottom:6px;color:var(--accent);}
-#helloText{font-size:20px;font-weight:800;text-align:center;margin:6px 0;color:#fff;opacity:0;}
+#helloText{font-size:20px;font-weight:800;text-align:center;margin:6px 0;color:#fff;transition:color .2s ease;}
 #center{flex:1;display:flex;flex-direction:column;gap:6px;}
 
-/* Sticky video frame */
+/* 🔥 Sticky video frame */
 #videoContainer{
   width:100%;
   aspect-ratio:16/9;
@@ -45,15 +44,25 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .msg.me{background:rgba(255,20,147,0.06);}
 .msg .meta{font-weight:700;font-size:13px;white-space:nowrap;}
 .msg .content{font-size:13px;color:#fff;white-space:pre-wrap;word-break:break-word;display:inline-block;}
-.buzz-content{font-weight:800;font-size:14px;color:#000;padding:6px 8px;border-radius:8px;display:inline-block;position: relative;transition: box-shadow 0.3s ease;}
+.buzz-content{font-weight:800;font-size:14px;color:#000;padding:6px 8px;border-radius:8px;display:inline-block;}
 
 /* Buzz messages glow */
+.buzz-content {
+  font-weight:800;
+  font-size:14px;
+  color:#000;
+  padding:6px 8px;
+  border-radius:8px;
+  display:inline-block;
+  position: relative;
+  transition: box-shadow 0.3s ease;
+}
+/* Glow animation keyframes */
 @keyframes buzzGlow {
   0% { box-shadow: 0 0 4px var(--glow-color, #FF1493), 0 0 8px var(--glow-color, #FF1493); }
   50% { box-shadow: 0 0 12px var(--glow-color, #FF69B4), 0 0 24px var(--glow-color, #FF69B4); }
   100% { box-shadow: 0 0 4px var(--glow-color, #FF1493), 0 0 8px var(--glow-color, #FF1493); }
 }
-
 .send-area{display:flex;align-items:center;gap:8px;background:var(--card);padding:10px;position:sticky;bottom:10px;z-index:20;border-top:1px solid rgba(255,255,255,0.04);border-radius:999px;}
 .send-area input{flex:1;padding:12px;border-radius:999px;border:1px solid rgba(255,255,255,0.06);background:#0e0e0e;color:#fff;font-size:14px;outline:none;}
 .send-area input::placeholder{color:var(--muted);}
@@ -68,10 +77,10 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .profile-card{background:var(--glass);padding:6px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);display:flex;flex-direction:column;gap:4px;}
 .profile-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .profile-left{display:flex;flex-direction:column;gap:2px;}
-.profile-name{font-weight:800;font-size:13px;color:#fff;}
+.profile-name{font-weight:800;font-size:13px;color:#fff;} /* always white */
 .profile-label{color:var(--accent);font-weight:800;font-size:10px;}
 
-/* Stars/Cash counts — monospace with commas */
+/* Stars/Cash counts — smaller & tighter */
 .profile-value{
   color:#fff;
   font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
@@ -80,107 +89,181 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 }
 .profile-value .icon,
 .profile-value span + .icon,
-.profile-value span .icon { font-size:10px;margin-left:2px;vertical-align:middle; }
+.profile-value span .icon {
+  font-size:10px;
+  margin-left:2px;
+  vertical-align:middle;
+}
 .profile-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;}
-.small-btn{padding:6px 10px;border-radius:8px;background:var(--btn-backdrop);border:0;color:#fff;cursor:pointer;font-weight:700;font-size:12px;text-decoration:none;}
+.small-btn{
+  padding:6px 10px;
+  border-radius:8px;
+  background:var(--btn-backdrop);
+  border:0;
+  color:#fff;
+  cursor:pointer;
+  font-weight:700;
+  font-size:12px;
+  text-decoration:none;
+}
+/* removed underline on redeem button */
 #redeemBtn{text-decoration:none;}
 
 /* star popup */
 .star-popup{position:fixed;left:50%;top:18%;transform:translateX(-50%);background:var(--card);padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);display:none;z-index:1000;color:var(--accent);font-size:13px;white-space:nowrap;text-align:center;}
 .onlineCount{font-size:11px;color:var(--muted);}
 
-/* Google Sign-In Button Styling */
-#authBox{display:flex;justify-content:center;margin:16px 0;position:relative;z-index:2000;}
-.google-btn{display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;font-weight:700;font-size:12px;padding:6px 14px;border-radius:20px;background:linear-gradient(135deg,#FF1493,#FF69B4);color:#fff;box-shadow:0 3px 10px rgba(255,20,147,0.35);white-space:nowrap;transition:transform 0.2s ease,box-shadow 0.2s ease;}
-.google-btn:hover{transform:translateY(-1px);box-shadow:0 6px 15px rgba(255,20,147,0.45);}
-.google-btn:active{transform:translateY(1px);box-shadow:0 2px 8px rgba(255,20,147,0.25);}
-.google-icon{display:flex;align-items:center;justify-content:center;width:14px;height:14px;font-size:10px;font-weight:bold;color:#fff;background:rgba(255,255,255,0.15);border-radius:50%;flex-shrink:0;}
-.btn-text{display:inline-block;}
-
-/* HELLO fade animation */
-@keyframes helloFade {
-  0%{opacity:0; transform:scale(0.95);}
-  50%{opacity:1; transform:scale(1);}
-  100%{opacity:0; transform:scale(0.95);}
+@media (max-width:420px){
+  .send-area input{padding:10px;font-size:13px;}
+  .buzz-btn,.send-btn{padding:8px 10px;font-size:13px;}
+  .profile-name{font-size:12px;}
+  .profile-label{font-size:9px;}
+  .profile-value{font-size:10px;}
+  .small-btn{padding:4px 8px;font-size:11px;}
 }
-#helloText.animate{animation:helloFade 2s ease-in-out infinite;}
+  /* Google Sign-In Button Styling */
+  /* Center the auth box */
+#authBox {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+/* Google Sign-In Button Styling */
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 16px;
+  padding: 12px 24px;
+  border-radius: 30px;
+  background: linear-gradient(135deg, #FF1493, #FF69B4);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(255,20,147,0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  width: 90%;      /* Make it smaller than full width */
+  max-width: 300px; /* Caps the width on bigger screens */
+}
+/* Google logo styling */
+.google-btn img {
+  width: 20px;
+  height: 20px;
+}
+/* Hover effect */
+.google-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(255,20,147,0.45);
+}
+/* Active effect */
+.google-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 5px 12px rgba(255,20,147,0.25);
+}
 </style>
 </head>
 <body>
-<div id="appWrapper">
-  <div class="app">
-    <div class="brand">乂丨乂丨</div>
-    <div id="greeting">Welcome to the vibe ✨</div>
+  <div id="appWrapper">
+    <div class="app">
+      <div class="brand">乂丨乂丨</div>
+      <div id="greeting">Welcome to the vibe ✨</div>
 
-    <div id="center">
-      <div id="videoContainer">
-        <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
-      </div>
+      <div id="center">
+        <div id="videoContainer">
+          <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+        </div>
 
-      <div id="helloText" aria-live="polite">HELLO</div>
+        <!-- HELLO (multilingual) under the video frame -->
+        <div id="helloText" aria-live="polite">HELLO</div>
 
-      <div class="room-desc">Live Stream 💸 — Chat. Own your vibe.
-        <span id="onlineCount" class="onlineCount"></span>
-      </div>
+        <div class="room-desc">Live Stream 💸 — Chat. Own your vibe.
+          <span id="onlineCount" class="onlineCount"></span>
+        </div>
 
-      <div id="guestMsg"></div>
+        <div id="guestMsg"></div>
 
-     <!-- Google Sign-In Button -->
-<div id="authBox">
+    <div id="authBox">
   <a id="googleSignInBtn" class="google-btn" href="#">
-    <span class="google-icon">
-      G
-    </span>
-    <span class="btn-text">Sign in with Google</span>
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo" />
+    Sign in with Google
   </a>
 </div>
+        <div id="messages"></div>
 
-      <div id="messages"></div>
+        <div class="send-area" id="sendArea" style="display:none;">
+          <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" />
+          <button id="buzzBtn" class="buzz-btn" title="Send BUZZ 🚨">🚨</button>
+          <button id="sendBtn" class="send-btn">Send</button>
+        </div>
 
-      <div class="send-area" id="sendArea" style="display:none;">
-        <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" />
-        <button id="buzzBtn" class="buzz-btn" title="Send BUZZ 🚨">🚨</button>
-        <button id="sendBtn" class="send-btn">Send</button>
       </div>
 
-    </div>
-
-    <div class="profile" id="profileBox">
-      <div class="profile-card">
-        <div class="profile-top">
-          <div class="profile-left">
-            <div id="profileName" class="profile-name">GUEST 0000</div>
-            <div>
-              <span class="profile-label">STARS COLLECTED:</span>
-              <span class="profile-value"><span id="starCount">0</span>⭐️</span>
+      <div class="profile" id="profileBox">
+        <div class="profile-card">
+          <div class="profile-top">
+            <div class="profile-left">
+              <div id="profileName" class="profile-name">GUEST 0000</div>
+              <div>
+                <span class="profile-label">STARS COLLECTED:</span>
+                <span class="profile-value"><span id="starCount">0</span>⭐️</span>
+              </div>
+            </div>
+            <div class="profile-actions">
+              <a id="redeemBtn" class="small-btn" href="https://xixi.live" target="_blank">Redeem</a>
+              <button id="tipBtn" class="small-btn">💵</button>
             </div>
           </div>
-          <div class="profile-actions">
-            <a id="redeemBtn" class="small-btn" href="https://xixi.live" target="_blank">Redeem</a>
-            <button id="tipBtn" class="small-btn">💵</button>
+          <div>
+            <span class="profile-label">CASH EARNED:</span>
+            <span class="profile-value">₦<span id="cashCount">0</span></span>
           </div>
         </div>
-        <div>
-          <span class="profile-label">CASH EARNED:</span>
-          <span class="profile-value">₦<span id="cashCount">0</span></span>
-        </div>
       </div>
+
     </div>
-
   </div>
-</div>
 
-<div class="star-popup" id="starPopup">
-  <div id="starText">You've just earned +1 star! ⭐</div>
-</div>
-
+  <div class="star-popup" id="starPopup">
+    <div id="starText">You've just earned +1 star! ⭐</div>
+  </div>
 <script type="module">
-// Firebase imports
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-app.js";
-import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, onSnapshot, query, orderBy, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-firestore.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-auth.js";
+/* ====== Full page JS: Firebase + UI logic + Badge system ====== */
+/* ---------- Imports ---------- */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth,
+  setPersistence,
+  browserLocalPersistence,
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  collection,
+  addDoc,
+  serverTimestamp,
+  onSnapshot,
+  query,
+  orderBy,
+  increment,
+  arrayUnion
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getDatabase,
+  ref as rtdbRef,
+  set as rtdbSet,
+  onDisconnect,
+  onValue
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// ---------- Firebase config ----------
+/* ---------- Firebase config ---------- */
 const firebaseConfig = {
   apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
@@ -188,184 +271,367 @@ const firebaseConfig = {
   storageBucket: "metaverse-1010.firebasestorage.app",
   messagingSenderId: "1044064238233",
   appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
-  measurementId: "G-S77BMC266C"
+  measurementId: "G-S77BMC266C",
+  databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
 };
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
 
-// ---------- DOM references ----------
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(()=>{});
+const db = getFirestore(app);
+const rtdb = getDatabase(app);
+
+/* ---------- State & constants ---------- */
+let currentUser = null;
+let userDocUnsub = null;
+let messagesUnsub = null;
+let usersUnsub = null;
+const CHAT_COLLECTION = "messages_livestreaming";
+const BUZZ_COST = 10;
+const AUTO_STAR_ADD = 5;
+const DAILY_STAR_CAP = 500;
+
+/* ---------- Helpers ---------- */
+function generateGuestName(){ return "GUEST " + Math.floor(1000 + Math.random()*9000); }
+function formatNumberWithCommas(n){ return new Intl.NumberFormat('en-NG').format(n || 0); }
+function randomColor(){ const colors = ["#FFD700","#FF69B4","#87CEEB","#90EE90","#FFB6C1","#FFA07A","#8A2BE2","#00BFA6","#F4A460"]; return colors[Math.floor(Math.random()*colors.length)]; }
+function showStarPopup(text){ const popup = document.getElementById("starPopup"); document.getElementById("starText").innerText = text; popup.style.display = "block"; setTimeout(()=>{ popup.style.display = "none"; }, 1700); }
+
+/* ---------- HELLO rotation ---------- */
+const greetings = ["HELLO","HOLA","BONJOUR","CIAO","HALLO","こんにちは","你好","안녕하세요","SALUT","OLÁ","NAMASTE","MERHABA"];
+let helloIndex = 0;
+const helloEl = document.getElementById("helloText");
+function rotateHello(){
+  if(!helloEl || helloEl.style.display === "none") return;
+  helloEl.innerText = greetings[helloIndex++ % greetings.length];
+  helloEl.style.color = randomColor();
+}
+rotateHello();
+const helloInterval = setInterval(rotateHello, 1500);
+
+/* ---------- UI refs ---------- */
+const googleBtn = document.getElementById("googleSignInBtn");
+const authBox = document.getElementById("authBox");
 const messagesEl = document.getElementById("messages");
+const sendAreaEl = document.getElementById("sendArea");
 const messageInputEl = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
 const buzzBtn = document.getElementById("buzzBtn");
-const googleSignInBtn = document.getElementById("googleSignInBtn");
-const helloTextEl = document.getElementById("helloText");
-const sendArea = document.getElementById("sendArea");
-const profileBox = document.getElementById("profileBox");
+const profileBoxEl = document.getElementById("profileBox");
 const profileNameEl = document.getElementById("profileName");
 const starCountEl = document.getElementById("starCount");
 const cashCountEl = document.getElementById("cashCount");
-const starPopupEl = document.getElementById("starPopup");
-const starTextEl = document.getElementById("starText");
+const tipBtn = document.getElementById("tipBtn");
+const redeemBtn = document.getElementById("redeemBtn");
+const onlineCountEl = document.getElementById("onlineCount");
 
-// ---------- Config ----------
-const CHAT_COLLECTION = "messages_livestreaming";
-const BUZZ_COST = 1; // stars cost to BUZZ
-
-// ---------- Helpers ----------
-let currentUser = null;
-const userColors = {}; // color per UID
-
-function showStarPopup(txt){
-  starTextEl.textContent = txt;
-  starPopupEl.style.display = "block";
-  setTimeout(()=>{ starPopupEl.style.display="none"; },2000);
-}
-
-function formatCash(num){
-  return num.toLocaleString("en-NG"); // add commas
-}
-
-// ---------- HELLO animation ----------
-setTimeout(()=>{ helloTextEl.classList.add("animate"); }, 500);
-
-// ---------- Google Sign-In ----------
-googleSignInBtn.addEventListener("click", async (e)=>{
-  e.preventDefault();
-  const provider = new GoogleAuthProvider();
+/* ---------- Presence: Realtime DB ---------- */
+function setupPresence(user){
   try{
-    const result = await signInWithPopup(auth, provider);
-    currentUser = result.user;
-    profileNameEl.textContent = currentUser.displayName || "Guest";
-    sendArea.style.display = "flex";
-    profileBox.style.display = "flex";
-
-    // Initialize user doc if not exists
-    const userRef = doc(db,"users",currentUser.uid);
-    const snap = await getDoc(userRef);
-    if(!snap.exists()){
-      await setDoc(userRef,{ stars:0, cash:0, chatId: currentUser.displayName||"Guest", isAdmin:false });
-    }
-
-    listenMessages();
-    listenUserStats();
-  } catch(err){ console.error(err); showStarPopup("Sign-in failed"); }
+    const pRef = rtdbRef(rtdb, "presence/" + user.uid);
+    rtdbSet(pRef, true).catch(()=>{});
+    onDisconnect(pRef).remove().catch(()=>{});
+  }catch(e){ console.warn("presence error", e); }
+}
+onValue(rtdbRef(rtdb, "presence"), snap=>{
+  const val = snap.val() || {};
+  onlineCountEl.innerText = `(${Object.keys(val).length} online)`;
 });
 
-// ---------- Render messages ----------
-function renderMessagesFromArray(arr){
-  messagesEl.innerHTML="";
-  arr.forEach(item=>{
-    const m = item.data();
-    const wrapper = document.createElement("div");
-    wrapper.className="msg";
-    if(m.uid===currentUser?.uid) wrapper.classList.add("me");
-
-    const meta=document.createElement("span");
-    meta.className="meta";
-    meta.textContent=m.chatId||"Guest";
-    meta.style.color=(m.uid&&userColors[m.uid])?userColors[m.uid]:"#ffffff";
-
-    const content=document.createElement("span");
-    if(m.highlight || m.buzzColor){
-      content.className="buzz-content content";
-      content.style.background=m.buzzColor||"#FF1493";
-      content.style.color="#000";
-      content.textContent=" "+(m.content||"");
-      if(!m.glowEnded){
-        const glowColor=m.buzzColor||"#FF1493";
-        content.style.setProperty("--glow-color", glowColor);
-        content.style.animation=`buzzGlow 1.5s infinite`;
-        setTimeout(async ()=>{
-          content.style.animation="";
-          try{ await updateDoc(doc(db, CHAT_COLLECTION, item.id),{glowEnded:true}); }catch(e){console.warn(e);}
-        }, m.buzzDuration || 60000);
-      }
-    } else {
-      content.className="content";
-      content.textContent=" "+(m.content||"");
-      if(m.content?.startsWith("/")){
-        const cmd=m.content.slice(1).trim().toLowerCase();
-        if(cmd==="tip") content.innerHTML+=" 💵";
-        if(cmd==="redeem") content.innerHTML+=" 🎁";
-      }
-    }
-    wrapper.appendChild(meta);
-    wrapper.appendChild(content);
-    messagesEl.appendChild(wrapper);
+/* ---------- Keep user color map (uid -> color) ---------- */
+const userColors = {};
+async function setupUsersListener(){
+  if(usersUnsub) usersUnsub();
+  usersUnsub = onSnapshot(collection(db,"users"), (snap)=>{
+    snap.forEach(d => {
+      const data = d.data() || {};
+      userColors[d.id] = data.usernameColor || "#ffffff";
+    });
+    if(lastMessagesArray.length) renderMessagesFromArray(lastMessagesArray);
   });
-  messagesEl.scrollTop=messagesEl.scrollHeight;
 }
 
-// ---------- Send normal message ----------
-sendBtn.addEventListener("click", async ()=>{
+/* ---------- daily color helper ---------- */
+async function assignDailyUsernameColor(userRef, data){
+  const today = new Date().toISOString().split("T")[0];
+  try{
+    if(!data || !data.lastColorDate || data.lastColorDate !== today){
+      const newColor = randomColor();
+      await updateDoc(userRef, { usernameColor: newColor, lastColorDate: today });
+      userColors[userRef.id] = newColor;
+      return newColor;
+    }
+    userColors[userRef.id] = data.usernameColor || randomColor();
+    return data.usernameColor || randomColor();
+  }catch(e){
+    console.warn("assignDailyUsernameColor error", e);
+    return data?.usernameColor || randomColor();
+  }
+}
+
+/* ---------- Sign-in ---------- */
+googleBtn.addEventListener("click", async () => {
+  const provider = new GoogleAuthProvider();
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (err) {
+    console.error("Sign-in failed", err);
+    alert("Sign-in failed: " + (err.message || err));
+  }
+});
+
+/* ---------- Send + Buzz ---------- */
+buzzBtn.addEventListener("click", async () => {
+  if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
+  const userRef = doc(db, "users", currentUser.uid);
+  const snapshot = await getDoc(userRef);
+  const userData = snapshot.exists() ? snapshot.data() : {};
+  const currentStars = userData.stars || 0;
+  if(currentStars < BUZZ_COST){ showStarPopup("Not enough stars to create a BUZZ! 🚨"); return; }
+  const txt = messageInputEl.value.trim();
+  if(!txt){ showStarPopup("Type a message to BUZZ! 🚨"); return; }
+  try{
+    await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
+
+    const colors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"];
+    const glowColor = colors[Math.floor(Math.random()*colors.length)];
+    const animationDuration = (1 + Math.random()*1.5) + "s";
+
+    const docRef = await addDoc(collection(db, CHAT_COLLECTION), {
+      content: txt,
+      uid: currentUser.uid,
+      chatId: currentUser.chatId || generateGuestName(),
+      timestamp: serverTimestamp(),
+      highlight: true,
+      buzzColor: glowColor,
+      buzzDuration: 60000
+    });
+
+    showStarPopup("BUZZ 🚨 sent!");
+    messageInputEl.value = "";
+
+    setTimeout(() => {
+      const msgElements = Array.from(messagesEl.querySelectorAll(".buzz-content"));
+      const lastMsg = msgElements[msgElements.length-1];
+      if(lastMsg){
+        lastMsg.style.setProperty("--glow-color", glowColor);
+        lastMsg.style.animation = `buzzGlow ${animationDuration} infinite`;
+        setTimeout(() => { if(lastMsg) lastMsg.style.animation = ""; }, 60000);
+      }
+    }, 100);
+
+  }catch(e){ console.error("buzz failed", e); showStarPopup("BUZZ failed"); }
+});
+sendBtn.addEventListener("click", async () => {
   if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
   const txt = messageInputEl.value.trim();
   if(!txt){ showStarPopup("Type a message first"); return; }
 
   try{
-    await addDoc(collection(db, CHAT_COLLECTION),{
+    await addDoc(collection(db, CHAT_COLLECTION), {
       content: txt,
       uid: currentUser.uid,
-      chatId: currentUser.displayName||"Guest",
-      timestamp: serverTimestamp(),
-      highlight:false,
-      glowEnded:true
+      chatId: currentUser.chatId || generateGuestName(),
+      timestamp: serverTimestamp()
     });
-    messageInputEl.value="";
-  }catch(err){ console.error(err); showStarPopup("Failed to send message"); }
+    messageInputEl.value = "";
+  }catch(e){ console.error("Send message failed", e); showStarPopup("Send failed"); }
 });
+/* ---------- Tip & Redeem ---------- */
+tipBtn.addEventListener("click", () => { window.open("https://your-placeholder-payment-link.com","_blank"); showStarPopup("Thanks! Tip clicked 💵"); });
+redeemBtn.addEventListener("click", () => { window.open("https://xixi.live","_blank"); showStarPopup("Redeem clicked"); });
 
-// ---------- BUZZ ----------
-buzzBtn.addEventListener("click", async ()=>{
-  if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
-  const userRef = doc(db,"users",currentUser.uid);
-  const snap = await getDoc(userRef);
-  const userData = snap.exists()?snap.data():{};
-  const currentStars=userData.stars||0;
-
-  if(currentStars<BUZZ_COST){ showStarPopup("Not enough stars to BUZZ! 🚨"); return; }
-
-  const txt = messageInputEl.value.trim();
-  if(!txt){ showStarPopup("Type a message to BUZZ!"); return; }
-
+/* ---------- Auto-star ---------- */
+setInterval(async () => {
+  if(!currentUser) return;
   try{
-    await addDoc(collection(db, CHAT_COLLECTION),{
-      content: txt,
-      uid: currentUser.uid,
-      chatId: currentUser.displayName||"Guest",
-      timestamp: serverTimestamp(),
-      highlight:true,
-      buzzColor:"#FF1493",
-      buzzDuration:30000,
-      glowEnded:false
-    });
+    const userRef = doc(db, "users", currentUser.uid);
+    const snap = await getDoc(userRef);
+    const data = snap.exists() ? snap.data() : {};
+    const curr = data.stars || 0;
+    if(curr < DAILY_STAR_CAP){
+      const next = Math.min(curr + AUTO_STAR_ADD, DAILY_STAR_CAP);
+      await updateDoc(userRef, { stars: next });
+    }
+  }catch(e){ }
+}, 60000);
 
-    await updateDoc(userRef,{ stars: increment(-BUZZ_COST) });
-    messageInputEl.value="";
-  }catch(err){ console.error(err); showStarPopup("Failed to BUZZ"); }
+/* ---------- Message rendering + badges ---------- */
+let lastMessagesArray = [];
+function getBadgeSVG(type){
+  switch(type){
+    case "crown": return "👑";
+    case "star": return "⭐";
+    case "fire": return "🔥";
+    default: return "";
+  }
+}
+function renderMessagesFromArray(arr){
+  messagesEl.innerHTML = ""; // clear old messages
+
+  arr.forEach(item => {
+    const m = item.data;
+    const wrapper = document.createElement("div");
+    wrapper.className = "msg";
+
+    // username element
+    const meta = document.createElement("span");
+    meta.className = "meta";
+    const nameText = m.chatId || "Guest";
+    const nameColor = (m.uid && userColors[m.uid]) ? userColors[m.uid] : '#ffffff';
+    meta.textContent = nameText;
+    meta.style.color = nameColor;
+
+    // content element
+    const content = document.createElement("span");
+    
+    if(m.highlight || m.buzzColor){
+      content.className = "buzz-content content";
+      content.style.background = m.buzzColor || randomColor();
+      content.textContent = " " + (m.content || "");
+      content.style.color = "#000";
+
+      // random pulse/glow animation
+      const glowColor = m.buzzColor || randomColor();
+      const animationDuration = (1 + Math.random() * 1.5) + "s";
+      content.style.setProperty("--glow-color", glowColor);
+      content.style.animation = `buzzGlow ${animationDuration} infinite`;
+
+      // Remove glow after buzzDuration
+      setTimeout(() => {
+        if(content) content.style.animation = "";
+      }, m.buzzDuration || 60000);
+
+      wrapper.appendChild(meta);
+      wrapper.appendChild(content);
+
+    } else {
+      content.className = "content";
+      content.textContent = " " + (m.content || "");
+      wrapper.appendChild(meta);
+      wrapper.appendChild(content);
+    }
+
+    messagesEl.appendChild(wrapper);
+  });
+
+  // scroll to bottom
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+/* ---------- Users listener ---------- */
+await setupUsersListener();
+
+/* ---------- Badge system (admin award) ---------- */
+const badgeAdminBox = document.createElement("div");
+badgeAdminBox.id = "badgeAdminBox";
+badgeAdminBox.style.display = "none";
+badgeAdminBox.innerHTML = `
+  <select id="badgeSelect">
+    <option value="crown">👑 Crown</option>
+    <option value="star">⭐ Star</option>
+    <option value="fire">🔥 Fire</option>
+  </select>
+  <input type="text" id="badgeUserId" placeholder="Enter User ID" />
+  <button id="giveBadgeBtn">Give Badge</button>
+`;
+document.body.appendChild(badgeAdminBox);
+
+const badgeSelect = document.getElementById("badgeSelect");
+const badgeUserIdInput = document.getElementById("badgeUserId");
+const giveBadgeBtn = document.getElementById("giveBadgeBtn");
+
+giveBadgeBtn.addEventListener("click", async ()=>{
+  const userId = badgeUserIdInput.value.trim();
+  const badgeType = badgeSelect.value;
+  if(!userId || !badgeType){ alert("Enter user ID & select badge"); return; }
+  try{
+    const userRef = doc(db,"users",userId);
+    await updateDoc(userRef,{ badges: arrayUnion({type:badgeType,earnedAt:new Date().toISOString()}) });
+    showStarPopup(`Badge "${badgeType}" awarded to ${userId}!`);
+    badgeUserIdInput.value = "";
+  }catch(e){ console.error(e); alert("Error awarding badge"); }
 });
 
-// ---------- Listen messages ----------
-function listenMessages(){
-  const q = query(collection(db, CHAT_COLLECTION), orderBy("timestamp","asc"));
-  onSnapshot(q,(snap)=>{
-    renderMessagesFromArray(snap.docs);
-  });
-}
+/* ---------- Glow animation CSS ---------- */
+const styleEl = document.createElement("style");
+styleEl.innerHTML = `
+@keyframes badgeGlow {0%{text-shadow:0 0 2px #fff;}50%{text-shadow:0 0 8px #ff0,0 0 12px #ff0;}100%{text-shadow:0 0 2px #fff;}}
+.badge{display:inline-block;font-size:1.1em;}
+`;
+document.head.appendChild(styleEl);
 
-// ---------- Listen user stars/cash ----------
-function listenUserStats(){
-  const userRef = doc(db,"users",currentUser.uid);
-  onSnapshot(userRef,(snap)=>{
-    const data = snap.exists()?snap.data():{stars:0,cash:0};
-    starCountEl.textContent=formatCash(data.stars||0);
-    cashCountEl.textContent=formatCash(data.cash||0);
-  });
-}
+/* ---------- Auth watcher ---------- */
+onAuthStateChanged(auth, async (user) => {
+  if(user){
+    try{ setupPresence(user); }catch(e){ console.warn("presence err", e); }
 
+    const userRef = doc(db, "users", user.uid);
+    let snap = await getDoc(userRef);
+    if(!snap.exists()){
+      await setDoc(userRef,{
+        chatId:user.displayName||generateGuestName(),
+        stars:100,
+        cash:0,
+        usernameColor:randomColor(),
+        lastColorDate:new Date().toISOString().split("T")[0],
+        isAdmin:false,
+        lastStarReset:Date.now(),
+        badges:[]
+      });
+      snap = await getDoc(userRef);
+    }
+    let userData = snap.exists() ? snap.data() : {};
+
+    const today = new Date().toISOString().split("T")[0];
+    if(!userData.lastColorDate || userData.lastColorDate!==today){
+      const newColor=randomColor();
+      try{ await updateDoc(userRef,{usernameColor:newColor,lastColorDate:today}); userData.usernameColor=newColor;}catch(e){console.warn(e);}
+    }
+
+    currentUser = { uid:user.uid, chatId:userData.chatId||user.displayName||generateGuestName(), stars:userData.stars||0, cash:userData.cash||0, usernameColor:userData.usernameColor||randomColor(), isAdmin:userData.isAdmin||false };
+
+    if(helloEl) helloEl.style.display="none";
+    const greetingEl=document.getElementById("greeting"); if(greetingEl) greetingEl.style.display="none";
+    if(authBox) authBox.style.display="none";
+    sendAreaEl.style.display="flex";
+    profileBoxEl.style.display="block";
+
+    profileNameEl.innerText = currentUser.chatId;
+    profileNameEl.style.color = "#ffffff";
+    starCountEl.innerText = formatNumberWithCommas(currentUser.stars);
+    cashCountEl.innerText = formatNumberWithCommas(currentUser.cash);
+
+    if(currentUser.isAdmin) badgeAdminBox.style.display="block";
+
+    if(userDocUnsub) userDocUnsub();
+    userDocUnsub = onSnapshot(userRef,(uSnap)=>{
+      const d = uSnap.data() || {};
+      currentUser.stars=d.stars||0;
+      currentUser.cash=d.cash||0;
+      starCountEl.innerText=formatNumberWithCommas(currentUser.stars);
+      cashCountEl.innerText=formatNumberWithCommas(currentUser.cash);
+      if(d.usernameColor){ profileNameEl.style.color=d.usernameColor; userColors[userRef.id]=d.usernameColor; }
+    });
+
+    if(messagesUnsub) messagesUnsub();
+    const messagesQuery=query(collection(db,CHAT_COLLECTION),orderBy("timestamp","asc"));
+    messagesUnsub=onSnapshot(messagesQuery,(snap)=>{
+      lastMessagesArray=[];
+      snap.forEach(docSnap=>lastMessagesArray.push({id:docSnap.id,data:docSnap.data()}));
+      renderMessagesFromArray(lastMessagesArray);
+    });
+
+  } else {
+    currentUser=null;
+    if(helloEl) helloEl.style.display="";
+    const greetingEl=document.getElementById("greeting"); if(greetingEl) greetingEl.style.display="";
+    if(authBox) authBox.style.display="";
+    sendAreaEl.style.display="none";
+    profileBoxEl.style.display="none";
+    messagesEl.innerHTML="";
+    badgeAdminBox.style.display="none";
+    if(userDocUnsub){ userDocUnsub(); userDocUnsub=null; }
+    if(messagesUnsub){ messagesUnsub(); messagesUnsub=null; }
+  }
+});
 </script>
-
-</body>
-</html>
