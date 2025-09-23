@@ -485,8 +485,9 @@ onAuthStateChanged(auth, async (user) => {
     profileBoxEl.style.display = "block";
 
     // populate profile UI
-    profileNameEl.innerText = currentUser.chatId;
-    profileNameEl.style.color = currentUser.usernameColor;
+profileNameEl.innerText = currentUser.chatId;
+// profileNameEl.style.color = currentUser.usernameColor;  <-- remove this
+profileNameEl.style.color = "#ffffff"; // always white on profile card
     starCountEl.innerText = formatNumberWithCommas(currentUser.stars);
     cashCountEl.innerText = formatNumberWithCommas(currentUser.cash);
 
