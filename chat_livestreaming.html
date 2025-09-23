@@ -15,7 +15,7 @@
   --btn-backdrop: rgba(255,20,147,0.15);
 }
 
-/* overall layout */
+/* Layout */
 html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;color:#fff;background:var(--bg);}
 #appWrapper{width:100%;height:100%;display:flex;justify-content:center;}
 .app{display:flex;flex-direction:column;height:100%;gap:10px;padding:10px;box-sizing:border-box;width:100%;max-width:480px;}
@@ -25,21 +25,11 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 #helloText{font-size:20px;font-weight:800;text-align:center;margin:6px 0;color:#fff;transition:color .2s ease;z-index:1500;position:relative;}
 #center{flex:1;display:flex;flex-direction:column;gap:6px;}
 
-/* Sticky video frame */
-#videoContainer{
-  width:100%;
-  aspect-ratio:16/9;
-  background:#111;
-  border-radius:10px;
-  overflow:hidden;
-  box-shadow:0 6px 18px rgba(0,0,0,0.6);
-  position:sticky;
-  top:0;
-  z-index:100;
-}
+/* Video */
+#videoContainer{width:100%;aspect-ratio:16/9;background:#111;border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,0.6);position:sticky;top:0;z-index:100;}
 #videoContainer iframe{width:100%;height:100%;border:0;border-radius:10px;}
 
-#guestMsg{font-size:16px;font-weight:700;margin:4px 0;color:var(--accent);text-align:center;}
+/* Chat messages */
 #messages{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px;border-radius:8px;background:#000;margin-bottom:4px;}
 .msg{padding:8px 10px;border-radius:8px;background:var(--glass);max-width:100%;display:flex;gap:8px;align-items:center;}
 .msg.me{background:rgba(255,20,147,0.06);}
@@ -47,13 +37,10 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .msg .content{font-size:13px;color:#fff;white-space:pre-wrap;word-break:break-word;display:inline-block;}
 .buzz-content{font-weight:800;font-size:14px;color:#000;padding:6px 8px;border-radius:8px;display:inline-block;position: relative;transition: box-shadow 0.3s ease;}
 
-/* Buzz messages glow */
-@keyframes buzzGlow {
-  0% { box-shadow: 0 0 4px var(--glow-color, #FF1493), 0 0 8px var(--glow-color, #FF1493); }
-  50% { box-shadow: 0 0 12px var(--glow-color, #FF69B4), 0 0 24px var(--glow-color, #FF69B4); }
-  100% { box-shadow: 0 0 4px var(--glow-color, #FF1493), 0 0 8px var(--glow-color, #FF1493); }
-}
+/* Buzz glow animation */
+@keyframes buzzGlow {0% { box-shadow:0 0 4px var(--glow-color,#FF1493),0 0 8px var(--glow-color,#FF1493);}50% { box-shadow:0 0 12px var(--glow-color,#FF69B4),0 0 24px var(--glow-color,#FF69B4);}100% { box-shadow:0 0 4px var(--glow-color,#FF1493),0 0 8px var(--glow-color,#FF1493);}}
 
+/* Send area */
 .send-area{display:flex;align-items:center;gap:8px;background:var(--card);padding:10px;position:sticky;bottom:10px;z-index:20;border-top:1px solid rgba(255,255,255,0.04);border-radius:999px;}
 .send-area input{flex:1;padding:12px;border-radius:999px;border:1px solid rgba(255,255,255,0.06);background:#0e0e0e;color:#fff;font-size:14px;outline:none;}
 .send-area input::placeholder{color:var(--muted);}
@@ -63,47 +50,31 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .buzz-btn:hover{animation:buzzPulse 1.5s infinite;}
 @keyframes buzzPulse{0%{box-shadow:0 0 0 0 rgba(255,20,147,0.18)}70%{box-shadow:0 0 0 12px rgba(255,20,147,0)}100%{box-shadow:0 0 0 0 rgba(255,20,147,0)}}
 
-/* profile glass bar */
+/* Profile glass bar */
 .profile{display:none;flex-direction:column;gap:8px;margin-top:10px;}
 .profile-card{background:var(--glass);padding:6px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);display:flex;flex-direction:column;gap:4px;}
 .profile-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .profile-left{display:flex;flex-direction:column;gap:2px;}
 .profile-name{font-weight:800;font-size:13px;color:#fff;}
 .profile-label{color:var(--accent);font-weight:800;font-size:10px;}
-
-/* Stars/Cash counts — monospace */
-.profile-value{
-  color:#fff;
-  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
-  font-weight:400;
-  font-size:11px;
-}
-.profile-value .icon,
-.profile-value span + .icon,
-.profile-value span .icon { font-size:10px;margin-left:2px;vertical-align:middle; }
+.profile-value{color:#fff;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"Roboto Mono","Courier New",monospace;font-weight:400;font-size:11px;}
 .profile-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;}
 .small-btn{padding:6px 10px;border-radius:8px;background:var(--btn-backdrop);border:0;color:#fff;cursor:pointer;font-weight:700;font-size:12px;text-decoration:none;}
-#redeemBtn{text-decoration:none;}
 
-/* star popup */
+/* Star popup */
 .star-popup{position:fixed;left:50%;top:18%;transform:translateX(-50%);background:var(--card);padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);display:none;z-index:1000;color:var(--accent);font-size:13px;white-space:nowrap;text-align:center;}
 .onlineCount{font-size:11px;color:var(--muted);}
 
-/* Google Sign-In Button Styling */
-#authBox{display:flex;justify-content:center;margin:16px 0;position:relative;z-index:2000;}
-.google-btn{display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;font-weight:700;font-size:12px;padding:6px 14px;border-radius:20px;background:linear-gradient(135deg,#FF1493,#FF69B4);color:#fff;box-shadow:0 3px 10px rgba(255,20,147,0.35);white-space:nowrap;transition:transform 0.2s ease,box-shadow 0.2s ease;}
-.google-btn:hover{transform:translateY(-1px);box-shadow:0 6px 15px rgba(255,20,147,0.45);}
-.google-btn:active{transform:translateY(1px);box-shadow:0 2px 8px rgba(255,20,147,0.25);}
-.google-icon{display:flex;align-items:center;justify-content:center;width:14px;height:14px;font-size:10px;font-weight:bold;color:#fff;background:rgba(255,255,255,0.15);border-radius:50%;flex-shrink:0;}
-.btn-text{display:inline-block;}
+/* Google Sign-In (aged) */
+.old-google-btn{
+  display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 12px;border-radius:8px;background:linear-gradient(135deg,#FF1493,#FF69B4);color:#fff;font-weight:600;font-size:12px;border:none;cursor:pointer;opacity:0.85;transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.old-google-btn:hover{transform:translateY(-1px);opacity:1;}
+.old-google-btn img{width:16px;height:16px;vertical-align:middle;margin-right:6px;}
 
 /* HELLO Animation */
-@keyframes helloMove {
-  0% { transform: translateY(-10px); opacity: 0; }
-  50% { transform: translateY(0px); opacity: 1; }
-  100% { transform: translateY(10px); opacity: 0; }
-}
-#helloText.animate { display:block; animation:helloMove 1.5s ease-in-out infinite; }
+@keyframes helloMove {0%{transform:translateY(-10px);opacity:0;}50%{transform:translateY(0px);opacity:1;}100%{transform:translateY(10px);opacity:0;}}
+#helloText.animate{display:block;animation:helloMove 1.5s ease-in-out infinite;}
 </style>
 </head>
 <body>
@@ -111,7 +82,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   <div class="app">
     <div class="brand">乂丨乂丨</div>
     <div id="greeting">Welcome to the vibe ✨</div>
-
     <div id="center">
       <div id="videoContainer">
         <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
@@ -125,11 +95,12 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
       <div id="guestMsg"></div>
 
+      <!-- OLD Google Sign-In -->
       <div id="authBox">
-        <a id="googleSignInBtn" class="google-btn" href="#">
-          <span class="google-icon">G</span>
-          <span class="btn-text">Sign in with Google</span>
-        </a>
+        <button id="googleSignInBtn" class="old-google-btn">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="G">
+          Sign in with Google
+        </button>
       </div>
 
       <div id="messages"></div>
@@ -139,7 +110,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
         <button id="buzzBtn" class="buzz-btn" title="Send BUZZ 🚨">🚨</button>
         <button id="sendBtn" class="send-btn">Send</button>
       </div>
-
     </div>
 
     <div class="profile" id="profileBox">
@@ -163,7 +133,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
         </div>
       </div>
     </div>
-
   </div>
 </div>
 
@@ -176,7 +145,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc, updateDoc, increment, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-// ---------- Firebase config ----------
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
@@ -192,7 +161,7 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// ---------- Elements ----------
+// Elements
 const sendBtn = document.getElementById("sendBtn");
 const buzzBtn = document.getElementById("buzzBtn");
 const messageInputEl = document.getElementById("messageInput");
@@ -209,112 +178,103 @@ const BUZZ_COST = 30;
 
 let currentUser = null;
 
-// ---------- Utils ----------
+// Utils
 function formatCash(n){ return Number(n).toLocaleString("en-US"); }
-function randomColor(){ const colors=["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"]; return colors[Math.floor(Math.random()*colors.length)]; }
-function showStarPopup(text){ const popup=document.getElementById("starPopup"); if(!popup) return; document.getElementById("starText").textContent=text; popup.style.display="block"; setTimeout(()=>popup.style.display="none",1500); }
+function randomColor(){ const colors=["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A","#FFD700","#00CED1","#FF4500","#7FFF00","#FF1493","#ADFF2F","#00FA9A"]; return colors[Math.floor(Math.random()*colors.length)]; }
 
-// ---------- HELLO ----------
-const hellos=["HELLO","你好","こんにちは","안녕하세요","Bonjour","Hola","สวัสดี","مرحبا","Привет","שלום","हेलो","ສະບາຍດີ"];
-let helloInterval;
-function getDailyHello(){ return hellos[new Date().getDate()%hellos.length]; }
-function startHelloAnimation(){
+// HELLO multi-language animation
+const HELLOS = ["HELLO","BONJOUR","HOLA","CIAO","SALUT","HALLO","NAMASTE","SALAAM","NI HAO","KONNICHIWA","MERHABA","SHALOM"];
+function animateHello(){
+  helloEl.textContent = HELLOS[Math.floor(Math.random()*HELLOS.length)];
+  helloEl.style.color = randomColor();
   helloEl.classList.add("animate");
-  helloEl.style.display="block";
-  helloInterval=setInterval(()=>{
-    helloEl.textContent=getDailyHello();
-    helloEl.style.color=randomColor();
-  },1500);
+  setTimeout(()=>helloEl.classList.remove("animate"),1500);
 }
-function stopHelloAnimation(){ helloEl.style.display="none"; helloEl.classList.remove("animate"); clearInterval(helloInterval); }
-startHelloAnimation();
+setInterval(animateHello,3000);
 
-// ---------- Auth ----------
-onAuthStateChanged(auth, async user=>{
+// Sign in
+document.getElementById("googleSignInBtn").addEventListener("click", async e=>{
+  e.preventDefault();
+  try{
+    const result = await signInWithPopup(auth,provider);
+  }catch(err){console.error(err);}
+});
+
+// Auth state
+onAuthStateChanged(auth,user=>{
   if(user){
     currentUser=user;
-    stopHelloAnimation();
     authBox.style.display="none";
     sendArea.style.display="flex";
     profileBox.style.display="flex";
-    profileNameEl.textContent=user.displayName || "GUEST 0000";
-    const userDoc=doc(db,"users",user.uid);
-    const docSnap=await getDoc(userDoc);
-    if(!docSnap.exists()) await setDoc(userDoc,{stars:0,cash:0});
-    else { starCountEl.textContent=docSnap.data().stars||0; cashCountEl.textContent=formatCash(docSnap.data().cash||0); }
-    listenMessages();
-  } else {
+    profileNameEl.textContent = user.displayName || "GUEST";
+    starCountEl.textContent = 0;
+    cashCountEl.textContent = 0;
+  }else{
+    currentUser=null;
     authBox.style.display="flex";
     sendArea.style.display="none";
     profileBox.style.display="none";
   }
 });
 
-document.getElementById("googleSignInBtn").addEventListener("click", async e=>{
-  e.preventDefault();
-  await signInWithPopup(auth,provider);
+// Firestore messages listener
+const messagesQuery=query(collection(db,CHAT_COLLECTION),orderBy("timestamp","asc"));
+onSnapshot(messagesQuery,snapshot=>{
+  messagesEl.innerHTML="";
+  snapshot.forEach(doc=>{
+    const data=doc.data();
+    const msgDiv=document.createElement("div");
+    msgDiv.className="msg "+(data.uid===currentUser?.uid?"me":"");
+    msgDiv.innerHTML=`<span class="meta" style="color:${randomColor()}">${data.name||"GUEST"}:</span>
+                        <span class="content">${data.content}</span>`;
+    messagesEl.appendChild(msgDiv);
+    messagesEl.scrollTop=messagesEl.scrollHeight;
+  });
 });
 
-// ---------- Send message ----------
-async function sendMessage(type="text"){
+// Send message
+sendBtn.addEventListener("click",async()=>{
   if(!currentUser) return;
-  const text=messageInputEl.value.trim();
-  if(!text) return;
-  const userDoc=doc(db,"users",currentUser.uid);
-  const userSnap=await getDoc(userDoc);
-  const stars=userSnap.exists()?userSnap.data().stars:0;
-  const cash=userSnap.exists()?userSnap.data().cash:0;
-
-  const docRef=await addDoc(collection(db,CHAT_COLLECTION),{
-    uid: currentUser.uid,
-    name: currentUser.displayName||"Guest",
-    content: text,
-    type:type,
+  const msg = messageInputEl.value.trim();
+  if(msg==="") return;
+  await addDoc(collection(db,CHAT_COLLECTION),{
+    uid:currentUser.uid,
+    name:currentUser.displayName,
+    content:msg,
     timestamp:serverTimestamp()
   });
-
   messageInputEl.value="";
-  if(type==="buzz"){
-    showStarPopup(`🚨 BUZZ sent!`);
-    await updateDoc(userDoc,{stars:increment(1),cash:increment(-BUZZ_COST)});
-    starCountEl.textContent=stars+1;
-    cashCountEl.textContent=formatCash(cash-BUZZ_COST);
-  }
-}
-sendBtn.addEventListener("click",()=>sendMessage("text"));
-buzzBtn.addEventListener("click",()=>sendMessage("buzz"));
+});
 
-// ---------- Listen messages ----------
-function listenMessages(){
-  const q=query(collection(db,CHAT_COLLECTION),orderBy("timestamp","asc"));
-  onSnapshot(q,snapshot=>{
-    messagesEl.innerHTML="";
-    snapshot.forEach(docSnap=>{
-      const data=docSnap.data();
-      const msgDiv=document.createElement("div");
-      msgDiv.className="msg";
-      const nameSpan=document.createElement("span");
-      nameSpan.className="meta";
-      const usernameColor=randomColor();
-      nameSpan.style.color=usernameColor;
-      nameSpan.textContent=data.name+": ";
-      const contentSpan=document.createElement("span");
-      contentSpan.className="content";
-      contentSpan.textContent=data.content;
-      msgDiv.appendChild(nameSpan);
-      if(data.type==="buzz"){
-        const buzzSpan=document.createElement("span");
-        buzzSpan.className="buzz-content";
-        buzzSpan.textContent=data.content;
-        buzzSpan.style.setProperty("--glow-color","#FF1493");
-        msgDiv.appendChild(buzzSpan);
-        setTimeout(()=>{buzzSpan.style.boxShadow="none"},39000);
-      } else msgDiv.appendChild(contentSpan);
-      messagesEl.appendChild(msgDiv);
-      messagesEl.scrollTop=messagesEl.scrollHeight;
-    });
+// BUZZ feature
+buzzBtn.addEventListener("click",async()=>{
+  if(!currentUser) return;
+  const buzzText = messageInputEl.value.trim() || "BUZZ!";
+  await addDoc(collection(db,CHAT_COLLECTION),{
+    uid:currentUser.uid,
+    name:currentUser.displayName,
+    content: `<span class='buzz-content'>${buzzText}</span>`,
+    timestamp:serverTimestamp()
   });
+  messageInputEl.value="";
+});
+
+// Profile updates (stars/cash) placeholder
+function addStar(amount=1){
+  const current=parseInt(starCountEl.textContent)||0;
+  starCountEl.textContent=current+amount;
+  const popup=document.getElementById("starPopup");
+  popup.style.display="block";
+  popup.textContent=`You've earned +${amount} star${amount>1?'s':''} ⭐`;
+  setTimeout(()=>popup.style.display="none",1500);
 }
+
+function addCash(amount=100){
+  const current=parseInt(cashCountEl.textContent.replace(/,/g,''))||0;
+  cashCountEl.textContent=formatCash(current+amount);
+}
+
 </script>
 </body>
 </html>
