@@ -22,7 +22,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .brand{font-weight:700;font-size:24px;color:var(--accent);text-align:center;}
 .room-desc{font-size:11px;color:var(--muted);text-align:center;margin-bottom:6px;}
 #greeting{font-size:13px;text-align:center;font-weight:600;margin-bottom:6px;color:var(--accent);}
-#helloText{font-size:20px;font-weight:800;text-align:center;margin:6px 0;color:#fff;transition:color .2s ease;z-index:1500;position:relative;}
+#helloText{font-size:20px;font-weight:800;text-align:center;margin:6px 0;color:#fff;opacity:0;transition:opacity 1s ease-in-out;z-index:1500;position:relative;}
 #center{flex:1;display:flex;flex-direction:column;gap:6px;}
 
 /* Sticky video frame */
@@ -97,13 +97,14 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .google-icon{display:flex;align-items:center;justify-content:center;width:14px;height:14px;font-size:10px;font-weight:bold;color:#fff;background:rgba(255,255,255,0.15);border-radius:50%;flex-shrink:0;}
 .btn-text{display:inline-block;}
 
-/* HELLO Animation */
-@keyframes helloMove {
-  0% { transform: translateY(-10px); opacity: 0; }
-  50% { transform: translateY(0px); opacity: 1; }
-  100% { transform: translateY(10px); opacity: 0; }
+/* HELLO Animation (Apple fade style) */
+@keyframes appleFade {
+  0%{opacity:0;}
+  25%{opacity:1;}
+  75%{opacity:1;}
+  100%{opacity:0;}
 }
-#helloText.animate { display:block; animation:helloMove 1.5s ease-in-out infinite; }
+#helloText.animate { animation:appleFade 3s ease-in-out; }
 
 </style>
 </head>
@@ -179,6 +180,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 <div class="star-popup" id="starPopup">
   <div id="starText">You've just earned +1 star! ⭐</div>
 </div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
 import { 
@@ -219,26 +221,26 @@ const starText = document.getElementById("starText");
 const profileName = document.getElementById("profileName");
 const starCountEl = document.getElementById("starCount");
 const cashCountEl = document.getElementById("cashCount");
+const helloText = document.getElementById("helloText");
 
 // ----------------------
 // Globals
 // ----------------------
 let currentUser = null;
 const CHAT_COLLECTION = "messages_openroom";
-const BUZZ_COST = 1; // stars needed to BUZZ
-const userColors = {}; // optional: assign colors per user
+const USER_COLLECTION = "users";
+const BUZZ_COST = 1;
+const userColors = {}; // optional
 
 // ----------------------
-// HELLO animation
+// HELLO animation Apple fade
 // ----------------------
-const helloText = document.getElementById("helloText");
-function animateHello() {
+function showHelloAnimation(){
+  helloText.style.opacity=1;
   helloText.classList.add("animate");
-  setInterval(() => {
-    helloText.classList.toggle("animate");
-  }, 1500);
+  setTimeout(()=>helloText.style.opacity=0, 3000);
 }
-animateHello();
+showHelloAnimation();
 
 // ----------------------
 // Star popup
@@ -252,28 +254,25 @@ function showStarPopup(msg){
 // ----------------------
 // Google Sign-In
 // ----------------------
-googleSignInBtn.addEventListener("click", async (e) => {
-  e.preventDefault(); // prevent page reload
+googleSignInBtn.addEventListener("click", async (e)=>{
+  e.preventDefault();
   try {
     const result = await signInWithPopup(auth, provider);
     currentUser = result.user;
 
     sendArea.style.display = "flex";
     profileBox.style.display = "flex";
+    document.getElementById("authBox").style.display="none";
 
     showStarPopup(`Welcome, ${currentUser.displayName}!`);
 
-    // Create user doc if not exists
-    const userRef = doc(db, "users", currentUser.uid);
+    const userRef = doc(db, USER_COLLECTION, currentUser.uid);
     const snap = await getDoc(userRef);
     if(!snap.exists()){
-      await setDoc(userRef, { 
-        stars: 5, 
-        cash: 0, 
-        isAdmin: false, 
-        chatId: currentUser.displayName || "Guest" 
-      });
+      await setDoc(userRef, { stars:5, cash:0, isAdmin:false, chatId: currentUser.displayName || "Guest" });
     }
+
+    loadUserData();
 
   } catch(err){
     console.error("Google Sign-In Error:", err);
@@ -282,109 +281,100 @@ googleSignInBtn.addEventListener("click", async (e) => {
 });
 
 // ----------------------
-// Auth state listener
+// Load user data into profile
 // ----------------------
-onAuthStateChanged(auth, user => {
-  if(user){
-    currentUser = user;
-    sendArea.style.display = "flex";
-    profileBox.style.display = "flex";
-    console.log("User signed in:", user.displayName);
-  } else {
-    currentUser = null;
-    sendArea.style.display = "none";
-    profileBox.style.display = "none";
-    console.log("User signed out");
+async function loadUserData(){
+  if(!currentUser) return;
+  const userRef = doc(db, USER_COLLECTION, currentUser.uid);
+  const snap = await getDoc(userRef);
+  if(snap.exists()){
+    const data = snap.data();
+    profileName.textContent = currentUser.displayName || "Guest";
+    starCountEl.textContent = data.stars||0;
+    cashCountEl.textContent = data.cash||0;
   }
-});
-
-// ----------------------
-// Render messages
-// ----------------------
-function renderMessagesFromArray(arr){
-  messagesEl.innerHTML = "";
-  arr.forEach(item => {
-    const m = item.data();
-    const msgId = item.id;
-    const div = document.createElement("div");
-    div.classList.add("msg");
-    if(m.uid === currentUser?.uid) div.classList.add("me");
-
-    if(m.type === "buzz"){
-      const buzzEl = document.createElement("span");
-      buzzEl.classList.add("buzz-content");
-      buzzEl.textContent = "🚨 BUZZ!";
-      buzzEl.style.setProperty('--glow-color','#FF1493');
-      div.appendChild(buzzEl);
-
-      // auto remove glow
-      setTimeout(async()=>{
-        try{ await updateDoc(doc(db, CHAT_COLLECTION, msgId), { glowEnded:true }); } catch(e){}
-      }, 4500);
-    } else {
-      const meta = document.createElement("div");
-      meta.classList.add("meta");
-      meta.textContent = m.username || "Guest";
-      const content = document.createElement("div");
-      content.classList.add("content");
-      content.textContent = m.text;
-      div.appendChild(meta);
-      div.appendChild(content);
-    }
-
-    messagesEl.appendChild(div);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  });
 }
 
 // ----------------------
-// Listen for chat messages
+// Auth state listener
 // ----------------------
-const q = query(collection(db, CHAT_COLLECTION), orderBy("createdAt"));
-onSnapshot(q, snap => {
-  renderMessagesFromArray(snap.docs);
+onAuthStateChanged(auth, user=>{
+  if(user){
+    currentUser=user;
+    sendArea.style.display="flex";
+    profileBox.style.display="flex";
+    document.getElementById("authBox").style.display="none";
+    loadUserData();
+  }
 });
 
 // ----------------------
 // Send message
 // ----------------------
-sendBtn.addEventListener("click", async () => {
-  if(!currentUser) return showStarPopup("Sign in first!");
-  const text = messageInputEl.value.trim();
-  if(!text) return;
-  const userRef = doc(db, "users", currentUser.uid);
-  await addDoc(collection(db, CHAT_COLLECTION), {
+async function sendMessage(type="text"){
+  if(!currentUser) return;
+  let content = messageInputEl.value.trim();
+  if(type==="buzz") content="BUZZ!";
+  if(content==="") return;
+
+  await addDoc(collection(db, CHAT_COLLECTION),{
     uid: currentUser.uid,
-    username: currentUser.displayName || "Guest",
-    text,
-    type: "text",
+    displayName: currentUser.displayName||"Guest",
+    type:type,
+    content: content,
+    stars:type==="buzz"?BUZZ_COST:0,
     createdAt: serverTimestamp()
   });
-  messageInputEl.value = "";
+
+  if(type==="buzz"){
+    // deduct stars
+    const userRef = doc(db, USER_COLLECTION, currentUser.uid);
+    await updateDoc(userRef,{stars: increment(-BUZZ_COST)});
+    starCountEl.textContent = Math.max(0, parseInt(starCountEl.textContent)-BUZZ_COST);
+    showStarPopup(`-1 star for BUZZ!`);
+  }
+
+  messageInputEl.value="";
+}
+
+// ----------------------
+// Send button events
+// ----------------------
+sendBtn.addEventListener("click", ()=>sendMessage());
+buzzBtn.addEventListener("click", ()=>sendMessage("buzz"));
+messageInputEl.addEventListener("keypress", e=>{
+  if(e.key==="Enter") sendMessage();
 });
 
 // ----------------------
-// BUZZ button
+// Listen for chat changes
 // ----------------------
-buzzBtn.addEventListener("click", async () => {
-  if(!currentUser) return showStarPopup("Sign in first!");
-  const userRef = doc(db, "users", currentUser.uid);
-  const snap = await getDoc(userRef);
-  const stars = snap.data()?.stars || 0;
-  if(stars < BUZZ_COST) return showStarPopup("Not enough stars to BUZZ!");
-  // decrement stars
-  await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
-  showStarPopup("-1 star for BUZZ!");
+const chatQuery = query(collection(db, CHAT_COLLECTION), orderBy("createdAt"));
+onSnapshot(chatQuery, snap=>{
+  messagesEl.innerHTML="";
+  snap.forEach(docSnap=>{
+    const d = docSnap.data();
+    const msgDiv = document.createElement("div");
+    msgDiv.classList.add("msg");
+    if(currentUser && d.uid===currentUser.uid) msgDiv.classList.add("me");
 
-  // send BUZZ message
-  await addDoc(collection(db, CHAT_COLLECTION), {
-    uid: currentUser.uid,
-    username: currentUser.displayName || "Guest",
-    type: "buzz",
-    createdAt: serverTimestamp()
+    const metaSpan = document.createElement("span");
+    metaSpan.classList.add("meta");
+    metaSpan.textContent = d.displayName;
+
+    const contentSpan = document.createElement("span");
+    contentSpan.classList.add("content");
+    contentSpan.textContent = d.content;
+
+    if(d.type==="buzz") contentSpan.classList.add("buzz-content");
+
+    msgDiv.appendChild(metaSpan);
+    msgDiv.appendChild(contentSpan);
+
+    messagesEl.appendChild(msgDiv);
   });
+  messagesEl.scrollTop = messagesEl.scrollHeight;
 });
-
 </script>
 </body>
 </html>
