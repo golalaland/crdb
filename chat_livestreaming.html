@@ -395,7 +395,6 @@ buzzBtn.addEventListener("click", async () => {
 
     const colors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"];
     const glowColor = colors[Math.floor(Math.random()*colors.length)];
-    const animationDuration = (1 + Math.random()*1.5) + "s";
 
     const docRef = await addDoc(collection(db, CHAT_COLLECTION), {
       content: txt,
@@ -409,16 +408,6 @@ buzzBtn.addEventListener("click", async () => {
 
     showStarPopup("BUZZ 🚨 sent!");
     messageInputEl.value = "";
-
-    setTimeout(() => {
-      const msgElements = Array.from(messagesEl.querySelectorAll(".buzz-content"));
-      const lastMsg = msgElements[msgElements.length-1];
-      if(lastMsg){
-        lastMsg.style.setProperty("--glow-color", glowColor);
-        lastMsg.style.animation = `buzzGlow ${animationDuration} infinite`;
-        setTimeout(() => { if(lastMsg) lastMsg.style.animation = ""; }, 60000);
-      }
-    }, 100);
 
   }catch(e){ console.error("buzz failed", e); showStarPopup("BUZZ failed"); }
 });
@@ -437,6 +426,7 @@ sendBtn.addEventListener("click", async () => {
     messageInputEl.value = "";
   }catch(e){ console.error("Send message failed", e); showStarPopup("Send failed"); }
 });
+
 /* ---------- Tip & Redeem ---------- */
 tipBtn.addEventListener("click", () => { window.open("https://your-placeholder-payment-link.com","_blank"); showStarPopup("Thanks! Tip clicked 💵"); });
 redeemBtn.addEventListener("click", () => { window.open("https://xixi.live","_blank"); showStarPopup("Redeem clicked"); });
@@ -456,7 +446,7 @@ setInterval(async () => {
   }catch(e){ }
 }, 60000);
 
-/* ---------- Message rendering + badges ---------- */
+/* ---------- Message rendering + badges (with permanent glow) ---------- */
 let lastMessagesArray = [];
 function getBadgeSVG(type){
   switch(type){
@@ -474,7 +464,6 @@ function renderMessagesFromArray(arr){
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
-    // username element
     const meta = document.createElement("span");
     meta.className = "meta";
     const nameText = m.chatId || "Guest";
@@ -482,7 +471,6 @@ function renderMessagesFromArray(arr){
     meta.textContent = nameText;
     meta.style.color = nameColor;
 
-    // content element
     const content = document.createElement("span");
 
     if(m.highlight || m.buzzColor){
@@ -491,38 +479,33 @@ function renderMessagesFromArray(arr){
       content.textContent = " " + (m.content || "");
       content.style.color = "#000";
 
-      // Only animate if glow hasn't ended
       if(!m.glowEnded){
         const glowColor = m.buzzColor || randomColor();
         const animationDuration = (1 + Math.random() * 1.5) + "s";
         content.style.setProperty("--glow-color", glowColor);
         content.style.animation = `buzzGlow ${animationDuration} infinite`;
 
-        // Remove glow permanently after buzzDuration
         setTimeout(() => {
           content.style.animation = "";
-          m.glowEnded = true; // mark as ended
+          m.glowEnded = true;
         }, m.buzzDuration || 60000);
       }
 
       wrapper.appendChild(meta);
       wrapper.appendChild(content);
-
     } else {
       content.className = "content";
       content.textContent = " " + (m.content || "");
       wrapper.appendChild(meta);
       wrapper.appendChild(content);
     }
+
     messagesEl.appendChild(wrapper);
   });
 
-  // scroll to bottom
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
-  // scroll to bottom
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-}
+
 /* ---------- Users listener ---------- */
 await setupUsersListener();
 
@@ -621,22 +604,15 @@ onAuthStateChanged(auth, async (user) => {
     if(messagesUnsub) messagesUnsub();
     const messagesQuery=query(collection(db,CHAT_COLLECTION),orderBy("timestamp","asc"));
     messagesUnsub=onSnapshot(messagesQuery,(snap)=>{
-      lastMessagesArray=[];
-      snap.forEach(docSnap=>lastMessagesArray.push({id:docSnap.id,data:docSnap.data()}));
+      lastMessagesArray = snap.docs.map(d=>({id:d.id,data:d.data()}));
       renderMessagesFromArray(lastMessagesArray);
     });
 
   } else {
     currentUser=null;
-    if(helloEl) helloEl.style.display="";
-    const greetingEl=document.getElementById("greeting"); if(greetingEl) greetingEl.style.display="";
-    if(authBox) authBox.style.display="";
     sendAreaEl.style.display="none";
     profileBoxEl.style.display="none";
-    messagesEl.innerHTML="";
-    badgeAdminBox.style.display="none";
-    if(userDocUnsub){ userDocUnsub(); userDocUnsub=null; }
-    if(messagesUnsub){ messagesUnsub(); messagesUnsub=null; }
+    authBox.style.display="block";
   }
 });
 </script>
