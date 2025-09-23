@@ -178,6 +178,16 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   display: inline-block;
   white-space: nowrap;
 }
+@keyframes helloMove {
+  0% { transform: translateY(-10px); opacity: 0; }
+  50% { transform: translateY(0px); opacity: 1; }
+  100% { transform: translateY(10px); opacity: 0; }
+}
+
+#helloText.animate {
+  display: block;
+  animation: helloMove 1.5s ease-in-out infinite;
+}
 </style>
 
       <div id="messages"></div>
@@ -294,10 +304,18 @@ if(helloEl){
   const greetings = ["HELLO","HOLA","BONJOUR","CIAO","HALLO","こんにちは","你好","안녕하세요","SALUT","OLÁ","NAMASTE","MERHABA"];
   let helloIndex = 0;
 
+  // Add animation class
+  helloEl.classList.add("animate");
+
   function rotateHello(){
     if(helloEl.style.display === "none") return;
     helloEl.innerText = greetings[helloIndex++ % greetings.length];
     helloEl.style.color = randomColor();
+
+    // Restart animation to trigger movement/fade each change
+    helloEl.style.animation = 'none';
+    helloEl.offsetHeight; // trigger reflow
+    helloEl.style.animation = 'helloMove 1.5s ease-in-out infinite';
   }
 
   rotateHello();
