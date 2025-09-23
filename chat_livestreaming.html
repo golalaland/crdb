@@ -180,196 +180,57 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   <div id="starText">You've just earned +1 star! ⭐</div>
 </div>
 <script type="module">
-// === Firebase imports ===
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getDatabase, ref as rtdbRef, set as rtdbSet, onDisconnect, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
-/* Firebase config */
-const firebaseConfig = {
-  apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
-  authDomain: "metaverse-1010.firebaseapp.com",
-  projectId: "metaverse-1010",
-  storageBucket: "metaverse-1010.firebasestorage.app",
-  messagingSenderId: "1044064238233",
-  appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
-  measurementId: "G-S77BMC266C",
-  databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
-};
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-setPersistence(auth, browserLocalPersistence).catch(()=>{});
-const db = getFirestore(app);
-const rtdb = getDatabase(app);
-
-/* --- State --- */
-let currentUser = null;
-let userDocUnsub = null;
-let messagesUnsub = null;
-let usersUnsub = null;
-const CHAT_COLLECTION = "messages_livestreaming";
-const BUZZ_COST = 10;
-
-/* --- UI refs --- */
-const googleBtn = document.getElementById("googleSignInBtn");
-const authBox = document.getElementById("authBox");
-const messagesEl = document.getElementById("messages");
-const sendAreaEl = document.getElementById("sendArea");
-const messageInputEl = document.getElementById("messageInput");
-const sendBtn = document.getElementById("sendBtn");
-const buzzBtn = document.getElementById("buzzBtn");
-const profileBoxEl = document.getElementById("profileBox");
-const profileNameEl = document.getElementById("profileName");
-const starCountEl = document.getElementById("starCount");
-const cashCountEl = document.getElementById("cashCount");
-const onlineCountEl = document.getElementById("onlineCount");
-const helloEl = document.getElementById("helloText");
-
-/* HELLO animation rotation */
-if(helloEl){
-  const greetings = ["HELLO","HOLA","BONJOUR","CIAO","HALLO","こんにちは","你好","안녕하세요","SALUT","OLÁ","NAMASTE","MERHABA"];
-  let helloIndex = 0;
-  helloEl.classList.add("animate");
-  function rotateHello(){
-    helloEl.innerText = greetings[helloIndex++ % greetings.length];
-    helloEl.style.color = ["#FFD700","#FF69B4","#87CEEB","#90EE90","#FFB6C1","#FFA07A","#8A2BE2","#00BFA6","#F4A460"][Math.floor(Math.random()*9)];
-  }
-  rotateHello();
-  setInterval(rotateHello,1500);
-}
-
-/* --- Presence --- */
-function setupPresence(user){
-  try{
-    const pRef = rtdbRef(rtdb,"presence/"+user.uid);
-    rtdbSet(pRef,true).catch(()=>{});
-    onDisconnect(pRef).remove().catch(()=>{});
-  }catch(e){ console.warn("presence error",e); }
-}
-onValue(rtdbRef(rtdb,"presence"),snap=>{
-  onlineCountEl.innerText=`(${Object.keys(snap.val()||{}).length} online)`;
-});
-
-/* --- User colors --- */
-const userColors = {};
-async function setupUsersListener(){
-  if(usersUnsub) usersUnsub();
-  usersUnsub = onSnapshot(collection(db,"users"),snap=>{
-    snap.forEach(d=>{userColors[d.id]=d.data().usernameColor||"#fff";});
-    if(lastMessagesArray.length) renderMessagesFromArray(lastMessagesArray);
-  });
-}
-await setupUsersListener();
-
-/* --- Google Sign-in --- */
-googleBtn?.addEventListener("click", async e=>{
-  e.preventDefault();
-  const provider = new GoogleAuthProvider();
-  try{ await signInWithPopup(auth,provider); }
-  catch(err){ console.error(err); alert("Sign-in failed: "+(err.message||err)); }
-});
-
-/* --- Auth watcher --- */
-onAuthStateChanged(auth, async user=>{
-  if(user){
-    setupPresence(user);
-    const userRef = doc(db,"users",user.uid);
-    let snap = await getDoc(userRef);
-    if(!snap.exists()){
-      await setDoc(userRef,{
-        chatId:"GUEST "+Math.floor(1000+Math.random()*9000),
-        stars:100,
-        cash:0,
-        usernameColor:["#FFD700","#FF69B4","#87CEEB","#90EE90","#FFB6C1","#FFA07A","#8A2BE2","#00BFA6","#F4A460"][Math.floor(Math.random()*9)],
-        lastStarReset:Date.now(),
-        badges:[]
-      });
-      snap = await getDoc(userRef);
-    }
-    const userData = snap.data();
-    currentUser={ uid:user.uid, chatId:userData.chatId, stars:userData.stars, cash:userData.cash, usernameColor:userData.usernameColor };
-    helloEl.style.display="none";
-    authBox.style.display="none";
-    sendAreaEl.style.display="flex";
-    profileBoxEl.style.display="block";
-    profileNameEl.innerText=currentUser.chatId;
-    profileNameEl.style.color=currentUser.usernameColor;
-    starCountEl.innerText=currentUser.stars;
-    cashCountEl.innerText=currentUser.cash;
-
-    /* Listen to user updates */
-    if(userDocUnsub) userDocUnsub();
-    userDocUnsub=onSnapshot(userRef,uSnap=>{
-      const d=uSnap.data()||{};
-      currentUser.stars=d.stars||0; currentUser.cash=d.cash||0;
-      starCountEl.innerText=currentUser.stars; cashCountEl.innerText=currentUser.cash;
-      if(d.usernameColor){ profileNameEl.style.color=d.usernameColor; userColors[userRef.id]=d.usernameColor; }
-    });
-
-    /* Listen to chat messages */
-    if(messagesUnsub) messagesUnsub();
-    const messagesQuery=query(collection(db,CHAT_COLLECTION),orderBy("timestamp","asc"));
-    messagesUnsub=onSnapshot(messagesQuery,snap=>{
-      lastMessagesArray=snap.docs.map(d=>({id:d.id,data:d.data()}));
-      renderMessagesFromArray(lastMessagesArray);
-    });
-
-  } else {
-    currentUser=null;
-    sendAreaEl.style.display="none";
-    profileBoxEl.style.display="none";
-    authBox.style.display="block";
-    helloEl.style.display="block";
-  }
-});
-
-/* --- Random color helper --- */
-function randomColor(){
-  const colors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A","#FFD700","#87CEEB"];
-  return colors[Math.floor(Math.random()*colors.length)];
-}
-
-/* --- Show popup --- */
-function showStarPopup(txt){
-  const popup=document.getElementById("starPopup");
-  const starText=document.getElementById("starText");
-  starText.innerText=txt;
-  popup.style.display="block";
-  setTimeout(()=>{popup.style.display="none";},2000);
-}
-
-/* --- Message renderer --- */
-let lastMessagesArray = [];
+/* ---------- Message rendering + send/buzz listeners ---------- */
 function renderMessagesFromArray(arr){
   messagesEl.innerHTML = "";
-  arr.forEach(item=>{
+  arr.forEach(item => {
     const m = item.data;
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
     if(m.uid === currentUser?.uid) wrapper.classList.add("me");
 
+    // Meta
     const meta = document.createElement("span");
-    meta.className="meta";
-    meta.textContent = m.chatId||"Guest";
-    meta.style.color=(m.uid && userColors[m.uid])?userColors[m.uid]:"#fff";
+    meta.className = "meta";
+    meta.textContent = m.chatId || "Guest";
+    meta.style.color = (m.uid && userColors[m.uid]) ? userColors[m.uid] : "#ffffff";
 
-    const content=document.createElement("span");
-    if(m.highlight){
-      content.className="buzz-content content";
+    // Content
+    const content = document.createElement("span");
+    if(m.highlight || m.buzzColor){
+      content.className = "buzz-content content";
       content.style.background = m.buzzColor || randomColor();
-      content.style.color="#000";
-      const duration = (1+Math.random()*1.5)+"s";
-      content.style.setProperty("--glow-color", m.buzzColor || randomColor());
-      content.style.animation=`buzzGlow ${duration} infinite`;
+      content.style.color = "#000";
+      content.textContent = " " + (m.content || "");
+
+      // Glow animation
       if(!m.glowEnded){
-        setTimeout(()=>{
-          content.style.animation="";
-        }, m.buzzDuration||60000);
+        const glowColor = m.buzzColor || randomColor();
+        const duration = (1 + Math.random()*1.5) + "s";
+        content.style.setProperty("--glow-color", glowColor);
+        content.style.animation = `buzzGlow ${duration} infinite`;
+
+        // Stop glow after duration
+        setTimeout(async () => {
+          content.style.animation = "";
+          m.glowEnded = true;
+          try {
+            const msgRef = doc(db, CHAT_COLLECTION, item.id);
+            await updateDoc(msgRef, { glowEnded: true });
+          } catch(e){ console.warn("Error ending glow", e); }
+        }, m.buzzDuration || 60000);
       }
+
     } else {
-      content.className="content";
-      content.textContent = " "+(m.content||"");
+      content.className = "content";
+      content.textContent = " " + (m.content || "");
+
+      // Parse commands
+      if(m.content?.startsWith("/")){
+        const cmd = m.content.slice(1).trim().toLowerCase();
+        if(cmd === "tip") content.innerHTML += " 💵";
+        if(cmd === "redeem") content.innerHTML += " 🎁";
+      }
     }
 
     wrapper.appendChild(meta);
@@ -379,13 +240,14 @@ function renderMessagesFromArray(arr){
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-/* --- Send normal message --- */
-sendBtn.addEventListener("click", async ()=>{
+/* ---------- Send normal message ---------- */
+sendBtn.addEventListener("click", async () => {
   if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
-  const txt=messageInputEl.value.trim();
+  const txt = messageInputEl.value.trim();
   if(!txt){ showStarPopup("Type a message first"); return; }
-  try{
-    await addDoc(collection(db,CHAT_COLLECTION),{
+
+  try {
+    await addDoc(collection(db, CHAT_COLLECTION), {
       content: txt,
       uid: currentUser.uid,
       chatId: currentUser.chatId,
@@ -393,44 +255,52 @@ sendBtn.addEventListener("click", async ()=>{
       highlight: false,
       glowEnded: true
     });
-    messageInputEl.value="";
-  }catch(e){ console.error(e); showStarPopup("Failed to send"); }
+    messageInputEl.value = "";
+  } catch(err){
+    console.error("Send message error", err);
+  }
 });
 
-/* --- Send Buzz message --- */
-buzzBtn.addEventListener("click", async ()=>{
+/* ---------- BUZZ button ---------- */
+buzzBtn.addEventListener("click", async () => {
   if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
-  if(currentUser.stars<BUZZ_COST){ showStarPopup("Not enough stars!"); return; }
-  const buzzColor=randomColor();
-  try{
-    const userRef=doc(db,"users",currentUser.uid);
-    await updateDoc(userRef,{ stars: increment(-BUZZ_COST) });
-    await addDoc(collection(db,CHAT_COLLECTION),{
-      content: "BUZZ!",
+  const userRef = doc(db, "users", currentUser.uid);
+  const snap = await getDoc(userRef);
+  const userData = snap.exists() ? snap.data() : {};
+  const currentStars = userData.stars || 0;
+
+  if(currentStars < BUZZ_COST){ showStarPopup("Not enough stars to create a BUZZ! 🚨"); return; }
+
+  const txt = messageInputEl.value.trim();
+  if(!txt){ showStarPopup("Type a message to BUZZ! 🚨"); return; }
+
+  try {
+    await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
+
+    const colors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"];
+    const glowColor = colors[Math.floor(Math.random()*colors.length)];
+
+    await addDoc(collection(db, CHAT_COLLECTION), {
+      content: txt,
       uid: currentUser.uid,
       chatId: currentUser.chatId,
       timestamp: serverTimestamp(),
       highlight: true,
-      buzzColor,
-      buzzDuration:60000,
-      glowEnded:false
+      buzzColor: glowColor,
+      buzzDuration: 60000,
+      glowEnded: false
     });
-  }catch(e){ console.error(e); showStarPopup("BUZZ failed"); }
-});
 
-/* --- Enter key --- */
-messageInputEl.addEventListener("keydown", e=>{
-  if(e.key==="Enter"){ sendBtn.click(); e.preventDefault(); }
-});
+    showStarPopup("BUZZ 🚨 sent!");
+    messageInputEl.value = "";
 
-/* --- CSS for buzz glow --- */
-const styleEl=document.createElement("style");
-styleEl.textContent=`
-  @keyframes buzzGlow{
-    0%,100%{ box-shadow: 0 0 10px var(--glow-color), 0 0 20px var(--glow-color); }
-    50%{ box-shadow: 0 0 20px var(--glow-color),0 0 40px var(--glow-color); }
+  } catch(err){
+    console.error("Buzz send error", err);
+    showStarPopup("Failed to send BUZZ 🚨");
   }
-`;
-document.head.appendChild(styleEl);
+});
 
-</script>
+/* ---------- Enter key support ---------- */
+messageInputEl.addEventListener("keypress", (e) => {
+  if(e.key === "Enter") sendBtn.click();
+});
