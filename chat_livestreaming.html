@@ -248,18 +248,51 @@ sendBtn.addEventListener("click",async()=>{
 });
 
 // BUZZ feature
-buzzBtn.addEventListener("click",async()=>{
-  if(!currentUser) return;
-  const buzzText = messageInputEl.value.trim() || "BUZZ!";
-  await addDoc(collection(db,CHAT_COLLECTION),{
-    uid:currentUser.uid,
-    name:currentUser.displayName,
-    content: `<span class='buzz-content'>${buzzText}</span>`,
-    timestamp:serverTimestamp()
+// Firestore messages listener with BUZZ highlight fix
+onSnapshot(messagesQuery, snapshot => {
+  messagesEl.innerHTML = "";
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    const msgDiv = document.createElement("div");
+    msgDiv.className = "msg " + (data.uid === currentUser?.uid ? "me" : "");
+
+    let contentHTML = data.content;
+    // Detect if message is BUZZ and wrap if not already
+    if(data.isBuzz){
+      contentHTML = `<span class='buzz-content'>${data.content}</span>`;
+    }
+
+    msgDiv.innerHTML = `
+      <span class="meta" style="color:${randomColor()}">${data.name||"GUEST"}:</span>
+      <span class="content">${contentHTML}</span>
+    `;
+
+    messagesEl.appendChild(msgDiv);
+
+    // Animate BUZZ glow if present
+    const buzzSpan = msgDiv.querySelector(".buzz-content");
+    if(buzzSpan){
+      buzzSpan.style.setProperty("--glow-color","#FF1493");
+      buzzSpan.style.animation = "buzzGlow 1.2s infinite alternate";
+    }
+
+    messagesEl.scrollTop = messagesEl.scrollHeight; // auto-scroll
   });
-  messageInputEl.value="";
 });
 
+// BUZZ feature fix
+buzzBtn.addEventListener("click", async () => {
+  if (!currentUser) return;
+  const buzzText = messageInputEl.value.trim() || "BUZZ!";
+  await addDoc(collection(db, CHAT_COLLECTION), {
+    uid: currentUser.uid,
+    name: currentUser.displayName || "GUEST",
+    content: buzzText,
+    isBuzz: true, // <-- important flag
+    timestamp: serverTimestamp()
+  });
+  messageInputEl.value = "";
+});
 // Profile updates (stars/cash) placeholder
 function addStar(amount=1){
   const current=parseInt(starCountEl.textContent)||0;
