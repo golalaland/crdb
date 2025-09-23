@@ -6,25 +6,20 @@
 <title>Xixi — Live Stream 💸</title>
 <link rel="icon" href="data:," />
 <style>
-:root{
-  --bg:#000;
-  --card:#111;
-  --muted:#aaa;
-  --accent:#FF1493; 
-  --glass: rgba(255,255,255,0.03);
-}
+:root{--bg:#000;--card:#111;--muted:#aaa;--accent:#FF1493;--glass:rgba(255,255,255,0.03);}
 html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;color:#fff;background:var(--bg);}
 #appWrapper{width:100%;height:100%;display:flex;justify-content:center;}
 .app{display:flex;flex-direction:column;height:100%;gap:10px;padding:10px;box-sizing:border-box;width:100%;max-width:480px;}
 .brand{font-weight:700;font-size:24px;color:var(--accent);text-align:center;}
 .room-desc{font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px;}
-#greeting{font-size:13px;text-align:center;font-weight:600;margin-bottom:6px;color:var(--accent);}
+#greeting{font-size:14px;text-align:center;font-weight:700;margin-bottom:6px;color:var(--accent);}
+#helloText{font-size:20px;font-weight:800;text-align:center;margin:6px 0;color:#fff;}
 #authBox{margin-bottom:10px;text-align:center;}
 #authBox button.btn{background:var(--accent);color:#000;border:0;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px;}
 #center{flex:1;display:flex;flex-direction:column;gap:4px;}
 #videoContainer{width:100%;aspect-ratio:16/9;background:#111;border-radius:10px;overflow:hidden;}
 #videoContainer iframe{width:100%;height:100%;border:0;border-radius:10px;}
-#guestMsg{font-size:20px;font-weight:700;margin:4px 0;color:var(--accent);text-align:center;font-family:'Segoe UI',sans-serif;}
+#guestMsg{font-size:20px;font-weight:700;margin:4px 0;color:var(--accent);text-align:center;}
 #messages{flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:4px;border-radius:8px;background:#000;margin-bottom:4px;}
 .msg{padding:5px 6px;border-radius:8px;background:var(--glass);max-width:85%;display:flex;gap:4px;align-items:center;opacity:0;animation:fadeInUp 0.25s forwards;}
 .msg.me{background:rgba(255,20,147,0.1);}
@@ -54,6 +49,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 <div class="app">
   <div class="brand">乂丨乂丨</div>
   <div id="greeting">Welcome to the vibe ✨</div>
+  <div id="helloText">HELLO</div> <!-- multilingual hello -->
   <div class="room-desc">Live Stream 💸 — Chat. Own your vibe.
     <span id="onlineCount" style="color:var(--accent);font-weight:600;"></span>
   </div>
@@ -102,7 +98,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-
 const firebaseConfig = {
   apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
@@ -111,6 +106,7 @@ const firebaseConfig = {
   messagingSenderId: "1044064238233",
   appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
   measurementId: "G-S77BMC266C"
+};
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -118,29 +114,39 @@ const db = getFirestore(app);
 
 let currentUser = null;
 
+// multilingual HELLO
+const hellos = ["HELLO","HOLA","BONJOUR","CIAO","HALLO","OLÁ","NAMASTE","SALAM","KONNICHIWA","NǏ HǍO","MERHABA"];
+let idx = 0;
+setInterval(()=>{
+  document.getElementById("helloText").innerText = hellos[idx];
+  idx = (idx+1)%hellos.length;
+},1500);
+
 function randomColor(){
-  const colors = ["#FFD700","#FF69B4","#87CEEB","#90EE90","#FFB6C1","#FFA07A"];
+  const colors=["#FFD700","#FF69B4","#87CEEB","#90EE90","#FFB6C1","#FFA07A"];
   return colors[Math.floor(Math.random()*colors.length)];
 }
 
 function showStarPopup(text){
-  const popup = document.getElementById("starPopup");
+  const popup=document.getElementById("starPopup");
   document.getElementById("starText").innerText=text;
   popup.style.display="block";
   setTimeout(()=>{popup.style.display="none";},2000);
 }
 
-document.getElementById("googleSignInBtn").addEventListener("click", async () => {
-  const provider = new GoogleAuthProvider();
-  await signInWithPopup(auth, provider);
+document.getElementById("googleSignInBtn").addEventListener("click", async ()=>{
+  const provider=new GoogleAuthProvider();
+  try {
+    await signInWithPopup(auth,provider);
+  } catch(e){alert("Sign-in error: "+e.message);}
 });
 
-onAuthStateChanged(auth, async user => {
+onAuthStateChanged(auth, async user=>{
   if(user){
-    const userRef = doc(db,"users",user.uid);
-    const snap = await getDoc(userRef);
+    const userRef=doc(db,"users",user.uid);
+    const snap=await getDoc(userRef);
     if(!snap.exists()) await setDoc(userRef,{chatId:user.displayName||"Guest",stars:100,cash:0});
-    currentUser = {uid:user.uid,...(await getDoc(userRef)).data()};
+    currentUser={uid:user.uid,...(await getDoc(userRef)).data()};
 
     document.getElementById("authBox").style.display="none";
     document.getElementById("sendArea").style.display="flex";
@@ -149,9 +155,8 @@ onAuthStateChanged(auth, async user => {
     document.getElementById("starCount").innerText=currentUser.stars;
     document.getElementById("cashCount").innerText=`₦${currentUser.cash}`;
 
-    // Hardcoded collection for livestream
-    const messagesDiv = document.getElementById("messages");
-    const messagesQuery = query(collection(db,"messages_livestreaming"),orderBy("timestamp","asc"));
+    const messagesDiv=document.getElementById("messages");
+    const messagesQuery=query(collection(db,"messages_livestreaming"),orderBy("timestamp","asc"));
     onSnapshot(messagesQuery,snap=>{
       messagesDiv.innerHTML="";
       snap.forEach(doc=>{
@@ -161,10 +166,8 @@ onAuthStateChanged(auth, async user => {
         if(m.highlight){
           div.classList.add("highlight");
           div.style.background=randomColor();
-          div.innerHTML=`<span class="meta">${m.chatId}:</span> <span class="content">${m.content}</span>`;
-        } else {
-          div.innerHTML=`<span class="meta">${m.chatId}:</span> <span class="content">${m.content}</span>`;
         }
+        div.innerHTML=`<span class="meta">${m.chatId}:</span> <span class="content">${m.content}</span>`;
         messagesDiv.appendChild(div);
       });
       messagesDiv.scrollTop=messagesDiv.scrollHeight;
@@ -178,9 +181,9 @@ onAuthStateChanged(auth, async user => {
     });
 
     document.getElementById("buzzBtn").addEventListener("click", async ()=>{
-      if(currentUser.stars<10) return showStarPopup("Not enough stars to create a BUZZ! 🚨");
+      if(currentUser.stars<10) return showStarPopup("Not enough stars 🚨");
       const val=document.getElementById("messageInput").value.trim();
-      if(!val) return showStarPopup("Type a message to BUZZ! 🚨");
+      if(!val) return showStarPopup("Type a message first 🚨");
       await updateDoc(doc(db,"users",currentUser.uid),{stars:currentUser.stars-10});
       await addDoc(collection(db,"messages_livestreaming"),{content:val,uid:currentUser.uid,chatId:currentUser.chatId,timestamp:serverTimestamp(),highlight:true});
       showStarPopup("BUZZ 🚨 sent!");
