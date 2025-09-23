@@ -131,8 +131,8 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   width: 100%;
 }
 
-.google-btn {
-  display: flex;
+..google-btn {
+  display: inline-flex;          /* prevents full-width stretching */
   align-items: center;
   justify-content: center;
   gap: 10px;
@@ -144,15 +144,16 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   background: linear-gradient(135deg, #FF1493, #FF69B4);
   color: #fff;
   box-shadow: 0 6px 18px rgba(255,20,147,0.35);
+  width: auto;                   /* let width be text+logo only */
+  min-width: 220px;
+  max-width: 300px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  width: auto;        /* remove the 90% stretching */
-  min-width: 220px;   /* keep a reasonable clickable size */
-  max-width: 300px;   /* caps the width */
 }
 /* Google logo styling */
 .google-btn img {
   width: 20px;
   height: 20px;
+  flex-shrink: 0;   /* prevents shrinking/expansion */
 }
 /* Hover effect */
 .google-btn:hover {
