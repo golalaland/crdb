@@ -123,24 +123,61 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 }
   /* Google Sign-In Button Styling */
   /* Center the auth box */
-<<a id="googleSignInBtn" class="google-btn" href="#">
-  Sign in with Google
-</a>
+<div id="authBox">
+  <a id="googleSignInBtn" class="google-btn" href="#">
+    <span class="google-icon">G</span>
+    Sign in with Google
+  </a>
+</div>
 
 <style>
+#authBox {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
 .google-btn {
-  display: inline-block;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;             /* space between icon and text */
+  text-decoration: none;
   font-weight: 700;
-  font-size: 16px;
-  padding: 12px 24px;
-  border-radius: 30px;
+  font-size: 14px;
+  padding: 10px 20px;
+  border-radius: 28px;
   background: linear-gradient(135deg, #FF1493, #FF69B4);
   color: #fff;
-  box-shadow: 0 6px 18px rgba(255,20,147,0.35);
+  box-shadow: 0 5px 15px rgba(255,20,147,0.35);
   width: fit-content;
   white-space: nowrap;
-  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Hover & active effects */
+.google-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(255,20,147,0.45);
+}
+.google-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 4px 12px rgba(255,20,147,0.25);
+}
+
+/* Small Google "G" icon */
+.google-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff;
+  background: rgba(255,255,255,0.15);
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 </style>
 </head>
