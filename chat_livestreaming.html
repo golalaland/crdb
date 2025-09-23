@@ -178,11 +178,10 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 <div class="star-popup" id="starPopup">
   <div id="starText">You've just earned +1 star! ⭐</div>
 </div>
-
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-app.js";
-import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc, updateDoc, increment, setDoc } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-firestore.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, setPersistence, browserLocalPersistence, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc, updateDoc, increment, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // ---------- Firebase config ----------
 const firebaseConfig = {
@@ -200,11 +199,6 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// ---------- Set persistence ----------
-setPersistence(auth, browserLocalPersistence)
-  .then(() => console.log("Persistence set"))
-  .catch(err => console.error("Persistence error:", err));
-
 // ---------- Elements ----------
 const sendBtn = document.getElementById("sendBtn");
 const buzzBtn = document.getElementById("buzzBtn");
@@ -217,115 +211,142 @@ const starCountEl = document.getElementById("starCount");
 const cashCountEl = document.getElementById("cashCount");
 const sendArea = document.getElementById("sendArea");
 const authBox = document.getElementById("authBox");
-
-// ---------- Variables ----------
-let currentUser = null;
 const CHAT_COLLECTION = "messages_livestreaming";
 const BUZZ_COST = 5;
-const userColors = {};
 
-// ---------- Utilities ----------
+let currentUser = null;
+
+// ---------- Utils ----------
 function formatCash(n){ return Number(n).toLocaleString("en-US"); }
-function randomColor(){ const colors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"]; return colors[Math.floor(Math.random()*colors.length)]; }
-function showStarPopup(text){ const popup = document.getElementById("starPopup"); if(!popup) return; document.getElementById("starText").textContent = text; popup.style.display = "block"; setTimeout(()=>popup.style.display="none",1500); }
+function randomColor(){ const colors=["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"]; return colors[Math.floor(Math.random()*colors.length)]; }
+function showStarPopup(text){ const popup=document.getElementById("starPopup"); if(!popup) return; document.getElementById("starText").textContent=text; popup.style.display="block"; setTimeout(()=>popup.style.display="none",1500); }
+function startHelloAnimation(){ helloEl.classList.add("animate"); }
 
-// ---------- HELLO Animation ----------
-function startHelloAnimation(){
-  helloEl.classList.add("animate");
-}
-
-// ---------- Authentication ----------
+// ---------- Google Sign-In ----------
 document.getElementById("googleSignInBtn").addEventListener("click", async (e)=>{
   e.preventDefault();
   try{
     const result = await signInWithPopup(auth, provider);
     currentUser = result.user;
+  }catch(err){
+    console.error("Sign-in failed:", err);
+    showStarPopup("Sign in failed!");
+  }
+});
+
+// ---------- Auth State ----------
+onAuthStateChanged(auth, async user => {
+  if(user){
+    currentUser = user;
     authBox.style.display = "none";
     sendArea.style.display = "flex";
     profileBox.style.display = "flex";
     profileNameEl.textContent = currentUser.displayName.toUpperCase();
     startHelloAnimation();
-    setupUserData();
+
+    // Ensure user data exists
+    const userRef = doc(db,"users",currentUser.uid);
+    const snap = await getDoc(userRef);
+    if(!snap.exists()){
+      await setDoc(userRef,{stars:0,cash:0,name:currentUser.displayName});
+      starCountEl.textContent = 0;
+      cashCountEl.textContent = "0";
+    } else {
+      const data = snap.data();
+      starCountEl.textContent = data.stars || 0;
+      cashCountEl.textContent = formatCash(data.cash || 0);
+    }
+
+    // Start listening to messages
     listenMessages();
-  }catch(err){ console.error("Sign-in failed:", err); alert("Sign-in failed!"); }
-});
 
-// ---------- Firestore user setup ----------
-async function setupUserData(){
-  if(!currentUser) return;
-  const userRef = doc(db,"users",currentUser.uid);
-  const userSnap = await getDoc(userRef);
-  if(!userSnap.exists()){
-    await setDoc(userRef,{stars:0,cash:0,name:currentUser.displayName});
-  }else{
-    const data = userSnap.data();
-    starCountEl.textContent = data.stars || 0;
-    cashCountEl.textContent = formatCash(data.cash || 0);
+  } else {
+    authBox.style.display = "flex";
+    sendArea.style.display = "none";
+    profileBox.style.display = "none";
+    currentUser = null;
   }
-}
-
-// ---------- Sending messages ----------
-sendBtn.addEventListener("click", async ()=>{
-  const text = messageInputEl.value.trim();
-  if(!text || !currentUser) return;
-  await addDoc(collection(db, CHAT_COLLECTION), {
-    uid: currentUser.uid,
-    name: currentUser.displayName,
-    content: text,
-    createdAt: serverTimestamp()
-  });
-  messageInputEl.value="";
 });
 
-buzzBtn.addEventListener("click", async ()=>{
-  if(!currentUser) return;
-  const userRef = doc(db,"users",currentUser.uid);
-  await updateDoc(userRef,{
-    stars: increment(BUZZ_COST)
-  });
-  starCountEl.textContent = Number(starCountEl.textContent) + BUZZ_COST;
-  showStarPopup(`+${BUZZ_COST} Stars! ⭐`);
-});
-
-// ---------- Listen to messages ----------
+// ---------- Messages ----------
 function listenMessages(){
-  const q = query(collection(db, CHAT_COLLECTION), orderBy("createdAt","asc"));
+  const q = query(collection(db, CHAT_COLLECTION), orderBy("timestamp","asc"));
   onSnapshot(q, snapshot=>{
-    messagesEl.innerHTML="";
+    messagesEl.innerHTML = "";
     snapshot.forEach(docSnap=>{
-      const msg = docSnap.data();
-      const msgEl = document.createElement("div");
-      msgEl.classList.add("msg");
-      if(msg.uid===currentUser.uid) msgEl.classList.add("me");
-      const meta = document.createElement("div");
-      meta.classList.add("meta");
-      meta.textContent = msg.name;
-      const content = document.createElement("div");
-      content.classList.add("content");
-      content.textContent = msg.content;
-      msgEl.append(meta,content);
-      messagesEl.appendChild(msgEl);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      const m = docSnap.data();
+      const wrapper = document.createElement("div");
+      wrapper.className = "msg";
+      if(m.uid===currentUser?.uid) wrapper.classList.add("me");
+
+      const meta = document.createElement("span");
+      meta.className = "meta";
+      meta.textContent = m.chatId || "Guest";
+      meta.style.color = (m.uid) ? randomColor() : "#ffffff";
+
+      const content = document.createElement("span");
+      content.className = m.highlight ? "buzz-content content" : "content";
+      content.textContent = m.content || "";
+      wrapper.appendChild(meta);
+      wrapper.appendChild(content);
+      messagesEl.appendChild(wrapper);
     });
+    messagesEl.scrollTop = messagesEl.scrollHeight;
   });
 }
 
-onAuthStateChanged(auth,user=>{
-  if(user){
-    currentUser=user;
-    authBox.style.display="none";
-    sendArea.style.display="flex";
-    profileBox.style.display="flex";
-    profileNameEl.textContent=currentUser.displayName.toUpperCase();
-    startHelloAnimation();
-    setupUserData();
-    listenMessages();
-  }else{
-    authBox.style.display="flex";
-    sendArea.style.display="none";
-    profileBox.style.display="none";
-  }
+// ---------- Send Message ----------
+sendBtn.addEventListener("click", async ()=>{
+  if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
+  const txt = messageInputEl.value.trim();
+  if(!txt){ showStarPopup("Type a message first"); return; }
+
+  try{
+    await addDoc(collection(db, CHAT_COLLECTION), {
+      content: txt,
+      uid: currentUser.uid,
+      chatId: currentUser.displayName || "Guest",
+      timestamp: serverTimestamp(),
+      highlight:false
+    });
+    messageInputEl.value = "";
+  }catch(err){ console.error(err); showStarPopup("Failed to send message"); }
+});
+
+// ---------- BUZZ ----------
+buzzBtn.addEventListener("click", async ()=>{
+  if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
+
+  const userRef = doc(db,"users",currentUser.uid);
+  const snap = await getDoc(userRef);
+  const data = snap.exists() ? snap.data() : {};
+  const stars = data.stars || 0;
+
+  if(stars < BUZZ_COST){ showStarPopup("Not enough stars to BUZZ!"); return; }
+  const txt = messageInputEl.value.trim();
+  if(!txt){ showStarPopup("Type a message to BUZZ!"); return; }
+
+  try{
+    await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
+    starCountEl.textContent = stars - BUZZ_COST;
+
+    const glowColor = randomColor();
+    await addDoc(collection(db, CHAT_COLLECTION), {
+      content: txt,
+      uid: currentUser.uid,
+      chatId: currentUser.displayName || "Guest",
+      timestamp: serverTimestamp(),
+      highlight:true,
+      buzzColor: glowColor,
+      glowEnded:false
+    });
+    messageInputEl.value = "";
+    showStarPopup("BUZZ sent!");
+  }catch(err){ console.error(err); showStarPopup("Failed to send BUZZ"); }
+});
+
+// ---------- Enter key sends message ----------
+messageInputEl.addEventListener("keypress", e=>{
+  if(e.key==="Enter") sendBtn.click();
 });
 </script>
-</body>
-</html>
