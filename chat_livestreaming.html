@@ -293,25 +293,68 @@ async function sendMessage(content, highlight=false, buzzColor=null){
   }catch(e){ console.error("sendMessage error", e); showStarPopup("Message failed to send"); }
 }
 
-sendBtn.addEventListener("click",()=>sendMessage(messageInputEl.value));
-messageInputEl.addEventListener("keydown",(e)=>{ if(e.key==="Enter") sendBtn.click(); });
+sendBtn.addEventListener/* ---------- Send message ---------- */
+sendBtn.addEventListener("click", async () => {
+  if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
+  const txt = messageInputEl.value.trim();
+  if(!txt) return;
+  messageInputEl.value = "";
 
-buzzBtn.addEventListener("click", async ()=>{
+  try {
+    await addDoc(collection(db, "messages_livestreaming", currentRoomId, "messages"), {
+      content: txt,
+      uid: currentUser.uid,
+      chatId: currentUser.chatId || generateGuestName(),
+      timestamp: serverTimestamp(),
+      highlight: false
+    });
+  } catch(e) {
+    console.error("send error", e);
+    showStarPopup("Message failed to send");
+  }
+});
+
+messageInputEl.addEventListener("keydown", (e) => {
+  if(e.key === "Enter") sendBtn.click();
+});
+
+/* ---------- Buzz (highlight) ---------- */
+buzzBtn.addEventListener("click", async () => {
   if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
-  const userRef = doc(db,"users",currentUser.uid);
-  const snap = await getDoc(userRef);
-  const data = snap.exists()? snap.data() : {};
-  const currentStars = data.stars || 0;
+  const userRef = doc(db, "users", currentUser.uid);
+  const snapshot = await getDoc(userRef);
+  const userData = snapshot.exists() ? snapshot.data() : {};
+  const currentStars = userData.stars || 0;
   if(currentStars < BUZZ_COST){ showStarPopup("Not enough stars to create a BUZZ! 🚨"); return; }
   const txt = messageInputEl.value.trim();
   if(!txt){ showStarPopup("Type a message to BUZZ! 🚨"); return; }
 
-  try{
-    await updateDoc(userRef,{stars: increment(-BUZZ_COST)});
+  try {
+    await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
+
     const color = randomColor();
-    await sendMessage(txt,true,color);
+    const docRef = await addDoc(collection(db, "messages_livestreaming", currentRoomId, "messages"), {
+      content: txt,
+      uid: currentUser.uid,
+      chatId: currentUser.chatId || generateGuestName(),
+      timestamp: serverTimestamp(),
+      highlight: true,
+      buzzColor: color
+    });
+
     showStarPopup("BUZZ 🚨 sent!");
-  }catch(e){ console.error(e); showStarPopup("BUZZ failed"); }
+    messageInputEl.value = "";
+
+    // clear highlight after 10s
+    setTimeout(async () => {
+      try { await updateDoc(docRef, { highlight: false, buzzColor: null }); } 
+      catch(e){ console.warn("clear buzz failed", e); }
+    }, 10000);
+
+  } catch(e) {
+    console.error("buzz failed", e);
+    showStarPopup("BUZZ failed");
+  }
 });
 
 /* Tip & Redeem */
