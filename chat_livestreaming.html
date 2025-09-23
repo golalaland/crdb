@@ -331,85 +331,57 @@ onAuthStateChanged(auth,async user=>{
 
 /* Message render */
 /* ---------- Buzz + Send ---------- */
-buzzBtn.addEventListener("click", async () => {
-  if (!currentUser) { showStarPopup("Sign in to BUZZ"); return; }
-  const txt = messageInputEl.value.trim();
-  if (!txt) { showStarPopup("Type a message to BUZZ! 🚨"); return; }
-
-  const userRef = doc(db, "users", currentUser.uid);
-  const snapshot = await getDoc(userRef);
-  const userData = snapshot.exists() ? snapshot.data() : {};
-  if ((userData.stars || 0) < BUZZ_COST) { showStarPopup("Not enough stars to create a BUZZ! 🚨"); return; }
-
-  await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
-
-  const colors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"];
-  const glowColor = colors[Math.floor(Math.random()*colors.length)];
-
-  await addDoc(collection(db, CHAT_COLLECTION), {
-    content: txt,
-    uid: currentUser.uid,
-    chatId: currentUser.chatId,
-    timestamp: serverTimestamp(),
-    highlight: true,
-    buzzColor: glowColor,
-    buzzDuration: 60000,
-    glowEnded: false
-  });
-
-  showStarPopup("BUZZ 🚨 sent!");
-  messageInputEl.value = "";
-});
-
-sendBtn.addEventListener("click", async () => {
-  if (!currentUser) { showStarPopup("Sign in to send messages"); return; }
-  const txt = messageInputEl.value.trim();
-  if (!txt) { showStarPopup("Type a message first"); return; }
-
-  await addDoc(collection(db, CHAT_COLLECTION), {
-    content: txt,
-    uid: currentUser.uid,
-    chatId: currentUser.chatId,
-    timestamp: serverTimestamp(),
-    highlight: false,   // normal messages
-    glowEnded: true
-  });
-
-  messageInputEl.value = "";
-});
-
-/* ---------- Message Rendering ---------- */
+/* ---------- Message rendering + send/buzz listeners ---------- */
 function renderMessagesFromArray(arr){
   messagesEl.innerHTML = "";
   arr.forEach(item => {
     const m = item.data;
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
+    if(m.uid === currentUser?.uid) wrapper.classList.add("me");
 
+    // Meta
     const meta = document.createElement("span");
     meta.className = "meta";
     meta.textContent = m.chatId || "Guest";
-    meta.style.color = (m.uid && userColors[m.uid]) ? userColors[m.uid] : "#fff";
+    meta.style.color = (m.uid && userColors[m.uid]) ? userColors[m.uid] : "#ffffff";
 
+    // Content
     const content = document.createElement("span");
-    content.className = "content";
-    content.textContent = " " + (m.content || "");
-
-    // Handle BUZZ glow
-    if (m.highlight && !m.glowEnded) {
+    if(m.highlight || m.buzzColor){
       content.className = "buzz-content content";
-      content.style.background = m.buzzColor || "#FF1493";
+      content.style.background = m.buzzColor || randomColor();
       content.style.color = "#000";
-      content.style.setProperty("--glow-color", m.buzzColor || "#FF1493");
-      content.style.animation = `buzzGlow ${(1+Math.random()*1.5)}s infinite`;
+      content.textContent = " " + (m.content || "");
 
-      // Fade out glow after duration
-      setTimeout(async () => {
-        content.style.animation = "";
-        m.glowEnded = true;
-        const msgRef = doc(db, CHAT_COLLECTION, item.id);
-        await updateDoc(msgRef, { glowEnded: true });
-      }, m.buzzDuration || 60000);
+      // Glow animation
+      if(!m.glowEnded){
+        const glowColor = m.buzzColor || randomColor();
+        const duration = (1 + Math.random()*1.5) + "s";
+        content.style.setProperty("--glow-color", glowColor);
+        content.style.animation = `buzzGlow ${duration} infinite`;
+
+        // Stop glow after duration
+        setTimeout(async () => {
+          content.style.animation = "";
+          m.glowEnded = true;
+          try {
+            const msgRef = doc(db, CHAT_COLLECTION, item.id);
+            await updateDoc(msgRef, { glowEnded: true });
+          } catch(e){ console.warn("Error ending glow", e); }
+        }, m.buzzDuration || 60000);
+      }
+
+    } else {
+      content.className = "content";
+      content.textContent = " " + (m.content || "");
+
+      // Parse commands
+      if(m.content?.startsWith("/")){
+        const cmd = m.content.slice(1).trim().toLowerCase();
+        if(cmd === "tip") content.innerHTML += " 💵";
+        if(cmd === "redeem") content.innerHTML += " 🎁";
+      }
     }
 
     wrapper.appendChild(meta);
@@ -418,6 +390,71 @@ function renderMessagesFromArray(arr){
   });
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
+
+/* ---------- Send normal message ---------- */
+sendBtn.addEventListener("click", async () => {
+  if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
+  const txt = messageInputEl.value.trim();
+  if(!txt){ showStarPopup("Type a message first"); return; }
+
+  try {
+    await addDoc(collection(db, CHAT_COLLECTION), {
+      content: txt,
+      uid: currentUser.uid,
+      chatId: currentUser.chatId,
+      timestamp: serverTimestamp(),
+      highlight: false,
+      glowEnded: true
+    });
+    messageInputEl.value = "";
+  } catch(err){
+    console.error("Send message error", err);
+  }
+});
+
+/* ---------- BUZZ button ---------- */
+buzzBtn.addEventListener("click", async () => {
+  if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
+  const userRef = doc(db, "users", currentUser.uid);
+  const snap = await getDoc(userRef);
+  const userData = snap.exists() ? snap.data() : {};
+  const currentStars = userData.stars || 0;
+
+  if(currentStars < BUZZ_COST){ showStarPopup("Not enough stars to create a BUZZ! 🚨"); return; }
+
+  const txt = messageInputEl.value.trim();
+  if(!txt){ showStarPopup("Type a message to BUZZ! 🚨"); return; }
+
+  try {
+    await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
+
+    const colors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"];
+    const glowColor = colors[Math.floor(Math.random()*colors.length)];
+
+    await addDoc(collection(db, CHAT_COLLECTION), {
+      content: txt,
+      uid: currentUser.uid,
+      chatId: currentUser.chatId,
+      timestamp: serverTimestamp(),
+      highlight: true,
+      buzzColor: glowColor,
+      buzzDuration: 60000,
+      glowEnded: false
+    });
+
+    showStarPopup("BUZZ 🚨 sent!");
+    messageInputEl.value = "";
+
+  } catch(err){
+    console.error("Buzz send error", err);
+    showStarPopup("Failed to send BUZZ 🚨");
+  }
+});
+
+/* ---------- Enter key support ---------- */
+messageInputEl.addEventListener("keypress", (e) => {
+  if(e.key === "Enter") sendBtn.click();
+});
 </script>
 </body>
 </html>
