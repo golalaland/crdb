@@ -1,102 +1,113 @@
+
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Xixi — Money Talk 💸</title>
-  <link rel="icon" href="data:," />
-  <style>
-    :root{
-      --bg:#000;
-      --card:#111;
-      --muted:#aaa;
-      --accent:#FF1493; 
-      --glass: rgba(255,255,255,0.03);
-    }
-    html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;color:#fff;background:var(--bg);}
-    
-    #appWrapper{
-      transform: scale(1);
-      transform-origin: top center;
-      width: 100%;
-      height: 100%;
-      display:flex;
-      justify-content:center;
-    }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Xixi — Live Stream 💸</title>
+<link rel="icon" href="data:," />
+<style>
+:root{
+  --bg:#000;
+  --card:#111;
+  --muted:#aaa;
+  --accent:#FF1493;
+  --glass: rgba(255,255,255,0.03);
+}
+/* overall layout */
+html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;color:#fff;background:var(--bg);}
+#appWrapper{width:100%;height:100%;display:flex;justify-content:center;}
+.app{display:flex;flex-direction:column;height:100%;gap:10px;padding:10px;box-sizing:border-box;width:100%;max-width:480px;}
+.brand{font-weight:700;font-size:24px;color:var(--accent);text-align:center;}
+.room-desc{font-size:11px;color:var(--muted);text-align:center;margin-bottom:6px;}
+#greeting{font-size:13px;text-align:center;font-weight:600;margin-bottom:6px;color:var(--accent);}
+#helloText{font-size:20px;font-weight:800;text-align:center;margin:6px 0;color:#fff;transition:color .2s ease;}
+#center{flex:1;display:flex;flex-direction:column;gap:6px;}
 
-    .app{
-      display:flex;
-      flex-direction:column;
-      height:100%;
-      gap:10px;
-      padding:10px;
-      box-sizing:border-box;
-      width:100%;
-      max-width:480px;
-    }
+/* 🔥 1. Sticky video frame */
+#videoContainer{
+  width:100%;
+  aspect-ratio:16/9;
+  background:#111;
+  border-radius:10px;
+  overflow:hidden;
+  box-shadow:0 6px 18px rgba(0,0,0,0.6);
+  position:sticky;
+  top:0;
+  z-index:100;
+}
+#videoContainer iframe{width:100%;height:100%;border:0;border-radius:10px;}
 
-    .brand{font-weight:700;font-size:24px;color:var(--accent);text-align:center;}
-    .room-desc{font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px;}
-    #authBox{margin-bottom:10px;text-align:center;}
-    #authBox button.btn{background:var(--accent);color:#000;border:0;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px;}
-    #center{flex:1;display:flex;flex-direction:column;gap:4px;}
-    #videoContainer{width:100%;aspect-ratio:16/9;background:#111;border-radius:10px;overflow:hidden;position:sticky;top:0;z-index:5;}
-    #videoContainer iframe{width:100%;height:100%;border:0;border-radius:10px;}
-    #guestMsg{font-size:20px;font-weight:700;margin:4px 0;color:var(--accent);text-align:center;font-family:'Segoe UI',sans-serif;}
-    #messages{flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:4px;border-radius:8px;background:#000;margin-bottom:4px;}
-    .msg{padding:5px 6px;border-radius:8px;background:var(--glass);max-width:85%;display:flex;gap:4px;align-items:center;opacity:0;animation:fadeInUp 0.25s forwards;justify-content:flex-start;}
-    .msg.me{background:rgba(255,20,147,0.1);}
-    .msg .meta{font-weight:700;font-size:13px;}
-    .msg .content{font-size:11px;color:#fff;white-space:pre-wrap;}
-    .send-area{
-      display:flex;
-      align-items:center;
-      gap:4px;
-      background:var(--card);
-      padding:10px;
-      position:sticky;
-      bottom:0;
-      z-index:10;
-      border-top:1px solid rgba(255,255,255,0.05);
-      border-radius:18px;
-    }
-    .send-area input{flex:1;padding:10px;border-radius:999px;border:1px solid rgba(255,255,255,0.1);background:#111;color:#fff;font-size:13px;outline:none;}
-    .send-area input::placeholder{color:var(--muted);}
-    .send-area input:focus{border-color:var(--accent);box-shadow:0 0 8px rgba(255,20,147,0.4);}
-    .send-area button.btn{padding:10px 16px;border-radius:999px;background:var(--accent);color:#000;cursor:pointer;font-weight:600;font-size:13px;}
+#guestMsg{font-size:16px;font-weight:700;margin:4px 0;color:var(--accent);text-align:center;}
+#messages{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px;border-radius:8px;background:#000;margin-bottom:4px;}
+/* compact message layout: username + message on same line */
+.msg{padding:8px 10px;border-radius:8px;background:var(--glass);max-width:100%;display:flex;gap:8px;align-items:center;}
+.msg.me{background:rgba(255,20,147,0.06);}
+.msg .meta{font-weight:700;font-size:13px;white-space:nowrap;}
+.msg .content{font-size:13px;color:#fff;white-space:pre-wrap;word-break:break-word;display:inline-block;}
+/* highlighted buzz content but keep username+content on same line */
+.buzz-content{font-weight:800;font-size:14px;color:#000;padding:6px 8px;border-radius:8px;display:inline-block;}
+/* chat input area */
+.send-area{display:flex;align-items:center;gap:8px;background:var(--card);padding:10px;position:sticky;bottom:10px;z-index:20;border-top:1px solid rgba(255,255,255,0.04);border-radius:999px;}
+.send-area input{flex:1;padding:12px;border-radius:999px;border:1px solid rgba(255,255,255,0.06);background:#0e0e0e;color:#fff;font-size:14px;outline:none;}
+.send-area input::placeholder{color:var(--muted);}
+.send-area input:focus{border-color:var(--accent);box-shadow:0 0 14px rgba(255,20,147,0.12);}
+.send-btn{padding:10px 14px;border-radius:999px;background:var(--accent);color:#000;cursor:pointer;font-weight:700;border:0;font-size:14px;}
+.buzz-btn{padding:10px 12px;border-radius:999px;background:#1d1d1d;color:var(--accent);cursor:pointer;font-weight:700;font-size:14px;border:1px solid rgba(255,20,147,0.18);}
+.buzz-btn:hover{animation:buzzPulse 1.5s infinite;}
+@keyframes buzzPulse{0%{box-shadow:0 0 0 0 rgba(255,20,147,0.18)}70%{box-shadow:0 0 0 12px rgba(255,20,147,0)}100%{box-shadow:0 0 0 0 rgba(255,20,147,0)}}
 
-    .profile{display:none;flex-direction:column;gap:3px;margin-top:10px;}
-    .profile .small{font-size:11px;color:var(--muted);}
-    .stats{font-size:10px;font-weight:700;color:var(--accent);}
-    .stats span{font-weight:400;color:#fff;font-family:monospace;font-size:12px;}
-    .profile-card{background:var(--glass);padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);}
-    .badge{font-size:11px;margin-left:3px;background:none;color:#fff;padding:0;}
-    .cash-earned .badge{display:none;}
+/* profile glass bar - restored original style exactly as requested */
+/* Labels (pink & bold), Values (monospace white) */
+.profile{display:none;flex-direction:column;gap:8px;margin-top:10px;}
+.profile-card{background:var(--glass);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);display:flex;flex-direction:column;gap:8px;}
+.profile-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.profile-left{display:flex;flex-direction:column;gap:4px;}
+.profile-name{font-weight:800;}
+.profile-label{color:var(--accent);font-weight:800;font-size:12px;}
 
-    .star-popup{position:fixed;left:50%;top:18%;transform:translateX(-50%);background:var(--card);padding:5px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.05);display:none;z-index:1000;color:var(--accent);font-size:11px;white-space:nowrap;text-align:center;max-width:90%;}
-    .redeem-btn{display:none;background:var(--accent);color:#000;font-size:10px;padding:3px 6px;border-radius:6px;cursor:pointer;font-weight:600;margin-left:auto;text-decoration:none;}
-    .admin-panel{display:none;margin-top:6px;padding:5px;background:#111;border-radius:8px;border:1px solid rgba(255,20,147,0.3);flex-direction:column;gap:3px;}
-    .admin-panel button{padding:5px;background:var(--accent);color:#000;border:none;border-radius:6px;cursor:pointer;margin:1px 0;font-size:11px;}
-    
-    @keyframes fadeInUp{to{opacity:1;transform:translateY(0);}}
-    @keyframes fadeInOut{0%{opacity:0;}10%{opacity:1;}90%{opacity:1;}100%{opacity:0;}}
-  </style>
+/* 🔥 2. Stars/Cash counts — not bold + closer star */
+.profile-value{
+  color:#fff;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
+  font-weight:400; /* normal, not bold */
+}
+.profile-value span,
+.profile-value .icon{margin-left:2px;}
+
+.profile-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;}
+.small-btn{padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.06);border:0;color:#fff;cursor:pointer;font-weight:700;}
+
+/* star popup */
+.star-popup{position:fixed;left:50%;top:18%;transform:translateX(-50%);background:var(--card);padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);display:none;z-index:1000;color:var(--accent);font-size:13px;white-space:nowrap;text-align:center;}
+.onlineCount{font-size:11px;color:var(--muted);}
+
+@media (max-width:420px){
+  .send-area input{padding:10px;font-size:13px;}
+  .buzz-btn,.send-btn{padding:8px 10px;font-size:13px;}
+}
+</style>
 </head>
 <body>
   <div id="appWrapper">
     <div class="app">
       <div class="brand">乂丨乂丨</div>
-      <div class="room-desc">
-        Money Talk 💸 — Chat. Own your vibe.
-        <span id="onlineCount" style="color:var(--accent);font-weight:600;"></span>
-      </div>
+      <div id="greeting">Welcome to the vibe ✨</div>
 
       <div id="center">
         <div id="videoContainer">
           <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
         </div>
 
+        <!-- HELLO (multilingual) under the video frame -->
+        <div id="helloText" aria-live="polite">HELLO</div>
+
+        <div class="room-desc">Live Stream 💸 — Chat. Own your vibe.
+          <span id="onlineCount" class="onlineCount"></span>
+        </div>
+
         <div id="guestMsg"></div>
+
         <div id="authBox">
           <button id="googleSignInBtn" class="btn">Sign in with Google</button>
         </div>
@@ -104,278 +115,392 @@
         <div id="messages"></div>
 
         <div class="send-area" id="sendArea" style="display:none;">
-          <input type="text" id="messageInput" placeholder="Type your message..." />
-          <button id="sendBtn" class="btn">Send</button>
+          <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" />
+          <button id="buzzBtn" class="buzz-btn" title="Send BUZZ 🚨">🚨</button>
+          <button id="sendBtn" class="send-btn">Send</button>
         </div>
+
       </div>
 
       <div class="profile" id="profileBox">
         <div class="profile-card">
-          <div style="display:flex;align-items:center;justify-content:space-between;">
-            <div>
-              <strong id="profileName">GUEST 0000</strong>
-              <div class="stats">STARS COLLECTED: 
-                <span id="starCount">0</span> 
-                <span class="badge">⭐</span>
-              </div>
-              <div class="stats cash-earned">CASH EARNED: 
-                <span id="cashCount">₦0</span> 
-                <span class="badge">₦</span>
+          <div class="profile-top">
+            <div class="profile-left">
+              <div id="profileName" class="profile-name">GUEST 0000</div>
+              <div>
+                <span class="profile-label">STARS COLLECTED:</span>
+                <span class="profile-value"><span id="starCount">0</span>⭐️</span>
               </div>
             </div>
-            <a href="https://xixi.live" target="_blank" class="redeem-btn" id="redeemBtn">Redeem</a>
+            <div class="profile-actions">
+              <a id="redeemBtn" class="small-btn" href="https://xixi.live" target="_blank">Redeem</a>
+              <button id="tipBtn" class="small-btn">💵</button>
+            </div>
+          </div>
+          <div>
+            <span class="profile-label">CASH EARNED:</span>
+            <span class="profile-value">₦<span id="cashCount">0</span></span>
           </div>
         </div>
-
-        <div class="admin-panel" id="adminPanel">
-          <h3 style="margin:0;color:#fff;text-align:center;font-size:12px;">⚡ Admin Dashboard ⚡</h3>
-
-          <div class="admin-section" style="border-top:1px solid rgba(255,255,255,0.2);padding-top:4px;">
-            <strong style="color:#fff;font-size:11px;">User Management:</strong>
-            <button id="giveStarAdmin">⭐ Gift Stars</button>
-            <button id="giveCashAdmin">💸 Gift Cash</button>
-            <button id="kickUser">❌ Kick User</button>
-          </div>
-
-          <div class="admin-section" style="border-top:1px solid rgba(255,255,255,0.2);padding-top:4px;">
-            <strong style="color:#fff;font-size:11px;">Chat Control:</strong>
-            <button id="setTimeoutAdmin">⏱ Set Chat Timeout</button>
-            <button id="deleteAllAdmin">🗑 Delete All Messages</button>
-            <button id="broadcastMsg">📢 Broadcast Message</button>
-          </div>
-
-          <div class="admin-section" style="border-top:1px solid rgba(255,255,255,0.2);padding-top:4px;">
-            <strong style="color:#fff;font-size:11px;">Economy & Auto-Star:</strong>
-            <button id="globalStars">🌟 Gift Stars Bonus</button>
-            <button id="globalCash">💰 Gift Cash Bonus</button>
-            <button id="toggleAutoStar">⚡ Toggle Auto-Star</button>
-          </div>
-
-          <div class="admin-section" style="border-top:1px solid rgba(255,255,255,0.2);padding-top:4px;">
-            <button id="viewActiveUsers">👥 View Online Users</button>
-            <button id="adminLogoutBtn">🚪 Logout</button>
-          </div>
-        </div>
-
       </div>
+
     </div>
   </div>
 
   <div class="star-popup" id="starPopup">
     <div id="starText">You've just earned +1 star! ⭐</div>
-    <div style="text-align:right;margin-top:4px"><button id="closeStar" class="ghost">Close</button></div>
   </div>
+<script type="module">
+/* ====== Full page JS: Firebase + UI logic (updated per your requests) ====== */
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { getDatabase, ref, onDisconnect, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+/* ---------- Imports ---------- */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth,
+  setPersistence,
+  browserLocalPersistence,
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  collection,
+  addDoc,
+  serverTimestamp,
+  onSnapshot,
+  query,
+  orderBy,
+  increment
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getDatabase,
+  ref as rtdbRef,
+  set as rtdbSet,
+  onDisconnect,
+  onValue
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-    // ---------- PASTE YOUR FIREBASE CONFIG HERE ----------
- const firebaseConfig = {
-      apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
-      authDomain: "metaverse-1010.firebaseapp.com",
-      projectId: "metaverse-1010",
-      storageBucket: "metaverse-1010.firebasestorage.app",
-      messagingSenderId: "1044064238233",
-      appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
-      measurementId: "G-S77BMC266C",
-      databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
-    };
+/* ---------- Firebase config (your project) ---------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
+  authDomain: "metaverse-1010.firebaseapp.com",
+  projectId: "metaverse-1010",
+  storageBucket: "metaverse-1010.firebasestorage.app",
+  messagingSenderId: "1044064238233",
+  appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
+  measurementId: "G-S77BMC266C",
+  databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
+};
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const rtdb = getDatabase(app);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(()=>{});
+const db = getFirestore(app);
+const rtdb = getDatabase(app);
 
-    let currentUser = null;
-    let userColors = {};
-    let chatTimeout = 5000;
-    let lastMessageTime = 0;
-    let autoStarEnabled = true;
-    const dailyStarCap = 500;
+/* ---------- State & constants ---------- */
+let currentUser = null;
+let userDocUnsub = null;
+let messagesUnsub = null;
+let usersUnsub = null;
+const CHAT_COLLECTION = "messages_livestreaming";
+const BUZZ_COST = 10;
+const AUTO_STAR_ADD = 5;
+const DAILY_STAR_CAP = 500;
 
-    // ---------------- ROOM CONFIG ----------------
-    const urlParams = new URLSearchParams(window.location.search);
-    const roomId = urlParams.get("room") || "lobby"; // default room
-    const roomSettings = {
-      lobby: { costPerMessage: 0, private: false, admins: [] },
-      vip: { costPerMessage: 1, private: false, admins: [] },
-      privateRoom: { costPerMessage: 0, private: true, admins: ["adminUid1","adminUid2"] }
-    };
-    const currentRoom = roomSettings[roomId] || roomSettings["lobby"];
+/* ---------- Helpers ---------- */
+function generateGuestName(){ return "GUEST " + Math.floor(1000 + Math.random()*9000); }
+function formatNumberWithCommas(n){ return new Intl.NumberFormat('en-NG').format(n || 0); }
+function randomColor(){ const colors = ["#FFD700","#FF69B4","#87CEEB","#90EE90","#FFB6C1","#FFA07A","#8A2BE2","#00BFA6","#F4A460"]; return colors[Math.floor(Math.random()*colors.length)]; }
+function showStarPopup(text){ const popup = document.getElementById("starPopup"); document.getElementById("starText").innerText = text; popup.style.display = "block"; setTimeout(()=>{ popup.style.display = "none"; }, 1700); }
 
-    function generateGuestName(){return "GUEST " + Math.floor(1000+Math.random()*9000);}
-    function getColorForUser(chatId){
-      if(!userColors[chatId]){
-        const c=["#FF6B6B","#FF1493","#FF69B4","#FF85C0","#FF00FF"];
-        userColors[chatId]=c[Math.floor(Math.random()*c.length)];
-      }
-      return userColors[chatId];
+/* ---------- HELLO rotation ---------- */
+const greetings = ["HELLO","HOLA","BONJOUR","CIAO","HALLO","こんにちは","你好","안녕하세요","SALUT","OLÁ","NAMASTE","MERHABA"];
+let helloIndex = 0;
+const helloEl = document.getElementById("helloText");
+function rotateHello(){
+  if(!helloEl || helloEl.style.display === "none") return;
+  helloEl.innerText = greetings[helloIndex++ % greetings.length];
+  helloEl.style.color = randomColor();
+}
+rotateHello();
+const helloInterval = setInterval(rotateHello, 1500);
+
+/* ---------- UI refs ---------- */
+const googleBtn = document.getElementById("googleSignInBtn");
+const authBox = document.getElementById("authBox");
+const messagesEl = document.getElementById("messages");
+const sendAreaEl = document.getElementById("sendArea");
+const messageInputEl = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendBtn");
+const buzzBtn = document.getElementById("buzzBtn");
+const profileBoxEl = document.getElementById("profileBox");
+const profileNameEl = document.getElementById("profileName");
+const starCountEl = document.getElementById("starCount");
+const cashCountEl = document.getElementById("cashCount");
+const tipBtn = document.getElementById("tipBtn");
+const redeemBtn = document.getElementById("redeemBtn");
+const onlineCountEl = document.getElementById("onlineCount");
+
+/* ---------- Presence: Realtime DB ---------- */
+function setupPresence(user){
+  try{
+    const pRef = rtdbRef(rtdb, "presence/" + user.uid);
+    rtdbSet(pRef, true).catch(()=>{});
+    onDisconnect(pRef).remove().catch(()=>{});
+  }catch(e){ console.warn("presence error", e); }
+}
+onValue(rtdbRef(rtdb, "presence"), snap=>{
+  const val = snap.val() || {};
+  onlineCountEl.innerText = `(${Object.keys(val).length} online)`;
+});
+
+/* ---------- Keep user color map (uid -> color) so chat names get daily color ---------- */
+const userColors = {}; // uid => color
+async function setupUsersListener(){
+  if(usersUnsub) usersUnsub();
+  usersUnsub = onSnapshot(collection(db,"users"), (snap)=>{
+    snap.forEach(d => {
+      const data = d.data() || {};
+      userColors[d.id] = data.usernameColor || "#ffffff";
+    });
+    // re-render last messages if any
+    if(lastMessagesArray.length) renderMessagesFromArray(lastMessagesArray);
+  });
+}
+
+/* ---------- daily color logic helper ---------- */
+async function assignDailyUsernameColor(userRef, data){
+  const today = new Date().toISOString().split("T")[0];
+  try{
+    if(!data || !data.lastColorDate || data.lastColorDate !== today){
+      const newColor = randomColor();
+      await updateDoc(userRef, { usernameColor: newColor, lastColorDate: today });
+      userColors[userRef.id] = newColor;
+      return newColor;
     }
+    userColors[userRef.id] = data.usernameColor || randomColor();
+    return data.usernameColor || randomColor();
+  }catch(e){
+    console.warn("assignDailyUsernameColor error", e);
+    return data?.usernameColor || randomColor();
+  }
+}
 
-    setPersistence(auth,browserLocalPersistence).catch(()=>{});
+/* ---------- Sign-in ---------- */
+googleBtn.addEventListener("click", async () => {
+  const provider = new GoogleAuthProvider();
+  try {
+    await signInWithPopup(auth, provider);
+    // UI handled in onAuthStateChanged
+  } catch (err) {
+    console.error("Sign-in failed", err);
+    alert("Sign-in failed: " + (err.message || err));
+  }
+});
 
-    const guestGreetingEl = document.getElementById('guestMsg');
-    const greetings = ["HELLO","HOLA","BONJOUR","こんにちは","CIAO","안녕하세요","你好","SALUT","OLÁ"];
-    let greetIndex=0;
-    function showGreeting(){
-      guestGreetingEl.textContent=greetings[greetIndex];
-      guestGreetingEl.style.animation="fadeInOut 3s linear";
-      greetIndex=(greetIndex+1)%greetings.length;
-      setTimeout(showGreeting,3000);
-    }
-    showGreeting();
+/* ---------- Send + Buzz (attached once) ---------- */
+sendBtn.addEventListener("click", async () => {
+  if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
+  const txt = messageInputEl.value.trim();
+  if(!txt) return;
+  messageInputEl.value = "";
+  try{
+    await addDoc(collection(db, CHAT_COLLECTION), {
+      content: txt,
+      uid: currentUser.uid,
+      chatId: currentUser.chatId || generateGuestName(),
+      timestamp: serverTimestamp(),
+      highlight: false
+    });
+  }catch(e){ console.error("send error", e); showStarPopup("Message failed to send"); }
+});
+messageInputEl.addEventListener("keydown", (e)=> { if(e.key === "Enter") sendBtn.click(); });
 
-    document.getElementById("googleSignInBtn").addEventListener("click",async()=>{
-      const provider=new GoogleAuthProvider();
-      try{await signInWithPopup(auth,provider);}catch(e){console.error(e);}
+buzzBtn.addEventListener("click", async () => {
+  if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
+  const userRef = doc(db, "users", currentUser.uid);
+  const snapshot = await getDoc(userRef);
+  const userData = snapshot.exists() ? snapshot.data() : {};
+  const currentStars = userData.stars || 0;
+  if(currentStars < BUZZ_COST){ showStarPopup("Not enough stars to create a BUZZ! 🚨"); return; }
+  const txt = messageInputEl.value.trim();
+  if(!txt){ showStarPopup("Type a message to BUZZ! 🚨"); return; }
+
+  try{
+    // atomic decrement to avoid race conditions
+    await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
+
+    const color = randomColor();
+    const docRef = await addDoc(collection(db, CHAT_COLLECTION), {
+      content: txt,
+      uid: currentUser.uid,
+      chatId: currentUser.chatId || generateGuestName(),
+      timestamp: serverTimestamp(),
+      highlight: true,
+      buzzColor: color
     });
 
-    function formatNumberWithCommas(n){return new Intl.NumberFormat('en-NG').format(n);}
+    showStarPopup("BUZZ 🚨 sent!");
+    messageInputEl.value = "";
 
-    const onlineCountEl = document.getElementById("onlineCount");
-    const presenceRef = ref(rtdb,"presence");
-    function setupPresence(user){
-      const userRef = ref(rtdb,"presence/"+user.uid);
-      set(userRef,true);
-      onDisconnect(userRef).remove();
+    // clear highlight after 10s
+    setTimeout(async () => {
+      try{ await updateDoc(docRef, { highlight: false, buzzColor: null }); } catch(e){ console.warn("clear buzz failed", e); }
+    }, 10000);
+
+  }catch(e){ console.error("buzz failed", e); showStarPopup("BUZZ failed"); }
+});
+
+/* Tip & Redeem (placeholders) */
+tipBtn.addEventListener("click", () => { window.open("https://your-placeholder-payment-link.com","_blank"); showStarPopup("Thanks! Tip clicked 💵"); });
+redeemBtn.addEventListener("click", () => { window.open("https://xixi.live","_blank"); showStarPopup("Redeem clicked"); });
+
+/* ---------- Auto-star (periodic) ---------- */
+setInterval(async () => {
+  if(!currentUser) return;
+  try{
+    const userRef = doc(db, "users", currentUser.uid);
+    const snap = await getDoc(userRef);
+    const data = snap.exists() ? snap.data() : {};
+    const curr = data.stars || 0;
+    if(curr < DAILY_STAR_CAP){
+      const next = Math.min(curr + AUTO_STAR_ADD, DAILY_STAR_CAP);
+      await updateDoc(userRef, { stars: next });
     }
-    onValue(presenceRef,snap=>{
-      const val=snap.val()||{};
-      onlineCountEl.textContent = `(${Object.keys(val).length} online)`;
-    });
+  }catch(e){ /* ignore periodic errors */ }
+}, 60000);
 
-    function updateAdminPanel(user){
-      document.getElementById("adminPanel").style.display = user?.isAdmin ? "flex" : "none";
+/* ---------- Message rendering: we store lastMessagesArray to re-render when username colors change ---------- */
+let lastMessagesArray = [];
+function renderMessagesFromArray(arr){
+  messagesEl.innerHTML = "";
+  arr.forEach(item => {
+    const m = item.data;
+    const wrapper = document.createElement("div");
+    wrapper.className = "msg";
+
+    // username element (color from userColors map if available)
+    const meta = document.createElement("span");
+    meta.className = "meta";
+    const nameText = m.chatId || "Guest";
+    // color by uid if available, fallback to white
+    const nameColor = (m.uid && userColors[m.uid]) ? userColors[m.uid] : '#ffffff';
+    meta.textContent = nameText;
+    meta.style.color = nameColor;
+
+    // content element
+    const content = document.createElement("span");
+
+    if(m.highlight || m.buzzColor){
+      content.className = "buzz-content content";
+      content.style.background = m.buzzColor || randomColor();
+      content.textContent = " " + (m.content || "");
+      content.style.color = "#000";
+      wrapper.appendChild(meta);
+      wrapper.appendChild(content);
+    } else {
+      content.className = "content";
+      content.textContent = " " + (m.content || "");
+      wrapper.appendChild(meta);
+      wrapper.appendChild(content);
     }
 
-    async function showChatIdPromptIfNeeded(user){
-      const userRef = doc(db,"users",user.uid);
-      const snap = await getDoc(userRef);
-      if(snap.exists()){
-        const data = snap.data();
-        if(!data.chatId){
-          setTimeout(async () => {
-            const newId = prompt("Choose your Chat ID:");
-            if(newId && newId.trim() !== ""){
-              await updateDoc(userRef,{chatId:newId.trim()});
-              location.reload();
-            }
-          }, 3000);
-        }
-      }
+    messagesEl.appendChild(wrapper);
+  });
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+/* ---------- Users listener (fills userColors map) ---------- */
+await setupUsersListener();
+
+/* ---------- Auth watcher (core) ---------- */
+onAuthStateChanged(auth, async (user) => {
+  if(user){
+    // presence
+    try{ setupPresence(user); }catch(e){ console.warn("presence err", e); }
+
+    // ensure user doc exists
+    const userRef = doc(db, "users", user.uid);
+    let snap = await getDoc(userRef);
+    if(!snap.exists()){
+      await setDoc(userRef, {
+        chatId: user.displayName || generateGuestName(),
+        stars: 100,
+        cash: 0,
+        usernameColor: randomColor(),
+        lastColorDate: new Date().toISOString().split("T")[0],
+        isAdmin: false,
+        lastStarReset: Date.now()
+      });
+      snap = await getDoc(userRef);
+    }
+    let userData = snap.exists() ? snap.data() : {};
+
+    // assign daily color if needed
+    const today = new Date().toISOString().split("T")[0];
+    if(!userData.lastColorDate || userData.lastColorDate !== today){
+      const newColor = randomColor();
+      try{ await updateDoc(userRef, { usernameColor: newColor, lastColorDate: today }); userData.usernameColor = newColor; } catch(e){ console.warn("usernameColor update failed", e); }
     }
 
-    onAuthStateChanged(auth,async user=>{
-      if(user){
-        const userRef = doc(db,"users",user.uid);
-        const snap = await getDoc(userRef);
-        if(!snap.exists()){
-          await setDoc(userRef,{chatId:"",email:user.email,stars:0,cash:0,isAdmin:false,lastStarReset:Date.now()});
-        }
-        const userData = (await getDoc(userRef)).data();
-        currentUser = {uid:user.uid,...userData};
-        setupPresence(user);
+    // set currentUser
+    currentUser = { uid: user.uid, chatId: userData.chatId || user.displayName || generateGuestName(), stars: userData.stars || 0, cash: userData.cash || 0, usernameColor: userData.usernameColor || randomColor(), isAdmin: userData.isAdmin || false };
 
-        document.getElementById("authBox").style.display="none";
-        document.getElementById("guestMsg").style.display="none";
-        document.getElementById("sendArea").style.display="flex";
-        document.getElementById("profileBox").style.display="flex";
-        document.getElementById("redeemBtn").style.display="inline-block";
-        document.getElementById("profileName").innerText=currentUser.chatId||generateGuestName();
+    // UI: hide hello + auth, show chat & profile
+    if(helloEl) helloEl.style.display = "none";
+    const greetingEl = document.getElementById("greeting"); if(greetingEl) greetingEl.style.display = "none";
+    if(authBox) authBox.style.display = "none";
+    sendAreaEl.style.display = "flex";
+    profileBoxEl.style.display = "block";
 
-        showChatIdPromptIfNeeded(user);
+    // populate profile UI
+    profileNameEl.innerText = currentUser.chatId;
+    profileNameEl.style.color = currentUser.usernameColor;
+    starCountEl.innerText = formatNumberWithCommas(currentUser.stars);
+    cashCountEl.innerText = formatNumberWithCommas(currentUser.cash);
 
-        onSnapshot(userRef,docSnap=>{
-          const d=docSnap.data()||{};
-          currentUser.stars=d.stars||0;
-          currentUser.cash=d.cash||0;
-          currentUser.isAdmin=d.isAdmin||false;
-          const now = Date.now();
-          const lastReset = d.lastStarReset || 0;
-          if(new Date(lastReset).toDateString() !== new Date(now).toDateString()){
-            updateDoc(userRef,{stars:0,lastStarReset:now});
-            currentUser.stars = 0;
-          }
-          document.getElementById("starCount").innerText=formatNumberWithCommas(currentUser.stars);
-          document.getElementById("cashCount").innerText="₦"+formatNumberWithCommas(currentUser.cash);
-          updateAdminPanel(currentUser);
-        });
-
-        setInterval(async()=>{
-          if(!currentUser || !autoStarEnabled) return;
-          if(currentUser.stars < dailyStarCap){
-            const userRef = doc(db,"users",currentUser.uid);
-            const newStars = Math.min(currentUser.stars + 1, dailyStarCap);
-            await updateDoc(userRef,{stars:newStars});
-          }
-        },10000);
-
-        // ---------------- MESSAGES ----------------
-        const messagesDiv = document.getElementById("messages");
-        const collectionName = currentRoom.private ? "privateMessages" : "messages";
-        const messagesQuery = query(
-          collection(db, collectionName),
-          where("roomId", "==", roomId),
-          orderBy("timestamp","asc")
-        );
-
-        onSnapshot(messagesQuery, (snapshot) => {
-          messagesDiv.innerHTML = ""; 
-          snapshot.forEach((doc) => {
-            const m = doc.data();
-            // if private room, show only to host/admins
-            if(currentRoom.private && !currentRoom.admins.includes(currentUser.uid) && m.uid !== currentUser.uid) return;
-            const div = document.createElement("div");
-            div.classList.add("msg");
-            if (m.uid === currentUser.uid) div.classList.add("me");
-            const color = getColorForUser(m.chatId || "Guest");
-            div.innerHTML = `
-              <span class="meta" style="color:${color}">${m.chatId || "Guest"}:</span> 
-              <span class="content">${m.content}</span>
-            `;
-            messagesDiv.appendChild(div);
-          });
-          messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        });
-
-        document.getElementById("sendBtn").addEventListener("click", async () => {
-          if (!currentUser) return;
-          const inputEl = document.getElementById("messageInput");
-          const val = inputEl.value.trim();
-          if (!val) return;
-          if(currentRoom.costPerMessage > 0 && currentUser.stars < currentRoom.costPerMessage){
-            alert(`You need ${currentRoom.costPerMessage} star(s) to send a message in this room.`);
-            return;
-          }
-          inputEl.value = "";
-
-          // deduct stars if needed
-          if(currentRoom.costPerMessage > 0){
-            const userRef = doc(db,"users",currentUser.uid);
-            await updateDoc(userRef,{stars: currentUser.stars - currentRoom.costPerMessage});
-            currentUser.stars -= currentRoom.costPerMessage;
-          }
-
-          try {
-            await addDoc(collection(db, collectionName), {
-              content: val,
-              uid: currentUser.uid,
-              chatId: currentUser.chatId || generateGuestName(),
-              roomId: roomId,
-              timestamp: serverTimestamp()
-            });
-          } catch (e) {
-            console.error("Failed to send message:", e);
-            alert("Message failed to send. Check console for details.");
-          }
-        });
-
+    // listen to user doc for live updates to stars/cash/usernameColor
+    if(userDocUnsub) userDocUnsub();
+    userDocUnsub = onSnapshot(userRef, (uSnap) => {
+      const d = uSnap.data() || {};
+      currentUser.stars = d.stars || 0;
+      currentUser.cash = d.cash || 0;
+      starCountEl.innerText = formatNumberWithCommas(currentUser.stars);
+      cashCountEl.innerText = formatNumberWithCommas(currentUser.cash);
+      if(d.usernameColor) {
+        profileNameEl.style.color = d.usernameColor;
+        userColors[userRef.id] = d.usernameColor; // keep map in sync
       }
     });
 
-  </script>
+    // messages listener
+    if(messagesUnsub) messagesUnsub();
+    const messagesQuery = query(collection(db, CHAT_COLLECTION), orderBy("timestamp","asc"));
+    messagesUnsub = onSnapshot(messagesQuery, (snap) => {
+      lastMessagesArray = [];
+      snap.forEach(docSnap => lastMessagesArray.push({ id: docSnap.id, data: docSnap.data() }));
+      renderMessagesFromArray(lastMessagesArray);
+    });
+
+  } else {
+    // signed out UI -> reset
+    currentUser = null;
+    if(helloEl) helloEl.style.display = "";
+    const greetingEl = document.getElementById("greeting"); if(greetingEl) greetingEl.style.display = "";
+    if(authBox) authBox.style.display = "";
+    sendAreaEl.style.display = "none";
+    profileBoxEl.style.display = "none";
+    messagesEl.innerHTML = "";
+    if(userDocUnsub){ userDocUnsub(); userDocUnsub = null; }
+    if(messagesUnsub){ messagesUnsub(); messagesUnsub = null; }
+  }
+});
+</script>
 </body>
 </html>
