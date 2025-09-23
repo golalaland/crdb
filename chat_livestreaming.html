@@ -126,10 +126,11 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 #authBox {
   display: flex;
   justify-content: center;
+  align-items: center; /* vertical centering */
   margin: 20px 0;
+  width: 100%;
 }
 
-/* Google Sign-In Button Styling */
 .google-btn {
   display: flex;
   align-items: center;
@@ -144,8 +145,9 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   color: #fff;
   box-shadow: 0 6px 18px rgba(255,20,147,0.35);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  width: 90%;      /* Make it smaller than full width */
-  max-width: 300px; /* Caps the width on bigger screens */
+  width: auto;        /* remove the 90% stretching */
+  min-width: 220px;   /* keep a reasonable clickable size */
+  max-width: 300px;   /* caps the width */
 }
 /* Google logo styling */
 .google-btn img {
