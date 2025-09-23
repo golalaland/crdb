@@ -1,148 +1,5 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-<title>Xixi — Live Stream 💸</title>
-<link rel="icon" href="data:," />
-<style>
-:root{
-  --bg:#000;
-  --card:#111;
-  --muted:#aaa;
-  --accent:#FF1493;
-  --glass: rgba(255,255,255,0.03);
-  --btn-backdrop: rgba(255,20,147,0.15);
-}
-
-/* Layout */
-html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;color:#fff;background:var(--bg);}
-#appWrapper{width:100%;height:100%;display:flex;justify-content:center;}
-.app{display:flex;flex-direction:column;height:100%;gap:10px;padding:10px;box-sizing:border-box;width:100%;max-width:480px;}
-.brand{font-weight:700;font-size:24px;color:var(--accent);text-align:center;}
-.room-desc{font-size:11px;color:var(--muted);text-align:center;margin-bottom:6px;}
-#greeting{font-size:13px;text-align:center;font-weight:600;margin-bottom:6px;color:var(--accent);}
-#helloText{font-size:20px;font-weight:800;text-align:center;margin:6px 0;color:#fff;transition:color .2s ease;z-index:1500;position:relative;}
-#center{flex:1;display:flex;flex-direction:column;gap:6px;}
-
-/* Video */
-#videoContainer{width:100%;aspect-ratio:16/9;background:#111;border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,0.6);position:sticky;top:0;z-index:100;}
-#videoContainer iframe{width:100%;height:100%;border:0;border-radius:10px;}
-
-/* Chat messages */
-#messages{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px;border-radius:8px;background:#000;margin-bottom:4px;}
-.msg{padding:8px 10px;border-radius:8px;background:var(--glass);max-width:100%;display:flex;gap:8px;align-items:center;}
-.msg.me{background:rgba(255,20,147,0.06);}
-.msg .meta{font-weight:700;font-size:13px;white-space:nowrap;}
-.msg .content{font-size:13px;color:#fff;white-space:pre-wrap;word-break:break-word;display:inline-block;}
-.buzz-content{font-weight:800;font-size:14px;color:#000;padding:6px 8px;border-radius:8px;display:inline-block;position: relative;transition: box-shadow 0.3s ease;}
-
-/* Buzz glow animation */
-@keyframes buzzGlow {0% { box-shadow:0 0 4px var(--glow-color,#FF1493),0 0 8px var(--glow-color,#FF1493);}50% { box-shadow:0 0 12px var(--glow-color,#FF69B4),0 0 24px var(--glow-color,#FF69B4);}100% { box-shadow:0 0 4px var(--glow-color,#FF1493),0 0 8px var(--glow-color,#FF1493);}}
-
-/* Send area */
-.send-area{display:flex;align-items:center;gap:8px;background:var(--card);padding:10px;position:sticky;bottom:10px;z-index:20;border-top:1px solid rgba(255,255,255,0.04);border-radius:999px;}
-.send-area input{flex:1;padding:12px;border-radius:999px;border:1px solid rgba(255,255,255,0.06);background:#0e0e0e;color:#fff;font-size:14px;outline:none;}
-.send-area input::placeholder{color:var(--muted);}
-.send-area input:focus{border-color:var(--accent);box-shadow:0 0 14px rgba(255,20,147,0.12);}
-.send-btn{padding:10px 14px;border-radius:999px;background:var(--accent);color:#000;cursor:pointer;font-weight:700;border:0;font-size:14px;}
-.buzz-btn{padding:10px 12px;border-radius:999px;background:#1d1d1d;color:var(--accent);cursor:pointer;font-weight:700;font-size:14px;border:1px solid rgba(255,20,147,0.18);}
-.buzz-btn:hover{animation:buzzPulse 1.5s infinite;}
-@keyframes buzzPulse{0%{box-shadow:0 0 0 0 rgba(255,20,147,0.18)}70%{box-shadow:0 0 0 12px rgba(255,20,147,0)}100%{box-shadow:0 0 0 0 rgba(255,20,147,0)}}
-
-/* Profile glass bar */
-.profile{display:none;flex-direction:column;gap:8px;margin-top:10px;}
-.profile-card{background:var(--glass);padding:6px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);display:flex;flex-direction:column;gap:4px;}
-.profile-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
-.profile-left{display:flex;flex-direction:column;gap:2px;}
-.profile-name{font-weight:800;font-size:13px;color:#fff;}
-.profile-label{color:var(--accent);font-weight:800;font-size:10px;}
-.profile-value{color:#fff;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"Roboto Mono","Courier New",monospace;font-weight:400;font-size:11px;}
-.profile-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;}
-.small-btn{padding:6px 10px;border-radius:8px;background:var(--btn-backdrop);border:0;color:#fff;cursor:pointer;font-weight:700;font-size:12px;text-decoration:none;}
-
-/* Star popup */
-.star-popup{position:fixed;left:50%;top:18%;transform:translateX(-50%);background:var(--card);padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);display:none;z-index:1000;color:var(--accent);font-size:13px;white-space:nowrap;text-align:center;}
-.onlineCount{font-size:11px;color:var(--muted);}
-
-/* Google Sign-In (aged) */
-.old-google-btn{
-  display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 12px;border-radius:8px;background:linear-gradient(135deg,#FF1493,#FF69B4);color:#fff;font-weight:600;font-size:12px;border:none;cursor:pointer;opacity:0.85;transition: transform 0.2s ease, opacity 0.2s ease;
-}
-.old-google-btn:hover{transform:translateY(-1px);opacity:1;}
-.old-google-btn img{width:16px;height:16px;vertical-align:middle;margin-right:6px;}
-
-/* HELLO Animation */
-@keyframes helloMove {0%{transform:translateY(-10px);opacity:0;}50%{transform:translateY(0px);opacity:1;}100%{transform:translateY(10px);opacity:0;}}
-#helloText.animate{display:block;animation:helloMove 1.5s ease-in-out infinite;}
-</style>
-</head>
-<body>
-<div id="appWrapper">
-  <div class="app">
-    <div class="brand">乂丨乂丨</div>
-    <div id="greeting">Welcome to the vibe ✨</div>
-    <div id="center">
-      <div id="videoContainer">
-        <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
-      </div>
-
-      <div id="helloText" aria-live="polite">HELLO</div>
-
-      <div class="room-desc">Live Stream 💸 — Chat. Own your vibe.
-        <span id="onlineCount" class="onlineCount"></span>
-      </div>
-
-      <div id="guestMsg"></div>
-
-      <!-- OLD Google Sign-In -->
-      <div id="authBox">
-        <button id="googleSignInBtn" class="old-google-btn">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="G">
-          Sign in with Google
-        </button>
-      </div>
-
-      <div id="messages"></div>
-
-      <div class="send-area" id="sendArea" style="display:none;">
-        <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" />
-        <button id="buzzBtn" class="buzz-btn" title="Send BUZZ 🚨">🚨</button>
-        <button id="sendBtn" class="send-btn">Send</button>
-      </div>
-    </div>
-
-    <div class="profile" id="profileBox">
-      <div class="profile-card">
-        <div class="profile-top">
-          <div class="profile-left">
-            <div id="profileName" class="profile-name">GUEST 0000</div>
-            <div>
-              <span class="profile-label">STARS COLLECTED:</span>
-              <span class="profile-value"><span id="starCount">0</span>⭐️</span>
-            </div>
-          </div>
-          <div class="profile-actions">
-            <a id="redeemBtn" class="small-btn" href="https://xixi.live" target="_blank">Redeem</a>
-            <button id="tipBtn" class="small-btn">💵</button>
-          </div>
-        </div>
-        <div>
-          <span class="profile-label">CASH EARNED:</span>
-          <span class="profile-value">₦<span id="cashCount">0</span></span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="star-popup" id="starPopup">
-  <div id="starText">You've just earned +1 star! ⭐</div>
-</div>
-
-<script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc, updateDoc, increment, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // Firebase config
@@ -174,7 +31,6 @@ const cashCountEl = document.getElementById("cashCount");
 const sendArea = document.getElementById("sendArea");
 const authBox = document.getElementById("authBox");
 const CHAT_COLLECTION = "messages_livestreaming";
-const BUZZ_COST = 30;
 
 let currentUser = null;
 
@@ -196,7 +52,7 @@ setInterval(animateHello,3000);
 document.getElementById("googleSignInBtn").addEventListener("click", async e=>{
   e.preventDefault();
   try{
-    const result = await signInWithPopup(auth,provider);
+    await signInWithPopup(auth,provider);
   }catch(err){console.error(err);}
 });
 
@@ -218,6 +74,12 @@ onAuthStateChanged(auth,user=>{
   }
 });
 
+// Scroll helper
+function scrollMessagesToBottom(){
+  const maxScroll = messagesEl.scrollHeight - messagesEl.clientHeight;
+  messagesEl.scrollTop = maxScroll > 0 ? maxScroll : 0;
+}
+
 // Firestore messages listener
 const messagesQuery=query(collection(db,CHAT_COLLECTION),orderBy("timestamp","asc"));
 onSnapshot(messagesQuery,snapshot=>{
@@ -226,11 +88,23 @@ onSnapshot(messagesQuery,snapshot=>{
     const data=doc.data();
     const msgDiv=document.createElement("div");
     msgDiv.className="msg "+(data.uid===currentUser?.uid?"me":"");
-    msgDiv.innerHTML=`<span class="meta" style="color:${randomColor()}">${data.name||"GUEST"}:</span>
-                        <span class="content">${data.content}</span>`;
+
+    // Detect if message is BUZZ
+    if(data.content.includes('buzz-content')){
+      msgDiv.innerHTML=`<span class="meta" style="color:${randomColor()}">${data.name||"GUEST"}:</span>
+                          ${data.content}`;
+      const buzzEl = msgDiv.querySelector(".buzz-content");
+      if(buzzEl){
+        buzzEl.style.animation = "buzzGlow 1.2s infinite";
+      }
+    } else {
+      msgDiv.innerHTML=`<span class="meta" style="color:${randomColor()}">${data.name||"GUEST"}:</span>
+                          <span class="content">${data.content}</span>`;
+    }
+
     messagesEl.appendChild(msgDiv);
-    messagesEl.scrollTop=messagesEl.scrollHeight;
   });
+  scrollMessagesToBottom();
 });
 
 // Send message
@@ -248,51 +122,18 @@ sendBtn.addEventListener("click",async()=>{
 });
 
 // BUZZ feature
-// Firestore messages listener with BUZZ highlight fix
-onSnapshot(messagesQuery, snapshot => {
-  messagesEl.innerHTML = "";
-  snapshot.forEach(doc => {
-    const data = doc.data();
-    const msgDiv = document.createElement("div");
-    msgDiv.className = "msg " + (data.uid === currentUser?.uid ? "me" : "");
-
-    let contentHTML = data.content;
-    // Detect if message is BUZZ and wrap if not already
-    if(data.isBuzz){
-      contentHTML = `<span class='buzz-content'>${data.content}</span>`;
-    }
-
-    msgDiv.innerHTML = `
-      <span class="meta" style="color:${randomColor()}">${data.name||"GUEST"}:</span>
-      <span class="content">${contentHTML}</span>
-    `;
-
-    messagesEl.appendChild(msgDiv);
-
-    // Animate BUZZ glow if present
-    const buzzSpan = msgDiv.querySelector(".buzz-content");
-    if(buzzSpan){
-      buzzSpan.style.setProperty("--glow-color","#FF1493");
-      buzzSpan.style.animation = "buzzGlow 1.2s infinite alternate";
-    }
-
-    messagesEl.scrollTop = messagesEl.scrollHeight; // auto-scroll
-  });
-});
-
-// BUZZ feature fix
-buzzBtn.addEventListener("click", async () => {
-  if (!currentUser) return;
+buzzBtn.addEventListener("click",async()=>{
+  if(!currentUser) return;
   const buzzText = messageInputEl.value.trim() || "BUZZ!";
-  await addDoc(collection(db, CHAT_COLLECTION), {
-    uid: currentUser.uid,
-    name: currentUser.displayName || "GUEST",
-    content: buzzText,
-    isBuzz: true, // <-- important flag
-    timestamp: serverTimestamp()
+  await addDoc(collection(db,CHAT_COLLECTION),{
+    uid:currentUser.uid,
+    name:currentUser.displayName,
+    content: `<span class='buzz-content'>${buzzText}</span>`,
+    timestamp:serverTimestamp()
   });
-  messageInputEl.value = "";
+  messageInputEl.value="";
 });
+
 // Profile updates (stars/cash) placeholder
 function addStar(amount=1){
   const current=parseInt(starCountEl.textContent)||0;
@@ -307,7 +148,3 @@ function addCash(amount=100){
   const current=parseInt(cashCountEl.textContent.replace(/,/g,''))||0;
   cashCountEl.textContent=formatCash(current+amount);
 }
-
-</script>
-</body>
-</html>
