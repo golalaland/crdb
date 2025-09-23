@@ -61,21 +61,28 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .profile-name{font-weight:800;font-size:13px;}
 .profile-label{color:var(--accent);font-weight:800;font-size:10px;}
 
-/* Stars/Cash counts — smaller & tighter */
-.profile-value{
-  color:#fff;
-  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
-  font-weight:400;
-  font-size:11px;
+/* Stars & Cash counts – compact and aligned */
+.profile-value {
+  color: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 1.2; /* tighter spacing */
+  display: inline-flex;
+  align-items: center; /* vertically aligns icon and number */
+  gap: 2px; /* small space between number and icon */
 }
+
 .profile-value .icon,
 .profile-value span + .icon,
 .profile-value span .icon {
-  font-size:10px;
-  margin-left:2px;
-  vertical-align:middle;
+  font-size: 10px;
+  vertical-align: middle;
 }
-
+/* Optional: adjust small screens */
+@media (max-width: 420px) {
+  .profile-value { font-size: 10px; gap: 1px; }
+}
 .profile-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;}
 .small-btn{
   padding:6px 10px;
