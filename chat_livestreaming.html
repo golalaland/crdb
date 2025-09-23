@@ -180,7 +180,73 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   <div id="starText">You've just earned +1 star! ⭐</div>
 </div>
 <script type="module">
-/* ---------- Message rendering + send/buzz listeners ---------- */
+// ---------- DOM references ----------
+const messagesEl = document.getElementById("messages");
+const sendBtn = document.getElementById("sendBtn");
+const buzzBtn = document.getElementById("buzzBtn");
+const messageInputEl = document.getElementById("messageInput");
+const starPopupEl = document.getElementById("starPopup");
+const helloTextEl = document.getElementById("helloText");
+const googleSignInBtn = document.getElementById("googleSignInBtn");
+const sendAreaEl = document.getElementById("sendArea");
+const profileBoxEl = document.getElementById("profileBox");
+const profileNameEl = document.getElementById("profileName");
+const starCountEl = document.getElementById("starCount");
+const cashCountEl = document.getElementById("cashCount");
+
+// ---------- Firebase references ----------
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+import { getFirestore, collection, addDoc, updateDoc, doc, getDoc, serverTimestamp, increment, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+
+const firebaseConfig = {
+  // your firebase config here
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+const CHAT_COLLECTION = "messages_livestreaming"; // or moneyroom/musicroom as needed
+const BUZZ_COST = 1; // cost in stars
+
+let currentUser = null;
+let userColors = {}; // optional: for colored usernames
+
+// ---------- HELLO animation ----------
+function animateHello() {
+  helloTextEl.classList.add("animate");
+  setTimeout(() => helloTextEl.classList.remove("animate"), 3000);
+}
+animateHello();
+
+// ---------- Google Sign-In ----------
+googleSignInBtn.addEventListener("click", async (e) => {
+  e.preventDefault();
+  try {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    currentUser = {
+      uid: result.user.uid,
+      chatId: result.user.displayName || "Guest"
+    };
+    profileNameEl.textContent = currentUser.chatId;
+    sendAreaEl.style.display = "flex";
+    profileBoxEl.style.display = "flex";
+    showStarPopup(`Hello, ${currentUser.chatId}!`);
+  } catch(err){
+    console.error("Sign-in error", err);
+    showStarPopup("Sign-in failed!");
+  }
+});
+
+// ---------- Star popup ----------
+function showStarPopup(msg){
+  starPopupEl.style.display = "block";
+  starPopupEl.querySelector("#starText").textContent = msg;
+  setTimeout(()=>starPopupEl.style.display="none",2000);
+}
+
+// ---------- Render messages ----------
 function renderMessagesFromArray(arr){
   messagesEl.innerHTML = "";
   arr.forEach(item => {
@@ -189,28 +255,24 @@ function renderMessagesFromArray(arr){
     wrapper.className = "msg";
     if(m.uid === currentUser?.uid) wrapper.classList.add("me");
 
-    // Meta
     const meta = document.createElement("span");
     meta.className = "meta";
     meta.textContent = m.chatId || "Guest";
     meta.style.color = (m.uid && userColors[m.uid]) ? userColors[m.uid] : "#ffffff";
 
-    // Content
     const content = document.createElement("span");
     if(m.highlight || m.buzzColor){
       content.className = "buzz-content content";
-      content.style.background = m.buzzColor || randomColor();
+      content.style.background = m.buzzColor || "#FF1493";
       content.style.color = "#000";
       content.textContent = " " + (m.content || "");
 
-      // Glow animation
       if(!m.glowEnded){
-        const glowColor = m.buzzColor || randomColor();
+        const glowColor = m.buzzColor || "#FF1493";
         const duration = (1 + Math.random()*1.5) + "s";
         content.style.setProperty("--glow-color", glowColor);
         content.style.animation = `buzzGlow ${duration} infinite`;
 
-        // Stop glow after duration
         setTimeout(async () => {
           content.style.animation = "";
           m.glowEnded = true;
@@ -224,13 +286,6 @@ function renderMessagesFromArray(arr){
     } else {
       content.className = "content";
       content.textContent = " " + (m.content || "");
-
-      // Parse commands
-      if(m.content?.startsWith("/")){
-        const cmd = m.content.slice(1).trim().toLowerCase();
-        if(cmd === "tip") content.innerHTML += " 💵";
-        if(cmd === "redeem") content.innerHTML += " 🎁";
-      }
     }
 
     wrapper.appendChild(meta);
@@ -240,7 +295,14 @@ function renderMessagesFromArray(arr){
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-/* ---------- Send normal message ---------- */
+// ---------- Real-time messages ----------
+const messagesQuery = query(collection(db, CHAT_COLLECTION), orderBy("timestamp","asc"));
+onSnapshot(messagesQuery, snapshot => {
+  const msgs = snapshot.docs.map(d=>({id:d.id,data:d.data()}));
+  renderMessagesFromArray(msgs);
+});
+
+// ---------- Send message ----------
 sendBtn.addEventListener("click", async () => {
   if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
   const txt = messageInputEl.value.trim();
@@ -261,7 +323,7 @@ sendBtn.addEventListener("click", async () => {
   }
 });
 
-/* ---------- BUZZ button ---------- */
+// ---------- BUZZ button ----------
 buzzBtn.addEventListener("click", async () => {
   if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
   const userRef = doc(db, "users", currentUser.uid);
@@ -276,7 +338,6 @@ buzzBtn.addEventListener("click", async () => {
 
   try {
     await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
-
     const colors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"];
     const glowColor = colors[Math.floor(Math.random()*colors.length)];
 
@@ -300,7 +361,7 @@ buzzBtn.addEventListener("click", async () => {
   }
 });
 
-/* ---------- Enter key support ---------- */
+// ---------- Enter key support ----------
 messageInputEl.addEventListener("keypress", (e) => {
   if(e.key === "Enter") sendBtn.click();
 });
