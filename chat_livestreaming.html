@@ -179,15 +179,12 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 <div class="star-popup" id="starPopup">
   <div id="starText">You've just earned +1 star! ⭐</div>
 </div>
-
 <script type="module">
-// === Firebase imports ===
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getDatabase, ref as rtdbRef, set as rtdbSet, onDisconnect, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-app.js";
+import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-auth.js";
 
-/* Firebase config */
+// ---------- Firebase config ----------
 const firebaseConfig = {
   apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
@@ -195,193 +192,137 @@ const firebaseConfig = {
   storageBucket: "metaverse-1010.firebasestorage.app",
   messagingSenderId: "1044064238233",
   appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
-  measurementId: "G-S77BMC266C",
-  databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
+  measurementId: "G-S77BMC266C"
 };
+
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-setPersistence(auth, browserLocalPersistence).catch(()=>{});
 const db = getFirestore(app);
-const rtdb = getDatabase(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
-/* --- State --- */
-let currentUser = null;
-let userDocUnsub = null;
-let messagesUnsub = null;
-let usersUnsub = null;
-const CHAT_COLLECTION = "messages_livestreaming";
-const BUZZ_COST = 10;
-const AUTO_STAR_ADD = 5;
-const DAILY_STAR_CAP = 500;
-let lastMessagesArray = [];
-
-/* --- UI refs --- */
-const googleBtn = document.getElementById("googleSignInBtn");
-const authBox = document.getElementById("authBox");
-const messagesEl = document.getElementById("messages");
-const sendAreaEl = document.getElementById("sendArea");
-const messageInputEl = document.getElementById("messageInput");
+// ---------- Elements ----------
 const sendBtn = document.getElementById("sendBtn");
 const buzzBtn = document.getElementById("buzzBtn");
-const profileBoxEl = document.getElementById("profileBox");
+const messageInputEl = document.getElementById("messageInput");
+const messagesEl = document.getElementById("messages");
+const helloEl = document.getElementById("helloText");
+const profileBox = document.getElementById("profileBox");
 const profileNameEl = document.getElementById("profileName");
 const starCountEl = document.getElementById("starCount");
 const cashCountEl = document.getElementById("cashCount");
-const tipBtn = document.getElementById("tipBtn");
-const redeemBtn = document.getElementById("redeemBtn");
-const onlineCountEl = document.getElementById("onlineCount");
-const helloEl = document.getElementById("helloText");
+const sendArea = document.getElementById("sendArea");
 
-/* HELLO animation rotation */
-if(helloEl){
-  const greetings = ["HELLO","HOLA","BONJOUR","CIAO","HALLO","こんにちは","你好","안녕하세요","SALUT","OLÁ","NAMASTE","MERHABA"];
-  let helloIndex = 0;
+// ---------- Variables ----------
+let currentUser = null;
+const CHAT_COLLECTION = "messages_livestreaming"; // Change room here if needed
+const BUZZ_COST = 5;
+const userColors = {}; // optional random colors for usernames
+
+// ---------- Utilities ----------
+function formatCash(n){
+  return Number(n).toLocaleString("en-US");
+}
+function randomColor(){
+  const colors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"];
+  return colors[Math.floor(Math.random()*colors.length)];
+}
+function showStarPopup(text){
+  const popup = document.getElementById("starPopup");
+  if(!popup) return;
+  document.getElementById("starText").textContent = text;
+  popup.style.display = "block";
+  setTimeout(()=>popup.style.display="none",1500);
+}
+
+// ---------- HELLO Animation ----------
+function startHelloAnimation(){
   helloEl.classList.add("animate");
-  function rotateHello(){
-    helloEl.innerText = greetings[helloIndex++ % greetings.length];
-    helloEl.style.color = ["#FFD700","#FF69B4","#87CEEB","#90EE90","#FFB6C1","#FFA07A","#8A2BE2","#00BFA6","#F4A460"][Math.floor(Math.random()*9)];
-  }
-  rotateHello();
-  setInterval(rotateHello,1500);
+}
+startHelloAnimation();
+
+// ---------- Google Sign-In ----------
+function signIn(){
+  signInWithPopup(auth, provider)
+    .then(result => {
+      currentUser = result.user;
+    })
+    .catch(err => {
+      console.error("Sign in failed:", err);
+      showStarPopup("Sign in failed!");
+    });
 }
 
-/* Presence */
-function setupPresence(user){
-  try{
-    const pRef = rtdbRef(rtdb,"presence/"+user.uid);
-    rtdbSet(pRef,true).catch(()=>{});
-    onDisconnect(pRef).remove().catch(()=>{});
-  }catch(e){ console.warn("presence error",e); }
-}
-onValue(rtdbRef(rtdb,"presence"),snap=>{
-  onlineCountEl.innerText=(${Object.keys(snap.val()||{}).length} online);
-});
-
-/* Users color map */
-const userColors = {};
-async function setupUsersListener(){
-  if(usersUnsub) usersUnsub();
-  usersUnsub = onSnapshot(collection(db,"users"),snap=>{
-    snap.forEach(d=>{userColors[d.id]=d.data().usernameColor||"#fff";});
-    if(lastMessagesArray.length) renderMessagesFromArray(lastMessagesArray);
-  });
-}
-await setupUsersListener();
-
-/* Google Sign-in */
-googleBtn?.addEventListener("click",async e=>{
+// Optionally auto-sign in button
+document.getElementById("googleSignInBtn")?.addEventListener("click", e=>{
   e.preventDefault();
-  const provider = new GoogleAuthProvider();
-  try{ await signInWithPopup(auth,provider); }
-  catch(err){ console.error(err); alert("Sign-in failed: "+(err.message||err)); }
+  signIn();
 });
 
-/* Auth watcher */
-onAuthStateChanged(auth,async user=>{
+// ---------- Auth state ----------
+onAuthStateChanged(auth, async user => {
   if(user){
-    setupPresence(user);
-    const userRef = doc(db,"users",user.uid);
-    let snap = await getDoc(userRef);
-    if(!snap.exists()){
-      await setDoc(userRef,{
-        chatId:user.displayName||"GUEST "+Math.floor(1000+Math.random()*9000),
-        stars:100, cash:0,
-        usernameColor:["#FFD700","#FF69B4","#87CEEB","#90EE90","#FFB6C1","#FFA07A","#8A2BE2","#00BFA6","#F4A460"][Math.floor(Math.random()*9)],
-        lastColorDate:new Date().toISOString().split("T")[0],
-        isAdmin:false, lastStarReset:Date.now(), badges:[]
-      });
-      snap = await getDoc(userRef);
+    currentUser = user;
+    profileBox.style.display = "flex";
+    sendArea.style.display = "flex";
+    profileNameEl.textContent = user.displayName || "GUEST";
+
+    // Load user data
+    const userRef = doc(db, "users", user.uid);
+    const snap = await getDoc(userRef);
+    if(snap.exists()){
+      const data = snap.data();
+      starCountEl.textContent = data.stars || 0;
+      cashCountEl.textContent = formatCash(data.cash || 0);
+    } else {
+      starCountEl.textContent = 0;
+      cashCountEl.textContent = "0";
     }
-    const userData = snap.data();
-    currentUser={ uid:user.uid, chatId:userData.chatId, stars:userData.stars, cash:userData.cash, usernameColor:userData.usernameColor };
-    helloEl.style.display="none";
-    authBox.style.display="none";
-    sendAreaEl.style.display="flex";
-    profileBoxEl.style.display="block";
-    profileNameEl.innerText=currentUser.chatId;
-    profileNameEl.style.color=currentUser.usernameColor;
-    starCountEl.innerText=currentUser.stars;
-    cashCountEl.innerText=currentUser.cash;
-
-    /* Firestore listener */
-    if(userDocUnsub) userDocUnsub();
-    userDocUnsub=onSnapshot(userRef,uSnap=>{
-      const d=uSnap.data()||{};
-      currentUser.stars=d.stars||0; currentUser.cash=d.cash||0;
-      starCountEl.innerText=currentUser.stars; cashCountEl.innerText=currentUser.cash;
-      if(d.usernameColor){ profileNameEl.style.color=d.usernameColor; userColors[userRef.id]=d.usernameColor; }
-    });
-
-    /* Chat listener */
-    if(messagesUnsub) messagesUnsub();
-    const messagesQuery=query(collection(db,CHAT_COLLECTION),orderBy("timestamp","asc"));
-    messagesUnsub=onSnapshot(messagesQuery,snap=>{
-      lastMessagesArray=snap.docs.map(d=>({id:d.id,data:d.data()}));
-      renderMessagesFromArray(lastMessagesArray);
-    });
-
   } else {
-    currentUser=null;
-    sendAreaEl.style.display="none";
-    profileBoxEl.style.display="none";
-    authBox.style.display="block";
-    helloEl.style.display="block";
+    profileBox.style.display = "none";
+    sendArea.style.display = "none";
+    profileNameEl.textContent = "GUEST";
   }
 });
 
-/* Message render */
-/* ---------- Buzz + Send ---------- */
-/* ---------- Message rendering + send/buzz listeners ---------- */
-function renderMessagesFromArray(arr){
+// ---------- Load messages ----------
+const messagesQuery = query(collection(db, CHAT_COLLECTION), orderBy("timestamp","asc"));
+onSnapshot(messagesQuery, snapshot=>{
   messagesEl.innerHTML = "";
-  arr.forEach(item => {
-    const m = item.data;
+  snapshot.forEach(docSnap=>{
+    const m = docSnap.data();
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
     if(m.uid === currentUser?.uid) wrapper.classList.add("me");
 
-    // Meta
     const meta = document.createElement("span");
     meta.className = "meta";
     meta.textContent = m.chatId || "Guest";
     meta.style.color = (m.uid && userColors[m.uid]) ? userColors[m.uid] : "#ffffff";
 
-    // Content
     const content = document.createElement("span");
     if(m.highlight || m.buzzColor){
       content.className = "buzz-content content";
       content.style.background = m.buzzColor || randomColor();
       content.style.color = "#000";
-      content.textContent = " " + (m.content || "");
 
-      // Glow animation
       if(!m.glowEnded){
         const glowColor = m.buzzColor || randomColor();
         const duration = (1 + Math.random()*1.5) + "s";
         content.style.setProperty("--glow-color", glowColor);
-        content.style.animation = buzzGlow ${duration} infinite;
+        content.style.animation = `buzzGlow ${duration} infinite`;
 
-        // Stop glow after duration
-        setTimeout(async () => {
+        setTimeout(async ()=>{
           content.style.animation = "";
-          m.glowEnded = true;
-          try {
-            const msgRef = doc(db, CHAT_COLLECTION, item.id);
-            await updateDoc(msgRef, { glowEnded: true });
-          } catch(e){ console.warn("Error ending glow", e); }
+          try{
+            const msgRef = doc(db, CHAT_COLLECTION, docSnap.id);
+            await updateDoc(msgRef,{glowEnded:true});
+          } catch(e){ console.warn(e); }
         }, m.buzzDuration || 60000);
       }
 
     } else {
       content.className = "content";
-      content.textContent = " " + (m.content || "");
-
-      // Parse commands
-      if(m.content?.startsWith("/")){
-        const cmd = m.content.slice(1).trim().toLowerCase();
-        if(cmd === "tip") content.innerHTML += " 💵";
-        if(cmd === "redeem") content.innerHTML += " 🎁";
-      }
+      content.textContent = m.content || "";
     }
 
     wrapper.appendChild(meta);
@@ -389,72 +330,60 @@ function renderMessagesFromArray(arr){
     messagesEl.appendChild(wrapper);
   });
   messagesEl.scrollTop = messagesEl.scrollHeight;
-}
+});
 
-/* ---------- Send normal message ---------- */
-sendBtn.addEventListener("click", async () => {
+// ---------- Send message ----------
+sendBtn.addEventListener("click", async ()=>{
   if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
   const txt = messageInputEl.value.trim();
   if(!txt){ showStarPopup("Type a message first"); return; }
 
-  try {
+  try{
     await addDoc(collection(db, CHAT_COLLECTION), {
       content: txt,
       uid: currentUser.uid,
-      chatId: currentUser.chatId,
+      chatId: currentUser.displayName || "Guest",
       timestamp: serverTimestamp(),
-      highlight: false,
-      glowEnded: true
+      highlight:false,
+      glowEnded:true
     });
     messageInputEl.value = "";
-  } catch(err){
-    console.error("Send message error", err);
-  }
+  } catch(err){ console.error(err); showStarPopup("Failed to send message"); }
 });
 
-/* ---------- BUZZ button ---------- */
-buzzBtn.addEventListener("click", async () => {
+// ---------- BUZZ button ----------
+buzzBtn.addEventListener("click", async ()=>{
   if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
+
   const userRef = doc(db, "users", currentUser.uid);
   const snap = await getDoc(userRef);
-  const userData = snap.exists() ? snap.data() : {};
-  const currentStars = userData.stars || 0;
+  const data = snap.exists() ? snap.data() : {};
+  const stars = data.stars || 0;
 
-  if(currentStars < BUZZ_COST){ showStarPopup("Not enough stars to create a BUZZ! 🚨"); return; }
-
+  if(stars < BUZZ_COST){ showStarPopup("Not enough stars to BUZZ!"); return; }
   const txt = messageInputEl.value.trim();
-  if(!txt){ showStarPopup("Type a message to BUZZ! 🚨"); return; }
+  if(!txt){ showStarPopup("Type a message to BUZZ!"); return; }
 
-  try {
+  try{
     await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
-
-    const colors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"];
-    const glowColor = colors[Math.floor(Math.random()*colors.length)];
-
+    const glowColor = randomColor();
     await addDoc(collection(db, CHAT_COLLECTION), {
       content: txt,
       uid: currentUser.uid,
-      chatId: currentUser.chatId,
+      chatId: currentUser.displayName || "Guest",
       timestamp: serverTimestamp(),
-      highlight: true,
+      highlight:true,
       buzzColor: glowColor,
-      buzzDuration: 60000,
-      glowEnded: false
+      buzzDuration:60000,
+      glowEnded:false
     });
-
-    showStarPopup("BUZZ 🚨 sent!");
     messageInputEl.value = "";
-
-  } catch(err){
-    console.error("Buzz send error", err);
-    showStarPopup("Failed to send BUZZ 🚨");
-  }
+    showStarPopup("BUZZ sent!");
+  } catch(err){ console.error(err); showStarPopup("Failed to send BUZZ"); }
 });
 
-/* ---------- Enter key support ---------- */
-messageInputEl.addEventListener("keypress", (e) => {
+// ---------- Enter key ----------
+messageInputEl.addEventListener("keypress", e=>{
   if(e.key === "Enter") sendBtn.click();
 });
 </script>
-</body>
-</html>
