@@ -182,7 +182,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
 import { 
-  getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, increment, query, orderBy, onSnapshot 
+  getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, setDoc, updateDoc, increment, query, orderBy, onSnapshot 
 } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
 
@@ -252,12 +252,12 @@ function showStarPopup(msg){
 // ----------------------
 // Google Sign-In
 // ----------------------
-googleSignInBtn.addEventListener("click", async () => {
+googleSignInBtn.addEventListener("click", async (e) => {
+  e.preventDefault(); // prevent page reload
   try {
     const result = await signInWithPopup(auth, provider);
     currentUser = result.user;
 
-    // Show chat area
     sendArea.style.display = "flex";
     profileBox.style.display = "flex";
 
@@ -267,8 +267,11 @@ googleSignInBtn.addEventListener("click", async () => {
     const userRef = doc(db, "users", currentUser.uid);
     const snap = await getDoc(userRef);
     if(!snap.exists()){
-      await updateDoc(userRef, { stars: 5, cash: 0, isAdmin: false, chatId: currentUser.displayName || "Guest" }).catch(async ()=>{
-        await setDoc(userRef, { stars: 5, cash: 0, isAdmin: false, chatId: currentUser.displayName || "Guest" });
+      await setDoc(userRef, { 
+        stars: 5, 
+        cash: 0, 
+        isAdmin: false, 
+        chatId: currentUser.displayName || "Guest" 
       });
     }
 
@@ -302,127 +305,86 @@ function renderMessagesFromArray(arr){
   messagesEl.innerHTML = "";
   arr.forEach(item => {
     const m = item.data();
-    const wrapper = document.createElement("div");
-    wrapper.className = "msg";
-    if(m.uid === currentUser?.uid) wrapper.classList.add("me");
+    const msgId = item.id;
+    const div = document.createElement("div");
+    div.classList.add("msg");
+    if(m.uid === currentUser?.uid) div.classList.add("me");
 
-    const meta = document.createElement("span");
-    meta.className = "meta";
-    meta.textContent = m.chatId || "Guest";
-    meta.style.color = (m.uid && userColors[m.uid]) ? userColors[m.uid] : "#ffffff";
+    if(m.type === "buzz"){
+      const buzzEl = document.createElement("span");
+      buzzEl.classList.add("buzz-content");
+      buzzEl.textContent = "🚨 BUZZ!";
+      buzzEl.style.setProperty('--glow-color','#FF1493');
+      div.appendChild(buzzEl);
 
-    const content = document.createElement("span");
-    if(m.highlight || m.buzzColor){
-      content.className = "buzz-content content";
-      content.style.background = m.buzzColor || "#FF1493";
-      content.style.color = "#000";
-      content.textContent = " " + (m.content || "");
-
-      if(!m.glowEnded){
-        const glowColor = m.buzzColor || "#FF1493";
-        const duration = (1 + Math.random()*1.5) + "s";
-        content.style.setProperty("--glow-color", glowColor);
-        content.style.animation = `buzzGlow ${duration} infinite`;
-
-        setTimeout(async ()=>{
-          content.style.animation = "";
-          m.glowEnded = true;
-          try {
-            const msgRef = doc(db, CHAT_COLLECTION, item.id);
-            await updateDoc(msgRef, { glowEnded: true });
-          } catch(e){ console.warn("Error ending glow", e); }
-        }, m.buzzDuration || 60000);
-      }
+      // auto remove glow
+      setTimeout(async()=>{
+        try{ await updateDoc(doc(db, CHAT_COLLECTION, msgId), { glowEnded:true }); } catch(e){}
+      }, 4500);
     } else {
-      content.className = "content";
-      content.textContent = " " + (m.content || "");
-      if(m.content?.startsWith("/")){
-        const cmd = m.content.slice(1).trim().toLowerCase();
-        if(cmd === "tip") content.innerHTML += " 💵";
-        if(cmd === "redeem") content.innerHTML += " 🎁";
-      }
+      const meta = document.createElement("div");
+      meta.classList.add("meta");
+      meta.textContent = m.username || "Guest";
+      const content = document.createElement("div");
+      content.classList.add("content");
+      content.textContent = m.text;
+      div.appendChild(meta);
+      div.appendChild(content);
     }
 
-    wrapper.appendChild(meta);
-    wrapper.appendChild(content);
-    messagesEl.appendChild(wrapper);
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
   });
-  messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
 // ----------------------
-// Firestore real-time listener
+// Listen for chat messages
 // ----------------------
-const q = query(collection(db, CHAT_COLLECTION), orderBy("timestamp","asc"));
-onSnapshot(q, snapshot => {
-  renderMessagesFromArray(snapshot.docs);
+const q = query(collection(db, CHAT_COLLECTION), orderBy("createdAt"));
+onSnapshot(q, snap => {
+  renderMessagesFromArray(snap.docs);
 });
 
 // ----------------------
 // Send message
 // ----------------------
-sendBtn.addEventListener("click", async ()=>{
-  if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
-  const txt = messageInputEl.value.trim();
-  if(!txt){ showStarPopup("Type a message first"); return; }
-  try {
-    await addDoc(collection(db, CHAT_COLLECTION), {
-      content: txt,
-      uid: currentUser.uid,
-      chatId: currentUser.displayName || "Guest",
-      timestamp: serverTimestamp(),
-      highlight: false,
-      glowEnded: true
-    });
-    messageInputEl.value = "";
-  } catch(err){ console.error("Send message error", err); }
+sendBtn.addEventListener("click", async () => {
+  if(!currentUser) return showStarPopup("Sign in first!");
+  const text = messageInputEl.value.trim();
+  if(!text) return;
+  const userRef = doc(db, "users", currentUser.uid);
+  await addDoc(collection(db, CHAT_COLLECTION), {
+    uid: currentUser.uid,
+    username: currentUser.displayName || "Guest",
+    text,
+    type: "text",
+    createdAt: serverTimestamp()
+  });
+  messageInputEl.value = "";
 });
 
 // ----------------------
 // BUZZ button
 // ----------------------
-buzzBtn.addEventListener("click", async ()=>{
-  if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
-
+buzzBtn.addEventListener("click", async () => {
+  if(!currentUser) return showStarPopup("Sign in first!");
   const userRef = doc(db, "users", currentUser.uid);
   const snap = await getDoc(userRef);
-  const userData = snap.exists() ? snap.data() : {};
-  const currentStars = userData.stars || 0;
+  const stars = snap.data()?.stars || 0;
+  if(stars < BUZZ_COST) return showStarPopup("Not enough stars to BUZZ!");
+  // decrement stars
+  await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
+  showStarPopup("-1 star for BUZZ!");
 
-  if(currentStars < BUZZ_COST){ showStarPopup("Not enough stars to create a BUZZ! 🚨"); return; }
-
-  const txt = messageInputEl.value.trim();
-  if(!txt){ showStarPopup("Type a message to BUZZ! 🚨"); return; }
-
-  try {
-    await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
-
-    const colors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"];
-    const glowColor = colors[Math.floor(Math.random()*colors.length)];
-
-    await addDoc(collection(db, CHAT_COLLECTION), {
-      content: txt,
-      uid: currentUser.uid,
-      chatId: currentUser.displayName || "Guest",
-      timestamp: serverTimestamp(),
-      highlight: true,
-      buzzColor: glowColor,
-      buzzDuration: 60000,
-      glowEnded: false
-    });
-
-    showStarPopup("BUZZ 🚨 sent!");
-    messageInputEl.value = "";
-
-  } catch(err){
-    console.error("Buzz send error", err);
-    showStarPopup("Failed to send BUZZ 🚨");
-  }
+  // send BUZZ message
+  await addDoc(collection(db, CHAT_COLLECTION), {
+    uid: currentUser.uid,
+    username: currentUser.displayName || "Guest",
+    type: "buzz",
+    createdAt: serverTimestamp()
+  });
 });
 
-// ----------------------
-// Enter key support
-// ----------------------
-messageInputEl.addEventListener("keypress", (e)=>{
-  if(e.key === "Enter") sendBtn.click();
-});
+</script>
+</body>
+</html>
