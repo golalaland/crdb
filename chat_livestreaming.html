@@ -13,6 +13,7 @@
   --glass: rgba(255,255,255,0.03);
   --btn-backdrop: rgba(255,20,147,0.15);
 }
+
 /* overall layout */
 html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;color:#fff;background:var(--bg);}
 #appWrapper{width:100%;height:100%;display:flex;justify-content:center;}
@@ -44,6 +45,18 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .msg .meta{font-weight:700;font-size:13px;white-space:nowrap;}
 .msg .content{font-size:13px;color:#fff;white-space:pre-wrap;word-break:break-word;display:inline-block;}
 .buzz-content{font-weight:800;font-size:14px;color:#000;padding:6px 8px;border-radius:8px;display:inline-block;}
+
+/* 🔥 Buzz glow animation */
+.buzz-glow {
+  animation: buzzGlow 1s ease-in-out infinite alternate;
+  box-shadow: 0 0 12px #FF1493, 0 0 20px #FF69B4;
+  border-radius: 8px;
+}
+@keyframes buzzGlow {
+  0% { box-shadow: 0 0 8px #FF1493, 0 0 16px #FF69B4; }
+  50% { box-shadow: 0 0 16px #FF1493, 0 0 28px #FF69B4; }
+  100% { box-shadow: 0 0 12px #FF1493, 0 0 20px #FF69B4; }
+}
 .send-area{display:flex;align-items:center;gap:8px;background:var(--card);padding:10px;position:sticky;bottom:10px;z-index:20;border-top:1px solid rgba(255,255,255,0.04);border-radius:999px;}
 .send-area input{flex:1;padding:12px;border-radius:999px;border:1px solid rgba(255,255,255,0.06);background:#0e0e0e;color:#fff;font-size:14px;outline:none;}
 .send-area input::placeholder{color:var(--muted);}
@@ -58,30 +71,22 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .profile-card{background:var(--glass);padding:6px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);display:flex;flex-direction:column;gap:4px;}
 .profile-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .profile-left{display:flex;flex-direction:column;gap:2px;}
-.profile-name{font-weight:800;font-size:13px;}
+.profile-name{font-weight:800;font-size:13px;color:#fff;} /* always white */
 .profile-label{color:var(--accent);font-weight:800;font-size:10px;}
 
-/* Stars & Cash counts – compact and aligned */
-.profile-value {
-  color: #fff;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
-  font-weight: 500;
-  font-size: 11px;
-  line-height: 1.2; /* tighter spacing */
-  display: inline-flex;
-  align-items: center; /* vertically aligns icon and number */
-  gap: 2px; /* small space between number and icon */
+/* Stars/Cash counts — smaller & tighter */
+.profile-value{
+  color:#fff;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
+  font-weight:400;
+  font-size:11px;
 }
-
 .profile-value .icon,
 .profile-value span + .icon,
 .profile-value span .icon {
-  font-size: 10px;
-  vertical-align: middle;
-}
-/* Optional: adjust small screens */
-@media (max-width: 420px) {
-  .profile-value { font-size: 10px; gap: 1px; }
+  font-size:10px;
+  margin-left:2px;
+  vertical-align:middle;
 }
 .profile-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;}
 .small-btn{
@@ -95,7 +100,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   font-size:12px;
   text-decoration:none;
 }
-
 /* removed underline on redeem button */
 #redeemBtn{text-decoration:none;}
 
