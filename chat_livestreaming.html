@@ -121,6 +121,22 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   .profile-value{font-size:10px;}
   .small-btn{padding:4px 8px;font-size:11px;}
 }
+<style>
+  /* ...your existing CSS above... */
+
+  /* Google Sign-In Button Styling */
+  #authBox { display:flex; justify-content:center; margin:20px 0; }
+  .google-btn { 
+    display:flex; align-items:center; justify-content:center; gap:10px; 
+    text-decoration:none; font-weight:700; font-size:16px; 
+    padding:12px 24px; border-radius:30px; 
+    background: linear-gradient(135deg, #FF1493, #FF69B4);
+    color:#fff; box-shadow:0 6px 18px rgba(255,20,147,0.35); 
+    transition: transform 0.2s ease, box-shadow 0.2s ease; 
+  }
+  .google-btn img { width:20px; height:20px; }
+  .google-btn:hover { transform: translateY(-2px); box-shadow:0 10px 25px rgba(255,20,147,0.45); }
+  .google-btn:active { transform: translateY(1px); box-shadow:0 5px 12px rgba(255,20,147,0.25); }
 </style>
 </head>
 <body>
@@ -143,10 +159,12 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
         <div id="guestMsg"></div>
 
-        <div id="authBox">
-          <button id="googleSignInBtn" class="btn">Sign in with Google</button>
-        </div>
-
+    <div id="authBox">
+  <a id="googleSignInBtn" class="google-btn" href="#">
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo" />
+    Sign in with Google
+  </a>
+</div>
         <div id="messages"></div>
 
         <div class="send-area" id="sendArea" style="display:none;">
