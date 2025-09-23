@@ -150,7 +150,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     <div id="starText">You've just earned +1 star! ⭐</div>
   </div>
 <script type="module">
-/* ====== Full page JS: Firebase + UI logic (updated per your requests) ====== */
+/* ====== Full page JS: Firebase + UI logic (cleaned & fixed) ====== */
 
 /* ---------- Imports ---------- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -160,7 +160,9 @@ import {
   browserLocalPersistence,
   onAuthStateChanged,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore,
@@ -184,7 +186,7 @@ import {
   onValue
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-/* ---------- Firebase config (your project) ---------- */
+/* ---------- Firebase config ---------- */
 const firebaseConfig = {
   apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
@@ -198,7 +200,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-setPersistence(auth, browserLocalPersistence).catch(()=>{});
+setPersistence(auth, browserLocalPersistence).catch(() => {});
 const db = getFirestore(app);
 const rtdb = getDatabase(app);
 
@@ -228,7 +230,7 @@ function rotateHello(){
   helloEl.style.color = randomColor();
 }
 rotateHello();
-const helloInterval = setInterval(rotateHello, 1500);
+setInterval(rotateHello, 1500);
 
 /* ---------- UI refs ---------- */
 const googleBtn = document.getElementById("googleSignInBtn");
@@ -259,8 +261,8 @@ onValue(rtdbRef(rtdb, "presence"), snap=>{
   onlineCountEl.innerText = `(${Object.keys(val).length} online)`;
 });
 
-/* ---------- Keep user color map (uid -> color) so chat names get daily color ---------- */
-const userColors = {}; // uid => color
+/* ---------- Users listener (daily color map) ---------- */
+const userColors = {};
 async function setupUsersListener(){
   if(usersUnsub) usersUnsub();
   usersUnsub = onSnapshot(collection(db,"users"), (snap)=>{
@@ -268,204 +270,48 @@ async function setupUsersListener(){
       const data = d.data() || {};
       userColors[d.id] = data.usernameColor || "#ffffff";
     });
-    // re-render last messages if any
     if(lastMessagesArray.length) renderMessagesFromArray(lastMessagesArray);
   });
 }
+await setupUsersListener();
 
-/* ---------- daily color logic helper ---------- */
-async function assignDailyUsernameColor(userRef, data){
+/* ---------- Daily username color helper ---------- */
+async function refreshDailyUsernameColor(userRef, userData){
   const today = new Date().toISOString().split("T")[0];
-  try{
-    if(!data || !data.lastColorDate || data.lastColorDate !== today){
-      const newColor = randomColor();
-      await updateDoc(userRef, { usernameColor: newColor, lastColorDate: today });
-      userColors[userRef.id] = newColor;
-      return newColor;
-    }
-    userColors[userRef.id] = data.usernameColor || randomColor();
-    return data.usernameColor || randomColor();
-  }catch(e){
-    console.warn("assignDailyUsernameColor error", e);
-    return data?.usernameColor || randomColor();
+  let color = userData.usernameColor || randomColor();
+  if(!userData.lastColorDate || userData.lastColorDate !== today){
+    color = randomColor();
+    try { await updateDoc(userRef, { usernameColor: color, lastColorDate: today }); } catch(e){ console.warn("Failed to update daily color", e); }
   }
+  userColors[userRef.id] = color;
+  return color;
 }
 
-/* ---------- Sign-in ---------- */
-/* ---------- Sign-in (safe for popup + mobile redirect) ---------- */
-/* ---------- Google Sign-In: Desktop popup / Mobile redirect ---------- */
-let signInInProgress = false;
+/* ---------- Sign-In ---------- */
 const provider = new GoogleAuthProvider();
+let signInInProgress = false;
 
 googleBtn.addEventListener("click", async () => {
   if (signInInProgress) return;
   signInInProgress = true;
-
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
   try {
     if(isMobile){
       await signInWithRedirect(auth, provider);
     } else {
       await signInWithPopup(auth, provider);
     }
-  } catch(err) {
-    console.error("Sign-in failed", err);
-    alert("Sign-in failed: " + (err.message || err));
-  } finally {
-    signInInProgress = false;
-  }
+  } catch(err) { console.error("Sign-in failed", err); alert("Sign-in failed: " + (err.message || err)); }
+  finally{ signInInProgress = false; }
 });
 
-/* ---------- Handle redirect result ---------- */
-getRedirectResult(auth)
-  .then((result) => {
-    if(result.user){
-      console.log("Signed in via redirect:", result.user.displayName);
-    }
-  })
-  .catch(err => {
-    console.error("Redirect sign-in error:", err);
-  });
+getRedirectResult(auth).then((result)=>{ if(result.user) console.log("Signed in via redirect:", result.user.displayName); }).catch(err => console.error("Redirect sign-in error:", err));
 
-/* ---------- Daily username color helper ---------- */
-async function refreshDailyUsernameColor(userRef, userData){
-  const today = new Date().toISOString().split("T")[0];
-  let color = userData.usernameColor || randomColor();
-
-  if(!userData.lastColorDate || userData.lastColorDate !== today){
-    color = randomColor();
-    try {
-      await updateDoc(userRef, { usernameColor: color, lastColorDate: today });
-    } catch(e){
-      console.warn("Failed to update daily color", e);
-    }
-  }
-  userColors[userRef.id] = color;
-  return color;
-}
-/* ---------- Send + Buzz (attached once) ---------- */
-sendBtn.addEventListener("click", async () => {
-  if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
-  const txt = messageInputEl.value.trim();
-  if(!txt) return;
-  messageInputEl.value = "";
-  try{
-    await addDoc(collection(db, CHAT_COLLECTION), {
-      content: txt,
-      uid: currentUser.uid,
-      chatId: currentUser.chatId || generateGuestName(),
-      timestamp: serverTimestamp(),
-      highlight: false
-    });
-  }catch(e){ console.error("send error", e); showStarPopup("Message failed to send"); }
-});
-messageInputEl.addEventListener("keydown", (e)=> { if(e.key === "Enter") sendBtn.click(); });
-
-buzzBtn.addEventListener("click", async () => {
-  if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
-  const userRef = doc(db, "users", currentUser.uid);
-  const snapshot = await getDoc(userRef);
-  const userData = snapshot.exists() ? snapshot.data() : {};
-  const currentStars = userData.stars || 0;
-  if(currentStars < BUZZ_COST){ showStarPopup("Not enough stars to create a BUZZ! 🚨"); return; }
-  const txt = messageInputEl.value.trim();
-  if(!txt){ showStarPopup("Type a message to BUZZ! 🚨"); return; }
-
-  try{
-    // atomic decrement to avoid race conditions
-    await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
-
-    const color = randomColor();
-    const docRef = await addDoc(collection(db, CHAT_COLLECTION), {
-      content: txt,
-      uid: currentUser.uid,
-      chatId: currentUser.chatId || generateGuestName(),
-      timestamp: serverTimestamp(),
-      highlight: true,
-      buzzColor: color
-    });
-
-    showStarPopup("BUZZ 🚨 sent!");
-    messageInputEl.value = "";
-
-    // clear highlight after 10s
-    setTimeout(async () => {
-      try{ await updateDoc(docRef, { highlight: false, buzzColor: null }); } catch(e){ console.warn("clear buzz failed", e); }
-    }, 10000);
-
-  }catch(e){ console.error("buzz failed", e); showStarPopup("BUZZ failed"); }
-});
-
-/* Tip & Redeem (placeholders) */
-tipBtn.addEventListener("click", () => { window.open("https://your-placeholder-payment-link.com","_blank"); showStarPopup("Thanks! Tip clicked 💵"); });
-redeemBtn.addEventListener("click", () => { window.open("https://xixi.live","_blank"); showStarPopup("Redeem clicked"); });
-
-/* ---------- Auto-star (periodic) ---------- */
-setInterval(async () => {
-  if(!currentUser) return;
-  try{
-    const userRef = doc(db, "users", currentUser.uid);
-    const snap = await getDoc(userRef);
-    const data = snap.exists() ? snap.data() : {};
-    const curr = data.stars || 0;
-    if(curr < DAILY_STAR_CAP){
-      const next = Math.min(curr + AUTO_STAR_ADD, DAILY_STAR_CAP);
-      await updateDoc(userRef, { stars: next });
-    }
-  }catch(e){ /* ignore periodic errors */ }
-}, 60000);
-
-/* ---------- Message rendering: we store lastMessagesArray to re-render when username colors change ---------- */
-let lastMessagesArray = [];
-function renderMessagesFromArray(arr){
-  messagesEl.innerHTML = "";
-  arr.forEach(item => {
-    const m = item.data;
-    const wrapper = document.createElement("div");
-    wrapper.className = "msg";
-
-    // username element (color from userColors map if available)
-    const meta = document.createElement("span");
-    meta.className = "meta";
-    const nameText = m.chatId || "Guest";
-    // color by uid if available, fallback to white
-    const nameColor = (m.uid && userColors[m.uid]) ? userColors[m.uid] : '#ffffff';
-    meta.textContent = nameText;
-    meta.style.color = nameColor;
-
-    // content element
-    const content = document.createElement("span");
-
-    if(m.highlight || m.buzzColor){
-      content.className = "buzz-content content";
-      content.style.background = m.buzzColor || randomColor();
-      content.textContent = " " + (m.content || "");
-      content.style.color = "#000";
-      wrapper.appendChild(meta);
-      wrapper.appendChild(content);
-    } else {
-      content.className = "content";
-      content.textContent = " " + (m.content || "");
-      wrapper.appendChild(meta);
-      wrapper.appendChild(content);
-    }
-
-    messagesEl.appendChild(wrapper);
-  });
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-}
-
-/* ---------- Users listener (fills userColors map) ---------- */
-await setupUsersListener();
-
-/* ---------- Auth watcher (core) ---------- */
-onAuthStateChanged(auth, async (user) => {
+/* ---------- Auth watcher ---------- */
+onAuthStateChanged(auth, async (user)=>{
   if(user){
-    // presence
-    try{ setupPresence(user); }catch(e){ console.warn("presence err", e); }
+    setupPresence(user);
 
-    // ensure user doc exists
     const userRef = doc(db, "users", user.uid);
     let snap = await getDoc(userRef);
     if(!snap.exists()){
@@ -480,60 +326,57 @@ onAuthStateChanged(auth, async (user) => {
       });
       snap = await getDoc(userRef);
     }
-    let userData = snap.exists() ? snap.data() : {};
+    const userData = snap.exists()? snap.data(): {};
+    const usernameColor = await refreshDailyUsernameColor(userRef, userData);
 
-    // assign daily color if needed
-    const today = new Date().toISOString().split("T")[0];
-    if(!userData.lastColorDate || userData.lastColorDate !== today){
-      const newColor = randomColor();
-      try{ await updateDoc(userRef, { usernameColor: newColor, lastColorDate: today }); userData.usernameColor = newColor; } catch(e){ console.warn("usernameColor update failed", e); }
-    }
+    currentUser = {
+      uid: user.uid,
+      chatId: userData.chatId || user.displayName || generateGuestName(),
+      stars: userData.stars || 0,
+      cash: userData.cash || 0,
+      usernameColor: usernameColor,
+      isAdmin: userData.isAdmin || false
+    };
 
-    // set currentUser
-    currentUser = { uid: user.uid, chatId: userData.chatId || user.displayName || generateGuestName(), stars: userData.stars || 0, cash: userData.cash || 0, usernameColor: userData.usernameColor || randomColor(), isAdmin: userData.isAdmin || false };
-
-    // UI: hide hello + auth, show chat & profile
-    if(helloEl) helloEl.style.display = "none";
-    const greetingEl = document.getElementById("greeting"); if(greetingEl) greetingEl.style.display = "none";
-    if(authBox) authBox.style.display = "none";
+    // UI
+    helloEl.style.display = "none";
+    authBox.style.display = "none";
     sendAreaEl.style.display = "flex";
     profileBoxEl.style.display = "block";
 
-    // populate profile UI
     profileNameEl.innerText = currentUser.chatId;
     profileNameEl.style.color = currentUser.usernameColor;
     starCountEl.innerText = formatNumberWithCommas(currentUser.stars);
     cashCountEl.innerText = formatNumberWithCommas(currentUser.cash);
 
-    // listen to user doc for live updates to stars/cash/usernameColor
+    // Listen to user doc
     if(userDocUnsub) userDocUnsub();
-    userDocUnsub = onSnapshot(userRef, (uSnap) => {
+    userDocUnsub = onSnapshot(userRef, (uSnap)=>{
       const d = uSnap.data() || {};
       currentUser.stars = d.stars || 0;
       currentUser.cash = d.cash || 0;
       starCountEl.innerText = formatNumberWithCommas(currentUser.stars);
       cashCountEl.innerText = formatNumberWithCommas(currentUser.cash);
-      if(d.usernameColor) {
+      if(d.usernameColor){
         profileNameEl.style.color = d.usernameColor;
-        userColors[userRef.id] = d.usernameColor; // keep map in sync
+        userColors[userRef.id] = d.usernameColor;
       }
     });
 
-    // messages listener
+    // Listen to messages
     if(messagesUnsub) messagesUnsub();
     const messagesQuery = query(collection(db, CHAT_COLLECTION), orderBy("timestamp","asc"));
-    messagesUnsub = onSnapshot(messagesQuery, (snap) => {
+    messagesUnsub = onSnapshot(messagesQuery, (snap)=>{
       lastMessagesArray = [];
-      snap.forEach(docSnap => lastMessagesArray.push({ id: docSnap.id, data: docSnap.data() }));
+      snap.forEach(docSnap => lastMessagesArray.push({id: docSnap.id, data: docSnap.data()}));
       renderMessagesFromArray(lastMessagesArray);
     });
 
   } else {
-    // signed out UI -> reset
+    // Signed out
     currentUser = null;
-    if(helloEl) helloEl.style.display = "";
-    const greetingEl = document.getElementById("greeting"); if(greetingEl) greetingEl.style.display = "";
-    if(authBox) authBox.style.display = "";
+    helloEl.style.display = "";
+    authBox.style.display = "";
     sendAreaEl.style.display = "none";
     profileBoxEl.style.display = "none";
     messagesEl.innerHTML = "";
@@ -541,6 +384,83 @@ onAuthStateChanged(auth, async (user) => {
     if(messagesUnsub){ messagesUnsub(); messagesUnsub = null; }
   }
 });
+
+/* ---------- Send + Buzz ---------- */
+sendBtn.addEventListener("click", async ()=>{
+  if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
+  const txt = messageInputEl.value.trim();
+  if(!txt) return;
+  messageInputEl.value = "";
+  try{ await addDoc(collection(db, CHAT_COLLECTION), { content: txt, uid: currentUser.uid, chatId: currentUser.chatId, timestamp: serverTimestamp(), highlight:false }); }
+  catch(e){ console.error("send error", e); showStarPopup("Message failed"); }
+});
+messageInputEl.addEventListener("keydown", (e)=>{ if(e.key==="Enter") sendBtn.click(); });
+
+buzzBtn.addEventListener("click", async ()=>{
+  if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
+  const userRef = doc(db,"users",currentUser.uid);
+  const snap = await getDoc(userRef);
+  const userData = snap.exists()? snap.data() : {};
+  const currentStars = userData.stars || 0;
+  if(currentStars < BUZZ_COST){ showStarPopup("Not enough stars to create a BUZZ! 🚨"); return; }
+  const txt = messageInputEl.value.trim();
+  if(!txt){ showStarPopup("Type a message to BUZZ! 🚨"); return; }
+  try{
+    await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
+    const color = randomColor();
+    const docRef = await addDoc(collection(db, CHAT_COLLECTION), { content: txt, uid: currentUser.uid, chatId: currentUser.chatId, timestamp: serverTimestamp(), highlight:true, buzzColor:color });
+    showStarPopup("BUZZ 🚨 sent!");
+    messageInputEl.value = "";
+    setTimeout(async ()=>{ try{ await updateDoc(docRef,{highlight:false,buzzColor:null}); } catch(e){console.warn(e);} },10000);
+  }catch(e){ console.error("buzz failed", e); showStarPopup("BUZZ failed"); }
+});
+
+/* Tip & Redeem placeholders */
+tipBtn.addEventListener("click", ()=>{ window.open("https://your-placeholder-payment-link.com","_blank"); showStarPopup("Thanks! Tip clicked 💵"); });
+redeemBtn.addEventListener("click", ()=>{ window.open("https://xixi.live","_blank"); showStarPopup("Redeem clicked"); });
+
+/* ---------- Auto-star ---------- */
+setInterval(async ()=>{
+  if(!currentUser) return;
+  try{
+    const userRef = doc(db,"users",currentUser.uid);
+    const snap = await getDoc(userRef);
+    const data = snap.exists()? snap.data():{};
+    const curr = data.stars || 0;
+    if(curr < DAILY_STAR_CAP){ await updateDoc(userRef,{stars: Math.min(curr + AUTO_STAR_ADD, DAILY_STAR_CAP)}); }
+  }catch(e){}
+}, 60000);
+
+/* ---------- Messages render ---------- */
+let lastMessagesArray = [];
+function renderMessagesFromArray(arr){
+  messagesEl.innerHTML = "";
+  arr.forEach(item=>{
+    const m = item.data;
+    const wrapper = document.createElement("div");
+    wrapper.className="msg";
+
+    const meta = document.createElement("span");
+    meta.className="meta";
+    const nameColor = (m.uid && userColors[m.uid]) ? userColors[m.uid] : "#ffffff";
+    meta.textContent = m.chatId || "Guest";
+    meta.style.color = nameColor;
+
+    const content = document.createElement("span");
+    if(m.highlight || m.buzzColor){
+      content.className="buzz-content content";
+      content.style.background = m.buzzColor || randomColor();
+      content.textContent = " "+(m.content || "");
+      content.style.color="#000";
+      wrapper.appendChild(meta); wrapper.appendChild(content);
+    } else {
+      content.className="content";
+      content.textContent = " "+(m.content || "");
+      wrapper.appendChild(meta); wrapper.appendChild(content);
+    }
+
+    messagesEl.appendChild(wrapper);
+  });
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
 </script>
-</body>
-</html>
