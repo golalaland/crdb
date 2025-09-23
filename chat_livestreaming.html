@@ -390,7 +390,6 @@ buzzBtn.addEventListener("click", async () => {
   if(currentStars < BUZZ_COST){ showStarPopup("Not enough stars to create a BUZZ! 🚨"); return; }
   const txt = messageInputEl.value.trim();
   if(!txt){ showStarPopup("Type a message to BUZZ! 🚨"); return; }
-
   try{
     await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
 
@@ -423,7 +422,21 @@ buzzBtn.addEventListener("click", async () => {
 
   }catch(e){ console.error("buzz failed", e); showStarPopup("BUZZ failed"); }
 });
+sendBtn.addEventListener("click", async () => {
+  if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
+  const txt = messageInputEl.value.trim();
+  if(!txt){ showStarPopup("Type a message first"); return; }
 
+  try{
+    await addDoc(collection(db, CHAT_COLLECTION), {
+      content: txt,
+      uid: currentUser.uid,
+      chatId: currentUser.chatId || generateGuestName(),
+      timestamp: serverTimestamp()
+    });
+    messageInputEl.value = "";
+  }catch(e){ console.error("Send message failed", e); showStarPopup("Send failed"); }
+});
 /* ---------- Tip & Redeem ---------- */
 tipBtn.addEventListener("click", () => { window.open("https://your-placeholder-payment-link.com","_blank"); showStarPopup("Thanks! Tip clicked 💵"); });
 redeemBtn.addEventListener("click", () => { window.open("https://xixi.live","_blank"); showStarPopup("Redeem clicked"); });
