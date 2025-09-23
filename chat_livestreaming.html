@@ -123,33 +123,24 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 }
   /* Google Sign-In Button Styling */
   /* Center the auth box */
-<a id="googleSignInBtn" class="google-btn" href="#">
-  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo" />
+<<a id="googleSignInBtn" class="google-btn" href="#">
   Sign in with Google
 </a>
 
 <style>
 .google-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px; /* smaller gap */
-  text-decoration: none;
+  display: inline-block;
+  text-align: center;
   font-weight: 700;
-  font-size: 14px; /* smaller text */
-  padding: 8px 16px; /* smaller padding */
-  border-radius: 24px;
+  font-size: 16px;
+  padding: 12px 24px;
+  border-radius: 30px;
   background: linear-gradient(135deg, #FF1493, #FF69B4);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(255,20,147,0.35);
+  box-shadow: 0 6px 18px rgba(255,20,147,0.35);
   width: fit-content;
-  max-width: 250px;
   white-space: nowrap;
-}
-.google-btn img {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
+  text-decoration: none;
 }
 </style>
 </head>
