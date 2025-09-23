@@ -125,42 +125,43 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   /* Center the auth box */
 #authBox {
   display: flex;
-  justify-content: center;
-  align-items: center; /* vertical centering */
+  justify-content: center;   /* center the button */
   margin: 20px 0;
   width: 100%;
 }
 
-..google-btn {
-  display: inline-flex;          /* prevents full-width stretching */
+.google-btn {
+  display: flex;             /* icon + text */
   align-items: center;
   justify-content: center;
   gap: 10px;
-  text-decoration: none;
+  text-decoration: none;     /* remove underline */
   font-weight: 700;
   font-size: 16px;
-  padding: 12px 24px;
+  padding: 12px 24px;        /* keeps padding consistent */
   border-radius: 30px;
-  background: linear-gradient(135deg, #FF1493, #FF69B4);
+  background: linear-gradient(135deg, #FF1493, #FF69B4); /* your pink gradient */
   color: #fff;
   box-shadow: 0 6px 18px rgba(255,20,147,0.35);
-  width: auto;                   /* let width be text+logo only */
-  min-width: 220px;
+  min-width: 220px;          /* prevent collapse */
   max-width: 300px;
+  width: auto;               /* shrink to content */
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;    /* includes padding in width */
 }
-/* Google logo styling */
+
 .google-btn img {
   width: 20px;
   height: 20px;
-  flex-shrink: 0;   /* prevents shrinking/expansion */
+  flex-shrink: 0;            /* prevents image from resizing */
+  display: block;            /* removes inline spacing weirdness */
 }
-/* Hover effect */
+
+/* Hover & Active effects remain */
 .google-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 25px rgba(255,20,147,0.45);
 }
-/* Active effect */
 .google-btn:active {
   transform: translateY(1px);
   box-shadow: 0 5px 12px rgba(255,20,147,0.25);
