@@ -329,19 +329,37 @@ async function assignDailyColor(userRef,data){
 }
 
 /* ---------- Auth ---------- */
-googleBtn.addEventListener("click",async ()=>{
-  const provider=new GoogleAuthProvider();
-  try{ await signInWithPopup(auth,provider); }
-  catch(err){ console.error("Sign-in failed",err); alert("Sign-in failed: "+(err.message||err)); }
-});
+googleBtn.addEventListener("click", async (e) => {
+  e.preventDefault(); // <- prevents the <a> from reloading the page
+  const provider = new GoogleAuthProvider();
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
 
+    // Update UI immediately
+    authBox.style.display = "none";
+    sendAreaEl.style.display = "flex";
+    profileBoxEl.style.display = "flex";
+    profileNameEl.textContent = user.displayName || generateGuestName();
+
+    // Optional: Initialize user document if it doesn't exist
+    const userRef = doc(db, "users", user.uid);
+    const docSnap = await getDoc(userRef);
+    if (!docSnap.exists()) {
+      await setDoc(userRef, { username: user.displayName || generateGuestName(), stars: 0, cash: 0 });
+    }
+
+  } catch (err) {
+    console.error("Sign-in failed", err);
+    alert("Sign-in failed: " + (err.message || err));
+  }
+});
 /* ---------- Send / Buzz ---------- */
 sendBtn.addEventListener("click",async ()=>{
   if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
   const txt=messageInputEl.value.trim(); if(!txt){ showStarPopup("Type a message first"); return; }
   try{ await addDoc(collection(db,CHAT_COLLECTION),{ content:txt, uid:currentUser.uid, chatId:currentUser.chatId, timestamp:serverTimestamp(), highlight:false, buzzColor:null, buzzDuration:0, glowEnded:false }); messageInputEl.value=""; } catch(e){ console.error(e); showStarPopup("Error sending message"); }
 });
-
 buzzBtn.addEventListener("click",async ()=>{
   if(!currentUser){ showStarPopup("Sign in to send buzz"); return; }
   try{
