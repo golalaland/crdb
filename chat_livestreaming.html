@@ -180,6 +180,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   <div id="starText">You've just earned +1 star! ⭐</div>
 </div>
 <script type="module">
+<script type="module">
 // ---------- Firebase Auth & Firestore Setup ----------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -187,10 +188,10 @@ import {
   setPersistence, browserLocalPersistence, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, serverTimestamp, increment
+  getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, increment
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ---------- Firebase Config ----------
+// ---------- Config ----------
 const firebaseConfig = {
   apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
@@ -204,19 +205,24 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-
-// Persist login across tabs
 setPersistence(auth, browserLocalPersistence);
 
-// ---------- DOM Elements ----------
-const messagesEl = document.getElementById("messages");
-const sendBtn = document.getElementById("sendBtn");
-const messageInputEl = document.getElementById("messageInput");
-const buzzBtn = document.getElementById("buzzBtn");
+// ---------- Elements ----------
 const googleBtn = document.getElementById("googleSignInBtn");
-const CHAT_COLLECTION = "chatMessages"; // Firestore collection name
-const BUZZ_COST = 1; // Number of stars needed to send BUZZ
-const userColors = {}; // Assign random colors for users if needed
+const profileBox = document.getElementById("profileBox");
+const sendArea = document.getElementById("sendArea");
+const profileNameEl = document.getElementById("profileName");
+const messagesEl = document.getElementById("messages");
+const messageInputEl = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendBtn");
+const buzzBtn = document.getElementById("buzzBtn");
+const starPopupEl = document.getElementById("starPopup");
+const starTextEl = document.getElementById("starText");
+const starCountEl = document.getElementById("starCount");
+const cashCountEl = document.getElementById("cashCount");
+
+const CHAT_COLLECTION = "chats";
+const BUZZ_COST = 1; // adjust stars cost for BUZZ
 
 // ---------- Helper Functions ----------
 function randomColor() {
@@ -224,48 +230,56 @@ function randomColor() {
   return colors[Math.floor(Math.random()*colors.length)];
 }
 
-function showStarPopup(msg){
-  const popup = document.getElementById("starPopup");
-  const starText = document.getElementById("starText");
-  starText.textContent = msg;
-  popup.style.display = "block";
-  setTimeout(()=>{popup.style.display = "none";},2000);
+function showStarPopup(text) {
+  starTextEl.textContent = text;
+  starPopupEl.style.display = "block";
+  setTimeout(() => { starPopupEl.style.display = "none"; }, 2000);
 }
 
-// ---------- Google Sign-In ----------
+let currentUser = null;
+const userColors = {}; // optional: assign unique colors per user
+
+// ---------- Google Sign-in ----------
 const provider = new GoogleAuthProvider();
 googleBtn.addEventListener("click", async (e) => {
   e.preventDefault();
   try {
     const result = await signInWithPopup(auth, provider);
-    console.log("Signed in:", result.user.displayName);
+    const user = result.user;
 
-    await setDoc(doc(db, "users", result.user.uid), {
-      name: result.user.displayName,
-      email: result.user.email,
+    await setDoc(doc(db, "users", user.uid), {
+      name: user.displayName,
+      email: user.email,
       stars: 0,
       cash: 0,
-      chatId: result.user.displayName.replace(/\s+/g,'') + Math.floor(Math.random()*9999)
+      chatId: user.displayName.replace(/\s+/g,'') + Math.floor(Math.random()*9999)
     }, { merge: true });
-
   } catch (err) {
     console.error("Sign-in failed:", err);
-    showStarPopup("Sign-in failed");
+    showStarPopup("Sign-in failed!");
   }
 });
 
 // ---------- Auth State ----------
-let currentUser = null;
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   if(user){
     currentUser = user;
-    document.getElementById("profileBox").style.display = "flex";
-    document.getElementById("sendArea").style.display = "flex";
-    document.getElementById("profileName").textContent = user.displayName;
+    profileBox.style.display = "flex";
+    sendArea.style.display = "flex";
+
+    profileNameEl.textContent = user.displayName;
+
+    // Load user data for stars/cash
+    const snap = await getDoc(doc(db, "users", user.uid));
+    if(snap.exists()){
+      const data = snap.data();
+      starCountEl.textContent = data.stars || 0;
+      cashCountEl.textContent = data.cash || 0;
+    }
   } else {
     currentUser = null;
-    document.getElementById("profileBox").style.display = "none";
-    document.getElementById("sendArea").style.display = "none";
+    profileBox.style.display = "none";
+    sendArea.style.display = "none";
   }
 });
 
@@ -278,41 +292,32 @@ function renderMessagesFromArray(arr){
     wrapper.className = "msg";
     if(m.uid === currentUser?.uid) wrapper.classList.add("me");
 
-    // Meta
     const meta = document.createElement("span");
     meta.className = "meta";
     meta.textContent = m.chatId || "Guest";
     meta.style.color = (m.uid && userColors[m.uid]) ? userColors[m.uid] : "#ffffff";
 
-    // Content
     const content = document.createElement("span");
     if(m.highlight || m.buzzColor){
       content.className = "buzz-content content";
       content.style.background = m.buzzColor || randomColor();
       content.style.color = "#000";
       content.textContent = " " + (m.content || "");
-
-      // Glow animation
       if(!m.glowEnded){
-        const glowColor = m.buzzColor || randomColor();
-        const duration = (1 + Math.random()*1.5) + "s";
-        content.style.setProperty("--glow-color", glowColor);
-        content.style.animation = `buzzGlow ${duration} infinite`;
+        content.style.setProperty("--glow-color", m.buzzColor || randomColor());
+        content.style.animation = `buzzGlow ${(1 + Math.random()*1.5)}s infinite`;
         setTimeout(async () => {
           content.style.animation = "";
           m.glowEnded = true;
-          try { await updateDoc(doc(db, CHAT_COLLECTION, item.id), { glowEnded: true }); } 
-          catch(e){ console.warn("Error ending glow", e); }
+          try {
+            const msgRef = doc(db, CHAT_COLLECTION, item.id);
+            await updateDoc(msgRef, { glowEnded: true });
+          } catch(e){ console.warn("Error ending glow", e); }
         }, m.buzzDuration || 60000);
       }
     } else {
       content.className = "content";
       content.textContent = " " + (m.content || "");
-      if(m.content?.startsWith("/")){
-        const cmd = m.content.slice(1).trim().toLowerCase();
-        if(cmd === "tip") content.innerHTML += " 💵";
-        if(cmd === "redeem") content.innerHTML += " 🎁";
-      }
     }
 
     wrapper.appendChild(meta);
@@ -322,11 +327,19 @@ function renderMessagesFromArray(arr){
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-// ---------- Send Normal Message ----------
+// ---------- Real-time Listener ----------
+const chatQuery = query(collection(db, CHAT_COLLECTION), orderBy("timestamp", "asc"));
+onSnapshot(chatQuery, (snapshot) => {
+  const messagesArray = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+  renderMessagesFromArray(messagesArray);
+});
+
+// ---------- Send Message ----------
 sendBtn.addEventListener("click", async () => {
   if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
   const txt = messageInputEl.value.trim();
   if(!txt){ showStarPopup("Type a message first"); return; }
+
   try {
     await addDoc(collection(db, CHAT_COLLECTION), {
       content: txt,
@@ -337,12 +350,16 @@ sendBtn.addEventListener("click", async () => {
       glowEnded: true
     });
     messageInputEl.value = "";
-  } catch(err){ console.error("Send message error", err); }
+  } catch(err){
+    console.error("Send message error", err);
+    showStarPopup("Failed to send message");
+  }
 });
 
-// ---------- BUZZ Button ----------
+// ---------- BUZZ ----------
 buzzBtn.addEventListener("click", async () => {
   if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
+
   const userRef = doc(db, "users", currentUser.uid);
   const snap = await getDoc(userRef);
   const userData = snap.exists() ? snap.data() : {};
@@ -381,4 +398,5 @@ buzzBtn.addEventListener("click", async () => {
 messageInputEl.addEventListener("keypress", (e) => {
   if(e.key === "Enter") sendBtn.click();
 });
+
 </script>
