@@ -467,49 +467,57 @@ function getBadgeSVG(type){
   }
 }
 function renderMessagesFromArray(arr){
-  messagesEl.innerHTML = "";
+  messagesEl.innerHTML = ""; // clear old messages
+
   arr.forEach(item => {
     const m = item.data;
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
+    // username element
     const meta = document.createElement("span");
     meta.className = "meta";
     const nameText = m.chatId || "Guest";
-    const nameColor = (m.uid && userColors[m.uid]) ? userColors[m.uid] : "#ffffff";
+    const nameColor = (m.uid && userColors[m.uid]) ? userColors[m.uid] : '#ffffff';
     meta.textContent = nameText;
     meta.style.color = nameColor;
 
-    if(m.uid && m.badges && m.badges.length){
-      m.badges.forEach(badge=>{
-        const badgeEl = document.createElement("span");
-        badgeEl.className = "badge";
-        badgeEl.textContent = getBadgeSVG(badge.type);
-        badgeEl.style.marginLeft = "4px";
-        badgeEl.style.animation = "badgeGlow 1.5s infinite alternate";
-        meta.appendChild(badgeEl);
-      });
-    }
-
+    // content element
     const content = document.createElement("span");
+    
     if(m.highlight || m.buzzColor){
       content.className = "buzz-content content";
       content.style.background = m.buzzColor || randomColor();
       content.textContent = " " + (m.content || "");
       content.style.color = "#000";
+
+      // random pulse/glow animation
+      const glowColor = m.buzzColor || randomColor();
+      const animationDuration = (1 + Math.random() * 1.5) + "s";
+      content.style.setProperty("--glow-color", glowColor);
+      content.style.animation = `buzzGlow ${animationDuration} infinite`;
+
+      // Remove glow after buzzDuration
+      setTimeout(() => {
+        if(content) content.style.animation = "";
+      }, m.buzzDuration || 60000);
+
       wrapper.appendChild(meta);
       wrapper.appendChild(content);
-    }else{
+
+    } else {
       content.className = "content";
       content.textContent = " " + (m.content || "");
       wrapper.appendChild(meta);
       wrapper.appendChild(content);
     }
+
     messagesEl.appendChild(wrapper);
   });
+
+  // scroll to bottom
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
-
 /* ---------- Users listener ---------- */
 await setupUsersListener();
 
