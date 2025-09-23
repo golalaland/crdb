@@ -180,7 +180,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   <div id="starText">You've just earned +1 star! ⭐</div>
 </div>
 <script type="module">
-<script type="module">
 // ---------- Firebase Auth & Firestore Setup ----------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -188,7 +187,8 @@ import {
   setPersistence, browserLocalPersistence, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, increment
+  getFirestore, doc, setDoc, getDoc, updateDoc, collection,
+  addDoc, query, orderBy, onSnapshot, serverTimestamp, increment
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ---------- Config ----------
@@ -205,7 +205,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-setPersistence(auth, browserLocalPersistence);
+
+// ---------- Ensure Persistence ----------
+await setPersistence(auth, browserLocalPersistence);
 
 // ---------- Elements ----------
 const googleBtn = document.getElementById("googleSignInBtn");
@@ -222,7 +224,7 @@ const starCountEl = document.getElementById("starCount");
 const cashCountEl = document.getElementById("cashCount");
 
 const CHAT_COLLECTION = "chats";
-const BUZZ_COST = 1; // adjust stars cost for BUZZ
+const BUZZ_COST = 1; // stars cost for BUZZ
 
 // ---------- Helper Functions ----------
 function randomColor() {
@@ -243,17 +245,26 @@ const userColors = {}; // optional: assign unique colors per user
 const provider = new GoogleAuthProvider();
 googleBtn.addEventListener("click", async (e) => {
   e.preventDefault();
+  if(auth.currentUser){
+    showStarPopup("Already signed in!");
+    return;
+  }
   try {
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
 
+    // Save user in Firestore
     await setDoc(doc(db, "users", user.uid), {
-      name: user.displayName,
+      name: user.displayName || "GUEST",
       email: user.email,
       stars: 0,
       cash: 0,
-      chatId: user.displayName.replace(/\s+/g,'') + Math.floor(Math.random()*9999)
+      chatId: (user.displayName?.replace(/\s+/g,'') || "GUEST") + Math.floor(Math.random()*9999)
     }, { merge: true });
+
+    // Immediately update UI
+    setupUserUI(user);
+
   } catch (err) {
     console.error("Sign-in failed:", err);
     showStarPopup("Sign-in failed!");
@@ -264,24 +275,35 @@ googleBtn.addEventListener("click", async (e) => {
 onAuthStateChanged(auth, async (user) => {
   if(user){
     currentUser = user;
-    profileBox.style.display = "flex";
-    sendArea.style.display = "flex";
-
-    profileNameEl.textContent = user.displayName;
-
-    // Load user data for stars/cash
-    const snap = await getDoc(doc(db, "users", user.uid));
-    if(snap.exists()){
-      const data = snap.data();
-      starCountEl.textContent = data.stars || 0;
-      cashCountEl.textContent = data.cash || 0;
-    }
+    setupUserUI(user);
   } else {
     currentUser = null;
     profileBox.style.display = "none";
     sendArea.style.display = "none";
   }
 });
+
+// ---------- Setup User UI ----------
+async function setupUserUI(user){
+  profileBox.style.display = "flex";
+  sendArea.style.display = "flex";
+
+  profileNameEl.textContent = user.displayName || "GUEST";
+
+  // Load user data
+  const snap = await getDoc(doc(db, "users", user.uid));
+  if(snap.exists()){
+    const data = snap.data();
+    starCountEl.textContent = data.stars || 0;
+    cashCountEl.textContent = data.cash || 0;
+    // Ensure chatId is present
+    if(!data.chatId){
+      await updateDoc(doc(db,"users",user.uid), {
+        chatId: (user.displayName?.replace(/\s+/g,'') || "GUEST") + Math.floor(Math.random()*9999)
+      });
+    }
+  }
+}
 
 // ---------- Render Messages ----------
 function renderMessagesFromArray(arr){
@@ -344,7 +366,7 @@ sendBtn.addEventListener("click", async () => {
     await addDoc(collection(db, CHAT_COLLECTION), {
       content: txt,
       uid: currentUser.uid,
-      chatId: currentUser.chatId,
+      chatId: currentUser.chatId || currentUser.displayName || "Guest",
       timestamp: serverTimestamp(),
       highlight: false,
       glowEnded: true
@@ -377,7 +399,7 @@ buzzBtn.addEventListener("click", async () => {
     await addDoc(collection(db, CHAT_COLLECTION), {
       content: txt,
       uid: currentUser.uid,
-      chatId: currentUser.chatId,
+      chatId: currentUser.chatId || currentUser.displayName || "Guest",
       timestamp: serverTimestamp(),
       highlight: true,
       buzzColor: glowColor,
@@ -395,8 +417,7 @@ buzzBtn.addEventListener("click", async () => {
 });
 
 // ---------- Enter Key Support ----------
-messageInputEl.addEventListener("keypress", (e) => {
+messageInputEl.addEventListener("keydown", (e) => {
   if(e.key === "Enter") sendBtn.click();
 });
-
 </script>
