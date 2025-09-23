@@ -122,40 +122,29 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   .small-btn{padding:4px 8px;font-size:11px;}
 }
   /* Google Sign-In Button Styling */
-  /* Center the auth box */
-<div id="authBox">
-  <a id="googleSignInBtn" class="google-btn" href="#">
-    <span class="google-icon">G</span>
-    Sign in with Google
-  </a>
-</div>
-
-<style>
-#authBox {
+ #authBox {
   display: flex;
   justify-content: center;
-  margin: 20px 0;
+  margin: 16px 0;
 }
 
 .google-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;              /* smaller space between icon and text */
+  gap: 6px;
   text-decoration: none;
   font-weight: 700;
-  font-size: 12px;       /* smaller text */
-  padding: 6px 12px;     /* compact padding */
+  font-size: 12px;
+  padding: 6px 14px;   /* compact padding */
   border-radius: 20px;
   background: linear-gradient(135deg, #FF1493, #FF69B4);
   color: #fff;
   box-shadow: 0 3px 10px rgba(255,20,147,0.35);
-  width: fit-content;
   white-space: nowrap;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Hover & active effects */
 .google-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 15px rgba(255,20,147,0.45);
@@ -165,7 +154,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   box-shadow: 0 2px 8px rgba(255,20,147,0.25);
 }
 
-/* Small Google "G" icon */
 .google-icon {
   display: flex;
   align-items: center;
@@ -179,7 +167,11 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   border-radius: 50%;
   flex-shrink: 0;
 }
-</style>
+
+.btn-text {
+  display: inline-block;
+}
+<style>
 </head>
 <body>
   <div id="appWrapper">
@@ -201,10 +193,10 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
         <div id="guestMsg"></div>
 
-    <div id="authBox">
+<div id="authBox">
   <a id="googleSignInBtn" class="google-btn" href="#">
-    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo" />
-    Sign in with Google
+    <span class="google-icon">G</span>
+    <span class="btn-text">Sign in with Google</span>
   </a>
 </div>
         <div id="messages"></div>
