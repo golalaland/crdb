@@ -229,8 +229,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     <div id="starText">You've just earned +1 star! ⭐</div>
   </div>
 <script type="module">
-/* ====== Full page JS: Firebase + UI logic (updated per your requests) ====== */
-
+/* ====== Full page JS: Firebase + UI logic + Badge system ====== */
 /* ---------- Imports ---------- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -253,7 +252,8 @@ import {
   onSnapshot,
   query,
   orderBy,
-  increment
+  increment,
+  arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getDatabase,
@@ -263,7 +263,7 @@ import {
   onValue
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-/* ---------- Firebase config (your project) ---------- */
+/* ---------- Firebase config ---------- */
 const firebaseConfig = {
   apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
@@ -338,8 +338,8 @@ onValue(rtdbRef(rtdb, "presence"), snap=>{
   onlineCountEl.innerText = `(${Object.keys(val).length} online)`;
 });
 
-/* ---------- Keep user color map (uid -> color) so chat names get daily color ---------- */
-const userColors = {}; // uid => color
+/* ---------- Keep user color map (uid -> color) ---------- */
+const userColors = {};
 async function setupUsersListener(){
   if(usersUnsub) usersUnsub();
   usersUnsub = onSnapshot(collection(db,"users"), (snap)=>{
@@ -347,12 +347,11 @@ async function setupUsersListener(){
       const data = d.data() || {};
       userColors[d.id] = data.usernameColor || "#ffffff";
     });
-    // re-render last messages if any
     if(lastMessagesArray.length) renderMessagesFromArray(lastMessagesArray);
   });
 }
 
-/* ---------- daily color logic helper ---------- */
+/* ---------- daily color helper ---------- */
 async function assignDailyUsernameColor(userRef, data){
   const today = new Date().toISOString().split("T")[0];
   try{
@@ -375,14 +374,13 @@ googleBtn.addEventListener("click", async () => {
   const provider = new GoogleAuthProvider();
   try {
     await signInWithPopup(auth, provider);
-    // UI handled in onAuthStateChanged
   } catch (err) {
     console.error("Sign-in failed", err);
     alert("Sign-in failed: " + (err.message || err));
   }
 });
 
-/* ---------- Send + Buzz (attached once) ---------- */
+/* ---------- Send + Buzz ---------- */
 buzzBtn.addEventListener("click", async () => {
   if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
   const userRef = doc(db, "users", currentUser.uid);
@@ -396,7 +394,6 @@ buzzBtn.addEventListener("click", async () => {
   try{
     await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
 
-    // Random glow color for this buzz
     const colors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"];
     const glowColor = colors[Math.floor(Math.random()*colors.length)];
     const animationDuration = (1 + Math.random()*1.5) + "s";
@@ -408,33 +405,30 @@ buzzBtn.addEventListener("click", async () => {
       timestamp: serverTimestamp(),
       highlight: true,
       buzzColor: glowColor,
-      buzzDuration: 60000 // 60 seconds
+      buzzDuration: 60000
     });
 
     showStarPopup("BUZZ 🚨 sent!");
     messageInputEl.value = "";
 
-    // Apply glow and random pulse to the message element after it renders
     setTimeout(() => {
       const msgElements = Array.from(messagesEl.querySelectorAll(".buzz-content"));
       const lastMsg = msgElements[msgElements.length-1];
       if(lastMsg){
         lastMsg.style.setProperty("--glow-color", glowColor);
         lastMsg.style.animation = `buzzGlow ${animationDuration} infinite`;
-        // Remove buzz glow after 60 seconds
-        setTimeout(() => {
-          if(lastMsg) lastMsg.style.animation = "";
-        }, 60000);
+        setTimeout(() => { if(lastMsg) lastMsg.style.animation = ""; }, 60000);
       }
-    }, 100); // slight delay to ensure message element exists
+    }, 100);
 
   }catch(e){ console.error("buzz failed", e); showStarPopup("BUZZ failed"); }
 });
-/* Tip & Redeem (placeholders) */
+
+/* ---------- Tip & Redeem ---------- */
 tipBtn.addEventListener("click", () => { window.open("https://your-placeholder-payment-link.com","_blank"); showStarPopup("Thanks! Tip clicked 💵"); });
 redeemBtn.addEventListener("click", () => { window.open("https://xixi.live","_blank"); showStarPopup("Redeem clicked"); });
 
-/* ---------- Auto-star (periodic) ---------- */
+/* ---------- Auto-star ---------- */
 setInterval(async () => {
   if(!currentUser) return;
   try{
@@ -446,11 +440,19 @@ setInterval(async () => {
       const next = Math.min(curr + AUTO_STAR_ADD, DAILY_STAR_CAP);
       await updateDoc(userRef, { stars: next });
     }
-  }catch(e){ /* ignore periodic errors */ }
+  }catch(e){ }
 }, 60000);
 
-/* ---------- Message rendering: we store lastMessagesArray to re-render when username colors change ---------- */
+/* ---------- Message rendering + badges ---------- */
 let lastMessagesArray = [];
+function getBadgeSVG(type){
+  switch(type){
+    case "crown": return "👑";
+    case "star": return "⭐";
+    case "fire": return "🔥";
+    default: return "";
+  }
+}
 function renderMessagesFromArray(arr){
   messagesEl.innerHTML = "";
   arr.forEach(item => {
@@ -458,18 +460,25 @@ function renderMessagesFromArray(arr){
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
 
-    // username element (color from userColors map if available)
     const meta = document.createElement("span");
     meta.className = "meta";
     const nameText = m.chatId || "Guest";
-    // color by uid if available, fallback to white
-    const nameColor = (m.uid && userColors[m.uid]) ? userColors[m.uid] : '#ffffff';
+    const nameColor = (m.uid && userColors[m.uid]) ? userColors[m.uid] : "#ffffff";
     meta.textContent = nameText;
     meta.style.color = nameColor;
 
-    // content element
-    const content = document.createElement("span");
+    if(m.uid && m.badges && m.badges.length){
+      m.badges.forEach(badge=>{
+        const badgeEl = document.createElement("span");
+        badgeEl.className = "badge";
+        badgeEl.textContent = getBadgeSVG(badge.type);
+        badgeEl.style.marginLeft = "4px";
+        badgeEl.style.animation = "badgeGlow 1.5s infinite alternate";
+        meta.appendChild(badgeEl);
+      });
+    }
 
+    const content = document.createElement("span");
     if(m.highlight || m.buzzColor){
       content.className = "buzz-content content";
       content.style.background = m.buzzColor || randomColor();
@@ -477,104 +486,131 @@ function renderMessagesFromArray(arr){
       content.style.color = "#000";
       wrapper.appendChild(meta);
       wrapper.appendChild(content);
-    } else {
+    }else{
       content.className = "content";
       content.textContent = " " + (m.content || "");
       wrapper.appendChild(meta);
       wrapper.appendChild(content);
     }
-
     messagesEl.appendChild(wrapper);
   });
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-/* ---------- Users listener (fills userColors map) ---------- */
+/* ---------- Users listener ---------- */
 await setupUsersListener();
 
-/* ---------- Auth watcher (core) ---------- */
+/* ---------- Badge system (admin award) ---------- */
+const badgeAdminBox = document.createElement("div");
+badgeAdminBox.id = "badgeAdminBox";
+badgeAdminBox.style.display = "none";
+badgeAdminBox.innerHTML = `
+  <select id="badgeSelect">
+    <option value="crown">👑 Crown</option>
+    <option value="star">⭐ Star</option>
+    <option value="fire">🔥 Fire</option>
+  </select>
+  <input type="text" id="badgeUserId" placeholder="Enter User ID" />
+  <button id="giveBadgeBtn">Give Badge</button>
+`;
+document.body.appendChild(badgeAdminBox);
+
+const badgeSelect = document.getElementById("badgeSelect");
+const badgeUserIdInput = document.getElementById("badgeUserId");
+const giveBadgeBtn = document.getElementById("giveBadgeBtn");
+
+giveBadgeBtn.addEventListener("click", async ()=>{
+  const userId = badgeUserIdInput.value.trim();
+  const badgeType = badgeSelect.value;
+  if(!userId || !badgeType){ alert("Enter user ID & select badge"); return; }
+  try{
+    const userRef = doc(db,"users",userId);
+    await updateDoc(userRef,{ badges: arrayUnion({type:badgeType,earnedAt:new Date().toISOString()}) });
+    showStarPopup(`Badge "${badgeType}" awarded to ${userId}!`);
+    badgeUserIdInput.value = "";
+  }catch(e){ console.error(e); alert("Error awarding badge"); }
+});
+
+/* ---------- Glow animation CSS ---------- */
+const styleEl = document.createElement("style");
+styleEl.innerHTML = `
+@keyframes badgeGlow {0%{text-shadow:0 0 2px #fff;}50%{text-shadow:0 0 8px #ff0,0 0 12px #ff0;}100%{text-shadow:0 0 2px #fff;}}
+.badge{display:inline-block;font-size:1.1em;}
+`;
+document.head.appendChild(styleEl);
+
+/* ---------- Auth watcher ---------- */
 onAuthStateChanged(auth, async (user) => {
   if(user){
-    // presence
     try{ setupPresence(user); }catch(e){ console.warn("presence err", e); }
 
-    // ensure user doc exists
     const userRef = doc(db, "users", user.uid);
     let snap = await getDoc(userRef);
     if(!snap.exists()){
-      await setDoc(userRef, {
-        chatId: user.displayName || generateGuestName(),
-        stars: 100,
-        cash: 0,
-        usernameColor: randomColor(),
-        lastColorDate: new Date().toISOString().split("T")[0],
-        isAdmin: false,
-        lastStarReset: Date.now()
+      await setDoc(userRef,{
+        chatId:user.displayName||generateGuestName(),
+        stars:100,
+        cash:0,
+        usernameColor:randomColor(),
+        lastColorDate:new Date().toISOString().split("T")[0],
+        isAdmin:false,
+        lastStarReset:Date.now(),
+        badges:[]
       });
       snap = await getDoc(userRef);
     }
     let userData = snap.exists() ? snap.data() : {};
 
-    // assign daily color if needed
     const today = new Date().toISOString().split("T")[0];
-    if(!userData.lastColorDate || userData.lastColorDate !== today){
-      const newColor = randomColor();
-      try{ await updateDoc(userRef, { usernameColor: newColor, lastColorDate: today }); userData.usernameColor = newColor; } catch(e){ console.warn("usernameColor update failed", e); }
+    if(!userData.lastColorDate || userData.lastColorDate!==today){
+      const newColor=randomColor();
+      try{ await updateDoc(userRef,{usernameColor:newColor,lastColorDate:today}); userData.usernameColor=newColor;}catch(e){console.warn(e);}
     }
 
-    // set currentUser
-    currentUser = { uid: user.uid, chatId: userData.chatId || user.displayName || generateGuestName(), stars: userData.stars || 0, cash: userData.cash || 0, usernameColor: userData.usernameColor || randomColor(), isAdmin: userData.isAdmin || false };
+    currentUser = { uid:user.uid, chatId:userData.chatId||user.displayName||generateGuestName(), stars:userData.stars||0, cash:userData.cash||0, usernameColor:userData.usernameColor||randomColor(), isAdmin:userData.isAdmin||false };
 
-    // UI: hide hello + auth, show chat & profile
-    if(helloEl) helloEl.style.display = "none";
-    const greetingEl = document.getElementById("greeting"); if(greetingEl) greetingEl.style.display = "none";
-    if(authBox) authBox.style.display = "none";
-    sendAreaEl.style.display = "flex";
-    profileBoxEl.style.display = "block";
+    if(helloEl) helloEl.style.display="none";
+    const greetingEl=document.getElementById("greeting"); if(greetingEl) greetingEl.style.display="none";
+    if(authBox) authBox.style.display="none";
+    sendAreaEl.style.display="flex";
+    profileBoxEl.style.display="block";
 
-    // populate profile UI
-profileNameEl.innerText = currentUser.chatId;
-// profileNameEl.style.color = currentUser.usernameColor;  <-- remove this
-profileNameEl.style.color = "#ffffff"; // always white on profile card
+    profileNameEl.innerText = currentUser.chatId;
+    profileNameEl.style.color = "#ffffff";
     starCountEl.innerText = formatNumberWithCommas(currentUser.stars);
     cashCountEl.innerText = formatNumberWithCommas(currentUser.cash);
 
-    // listen to user doc for live updates to stars/cash/usernameColor
+    if(currentUser.isAdmin) badgeAdminBox.style.display="block";
+
     if(userDocUnsub) userDocUnsub();
-    userDocUnsub = onSnapshot(userRef, (uSnap) => {
+    userDocUnsub = onSnapshot(userRef,(uSnap)=>{
       const d = uSnap.data() || {};
-      currentUser.stars = d.stars || 0;
-      currentUser.cash = d.cash || 0;
-      starCountEl.innerText = formatNumberWithCommas(currentUser.stars);
-      cashCountEl.innerText = formatNumberWithCommas(currentUser.cash);
-      if(d.usernameColor) {
-        profileNameEl.style.color = d.usernameColor;
-        userColors[userRef.id] = d.usernameColor; // keep map in sync
-      }
+      currentUser.stars=d.stars||0;
+      currentUser.cash=d.cash||0;
+      starCountEl.innerText=formatNumberWithCommas(currentUser.stars);
+      cashCountEl.innerText=formatNumberWithCommas(currentUser.cash);
+      if(d.usernameColor){ profileNameEl.style.color=d.usernameColor; userColors[userRef.id]=d.usernameColor; }
     });
 
-    // messages listener
     if(messagesUnsub) messagesUnsub();
-    const messagesQuery = query(collection(db, CHAT_COLLECTION), orderBy("timestamp","asc"));
-    messagesUnsub = onSnapshot(messagesQuery, (snap) => {
-      lastMessagesArray = [];
-      snap.forEach(docSnap => lastMessagesArray.push({ id: docSnap.id, data: docSnap.data() }));
+    const messagesQuery=query(collection(db,CHAT_COLLECTION),orderBy("timestamp","asc"));
+    messagesUnsub=onSnapshot(messagesQuery,(snap)=>{
+      lastMessagesArray=[];
+      snap.forEach(docSnap=>lastMessagesArray.push({id:docSnap.id,data:docSnap.data()}));
       renderMessagesFromArray(lastMessagesArray);
     });
 
   } else {
-    // signed out UI -> reset
-    currentUser = null;
-    if(helloEl) helloEl.style.display = "";
-    const greetingEl = document.getElementById("greeting"); if(greetingEl) greetingEl.style.display = "";
-    if(authBox) authBox.style.display = "";
-    sendAreaEl.style.display = "none";
-    profileBoxEl.style.display = "none";
-    messagesEl.innerHTML = "";
-    if(userDocUnsub){ userDocUnsub(); userDocUnsub = null; }
-    if(messagesUnsub){ messagesUnsub(); messagesUnsub = null; }
+    currentUser=null;
+    if(helloEl) helloEl.style.display="";
+    const greetingEl=document.getElementById("greeting"); if(greetingEl) greetingEl.style.display="";
+    if(authBox) authBox.style.display="";
+    sendAreaEl.style.display="none";
+    profileBoxEl.style.display="none";
+    messagesEl.innerHTML="";
+    badgeAdminBox.style.display="none";
+    if(userDocUnsub){ userDocUnsub(); userDocUnsub=null; }
+    if(messagesUnsub){ messagesUnsub(); messagesUnsub=null; }
   }
 });
 </script>
-</body>
-</html>
