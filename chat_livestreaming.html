@@ -340,23 +340,6 @@ googleBtn.addEventListener("click", async () => {
 });
 
 /* ---------- Send + Buzz (attached once) ---------- */
-sendBtn.addEventListener("click", async () => {
-  if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
-  const txt = messageInputEl.value.trim();
-  if(!txt) return;
-  messageInputEl.value = "";
-  try{
-    await addDoc(collection(db, CHAT_COLLECTION), {
-      content: txt,
-      uid: currentUser.uid,
-      chatId: currentUser.chatId || generateGuestName(),
-      timestamp: serverTimestamp(),
-      highlight: false
-    });
-  }catch(e){ console.error("send error", e); showStarPopup("Message failed to send"); }
-});
-messageInputEl.addEventListener("keydown", (e)=> { if(e.key === "Enter") sendBtn.click(); });
-
 buzzBtn.addEventListener("click", async () => {
   if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
   const userRef = doc(db, "users", currentUser.uid);
@@ -368,30 +351,42 @@ buzzBtn.addEventListener("click", async () => {
   if(!txt){ showStarPopup("Type a message to BUZZ! 🚨"); return; }
 
   try{
-    // atomic decrement to avoid race conditions
     await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
 
-    const color = randomColor();
+    // Random glow color for this buzz
+    const colors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"];
+    const glowColor = colors[Math.floor(Math.random()*colors.length)];
+    const animationDuration = (1 + Math.random()*1.5) + "s";
+
     const docRef = await addDoc(collection(db, CHAT_COLLECTION), {
       content: txt,
       uid: currentUser.uid,
       chatId: currentUser.chatId || generateGuestName(),
       timestamp: serverTimestamp(),
       highlight: true,
-      buzzColor: color
+      buzzColor: glowColor,
+      buzzDuration: 60000 // 60 seconds
     });
 
     showStarPopup("BUZZ 🚨 sent!");
     messageInputEl.value = "";
 
-    // clear highlight after 10s
-    setTimeout(async () => {
-      try{ await updateDoc(docRef, { highlight: false, buzzColor: null }); } catch(e){ console.warn("clear buzz failed", e); }
-    }, 10000);
+    // Apply glow and random pulse to the message element after it renders
+    setTimeout(() => {
+      const msgElements = Array.from(messagesEl.querySelectorAll(".buzz-content"));
+      const lastMsg = msgElements[msgElements.length-1];
+      if(lastMsg){
+        lastMsg.style.setProperty("--glow-color", glowColor);
+        lastMsg.style.animation = `buzzGlow ${animationDuration} infinite`;
+        // Remove buzz glow after 60 seconds
+        setTimeout(() => {
+          if(lastMsg) lastMsg.style.animation = "";
+        }, 60000);
+      }
+    }, 100); // slight delay to ensure message element exists
 
   }catch(e){ console.error("buzz failed", e); showStarPopup("BUZZ failed"); }
 });
-
 /* Tip & Redeem (placeholders) */
 tipBtn.addEventListener("click", () => { window.open("https://your-placeholder-payment-link.com","_blank"); showStarPopup("Thanks! Tip clicked 💵"); });
 redeemBtn.addEventListener("click", () => { window.open("https://xixi.live","_blank"); showStarPopup("Redeem clicked"); });
