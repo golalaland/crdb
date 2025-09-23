@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -293,17 +292,58 @@ async function assignDailyUsernameColor(userRef, data){
 }
 
 /* ---------- Sign-in ---------- */
+/* ---------- Sign-in (safe for popup + mobile redirect) ---------- */
+/* ---------- Google Sign-In: Desktop popup / Mobile redirect ---------- */
+let signInInProgress = false;
+const provider = new GoogleAuthProvider();
+
 googleBtn.addEventListener("click", async () => {
-  const provider = new GoogleAuthProvider();
+  if (signInInProgress) return;
+  signInInProgress = true;
+
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
   try {
-    await signInWithPopup(auth, provider);
-    // UI handled in onAuthStateChanged
-  } catch (err) {
+    if(isMobile){
+      await signInWithRedirect(auth, provider);
+    } else {
+      await signInWithPopup(auth, provider);
+    }
+  } catch(err) {
     console.error("Sign-in failed", err);
     alert("Sign-in failed: " + (err.message || err));
+  } finally {
+    signInInProgress = false;
   }
 });
 
+/* ---------- Handle redirect result ---------- */
+getRedirectResult(auth)
+  .then((result) => {
+    if(result.user){
+      console.log("Signed in via redirect:", result.user.displayName);
+    }
+  })
+  .catch(err => {
+    console.error("Redirect sign-in error:", err);
+  });
+
+/* ---------- Daily username color helper ---------- */
+async function refreshDailyUsernameColor(userRef, userData){
+  const today = new Date().toISOString().split("T")[0];
+  let color = userData.usernameColor || randomColor();
+
+  if(!userData.lastColorDate || userData.lastColorDate !== today){
+    color = randomColor();
+    try {
+      await updateDoc(userRef, { usernameColor: color, lastColorDate: today });
+    } catch(e){
+      console.warn("Failed to update daily color", e);
+    }
+  }
+  userColors[userRef.id] = color;
+  return color;
+}
 /* ---------- Send + Buzz (attached once) ---------- */
 sendBtn.addEventListener("click", async () => {
   if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
