@@ -180,6 +180,72 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   <div id="starText">You've just earned +1 star! ⭐</div>
 </div>
 <script type="module">
+// ---------- Firebase Auth & Firestore Setup ----------
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup,
+  setPersistence, browserLocalPersistence, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, doc, setDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// Your Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
+  authDomain: "metaverse-1010.firebaseapp.com",
+  projectId: "metaverse-1010",
+  storageBucket: "metaverse-1010.firebasestorage.app",
+  messagingSenderId: "1044064238233",
+  appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
+  measurementId: "G-S77BMC266C"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// Persist login across tabs
+setPersistence(auth, browserLocalPersistence);
+
+// Google Sign-in
+const provider = new GoogleAuthProvider();
+const googleBtn = document.getElementById("googleSignInBtn");
+
+googleBtn.addEventListener("click", async (e) => {
+  e.preventDefault();
+  try {
+    const result = await signInWithPopup(auth, provider);
+    console.log("Signed in:", result.user.displayName);
+
+    // Store user info in Firestore
+    await setDoc(doc(db, "users", result.user.uid), {
+      name: result.user.displayName,
+      email: result.user.email,
+      stars: 0,
+      cash: 0,
+      chatId: result.user.displayName.replace(/\s+/g,'') + Math.floor(Math.random()*9999)
+    }, { merge: true });
+
+  } catch (err) {
+    console.error("Sign-in failed:", err);
+  }
+});
+
+// Listen for auth state changes
+let currentUser = null;
+onAuthStateChanged(auth, (user) => {
+  if(user){
+    currentUser = user;
+    document.getElementById("profileBox").style.display = "flex";
+    document.getElementById("sendArea").style.display = "flex";
+    document.getElementById("profileName").textContent = user.displayName;
+  } else {
+    currentUser = null;
+    document.getElementById("profileBox").style.display = "none";
+    document.getElementById("sendArea").style.display = "none";
+  }
+});
 /* ---------- Message rendering + send/buzz listeners ---------- */
 function renderMessagesFromArray(arr){
   messagesEl.innerHTML = "";
