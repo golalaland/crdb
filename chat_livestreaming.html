@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
 <title>Xixi — Live Stream 💸</title>
 <link rel="icon" href="data:," />
-<style>:root{
+<style>
+:root{
   --bg:#000;
   --card:#111;
   --muted:#aaa;
@@ -21,10 +22,10 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .brand{font-weight:700;font-size:24px;color:var(--accent);text-align:center;}
 .room-desc{font-size:11px;color:var(--muted);text-align:center;margin-bottom:6px;}
 #greeting{font-size:13px;text-align:center;font-weight:600;margin-bottom:6px;color:var(--accent);}
-#helloText{font-size:20px;font-weight:800;text-align:center;margin:6px 0;color:#fff;transition:color .2s ease;}
+#helloText{font-size:20px;font-weight:800;text-align:center;margin:6px 0;color:#fff;transition:color .2s ease;z-index:1500;position:relative;}
 #center{flex:1;display:flex;flex-direction:column;gap:6px;}
 
-/* 🔥 Sticky video frame */
+/* Sticky video frame */
 #videoContainer{
   width:100%;
   aspect-ratio:16/9;
@@ -44,25 +45,15 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .msg.me{background:rgba(255,20,147,0.06);}
 .msg .meta{font-weight:700;font-size:13px;white-space:nowrap;}
 .msg .content{font-size:13px;color:#fff;white-space:pre-wrap;word-break:break-word;display:inline-block;}
-.buzz-content{font-weight:800;font-size:14px;color:#000;padding:6px 8px;border-radius:8px;display:inline-block;}
+.buzz-content{font-weight:800;font-size:14px;color:#000;padding:6px 8px;border-radius:8px;display:inline-block;position: relative;transition: box-shadow 0.3s ease;}
 
 /* Buzz messages glow */
-.buzz-content {
-  font-weight:800;
-  font-size:14px;
-  color:#000;
-  padding:6px 8px;
-  border-radius:8px;
-  display:inline-block;
-  position: relative;
-  transition: box-shadow 0.3s ease;
-}
-/* Glow animation keyframes */
 @keyframes buzzGlow {
   0% { box-shadow: 0 0 4px var(--glow-color, #FF1493), 0 0 8px var(--glow-color, #FF1493); }
   50% { box-shadow: 0 0 12px var(--glow-color, #FF69B4), 0 0 24px var(--glow-color, #FF69B4); }
   100% { box-shadow: 0 0 4px var(--glow-color, #FF1493), 0 0 8px var(--glow-color, #FF1493); }
 }
+
 .send-area{display:flex;align-items:center;gap:8px;background:var(--card);padding:10px;position:sticky;bottom:10px;z-index:20;border-top:1px solid rgba(255,255,255,0.04);border-radius:999px;}
 .send-area input{flex:1;padding:12px;border-radius:999px;border:1px solid rgba(255,255,255,0.06);background:#0e0e0e;color:#fff;font-size:14px;outline:none;}
 .send-area input::placeholder{color:var(--muted);}
@@ -77,10 +68,10 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .profile-card{background:var(--glass);padding:6px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);display:flex;flex-direction:column;gap:4px;}
 .profile-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .profile-left{display:flex;flex-direction:column;gap:2px;}
-.profile-name{font-weight:800;font-size:13px;color:#fff;} /* always white */
+.profile-name{font-weight:800;font-size:13px;color:#fff;}
 .profile-label{color:var(--accent);font-weight:800;font-size:10px;}
 
-/* Stars/Cash counts — smaller & tighter */
+/* Stars/Cash counts — monospace */
 .profile-value{
   color:#fff;
   font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
@@ -89,334 +80,227 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 }
 .profile-value .icon,
 .profile-value span + .icon,
-.profile-value span .icon {
-  font-size:10px;
-  margin-left:2px;
-  vertical-align:middle;
-}
+.profile-value span .icon { font-size:10px;margin-left:2px;vertical-align:middle; }
 .profile-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;}
-.small-btn{
-  padding:6px 10px;
-  border-radius:8px;
-  background:var(--btn-backdrop);
-  border:0;
-  color:#fff;
-  cursor:pointer;
-  font-weight:700;
-  font-size:12px;
-  text-decoration:none;
-}
-/* removed underline on redeem button */
+.small-btn{padding:6px 10px;border-radius:8px;background:var(--btn-backdrop);border:0;color:#fff;cursor:pointer;font-weight:700;font-size:12px;text-decoration:none;}
 #redeemBtn{text-decoration:none;}
 
 /* star popup */
 .star-popup{position:fixed;left:50%;top:18%;transform:translateX(-50%);background:var(--card);padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);display:none;z-index:1000;color:var(--accent);font-size:13px;white-space:nowrap;text-align:center;}
 .onlineCount{font-size:11px;color:var(--muted);}
 
-@media (max-width:420px){
-  .send-area input{padding:10px;font-size:13px;}
-  .buzz-btn,.send-btn{padding:8px 10px;font-size:13px;}
-  .profile-name{font-size:12px;}
-  .profile-label{font-size:9px;}
-  .profile-value{font-size:10px;}
-  .small-btn{padding:4px 8px;font-size:11px;}
-}
-  /* Google Sign-In Button Styling */
-  /* Center the auth box */
-#authBox {
-  display: flex;
-  justify-content: center;
-  margin: 20px 0;
-}
-
 /* Google Sign-In Button Styling */
-.google-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  text-decoration: none;
-  font-weight: 700;
-  font-size: 16px;
-  padding: 12px 24px;
-  border-radius: 30px;
-  background: linear-gradient(135deg, #FF1493, #FF69B4);
-  color: #fff;
-  box-shadow: 0 6px 18px rgba(255,20,147,0.35);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  width: 90%;      /* Make it smaller than full width */
-  max-width: 300px; /* Caps the width on bigger screens */
+#authBox{display:flex;justify-content:center;margin:16px 0;position:relative;z-index:2000;}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;font-weight:700;font-size:12px;padding:6px 14px;border-radius:20px;background:linear-gradient(135deg,#FF1493,#FF69B4);color:#fff;box-shadow:0 3px 10px rgba(255,20,147,0.35);white-space:nowrap;transition:transform 0.2s ease,box-shadow 0.2s ease;}
+.google-btn:hover{transform:translateY(-1px);box-shadow:0 6px 15px rgba(255,20,147,0.45);}
+.google-btn:active{transform:translateY(1px);box-shadow:0 2px 8px rgba(255,20,147,0.25);}
+.google-icon{display:flex;align-items:center;justify-content:center;width:14px;height:14px;font-size:10px;font-weight:bold;color:#fff;background:rgba(255,255,255,0.15);border-radius:50%;flex-shrink:0;}
+.btn-text{display:inline-block;}
+
+/* HELLO Animation */
+@keyframes helloMove {
+  0% { transform: translateY(-10px); opacity: 0; }
+  50% { transform: translateY(0px); opacity: 1; }
+  100% { transform: translateY(10px); opacity: 0; }
 }
-/* Google logo styling */
-.google-btn img {
-  width: 20px;
-  height: 20px;
-}
-/* Hover effect */
-.google-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(255,20,147,0.45);
-}
-/* Active effect */
-.google-btn:active {
-  transform: translateY(1px);
-  box-shadow: 0 5px 12px rgba(255,20,147,0.25);
-}
+#helloText.animate { display:block; animation:helloMove 1.5s ease-in-out infinite; }
+
 </style>
 </head>
 <body>
-  <div id="appWrapper">
-    <div class="app">
-      <div class="brand">乂丨乂丨</div>
-      <div id="greeting">Welcome to the vibe ✨</div>
+<div id="appWrapper">
+  <div class="app">
+    <div class="brand">乂丨乂丨</div>
+    <div id="greeting">Welcome to the vibe ✨</div>
 
-      <div id="center">
-        <div id="videoContainer">
-          <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
-        </div>
-
-        <!-- HELLO (multilingual) under the video frame -->
-        <div id="helloText" aria-live="polite">HELLO</div>
-
-        <div class="room-desc">Live Stream 💸 — Chat. Own your vibe.
-          <span id="onlineCount" class="onlineCount"></span>
-        </div>
-
-        <div id="guestMsg"></div>
-
-    <div id="authBox">
-  <a id="googleSignInBtn" class="google-btn" href="#">
-    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo" />
-    Sign in with Google
-  </a>
-</div>
-        <div id="messages"></div>
-
-        <div class="send-area" id="sendArea" style="display:none;">
-          <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" />
-          <button id="buzzBtn" class="buzz-btn" title="Send BUZZ 🚨">🚨</button>
-          <button id="sendBtn" class="send-btn">Send</button>
-        </div>
-
+    <div id="center">
+      <div id="videoContainer">
+        <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
       </div>
 
-      <div class="profile" id="profileBox">
-        <div class="profile-card">
-          <div class="profile-top">
-            <div class="profile-left">
-              <div id="profileName" class="profile-name">GUEST 0000</div>
-              <div>
-                <span class="profile-label">STARS COLLECTED:</span>
-                <span class="profile-value"><span id="starCount">0</span>⭐️</span>
-              </div>
-            </div>
-            <div class="profile-actions">
-              <a id="redeemBtn" class="small-btn" href="https://xixi.live" target="_blank">Redeem</a>
-              <button id="tipBtn" class="small-btn">💵</button>
-            </div>
-          </div>
-          <div>
-            <span class="profile-label">CASH EARNED:</span>
-            <span class="profile-value">₦<span id="cashCount">0</span></span>
-          </div>
-        </div>
+      <div id="helloText" aria-live="polite">HELLO</div>
+
+      <div class="room-desc">Live Stream 💸 — Chat. Own your vibe.
+        <span id="onlineCount" class="onlineCount"></span>
+      </div>
+
+      <div id="guestMsg"></div>
+
+     <!-- Google Sign-In Button -->
+<div id="authBox">
+  <a id="googleSignInBtn" class="google-btn" href="#">
+    <span class="google-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 533.5 544.3" width="18" height="18">
+        <path fill="#4285F4" d="M533.5 278.4c0-17.6-1.6-34.5-4.6-50.9H272v95.8h147.3c-6.3 34.1-25.6 63-54.7 82.3v68h88.3c51.7-47.6 81.6-117.8 81.6-195.2z"/>
+        <path fill="#34A853" d="M272 544.3c73.8 0 135.8-24.4 181-66.2l-88.3-68c-24.5 16.5-55.7 26.2-92.7 26.2-71.2 0-131.5-48.1-153-112.9H30v70.9C75.2 488 167.1 544.3 272 544.3z"/>
+        <path fill="#FBBC05" d="M119 324.4c-5.4-16.3-8.4-33.7-8.4-51.4s3-35 8.4-51.4V150.7H30C10.7 192.3 0 236.5 0 278.4s10.7 86.1 30 127.7l89-81.7z"/>
+        <path fill="#EA4335" d="M272 108.6c39.9 0 75.5 13.7 103.6 40.7l77.8-77.8C406.8 24.7 344.8 0 272 0 167.1 0 75.2 56.3 30 150.7l89 70.9c21.5-64.8 81.8-112.9 153-112.9z"/>
+      </svg>
+    </span>
+    <span class="btn-text">Sign in with Google</span>
+  </a>
+</div>
+
+      <div id="messages"></div>
+
+      <div class="send-area" id="sendArea" style="display:none;">
+        <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" />
+        <button id="buzzBtn" class="buzz-btn" title="Send BUZZ 🚨">🚨</button>
+        <button id="sendBtn" class="send-btn">Send</button>
       </div>
 
     </div>
-  </div>
 
-  <div class="star-popup" id="starPopup">
-    <div id="starText">You've just earned +1 star! ⭐</div>
+    <div class="profile" id="profileBox">
+      <div class="profile-card">
+        <div class="profile-top">
+          <div class="profile-left">
+            <div id="profileName" class="profile-name">GUEST 0000</div>
+            <div>
+              <span class="profile-label">STARS COLLECTED:</span>
+              <span class="profile-value"><span id="starCount">0</span>⭐️</span>
+            </div>
+          </div>
+          <div class="profile-actions">
+            <a id="redeemBtn" class="small-btn" href="https://xixi.live" target="_blank">Redeem</a>
+            <button id="tipBtn" class="small-btn">💵</button>
+          </div>
+        </div>
+        <div>
+          <span class="profile-label">CASH EARNED:</span>
+          <span class="profile-value">₦<span id="cashCount">0</span></span>
+        </div>
+      </div>
+    </div>
+
   </div>
+</div>
+
+<div class="star-popup" id="starPopup">
+  <div id="starText">You've just earned +1 star! ⭐</div>
+</div>
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged,
-  GoogleAuthProvider, signInWithPopup
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {
-  getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc,
-  serverTimestamp, onSnapshot, query, orderBy, increment
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getDatabase, ref as rtdbRef, set as rtdbSet, onDisconnect, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+/* ---------- Message rendering + send/buzz listeners ---------- */
+function renderMessagesFromArray(arr){
+  messagesEl.innerHTML = "";
+  arr.forEach(item => {
+    const m = item.data;
+    const wrapper = document.createElement("div");
+    wrapper.className = "msg";
+    if(m.uid === currentUser?.uid) wrapper.classList.add("me");
 
-/* ---------- Firebase config ---------- */
-const firebaseConfig = {
-  apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
-  authDomain: "metaverse-1010.firebaseapp.com",
-  projectId: "metaverse-1010",
-  storageBucket: "metaverse-1010.firebasestorage.app",
-  messagingSenderId: "1044064238233",
-  appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
-  databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
-};
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-setPersistence(auth, browserLocalPersistence).catch(console.warn);
-const db = getFirestore(app);
-const rtdb = getDatabase(app);
+    // Meta
+    const meta = document.createElement("span");
+    meta.className = "meta";
+    meta.textContent = m.chatId || "Guest";
+    meta.style.color = (m.uid && userColors[m.uid]) ? userColors[m.uid] : "#ffffff";
 
-/* ---------- DOM ---------- */
-const googleBtn = document.getElementById("googleSignInBtn");
-const authBox = document.getElementById("authBox");
-const messagesEl = document.getElementById("messages");
-const sendAreaEl = document.getElementById("sendArea");
-const messageInputEl = document.getElementById("messageInput");
-const sendBtn = document.getElementById("sendBtn");
-const buzzBtn = document.getElementById("buzzBtn");
-const profileBoxEl = document.getElementById("profileBox");
-const profileNameEl = document.getElementById("profileName");
-const starCountEl = document.getElementById("starCount");
-const cashCountEl = document.getElementById("cashCount");
-const tipBtn = document.getElementById("tipBtn");
-const redeemBtn = document.getElementById("redeemBtn");
-const onlineCountEl = document.getElementById("onlineCount");
-const helloEl = document.getElementById("helloText");
+    // Content
+    const content = document.createElement("span");
+    if(m.highlight || m.buzzColor){
+      content.className = "buzz-content content";
+      content.style.background = m.buzzColor || randomColor();
+      content.style.color = "#000";
+      content.textContent = " " + (m.content || "");
 
-/* ---------- State ---------- */
-let currentUser = null, userDocUnsub=null, messagesUnsub=null, usersUnsub=null;
-let lastMessagesArray = [];
-const CHAT_COLLECTION = "messages_livestreaming";
-const BUZZ_COST = 10, AUTO_STAR_ADD = 5, DAILY_STAR_CAP = 500;
-const greetings=["HELLO","HOLA","BONJOUR","CIAO","HALLO","こんにちは","你好","안녕하세요","SALUT","OLÁ","NAMASTE","MERHABA"];
-let helloIndex=0;
-const userColors={};
+      // Glow animation
+      if(!m.glowEnded){
+        const glowColor = m.buzzColor || randomColor();
+        const duration = (1 + Math.random()*1.5) + "s";
+        content.style.setProperty("--glow-color", glowColor);
+        content.style.animation = `buzzGlow ${duration} infinite`;
 
-/* ---------- Helpers ---------- */
-function generateGuestName(){ return "GUEST "+Math.floor(1000+Math.random()*9000); }
-function formatNumber(n){ return new Intl.NumberFormat('en-NG').format(n||0); }
-function randomColor(){ const c=["#FFD700","#FF69B4","#87CEEB","#90EE90","#FFB6C1","#FFA07A","#8A2BE2","#00BFA6","#F4A460"]; return c[Math.floor(Math.random()*c.length)]; }
-function showStarPopup(text){ const popup=document.getElementById("starPopup"); document.getElementById("starText").innerText=text; popup.style.display="block"; setTimeout(()=>{popup.style.display="none";},1700); }
+        // Stop glow after duration
+        setTimeout(async () => {
+          content.style.animation = "";
+          m.glowEnded = true;
+          try {
+            const msgRef = doc(db, CHAT_COLLECTION, item.id);
+            await updateDoc(msgRef, { glowEnded: true });
+          } catch(e){ console.warn("Error ending glow", e); }
+        }, m.buzzDuration || 60000);
+      }
 
-/* ---------- HELLO rotation ---------- */
-function rotateHello(){
-  if(!helloEl || helloEl.style.display==="none") return;
-  helloEl.innerText=greetings[helloIndex++ % greetings.length];
-  helloEl.style.color=randomColor();
-}
-rotateHello(); setInterval(rotateHello,1500);
+    } else {
+      content.className = "content";
+      content.textContent = " " + (m.content || "");
 
-/* ---------- Presence ---------- */
-function setupPresence(user){
-  try{
-    const pRef=rtdbRef(rtdb,"presence/"+user.uid);
-    rtdbSet(pRef,true).catch(()=>{});
-    onDisconnect(pRef).remove().catch(()=>{});
-  }catch(e){ console.warn("Presence error",e);}
-}
-onValue(rtdbRef(rtdb,"presence"),snap=>{
-  const val=snap.val()||{};
-  onlineCountEl.innerText=`(${Object.keys(val).length} online)`;
-});
-
-/* ---------- Users listener ---------- */
-async function setupUsersListener(){
-  if(usersUnsub) usersUnsub();
-  usersUnsub = onSnapshot(collection(db,"users"),snap=>{
-    snap.forEach(d=>{ const data=d.data()||{}; userColors[d.id]=data.usernameColor||"#fff"; });
-    if(lastMessagesArray.length) renderMessages(lastMessagesArray);
-  });
-}
-
-/* ---------- Daily color ---------- */
-async function assignDailyColor(userRef,data){
-  const today=new Date().toISOString().split("T")[0];
-  if(!data || data.lastColorDate!==today){
-    const newColor=randomColor();
-    try{ await updateDoc(userRef,{usernameColor:newColor,lastColorDate:today}); userColors[userRef.id]=newColor; return newColor; }catch(e){ console.warn(e); }
-  }
-  return data.usernameColor||randomColor();
-}
-
-/* ---------- Auth ---------- */
-googleBtn.addEventListener("click", async (e) => {
-  e.preventDefault(); // <- prevents the <a> from reloading the page
-  const provider = new GoogleAuthProvider();
-  try {
-    const result = await signInWithPopup(auth, provider);
-    const user = result.user;
-
-    // Update UI immediately
-    authBox.style.display = "none";
-    sendAreaEl.style.display = "flex";
-    profileBoxEl.style.display = "flex";
-    profileNameEl.textContent = user.displayName || generateGuestName();
-
-    // Optional: Initialize user document if it doesn't exist
-    const userRef = doc(db, "users", user.uid);
-    const docSnap = await getDoc(userRef);
-    if (!docSnap.exists()) {
-      await setDoc(userRef, { username: user.displayName || generateGuestName(), stars: 0, cash: 0 });
+      // Parse commands
+      if(m.content?.startsWith("/")){
+        const cmd = m.content.slice(1).trim().toLowerCase();
+        if(cmd === "tip") content.innerHTML += " 💵";
+        if(cmd === "redeem") content.innerHTML += " 🎁";
+      }
     }
 
-  } catch (err) {
-    console.error("Sign-in failed", err);
-    alert("Sign-in failed: " + (err.message || err));
-  }
-});
-/* ---------- Send / Buzz ---------- */
-sendBtn.addEventListener("click",async ()=>{
+    wrapper.appendChild(meta);
+    wrapper.appendChild(content);
+    messagesEl.appendChild(wrapper);
+  });
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+/* ---------- Send normal message ---------- */
+sendBtn.addEventListener("click", async () => {
   if(!currentUser){ showStarPopup("Sign in to send messages"); return; }
-  const txt=messageInputEl.value.trim(); if(!txt){ showStarPopup("Type a message first"); return; }
-  try{ await addDoc(collection(db,CHAT_COLLECTION),{ content:txt, uid:currentUser.uid, chatId:currentUser.chatId, timestamp:serverTimestamp(), highlight:false, buzzColor:null, buzzDuration:0, glowEnded:false }); messageInputEl.value=""; } catch(e){ console.error(e); showStarPopup("Error sending message"); }
-});
-buzzBtn.addEventListener("click",async ()=>{
-  if(!currentUser){ showStarPopup("Sign in to send buzz"); return; }
-  try{
-    const buzzMessage = {
-      content:"BUZZ 🚨",
-      uid:currentUser.uid,
-      chatId:currentUser.chatId,
-      timestamp:serverTimestamp(),
-      highlight:true,
-      buzzColor=randomColor(),
-      buzzDuration:1200,
-      glowEnded:false
-    };
-    await addDoc(collection(db,CHAT_COLLECTION),buzzMessage);
-  }catch(e){ console.warn(e); showStarPopup("Buzz failed"); }
+  const txt = messageInputEl.value.trim();
+  if(!txt){ showStarPopup("Type a message first"); return; }
+
+  try {
+    await addDoc(collection(db, CHAT_COLLECTION), {
+      content: txt,
+      uid: currentUser.uid,
+      chatId: currentUser.chatId,
+      timestamp: serverTimestamp(),
+      highlight: false,
+      glowEnded: true
+    });
+    messageInputEl.value = "";
+  } catch(err){
+    console.error("Send message error", err);
+  }
 });
 
-/* ---------- Render messages ---------- */
-function renderMessages(messages){
-  messagesEl.innerHTML="";
-  messages.forEach(m=>{
-    const div=document.createElement("div"); div.className="msg"+(m.data.uid===currentUser?.uid?" me":"");
-    const meta=document.createElement("span"); meta.className="meta"; meta.innerText=m.data.uid.slice(0,4);
-    const content=document.createElement("span"); content.className="content"; content.innerText=m.data.content;
-    div.appendChild(meta); div.appendChild(content);
-    if(m.data.highlight && m.data.buzzColor){
-      content.classList.add("buzz-content");
-      content.style.setProperty("--glow-color",m.data.buzzColor);
-      content.style.animation=`buzzGlow ${m.data.buzzDuration||1200}ms ease-in-out`;
-      setTimeout(()=>{ content.style.animation=""; },m.data.buzzDuration||1200);
-    }
-    messagesEl.appendChild(div);
-  });
-  messagesEl.scrollTop=messagesEl.scrollHeight;
-}
+/* ---------- BUZZ button ---------- */
+buzzBtn.addEventListener("click", async () => {
+  if(!currentUser){ showStarPopup("Sign in to BUZZ"); return; }
+  const userRef = doc(db, "users", currentUser.uid);
+  const snap = await getDoc(userRef);
+  const userData = snap.exists() ? snap.data() : {};
+  const currentStars = userData.stars || 0;
 
-/* ---------- Auth state ---------- */
-onAuthStateChanged(auth,async user=>{
-  if(!user){ authBox.style.display="flex"; sendAreaEl.style.display="none"; profileBoxEl.style.display="none"; currentUser=null; return; }
-  authBox.style.display="none"; sendAreaEl.style.display="flex"; profileBoxEl.style.display="flex";
-  currentUser={uid:user.uid, chatId:generateGuestName(), stars:0, cash:0};
-  const userRef=doc(db,"users",user.uid);
-  const docSnap=await getDoc(userRef);
-  const data=docSnap.exists()?docSnap.data():null;
-  currentUser.username=data?.username||currentUser.chatId;
-  profileNameEl.innerText=currentUser.username;
-  starCountEl.innerText=formatNumber(data?.stars||0);
-  cashCountEl.innerText=formatNumber(data?.cash||0);
-  await assignDailyColor(userRef,data);
-  setupPresence(user);
-  setupUsersListener();
-  const messagesQuery=query(collection(db,CHAT_COLLECTION),orderBy("timestamp","asc"));
-  messagesUnsub=onSnapshot(messagesQuery,snap=>{
-    lastMessagesArray=snap.docs.map(d=>({id:d.id,data:d.data()}));
-    renderMessages(lastMessagesArray);
-  });
+  if(currentStars < BUZZ_COST){ showStarPopup("Not enough stars to create a BUZZ! 🚨"); return; }
+
+  const txt = messageInputEl.value.trim();
+  if(!txt){ showStarPopup("Type a message to BUZZ! 🚨"); return; }
+
+  try {
+    await updateDoc(userRef, { stars: increment(-BUZZ_COST) });
+
+    const colors = ["#FF1493","#FF69B4","#8A2BE2","#00BFA6","#FFA07A"];
+    const glowColor = colors[Math.floor(Math.random()*colors.length)];
+
+    await addDoc(collection(db, CHAT_COLLECTION), {
+      content: txt,
+      uid: currentUser.uid,
+      chatId: currentUser.chatId,
+      timestamp: serverTimestamp(),
+      highlight: true,
+      buzzColor: glowColor,
+      buzzDuration: 60000,
+      glowEnded: false
+    });
+
+    showStarPopup("BUZZ 🚨 sent!");
+    messageInputEl.value = "";
+
+  } catch(err){
+    console.error("Buzz send error", err);
+    showStarPopup("Failed to send BUZZ 🚨");
+  }
 });
-</script>
-</body>
-</html>
+
+/* ---------- Enter key support ---------- */
+messageInputEl.addEventListener("keypress", (e) => {
+  if(e.key === "Enter") sendBtn.click();
+});
