@@ -103,15 +103,18 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { 
-    getAuth, GoogleAuthProvider, 
-    signInWithPopup, signInWithRedirect, getRedirectResult 
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged,
+  GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, doc, setDoc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  // 🔑 Your Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
+// ✅ Firebase config (replace with yours)
+const firebaseConfig = {
+  apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
   projectId: "metaverse-1010",
   storageBucket: "metaverse-1010.firebasestorage.app",
@@ -119,38 +122,75 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
   measurementId: "G-S77BMC266C"
 };
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-  // 🚀 Init
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
+setPersistence(auth, browserLocalPersistence);
 
-  // 🔄 Handle redirect results (if popup failed earlier)
-  getRedirectResult(auth)
-    .then((result) => {
-      if (result) {
-        console.log("✅ Signed in with redirect:", result.user);
-      }
-    })
-    .catch((error) => {
-      console.error("Redirect error:", error.message);
-    });
+// Elements
+const helloEl = document.getElementById("hello");
+const authBox = document.getElementById("authBox");
+const googleBtn = document.getElementById("googleSignInBtn");
+const sendAreaEl = document.getElementById("sendArea");
+const profileBoxEl = document.getElementById("profileBox");
+const signOutBtn = document.getElementById("signOutBtn");
 
-  // 🎯 Login button
-  document.getElementById("loginBtn").addEventListener("click", async () => {
-    try {
-      const result = await signInWithPopup(auth, provider);
-      console.log("✅ Signed in with popup:", result.user);
-    } catch (error) {
-      if (error.code === "auth/popup-blocked") {
-        console.warn("⚠️ Popup blocked, falling back to redirect...");
-        signInWithRedirect(auth, provider);
-      } else {
-        console.error("❌ Sign-in error:", error.message);
-      }
+// Google Provider
+const provider = new GoogleAuthProvider();
+
+// ✅ Handle sign-in with popup → fallback to redirect
+googleBtn.addEventListener("click", async () => {
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (error) {
+    if (error.code === "auth/popup-blocked") {
+      console.warn("Popup blocked, using redirect...");
+      await signInWithRedirect(auth, provider);
+    } else {
+      console.error("Sign-in failed:", error);
     }
-  });
-</script>
+  }
+});
+
+// ✅ Handle redirect results
+getRedirectResult(auth).catch(err => console.error("Redirect error:", err));
+
+// ✅ Listen to auth changes
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    // Hide hello + login
+    if (helloEl) helloEl.style.display = "none";
+    if (authBox) authBox.style.display = "none";
+
+    // Show chat area + profile
+    sendAreaEl.style.display = "flex";
+    profileBoxEl.style.display = "block";
+
+    // Save user in Firestore
+    await setDoc(doc(db, "users", user.uid), {
+      name: user.displayName,
+      email: user.email,
+      photo: user.photoURL
+    }, { merge: true });
+
+    console.log("✅ Signed in as:", user.displayName);
+  } else {
+    // Show hello + login
+    if (helloEl) helloEl.style.display = "block";
+    if (authBox) authBox.style.display = "block";
+
+    // Hide chat + profile
+    sendAreaEl.style.display = "none";
+    profileBoxEl.style.display = "none";
+  }
+});
+
+// ✅ Sign-out
+signOutBtn.addEventListener("click", async () => {
+  await signOut(auth);
+  console.log("🚪 Signed out");
+});
 /* ---------- Room Collection ---------- */
 const ROOM_ID = "room1";  // change to room2, room3 for duplication
 const CHAT_COLLECTION = `messages_${ROOM_ID}`;
