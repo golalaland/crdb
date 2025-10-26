@@ -1,22 +1,37 @@
 /* ---------- Imports (Firebase v10) ---------- */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { 
+  initializeApp 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  runTransaction
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  updateDoc, 
+  collection, 
+  addDoc, 
+  serverTimestamp, 
+  onSnapshot, 
+  query, 
+  orderBy, 
+  increment, 
+  getDocs, 
+  where,
+  runTransaction            // ✅ Added this (required for gift transactions)
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-import {
-  getDatabase,
+import { 
+  getDatabase, 
+  ref as rtdbRef, 
+  set as rtdbSet, 
+  onDisconnect, 
+  onValue 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 import { 
   getAuth, 
-  onAuthStateChanged, 
-  setPersistence, 
-  browserLocalPersistence 
+  onAuthStateChanged 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 /* ---------- Firebase Config ---------- */
@@ -37,40 +52,20 @@ const db = getFirestore(app);
 const rtdb = getDatabase(app);
 const auth = getAuth(app);
 
-/* ---------- Ensure Firebase Auth Persistence ---------- */
-await setPersistence(auth, browserLocalPersistence);
-
-/* ---------- Current User ---------- */
+/* ---------- Auth State Watcher ---------- */
 let currentUser = null;
 
-/* ---------- Auth State Watcher ---------- */
-onAuthStateChanged(auth, async user => {
+onAuthStateChanged(auth, user => {
   if (user) {
     currentUser = user;
     console.log("✅ Logged in as:", user.uid);
-    onUserReady(currentUser);
-
-    // Optional: fetch user data from Firestore
-    try {
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (userDoc.exists()) {
-        currentUser = { uid: user.uid, ...userDoc.data() };
-      }
-    } catch (err) {
-      console.error("❌ Failed to fetch user data:", err);
-    }
-
+    localStorage.setItem("userId", user.uid);
   } else {
     console.warn("⚠️ No logged-in user found");
     currentUser = null;
+    localStorage.removeItem("userId");
   }
 });
-
-/* ---------- Post-login setup ---------- */
-function onUserReady(user) {
-  console.log("User ready for actions:", user.uid);
-  // Example: show chat UI or load messages
-}
 
 /* ---------- Helper: Get current user ID ---------- */
 export function getCurrentUserId() {
