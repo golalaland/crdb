@@ -1251,7 +1251,7 @@ async function loadHost(idx) {
   const videoContainer = document.getElementById("featuredHostVideo");
   if (!videoContainer) return;
 
-  // Clear previous
+  // Clear previous video
   videoContainer.innerHTML = "";
   videoContainer.style.position = "relative";
   videoContainer.style.touchAction = "manipulation";
@@ -1261,23 +1261,20 @@ async function loadHost(idx) {
   shimmer.className = "video-shimmer";
   videoContainer.appendChild(shimmer);
 
-  // Create video element
+  // Video element
   const videoEl = document.createElement("video");
-  videoEl.src = host.videoUrl || "";
-  videoEl.autoplay = true;
-  videoEl.muted = true;
-  videoEl.loop = true;
-  videoEl.playsInline = true;
-  videoEl.preload = "metadata";
-  videoEl.style.width = "100%";
-  videoEl.style.height = "100%";
-  videoEl.style.objectFit = "cover";
-  videoEl.style.borderRadius = "8px";
-  videoEl.style.display = "none";
-  videoEl.style.cursor = "pointer";
+  Object.assign(videoEl, {
+    src: host.videoUrl || "",
+    autoplay: true,
+    muted: true,
+    loop: true,
+    playsInline: true,
+    preload: "metadata",
+    style: "width:100%;height:100%;object-fit:cover;border-radius:8px;display:none;cursor:pointer;"
+  });
   videoEl.setAttribute("webkit-playsinline", "true");
 
-  // Hint (bottom center)
+  // Hint
   const hint = document.createElement("div");
   hint.className = "video-hint";
   hint.textContent = "Tap to unmute";
@@ -1290,32 +1287,25 @@ async function loadHost(idx) {
     hint._t = setTimeout(() => hint.classList.remove("show"), timeout);
   }
 
-  function isFullscreen() {
-    return !!(document.fullscreenElement || document.webkitFullscreenElement);
-  }
-  function toggleFullscreen() {
-    if (isFullscreen()) document.exitFullscreen?.();
-    else videoEl.requestFullscreen?.();
-  }
-
+  // Fullscreen & tap events
   let lastTap = 0;
-  function onTapEvent(e) {
+  function onTapEvent() {
     const now = Date.now();
-    const diff = now - lastTap;
-    lastTap = now;
-
-    if (diff > 0 && diff < 300) toggleFullscreen();
-    else {
+    if (now - lastTap < 300) {
+      document.fullscreenElement ? document.exitFullscreen?.() : videoEl.requestFullscreen?.();
+    } else {
       videoEl.muted = !videoEl.muted;
       showHint(videoEl.muted ? "Tap to unmute" : "Sound on", 1200);
     }
+    lastTap = now;
   }
 
   videoEl.addEventListener("click", onTapEvent);
   videoEl.addEventListener("touchend", (ev) => {
-    if (ev.changedTouches && ev.changedTouches.length > 1) return;
-    ev.preventDefault?.();
-    onTapEvent(ev);
+    if (ev.changedTouches.length < 2) { 
+      ev.preventDefault?.(); 
+      onTapEvent(); 
+    }
   }, { passive: false });
 
   videoEl.addEventListener("loadeddata", () => {
@@ -1337,37 +1327,33 @@ async function loadHost(idx) {
   const nature = host.naturePick || "cool";
   const city = host.location || "Lagos";
   const country = host.country || "Nigeria";
-
   detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
 
-/* ---------- View Count (FOMO) ---------- */
-let viewEl = document.getElementById(`hostViewCount-${host.id}`);
-if (!viewEl) {
-  viewEl = document.createElement("div");
-  viewEl.id = `hostViewCount-${host.id}`;
-  viewEl.style = "display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:14px;color:#fff;gap:4px;";
+  /* ---------- View Count ---------- */
+  let viewEl = document.getElementById(`hostViewCount-${host.id}`);
+  if (!viewEl) {
+    viewEl = document.createElement("div");
+    viewEl.id = `hostViewCount-${host.id}`;
+    viewEl.style = "display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:14px;color:#fff;gap:4px;";
+    viewEl.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+      </svg>
+      <span>${host.views || 0} views</span>
+    `;
+    const meetBtn = document.getElementById("meetBtn");
+    if (meetBtn) meetBtn.insertAdjacentElement("beforebegin", viewEl);
+    else detailsEl.insertAdjacentElement("afterend", viewEl);
+  }
 
-  viewEl.innerHTML = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="3"/> <!-- pupil -->
-      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
-    </svg>
-    <span>${host.views || 0} views</span>
-  `;
+  // Firestore increment only once
+  const hostRef = doc(db, "featuredHosts", host.id);
+  updateDoc(hostRef, { views: increment(1) }).catch(console.error);
 
-  // Insert just above the Meet button
-  const meetBtn = document.getElementById("meetBtn");
-  if (meetBtn) meetBtn.insertAdjacentElement("beforebegin", viewEl);
-  else detailsEl.insertAdjacentElement("afterend", viewEl);
-}
-
-// Firestore increment
-const hostRef = doc(db, "featuredHosts", host.id);
-updateDoc(hostRef, { views: increment(1) }).catch(console.error);
-
-// Update live on page
-const span = viewEl.querySelector("span");
-if (span) span.textContent = `${(host.views || 0) + 1} views`;
+  // Update live count
+  const span = viewEl.querySelector("span");
+  if (span) span.textContent = `${(host.views || 0) + 1} views`;
 
   /* ---------- Meet Button ---------- */
   let meetBtn = document.getElementById("meetBtn");
@@ -1375,20 +1361,19 @@ if (span) span.textContent = `${(host.views || 0) + 1} views`;
     meetBtn = document.createElement("button");
     meetBtn.id = "meetBtn";
     meetBtn.textContent = "Meet";
-    meetBtn.style.marginTop = "6px";
-    meetBtn.style.padding = "8px 16px";
-    meetBtn.style.borderRadius = "6px";
-    meetBtn.style.background = "linear-gradient(90deg,#ff0099,#ff6600)";
-    meetBtn.style.color = "#fff";
-    meetBtn.style.border = "none";
-    meetBtn.style.fontWeight = "bold";
-    meetBtn.style.cursor = "pointer";
+    Object.assign(meetBtn.style, {
+      marginTop: "6px",
+      padding: "8px 16px",
+      borderRadius: "6px",
+      background: "linear-gradient(90deg,#ff0099,#ff6600)",
+      color: "#fff",
+      border: "none",
+      fontWeight: "bold",
+      cursor: "pointer"
+    });
     viewEl.insertAdjacentElement("afterend", meetBtn);
   }
-
-  meetBtn.onclick = () => {
-    showMeetModal(host);
-  };
+  meetBtn.onclick = () => showMeetModal(host);
 
   /* ---------- Avatar Highlight ---------- */
   hostListEl.querySelectorAll("img").forEach((img, i) => {
@@ -1397,9 +1382,9 @@ if (span) span.textContent = `${(host.views || 0) + 1} views`;
 
   giftSlider.value = 1;
   giftAmountEl.textContent = "1";
+}
 
-/* ---------- Meet Modal (fixed to appear above video + proper stars logic) ---------- */
-/* ---------- Meet Modal (fixed to appear above video + proper stars logic) ---------- */
+/* ---------- Meet Modal ---------- */
 function showMeetModal(host) {
   let modal = document.getElementById("meetModal");
   if (modal) modal.remove();
@@ -1438,14 +1423,15 @@ function showMeetModal(host) {
   const cancelBtn = modal.querySelector("#cancelMeet");
   const confirmBtn = modal.querySelector("#confirmMeet");
   const modalContent = modal.querySelector("#meetModalContent");
-  const hostViewEl = document.getElementById("hostViewCount");
+  const hostViewEl = document.getElementById(`hostViewCount-${host.id}`);
 
   cancelBtn.onclick = () => modal.remove();
 
-  // Increment views immediately when modal opens
-  const hostRef = doc(db, "featuredHosts", host.id);
-  updateDoc(hostRef, { views: increment(1) }).catch(console.error);
-  hostViewEl.textContent = `${(host.views || 0) + 1} views`;
+  // Update live view count on modal open
+  if (hostViewEl) {
+    const span = hostViewEl.querySelector("span");
+    if (span) span.textContent = `${(host.views || 0) + 1} views`;
+  }
 
   confirmBtn.onclick = async () => {
     const COST = 21;
@@ -1462,24 +1448,19 @@ function showMeetModal(host) {
       return;
     }
 
-    // Disable button
     confirmBtn.disabled = true;
     confirmBtn.style.opacity = 0.6;
     confirmBtn.style.cursor = "not-allowed";
 
     try {
-      // Deduct stars optimistically
       currentUser.stars -= COST;
       if (refs?.starCountEl)
         refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+
       updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
 
-      // Define stages
-      const fixedStages = [
-        "Handling your meet request…",
-        "Collecting host’s identity…"
-      ];
-
+      // Animation stages
+      const fixedStages = ["Handling your meet request…","Collecting host’s identity…"];
       const playfulMessages = [
         "Oh, she’s hella cute…💋",
         "Careful, she may be naughty..😏",
@@ -1488,20 +1469,14 @@ function showMeetModal(host) {
         "Be a real gentleman, when she texts u.."
       ];
 
-      // Randomly pick 2–3 playful messages
       const randomPlayful = [];
       while (randomPlayful.length < 3) {
         const choice = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
         if (!randomPlayful.includes(choice)) randomPlayful.push(choice);
       }
 
-      const stages = [
-        ...fixedStages,
-        ...randomPlayful,
-        "Generating secure token…"
-      ];
+      const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
 
-      // Prepare modal content for stages
       modalContent.innerHTML = `<p id="stageMsg" style="margin-top:20px;font-weight:500;"></p>`;
       const stageMsgEl = modalContent.querySelector("#stageMsg");
 
@@ -1512,8 +1487,6 @@ function showMeetModal(host) {
 
         setTimeout(() => {
           stageMsgEl.textContent = stage;
-
-          // After the last stage, show success
           if (index === stages.length - 1) {
             setTimeout(() => {
               modalContent.innerHTML = `
@@ -1523,8 +1496,7 @@ function showMeetModal(host) {
               `;
               modalContent.querySelector("#letsGoBtn").onclick = () => {
                 const telegramMessage = `Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`;
-                const telegramUrl = `https://t.me/drtantra?text=${encodeURIComponent(telegramMessage)}`;
-                window.open(telegramUrl, "_blank");
+                window.open(`https://t.me/drtantra?text=${encodeURIComponent(telegramMessage)}`, "_blank");
                 modal.remove();
               };
             }, 500);
@@ -1539,6 +1511,7 @@ function showMeetModal(host) {
     }
   };
 }
+
 /* ---------- Dummy helpers ---------- */
 let userStars = 100; // example balance
 function updateStarsDisplay() {
