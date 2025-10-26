@@ -1242,7 +1242,7 @@ function renderHostAvatars() {
 }
 
 
-/* ---------- Load Host with Unique View Count ---------- */
+/* ---------- Load Host ---------- */
 async function loadHost(idx) {
   const host = hosts[idx];
   if (!host) return;
@@ -1251,6 +1251,7 @@ async function loadHost(idx) {
   const videoContainer = document.getElementById("featuredHostVideo");
   if (!videoContainer) return;
 
+  // Clear previous
   videoContainer.innerHTML = "";
   videoContainer.style.position = "relative";
   videoContainer.style.touchAction = "manipulation";
@@ -1260,7 +1261,7 @@ async function loadHost(idx) {
   shimmer.className = "video-shimmer";
   videoContainer.appendChild(shimmer);
 
-  // Video element
+  // Create video element
   const videoEl = document.createElement("video");
   videoEl.src = host.videoUrl || "";
   videoEl.autoplay = true;
@@ -1276,7 +1277,7 @@ async function loadHost(idx) {
   videoEl.style.cursor = "pointer";
   videoEl.setAttribute("webkit-playsinline", "true");
 
-  // Hint
+  // Hint (bottom center)
   const hint = document.createElement("div");
   hint.className = "video-hint";
   hint.textContent = "Tap to unmute";
@@ -1302,6 +1303,7 @@ async function loadHost(idx) {
     const now = Date.now();
     const diff = now - lastTap;
     lastTap = now;
+
     if (diff > 0 && diff < 300) toggleFullscreen();
     else {
       videoEl.muted = !videoEl.muted;
@@ -1338,59 +1340,35 @@ async function loadHost(idx) {
 
   detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
 
-  /* ---------- View Count (FOMO) ---------- */
-  const viewId = `hostViewCount_${host.id}`; // UNIQUE ID
-  let viewEl = document.getElementById(viewId);
+/* ---------- View Count (FOMO) ---------- */
+let viewEl = document.getElementById(`hostViewCount-${host.id}`);
+if (!viewEl) {
+  viewEl = document.createElement("div");
+  viewEl.id = `hostViewCount-${host.id}`;
+  viewEl.style = "display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:14px;color:#fff;gap:4px;";
 
-  if (!viewEl) {
-    viewEl = document.createElement("div");
-    viewEl.id = viewId;
-    viewEl.style = "display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:14px;color:#fff;gap:4px;";
-    viewEl.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="3"/> <!-- pupil -->
-        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
-      </svg>
-      <span>${host.views || 0} views</span>
-    `;
-    detailsEl.insertAdjacentElement("afterend", viewEl);
+  viewEl.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="3"/> <!-- pupil -->
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+    </svg>
+    <span>${host.views || 0} views</span>
+  `;
 
-    // Increment Firestore view count only ONCE per load
-    const hostRef = doc(db, "featuredHosts", host.id);
-    updateDoc(hostRef, { views: increment(1) }).catch(console.error);
-
-    // Update live count
-    const span = viewEl.querySelector("span");
-    if (span) span.textContent = `${(host.views || 0) + 1} views`;
-  }
-
-  /* ---------- Meet Button ---------- */
-  let meetBtn = document.getElementById("meetBtn");
-  if (!meetBtn) {
-    meetBtn = document.createElement("button");
-    meetBtn.id = "meetBtn";
-    meetBtn.textContent = "Meet";
-    meetBtn.style.marginTop = "6px";
-    meetBtn.style.padding = "8px 16px";
-    meetBtn.style.borderRadius = "6px";
-    meetBtn.style.background = "linear-gradient(90deg,#ff0099,#ff6600)";
-    meetBtn.style.color = "#fff";
-    meetBtn.style.border = "none";
-    meetBtn.style.fontWeight = "bold";
-    meetBtn.style.cursor = "pointer";
-    viewEl.insertAdjacentElement("afterend", meetBtn);
-  }
-
-  meetBtn.onclick = () => showMeetModal(host);
-
-  /* ---------- Avatar Highlight ---------- */
-  hostListEl.querySelectorAll("img").forEach((img, i) => {
-    img.classList.toggle("active", i === idx);
-  });
-
-  giftSlider.value = 1;
-  giftAmountEl.textContent = "1";
+  // Insert just above the Meet button
+  const meetBtn = document.getElementById("meetBtn");
+  if (meetBtn) meetBtn.insertAdjacentElement("beforebegin", viewEl);
+  else detailsEl.insertAdjacentElement("afterend", viewEl);
 }
+
+// Firestore increment
+const hostRef = doc(db, "featuredHosts", host.id);
+updateDoc(hostRef, { views: increment(1) }).catch(console.error);
+
+// Update live on page
+const span = viewEl.querySelector("span");
+if (span) span.textContent = `${(host.views || 0) + 1} views`;
+
   /* ---------- Meet Button ---------- */
   let meetBtn = document.getElementById("meetBtn");
   if (!meetBtn) {
@@ -1419,7 +1397,6 @@ async function loadHost(idx) {
 
   giftSlider.value = 1;
   giftAmountEl.textContent = "1";
-}
 
 /* ---------- Meet Modal (fixed to appear above video + proper stars logic) ---------- */
 /* ---------- Meet Modal (fixed to appear above video + proper stars logic) ---------- */
