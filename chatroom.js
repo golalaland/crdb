@@ -1444,7 +1444,7 @@ confirmBtn.onclick = async () => {
       refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
     updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
 
-    // Replace modal content with staged messages
+    // Stage setup
     const fixedStages = [
       "Handling your meet request…",
       "Collecting host’s identity…"
@@ -1465,17 +1465,18 @@ confirmBtn.onclick = async () => {
       if (!randomPlayful.includes(choice)) randomPlayful.push(choice);
     }
 
-    // Build final staged sequence
+    // Final staged sequence
     const stages = [
       ...fixedStages,
       ...randomPlayful,
       "Generating secure token…"
     ];
 
-    // Animate dots
-    let stageIndex = 0;
+    // Prepare modal content
     modalContent.innerHTML = `<p id="stageMsg" style="margin-top:20px;font-weight:500;"></p>`;
     const stageMsgEl = modalContent.querySelector("#stageMsg");
+
+    let stageIndex = 0;
 
     function showNextStage() {
       if (stageIndex >= stages.length) {
@@ -1485,9 +1486,7 @@ confirmBtn.onclick = async () => {
           <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is approved.</p>
           <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send Message</button>
         `;
-
-        const letsGoBtn = modalContent.querySelector("#letsGoBtn");
-        letsGoBtn.onclick = () => {
+        modalContent.querySelector("#letsGoBtn").onclick = () => {
           const telegramMessage = `Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`;
           const telegramUrl = `https://t.me/drtantra?text=${encodeURIComponent(telegramMessage)}`;
           window.open(telegramUrl, "_blank");
@@ -1496,19 +1495,31 @@ confirmBtn.onclick = async () => {
         return;
       }
 
-      let dots = 0;
       const stage = stages[stageIndex];
-      const dotInterval = setInterval(() => {
-        stageMsgEl.textContent = stage + ".".repeat(dots % 4); // 0–3 dots
-        dots++;
-      }, 300);
+      let dots = 0;
+      stageMsgEl.textContent = stage;
 
-      // Show each stage for ~1.2–1.5s
+      // Animate dots with requestAnimationFrame
+      let lastTime = 0;
+      const dotSpeed = stage.length < 25 ? 250 : 350;
+
+      function animateDots(time) {
+        if (!lastTime) lastTime = time;
+        if (time - lastTime > dotSpeed) {
+          dots = (dots + 1) % 4; // 0–3 dots
+          stageMsgEl.textContent = stage + ".".repeat(dots);
+          lastTime = time;
+        }
+        if (stageIndex < stages.length) requestAnimationFrame(animateDots);
+      }
+      requestAnimationFrame(animateDots);
+
+      // Duration per stage
+      const duration = stageIndex < 2 ? 1300 : 1500 + Math.random() * 400;
       setTimeout(() => {
-        clearInterval(dotInterval);
         stageIndex++;
         showNextStage();
-      }, 1200 + Math.random() * 300);
+      }, duration);
     }
 
     showNextStage();
