@@ -1479,12 +1479,7 @@ let userStars = 100; // example balance
 function updateStarsDisplay() {
   document.getElementById("starsBalance").textContent = `${userStars}⭐`;
 }
-/* ---------- Gift Slider ---------- */
-giftSlider.addEventListener("input", () => {
-  giftAmountEl.textContent = giftSlider.value;
-});
-
-/* ---------- Send Gift ---------- */
+/* ---------- Send Gift with Spinner (Stable Width) ---------- */
 giftBtn.addEventListener("click", async () => {
   try {
     const host = hosts[currentIndex];
@@ -1492,8 +1487,14 @@ giftBtn.addEventListener("click", async () => {
     if (!currentUser?.uid) return showGiftAlert("Please log in to send stars ⭐");
 
     const giftStars = parseInt(giftSlider.value, 10);
-    if (isNaN(giftStars) || giftStars <= 0)
-      return showGiftAlert("Invalid star amount ❌");
+    if (isNaN(giftStars) || giftStars <= 0) return showGiftAlert("Invalid star amount ❌");
+
+    // Store original text and set button width
+    const originalText = giftBtn.textContent;
+    const buttonWidth = giftBtn.offsetWidth + "px";
+    giftBtn.style.width = buttonWidth; // lock width
+    giftBtn.innerHTML = `<span class="spinner"></span>`; // show spinner
+    giftBtn.disabled = true;
 
     const senderRef = doc(db, "users", currentUser.uid);
     const receiverRef = doc(db, "users", host.id);
@@ -1509,15 +1510,15 @@ giftBtn.addEventListener("click", async () => {
       const senderData = senderSnap.data();
       if ((senderData.stars || 0) < giftStars) throw new Error("Insufficient stars");
 
-      // --- Deduct from sender and add to receiver ---
+      // Deduct from sender and add to receiver
       tx.update(senderRef, { stars: increment(-giftStars), starsGifted: increment(giftStars) });
       tx.update(receiverRef, { stars: increment(giftStars) });
 
-      // --- Update featuredHosts only ---
+      // Update featuredHosts only
       tx.set(featuredReceiverRef, { stars: increment(giftStars) }, { merge: true });
     });
 
-    // Show sender alert immediately
+    // Show sender alert
     showGiftAlert(`You sent ${giftStars} stars ⭐ to ${host.chatId}!`);
 
     // Show recipient alert 1 second later, only once
@@ -1529,6 +1530,11 @@ giftBtn.addEventListener("click", async () => {
   } catch (err) {
     console.error("❌ Gift sending failed:", err);
     showGiftAlert(`⚠️ Something went wrong: ${err.message}`);
+  } finally {
+    // Restore button text and unlock width
+    giftBtn.innerHTML = originalText;
+    giftBtn.disabled = false;
+    giftBtn.style.width = "auto";
   }
 });
 
