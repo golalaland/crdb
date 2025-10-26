@@ -1489,11 +1489,11 @@ giftBtn.addEventListener("click", async () => {
     const giftStars = parseInt(giftSlider.value, 10);
     if (isNaN(giftStars) || giftStars <= 0) return showGiftAlert("Invalid star amount ❌");
 
-    // Store original text and set button width
+    // Store original text and lock button width
     const originalText = giftBtn.textContent;
     const buttonWidth = giftBtn.offsetWidth + "px";
-    giftBtn.style.width = buttonWidth; // lock width
-    giftBtn.innerHTML = `<span class="spinner"></span>`; // show spinner
+    giftBtn.style.width = buttonWidth;
+    giftBtn.innerHTML = `<span class="gift-spinner"></span>`; // use themed spinner
     giftBtn.disabled = true;
 
     const senderRef = doc(db, "users", currentUser.uid);
@@ -1519,12 +1519,14 @@ giftBtn.addEventListener("click", async () => {
     });
 
     // Show sender alert
-    showGiftAlert(`You sent ${giftStars} stars ⭐ to ${host.chatId}!`);
+    showGiftAlert(`✅ You sent ${giftStars} stars ⭐ to ${host.chatId}!`);
 
-    // Show recipient alert 1 second later, only once
-    setTimeout(() => {
-      showGiftAlert(`You received ${giftStars} stars ⭐ from ${currentUser.username || "a fan"}!`);
-    }, 1000);
+    // Show recipient alert 1 second later if session matches
+    if (currentUser.uid === host.id) {
+      setTimeout(() => {
+        showGiftAlert(`🎁 You received ${giftStars} stars ⭐ from ${currentUser.username || "a fan"}!`);
+      }, 1000);
+    }
 
     console.log(`✅ Sent ${giftStars} stars ⭐ to ${host.chatId}`);
   } catch (err) {
