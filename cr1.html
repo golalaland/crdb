@@ -300,6 +300,342 @@
   margin-bottom: 6px;
 
 }
+
+
+/* 🎁 Gift slider section */
+
+.gift-slider-container {
+
+  display: flex;
+
+  align-items: center;      /* vertical center for all items */
+
+  justify-content: space-between;
+
+  gap: 10px;
+
+  background: rgba(255, 255, 255, 0.05);
+
+  border-radius: 10px;
+
+  padding: 8px 10px;
+
+  margin-top: 8px;
+
+  backdrop-filter: blur(4px);
+
+}
+
+  
+
+/* Pink gradient slider */
+
+#giftSlider {
+
+  flex: 1;
+
+  appearance: none;
+
+  height: 6px;
+
+  border-radius: 4px;
+
+  background: linear-gradient(90deg, #ff4da6, #ff80c8);
+
+  outline: none;
+
+  cursor: pointer;
+
+}
+
+#giftSlider::-webkit-slider-thumb {
+
+  appearance: none;
+
+  width: 16px;
+
+  height: 16px;
+
+  border-radius: 50%;
+
+  background: #ff4da6;
+
+  border: 2px solid #fff;
+
+  transition: 0.2s ease;
+
+}
+
+#giftSlider::-webkit-slider-thumb:hover {
+
+  transform: scale(1.1);
+
+}
+
+  
+
+/* Gift button */
+
+.featured-gift-btn {
+
+  padding: 5px 10px;
+
+  border-radius: 6px;
+
+  background: linear-gradient(135deg, #ff4081, #ff80ab);
+
+  border: none;
+
+  color: #fff;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.25s ease;
+
+}
+
+.featured-gift-btn:hover {
+
+  transform: scale(1.05);
+
+}
+
+  
+
+/* Number + star inline */
+
+#giftDisplay {
+
+  display: inline-flex;
+
+  align-items: center;  /* vertical align emoji and number */
+
+  gap: 2px;
+
+  font-size: 16px;      /* same size for number and emoji */
+
+  line-height: 1;
+
+}
+
+  
+
+#giftAmount {
+
+  display: inline-flex;
+
+  align-items: center;
+
+}
+
+  
+
+#giftAmount + span {
+
+  display: inline-flex;
+
+  align-items: center;  /* ensures emoji aligns perfectly */
+
+  font-size: 16px;
+
+  line-height: 1;
+
+  transform: none;      /* remove old translateY tweaks */
+
+}
+
+  
+
+/* 🖼 Avatar list */
+
+.featured-host-list {
+
+  display: flex;
+
+  justify-content: center;
+
+  flex-wrap: wrap;
+
+  gap: 6px;
+
+  padding: 8px;
+
+}
+
+.featured-host-list img {
+
+  width: 42px;
+
+  height: 42px;
+
+  border-radius: 50%;
+
+  cursor: pointer;
+
+  border: 2px solid transparent;
+
+  transition: border 0.25s, transform 0.25s;
+
+}
+
+.featured-host-list img.active {
+
+  border: 2px solid #ff4da6;
+
+  transform: scale(1.05);
+
+}
+
+  
+
+/* Bottom nav buttons */
+
+.featured-nav-buttons {
+
+  display: flex;
+
+  justify-content: space-between;
+
+  padding: 8px 14px 14px;
+
+  font-size: 0.85rem;
+
+}
+
+.featured-nav-buttons a {
+
+  color: #fff;
+
+  text-decoration: none;
+
+  font-weight: 600;
+
+}
+
+  
+
+/* Animation */
+
+@keyframes modalPop {
+
+  from {
+
+    transform: scale(0.9);
+
+    opacity: 0;
+
+  }
+
+  to {
+
+    transform: scale(1);
+
+    opacity: 1;
+
+  }
+
+}
+
+  
+
+/* Hide socials */
+
+.featured-host-socials {
+
+  display: none !important;
+
+}
+
+#onlineWrapper {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center; /* centers horizontally */
+
+  gap: 6px;
+
+  font-family: sans-serif;
+
+  font-weight: 500;
+
+  font-size: 16px;
+
+  color: #fff; /* optional: match your theme */
+
+  width: 100%; /* take full width for perfect centering */
+
+  margin: 20px 0;
+
+}
+
+.featured-host-video-container {
+
+  position: relative;
+
+  overflow: hidden;
+
+}
+
+/* hint at bottom center, fades smoothly */
+
+.video-hint {
+
+  position: absolute;
+
+  left: 50%;
+
+  bottom: 18px;
+
+  transform: translateX(-50%);
+
+  background: rgba(0,0,0,0.6);
+
+  color: #fff;
+
+  padding: 8px 12px;
+
+  border-radius: 18px;
+
+  font-size: 13px;
+
+  opacity: 0;
+
+  pointer-events: none;
+
+  transition: opacity 0.35s ease, transform 0.25s ease;
+
+  z-index: 5;
+
+  white-space: nowrap;
+
+}
+
+  
+
+.video-hint.show {
+
+  opacity: 1;
+
+  transform: translateX(-50%) translateY(0);
+
+}
+
+/* ensure container allows pointer gestures without zooming */
+
+#featuredHostVideo {
+
+  touch-action: manipulation;
+
+  -webkit-user-select: none;
+
+  -ms-touch-action: manipulation;
+
+}
+
   
 /* overall layout */
 html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;color:#fff;background:var(--bg);}
