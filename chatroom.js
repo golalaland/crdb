@@ -1479,81 +1479,86 @@ giftSlider.addEventListener("input", () => {
   giftAmountEl.textContent = giftSlider.value;
 });
 
-/* ---------- Send Gift with Spinner & Receiver Notification ---------- */
+/* ---------- Send Gift with Spinner & One-Time Receiver Alert ---------- */
 giftBtn.addEventListener("click", async () => {
-  const host = hosts[currentIndex];
-  if (!host?.id) return showGiftAlert("⚠️ No host selected.");
-  if (!currentUser?.uid) return showGiftAlert("Please log in to send stars ⭐");
-
-  const giftStars = parseInt(giftSlider.value, 10);
-  if (isNaN(giftStars) || giftStars <= 0) return showGiftAlert("Invalid star amount ❌");
-
-  // Store original text and lock button width
-  const originalText = giftBtn.textContent;
-  const buttonWidth = giftBtn.offsetWidth + "px";
-  giftBtn.style.width = buttonWidth;
-  giftBtn.disabled = true;
-
-  // Add spinner inside button
-  giftBtn.innerHTML = `<span class="gift-spinner"></span>`;
-
   try {
+    const receiver = hosts[currentIndex]; // host to receive gift
+    if (!receiver?.uid) return showGiftAlert("⚠️ No host selected.");
+    if (!currentUser?.uid) return showGiftAlert("Please log in to send stars ⭐");
+
+    const giftStars = parseInt(giftSlider.value, 10);
+    if (isNaN(giftStars) || giftStars <= 0)
+      return showGiftAlert("Invalid star amount ❌");
+
+    // --- Spinner setup ---
+    const originalText = giftBtn.textContent;
+    const buttonWidth = giftBtn.offsetWidth + "px";
+    giftBtn.style.width = buttonWidth;
+    giftBtn.innerHTML = `<span class="gift-spinner"></span>`;
+    giftBtn.disabled = true;
+
     const senderRef = doc(db, "users", currentUser.uid);
-    const receiverRef = doc(db, "users", host.id);
-    const featuredReceiverRef = doc(db, "featuredHosts", host.id);
+    const receiverRef = doc(db, "users", receiver.uid);
+    const featuredReceiverRef = doc(db, "featuredHosts", receiver.uid);
 
     await runTransaction(db, async (tx) => {
       const senderSnap = await tx.get(senderRef);
       const receiverSnap = await tx.get(receiverRef);
 
       if (!senderSnap.exists()) throw new Error("Your user record not found.");
-      if (!receiverSnap.exists()) tx.set(receiverRef, { stars: 0, starsGifted: 0, lastGiftSeen: {} }, { merge: true });
+      if (!receiverSnap.exists())
+        tx.set(receiverRef, { stars: 0, starsGifted: 0, lastGiftSeen: {} }, { merge: true });
 
       const senderData = senderSnap.data();
       if ((senderData.stars || 0) < giftStars) throw new Error("Insufficient stars");
 
-      // Deduct sender stars and add to receiver
+      // Deduct from sender, add to receiver
       tx.update(senderRef, { stars: increment(-giftStars), starsGifted: increment(giftStars) });
       tx.update(receiverRef, { stars: increment(giftStars) });
 
-      // Update featuredHosts stars
+      // Update featuredHosts
       tx.set(featuredReceiverRef, { stars: increment(giftStars) }, { merge: true });
 
-      // Mark for one-time alert
+      // Store gift in receiver's lastGiftSeen to prevent duplicate alerts
       tx.update(receiverRef, {
         [`lastGiftSeen.${currentUser.uid}`]: giftStars
       });
     });
 
-    // Show sender alert immediately
-    showGiftAlert(`✅ You sent ${giftStars} stars ⭐ to ${host.chatId}!`);
+    // --- Sender confirmation ---
+    showGiftAlert(`✅ You sent ${giftStars} stars ⭐ to ${receiver.chatId}!`);
 
-    // Show receiver alert if they’re online in this session
-    if (currentUser.uid !== host.id) {
-      const receiverRefCheck = doc(db, "users", host.id);
-      const receiverSnapCheck = await getDoc(receiverRefCheck);
-      if (receiverSnapCheck.exists()) {
-        const lastSeen = receiverSnapCheck.data().lastGiftSeen || {};
-        if (lastSeen[currentUser.uid] === giftStars) {
-          // Show alert only once
-          setTimeout(() => {
-            showGiftAlert(`🎁 ${currentUser.username || "Someone"} sent you ${giftStars} stars ⭐`);
-          }, 1000);
-        }
-      }
-    }
+    // --- Restore button ---
+    giftBtn.innerHTML = originalText;
+    giftBtn.disabled = false;
 
-    console.log(`✅ Sent ${giftStars} stars ⭐ to ${host.chatId}`);
   } catch (err) {
     console.error("❌ Gift sending failed:", err);
     showGiftAlert(`⚠️ Something went wrong: ${err.message}`);
-  } finally {
-    // Restore button
-    giftBtn.innerHTML = originalText;
+    giftBtn.innerHTML = "Send Gift";
     giftBtn.disabled = false;
     giftBtn.style.width = "auto";
   }
 });
+
+/* ---------- Listen for one-time gift notifications for logged-in user ---------- */
+if (currentUser?.uid) {
+  const userRef = doc(db, "users", currentUser.uid);
+  onSnapshot(userRef, async (snap) => {
+    if (!snap.exists()) return;
+    const data = snap.data();
+    const lastGiftSeen = data.lastGiftSeen || {};
+
+    // Loop through all gifts sent to this user
+    for (const [senderUid, amount] of Object.entries(lastGiftSeen)) {
+      // Only show alert if we haven't seen it in this session
+      if (!sessionStorage.getItem(`giftSeen_${senderUid}`)) {
+        showGiftAlert(`🎁 ${senderUid} sent you ${amount} stars ⭐`); // optionally map UID to username if needed
+        sessionStorage.setItem(`giftSeen_${senderUid}`, "1");
+      }
+    }
+  });
+}
 
 /* ---------- Navigation ---------- */
 prevBtn.addEventListener("click", e => {
