@@ -1404,15 +1404,6 @@ function showMeetModal(host) {
       <h3 style="margin-bottom:10px;font-weight:600;">Meet ${host.chatId || "this host"}?</h3>
       <p style="margin-bottom:16px;">This will cost you <b>21 stars ⭐</b>.</p>
 
-      <!-- View count above Meet section -->
-      <div style="display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:14px;color:#fff;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-          <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8z"/>
-          <path d="M8 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/>
-        </svg>
-        <span id="hostViewCount" style="margin-left:4px;">${host.views || 0} views</span>
-      </div>
-
       <div style="display:flex;gap:10px;justify-content:center;">
         <button id="cancelMeet" style="padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">Cancel</button>
         <button id="confirmMeet" style="padding:8px 16px;background:linear-gradient(90deg,#ff0099,#ff6600);border:none;color:#fff;border-radius:8px;font-weight:600;">Yes</button>
