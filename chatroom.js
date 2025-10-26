@@ -1479,11 +1479,6 @@ let userStars = 100; // example balance
 function updateStarsDisplay() {
   document.getElementById("starsBalance").textContent = `${userStars}⭐`;
 }
-/* ---------- Gift slider ---------- */
-giftSlider.addEventListener("input", () => {
-  giftAmountEl.textContent = giftSlider.value;
-});
-
 /* ---------- Send gift ---------- */
 giftBtn.addEventListener("click", async () => {
   try {
@@ -1513,16 +1508,19 @@ giftBtn.addEventListener("click", async () => {
       const receiverSnap = await tx.get(receiverRef);
 
       if (!senderSnap.exists()) throw new Error("Your user record not found.");
-      if (!receiverSnap.exists()) tx.set(receiverRef, { stars: 0, starsGifted: 0 }, { merge: true });
+      if (!receiverSnap.exists()) tx.set(receiverRef, { stars: 0, starsGifted: 0, giftNotifications: [] }, { merge: true });
 
       const senderData = senderSnap.data();
       if ((senderData.stars || 0) < giftStars) throw new Error("Insufficient stars");
 
-      // --- Users updates only ---
+      // --- Users updates ---
       tx.update(senderRef, { stars: increment(-giftStars), starsGifted: increment(giftStars) });
-      tx.update(receiverRef, { stars: increment(giftStars) });
+      tx.update(receiverRef, { 
+        stars: increment(giftStars), 
+        giftNotifications: arrayUnion({ from: currentUser.uid, name: currentUser.name || "Someone", stars: giftStars, seen: false, timestamp: serverTimestamp() })
+      });
 
-      // --- Only receiver in featuredHosts ---
+      // --- FeaturedHosts updates ---
       tx.set(featuredReceiverRef, { stars: increment(giftStars) }, { merge: true });
     });
 
@@ -1533,6 +1531,32 @@ giftBtn.addEventListener("click", async () => {
     showGiftAlert(`⚠️ Something went wrong: ${err.message}`);
   }
 });
+
+/* ---------- Show one-time gift notification for host ---------- */
+async function showGiftNotifications(userId) {
+  const userRef = doc(db, "users", userId);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) return;
+
+  const data = userSnap.data();
+  const notifications = (data.giftNotifications || []).filter(n => !n.seen);
+  if (notifications.length === 0) return;
+
+  // Show each notification using showGiftAlert
+  notifications.forEach(async n => {
+    showGiftAlert(`🎁 ${n.name} sent you ${n.stars} stars!`);
+
+    // Mark as seen so it only shows once
+    await updateDoc(userRef, {
+      giftNotifications: arrayRemove(n)
+    });
+    n.seen = true; // Optional: keep for history
+    await updateDoc(userRef, {
+      giftNotifications: arrayUnion(n)
+    });
+  });
+}
+
 /* ---------- Navigation ---------- */
 prevBtn.addEventListener("click", e => {
   e.preventDefault();
