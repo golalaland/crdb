@@ -114,6 +114,192 @@
   opacity: 0;
   pointer-events: none;
 }
+
+/* ====== Featured Hosts Styles ====== */
+
+.featured-btn {
+
+  background: linear-gradient(90deg, #ff007a, #ffa500);
+
+  color: #fff;
+
+  border: none;
+
+  border-radius: 25px;
+
+  padding: 10px 20px;
+
+  font-size: 16px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  display: block;
+
+  margin: 20px auto;
+
+  box-shadow: 0 0 10px rgba(255, 0, 122, 0.6);
+
+  transition: transform 0.2s;
+
+}
+
+.featured-btn:hover { transform: scale(1.05); }
+
+  
+
+/* 🌟 Featured Hosts Modal (Compact Mobile Layout) */
+
+.featured-modal {
+
+  display: none;
+
+  position: fixed;
+
+  z-index: 10000;
+
+  inset: 0;
+
+  justify-content: center;
+
+  align-items: center;
+
+  background: rgba(0,0,0,0.85);
+
+  backdrop-filter: blur(10px);
+
+}
+
+  
+
+/* 🔲 Compact modal card */
+
+.featured-modal-content {
+
+  position: relative;
+
+  background: #111;
+
+  border-radius: 18px;
+
+  width: 82%; /* smaller screen-inside-screen look */
+
+  max-width: 320px; /* tighter fit for mobile */
+
+  color: #fff;
+
+  box-shadow: 0 0 25px rgba(255, 255, 255, 0.08);
+
+  display: flex;
+
+  flex-direction: column;
+
+  overflow: hidden;
+
+  animation: modalPop 0.25s ease-out;
+
+  transform: translateY(0);
+
+}
+
+  
+
+/* ❌ Close button */
+
+.featured-close {
+
+  position: absolute;
+
+  top: 8px;
+
+  right: 12px;
+
+  color: #fff;
+
+  font-size: 20px;
+
+  cursor: pointer;
+
+  opacity: 0.9;
+
+  z-index: 10;
+
+}
+
+.featured-close:hover {
+
+  opacity: 1;
+
+}
+
+  
+
+/* 🎥 Video area (smaller height for compactness) */
+
+.featured-host-video-container {
+
+  width: 100%;
+
+  aspect-ratio: 9 / 14; /* slightly shorter than portrait */
+
+  background: #000;
+
+  border-radius: 18px 18px 0 0;
+
+  overflow: hidden;
+
+}
+
+.featured-host-video-container iframe {
+
+  width: 100%;
+
+  height: 100%;
+
+  border: none;
+
+  object-fit: cover;
+
+}
+
+  
+
+/* 👤 Info and actions section */
+
+.featured-host-footer {
+
+  padding: 10px 14px;
+
+  background: #1a1a1a;
+
+  text-align: center;
+
+  font-size: 0.9rem;
+
+}
+
+  
+
+/* Username + Details */
+
+.featured-host-username {
+
+  font-weight: 600;
+
+  font-size: 1.05em;
+
+}
+
+.featured-host-details {
+
+  font-size: 0.85em;
+
+  opacity: 0.8;
+
+  margin-bottom: 6px;
+
+}
   
 /* overall layout */
 html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;color:#fff;background:var(--bg);}
@@ -909,6 +1095,103 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     <button id="giftConfirmBtn">Send Gift ⭐️</button>
   </div>
 </div>
+
+
+<!-- 🌟 Featured Hosts Button -->
+
+<button id="openHostsBtn" class="featured-btn" style="display:none;">🌟 Star Hosts 🌟</button>
+
+  
+
+<!-- 🌟 Featured Hosts Modal -->
+
+<div id="featuredHostsModal" class="featured-modal">
+
+  <div class="featured-modal-content">
+
+  
+
+    <span class="featured-close">&times;</span>
+
+  
+
+<!-- 🎥 Video + Info -->
+
+<div id="featuredHostVideo" class="featured-host-video-container">
+
+  <!-- Player will be dynamically inserted here -->
+
+</div>
+
+<div class="video-shimmer"></div>
+
+  
+
+   <div class="featured-host-footer">
+
+  <div>
+
+    <div id="featuredHostUsername" class="featured-host-username"></div>
+
+    <div id="featuredHostDetails" class="featured-host-details"></div>
+
+  </div>
+
+  
+
+<div class="gift-slider-container">
+
+  <!-- Slider -->
+
+  <input type="range" id="giftSlider" min="1" max="999" value="1">
+
+  
+
+  <!-- Number + star inline -->
+
+  <span id="giftDisplay">
+
+    <span id="giftAmount">1</span>
+
+    <span class="star-emoji">⭐</span>
+
+  </span>
+
+  
+
+  <!-- Button -->
+
+  <button id="featuredGiftBtn" class="featured-gift-btn">GIFT</button>
+
+</div>
+
+  
+
+    <!-- Host avatars list -->
+
+    <div id="featuredHostList" class="featured-host-list"></div>
+
+  
+
+    <!-- Navigation -->
+
+    <div class="featured-nav-buttons">
+
+      <a href="#" id="prevHost" class="featured-nav-link">Previous</a>
+
+      <a href="#" id="nextHost" class="featured-nav-link">Next</a>
+
+    </div>
+
+  
+
+  </div>
+
+</div>
+
+  
+
+  
 
 <!-- Gift Alert -->
 <div id="giftAlert" class="gift-alert"></div>
