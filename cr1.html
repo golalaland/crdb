@@ -397,12 +397,12 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);       /* nice dim overlay */
+  background: rgba(0,0,0,0.6);
   justify-content: center;
   align-items: center;
-  z-index: 2500;
+  z-index: 10000;  /* above all other modals */
   backdrop-filter: blur(6px);
-  padding: 10px;                     /* small spacing on tiny screens */
+  padding: 10px;
 }
 
 /* ---------- Popup Box ---------- */
