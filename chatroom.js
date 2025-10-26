@@ -1242,7 +1242,7 @@ function renderHostAvatars() {
 }
 
 
-/* ---------- Load Host ---------- */
+/* ---------- Load Host (Faster Video Loading) ---------- */
 async function loadHost(idx) {
   const host = hosts[idx];
   if (!host) return;
@@ -1267,11 +1267,14 @@ async function loadHost(idx) {
     muted: true,
     loop: true,
     playsInline: true,
-    preload: "metadata",
+    preload: "auto", // preload more data
     style: "width:100%;height:100%;object-fit:cover;border-radius:8px;display:none;cursor:pointer;"
   });
   videoEl.setAttribute("webkit-playsinline", "true");
   videoContainer.appendChild(videoEl);
+
+  // Force video to start loading immediately
+  videoEl.load();
 
   // Hint overlay
   const hint = document.createElement("div");
@@ -1305,7 +1308,8 @@ async function loadHost(idx) {
     }
   }, { passive: false });
 
-  videoEl.addEventListener("loadeddata", () => {
+  // Show video as soon as it can play
+  videoEl.addEventListener("canplay", () => {
     shimmer.style.display = "none";
     videoEl.style.display = "block";
     showHint("Tap to unmute", 1400);
