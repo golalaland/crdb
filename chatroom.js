@@ -1243,6 +1243,7 @@ function renderHostAvatars() {
 
 
 /* ---------- Load Host ---------- */
+/* ---------- Load Host ---------- */
 async function loadHost(idx) {
   const host = hosts[idx];
   if (!host) return;
@@ -1299,7 +1300,6 @@ async function loadHost(idx) {
     }
     lastTap = now;
   }
-
   videoEl.addEventListener("click", onTapEvent);
   videoEl.addEventListener("touchend", (ev) => {
     if (ev.changedTouches.length < 2) { 
@@ -1307,28 +1307,6 @@ async function loadHost(idx) {
       onTapEvent(); 
     }
   }, { passive: false });
-
-  videoEl.addEventListener("loadeddata", async () => {
-    shimmer.style.display = "none";
-    videoEl.style.display = "block";
-    showHint("Tap to unmute", 1400);
-
-    // Increment Firestore views only after video loads
-    const hostRef = doc(db, "featuredHosts", host.id);
-    await updateDoc(hostRef, { views: increment(1) }).catch(console.error);
-
-    // Update view count in DOM
-    let viewEl = document.getElementById(`hostViewCount-${host.id}`);
-    if (viewEl) {
-      const span = viewEl.querySelector("span");
-      if (span) {
-        const currentViews = host.views ? host.views + 1 : 1; // +1 because we incremented
-        span.textContent = `${currentViews} views`;
-      }
-    }
-
-    videoEl.play().catch(() => {});
-  });
 
   videoContainer.appendChild(videoEl);
 
@@ -1344,7 +1322,8 @@ async function loadHost(idx) {
   const country = host.country || "Nigeria";
   detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
 
-  /* ---------- View Count Element ---------- */
+  /* ---------- View Count ---------- */
+  const hostRef = doc(db, "featuredHosts", host.id);
   let viewEl = document.getElementById(`hostViewCount-${host.id}`);
   if (!viewEl) {
     viewEl = document.createElement("div");
@@ -1355,12 +1334,34 @@ async function loadHost(idx) {
         <circle cx="12" cy="12" r="3"/>
         <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
       </svg>
-      <span>${host.views || 0} views</span>
+      <span>0 views</span>
     `;
     const meetBtn = document.getElementById("meetBtn");
     if (meetBtn) meetBtn.insertAdjacentElement("beforebegin", viewEl);
     else detailsEl.insertAdjacentElement("afterend", viewEl);
   }
+
+  // Increment Firestore once after video loads
+  videoEl.addEventListener("loadeddata", async () => {
+    shimmer.style.display = "none";
+    videoEl.style.display = "block";
+    showHint("Tap to unmute", 1400);
+
+    try {
+      await updateDoc(hostRef, { views: increment(1) });
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
+  // Real-time view updates (prevents duplication)
+  onSnapshot(hostRef, (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const span = viewEl.querySelector("span");
+      if (span) span.textContent = `${data.views || 0} views`;
+    }
+  });
 
   /* ---------- Meet Button ---------- */
   let meetBtn = document.getElementById("meetBtn");
