@@ -969,10 +969,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   }
 }
 
-/* Hide socials */
-.featured-host-socials {
-  display: none !important;
-}
 #onlineWrapper {
   display: flex;
   align-items: center;
@@ -1124,6 +1120,16 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 <div class="star-popup" id="starPopup">
   <div id="starText">You've just earned +1 star! ⭐</div>
 </div>
+
+<div id="onlineWrapper" style="display:flex; justify-content:center; align-items:center; gap:4px; font-family:sans-serif; font-weight:500; font-size:14px;">
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+  <span id="onlineCount">…</span>
+  <span>people are interacting in this room</span>
+</div>
+
 
 <!-- 🌟 Featured Hosts Button -->
 <button id="openHostsBtn" class="featured-btn" style="display:none;">🌟 Star Hosts 🌟</button>
