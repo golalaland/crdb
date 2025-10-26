@@ -1479,8 +1479,9 @@ giftSlider.addEventListener("input", () => {
   giftAmountEl.textContent = giftSlider.value;
 });
 
-/* ---------- Send Gift Function ---------- */
-async function sendGift(receiver) {
+/* ---------- Send Gift Function (Dynamic Receiver) ---------- */
+async function sendGift() {
+  const receiver = hosts[currentIndex]; // dynamically pick current host
   if (!receiver?.id) return showGiftAlert("⚠️ No host selected.");
   if (!currentUser?.uid) return showGiftAlert("Please log in to send stars ⭐");
 
@@ -1493,7 +1494,7 @@ async function sendGift(receiver) {
   const buttonWidth = giftBtn.offsetWidth + "px";
   giftBtn.style.width = buttonWidth;
   giftBtn.disabled = true;
-  giftBtn.innerHTML = `<span class="gift-spinner"></span>`; // make sure CSS spins it
+  giftBtn.innerHTML = `<span class="gift-spinner"></span>`; // Make sure CSS spins it
 
   try {
     const senderRef = doc(db, "users", currentUser.uid);
@@ -1526,16 +1527,17 @@ async function sendGift(receiver) {
     // Sender alert
     showGiftAlert(`✅ You sent ${giftStars} stars ⭐ to ${receiver.chatId}!`);
 
-    // Receiver alert if they are online in this session
-    if (currentUser.uid === receiver.id) return;
-    setTimeout(async () => {
-      const receiverSnap = await getDoc(doc(db, "users", receiver.id));
-      const receiverData = receiverSnap.data();
-      const lastSeen = receiverData.lastGiftSeen || {};
-      if (lastSeen[currentUser.username || "Someone"] === giftStars) {
-        showGiftAlert(`🎁 ${currentUser.username || "Someone"} sent you ${giftStars} stars ⭐`);
-      }
-    }, 1000);
+    // Receiver alert if online in this session
+    if (currentUser.uid !== receiver.id) {
+      setTimeout(async () => {
+        const receiverSnap = await getDoc(doc(db, "users", receiver.id));
+        const receiverData = receiverSnap.data();
+        const lastSeen = receiverData.lastGiftSeen || {};
+        if (lastSeen[currentUser.username || "Someone"] === giftStars) {
+          showGiftAlert(`🎁 ${currentUser.username || "Someone"} sent you ${giftStars} stars ⭐`);
+        }
+      }, 1000);
+    }
 
     console.log(`✅ Sent ${giftStars} stars ⭐ to ${receiver.chatId}`);
   } catch (err) {
@@ -1549,9 +1551,7 @@ async function sendGift(receiver) {
 }
 
 /* ---------- Assign gift button click ---------- */
-// Make sure `selectedReceiver` is set whenever a host/featured host is chosen
-let selectedReceiver = hosts[currentIndex]; 
-giftBtn.onclick = () => sendGift(selectedReceiver);
+giftBtn.onclick = sendGift;
 
 /* ---------- Navigation ---------- */
 prevBtn.addEventListener("click", e => {
