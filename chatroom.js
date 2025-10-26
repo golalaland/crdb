@@ -1,38 +1,33 @@
 /* ---------- Imports (Firebase v10) ---------- */
-import { 
-  initializeApp 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
-import { 
-  getFirestore, 
-  doc, 
-  setDoc, 
-  getDoc, 
-  updateDoc, 
-  collection, 
-  addDoc, 
-  serverTimestamp, 
-  onSnapshot, 
-  query, 
-  orderBy, 
-  increment, 
-  getDocs, 
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  collection,
+  addDoc,
+  serverTimestamp,
+  onSnapshot,
+  query,
+  orderBy,
+  increment,
+  getDocs,
   where,
-  runTransaction            // ✅ Added this (required for gift transactions)
+  runTransaction // ✅ Required for gift transactions
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-import { 
-  getDatabase, 
-  ref as rtdbRef, 
-  set as rtdbSet, 
-  onDisconnect, 
-  onValue 
+import {
+  getDatabase,
+  ref as rtdbRef,
+  set as rtdbSet,
+  onDisconnect,
+  onValue
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-import { 
-  getAuth, 
-  onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 /* ---------- Firebase Config ---------- */
 const firebaseConfig = {
@@ -52,14 +47,16 @@ const db = getFirestore(app);
 const rtdb = getDatabase(app);
 const auth = getAuth(app);
 
-/* ---------- Auth State Watcher ---------- */
+/* ---------- Current User ---------- */
 let currentUser = null;
 
+/* ---------- Auth State Watcher ---------- */
 onAuthStateChanged(auth, user => {
   if (user) {
     currentUser = user;
     console.log("✅ Logged in as:", user.uid);
     localStorage.setItem("userId", user.uid);
+    onUserReady(currentUser);
   } else {
     console.warn("⚠️ No logged-in user found");
     currentUser = null;
@@ -67,6 +64,34 @@ onAuthStateChanged(auth, user => {
   }
 });
 
+/* ---------- Auto-login based on localStorage ---------- */
+async function tryAutoLogin() {
+  const storedUid = localStorage.getItem("userId");
+  if (!storedUid) return;
+
+  try {
+    const userDoc = await getDoc(doc(db, "users", storedUid));
+    if (userDoc.exists()) {
+      currentUser = { uid: storedUid, ...userDoc.data() };
+      console.log("✅ Auto-logged in as:", currentUser.uid);
+      onUserReady(currentUser);
+    } else {
+      console.warn("⚠️ Stored userId not found in DB. Clearing localStorage.");
+      localStorage.removeItem("userId");
+    }
+  } catch (err) {
+    console.error("❌ Auto-login failed:", err);
+  }
+}
+
+/* ---------- Call auto-login on page load ---------- */
+window.addEventListener("DOMContentLoaded", tryAutoLogin);
+
+/* ---------- Post-login setup ---------- */
+function onUserReady(user) {
+  // Example: show chat UI or load messages
+  console.log("User ready for actions:", user.uid);
+}
 /* ---------- Helper: Get current user ID ---------- */
 export function getCurrentUserId() {
   return currentUser ? currentUser.uid : localStorage.getItem("userId");
