@@ -1496,27 +1496,21 @@ confirmBtn.onclick = async () => {
       }
 
       const stage = stages[stageIndex];
-      let dots = 0;
+      let dotCount = 0;
       stageMsgEl.textContent = stage;
 
-      // Animate dots with requestAnimationFrame
-      let lastTime = 0;
-      const dotSpeed = stage.length < 25 ? 250 : 350;
-
-      function animateDots(time) {
-        if (!lastTime) lastTime = time;
-        if (time - lastTime > dotSpeed) {
-          dots = (dots + 1) % 4; // 0–3 dots
-          stageMsgEl.textContent = stage + ".".repeat(dots);
-          lastTime = time;
-        }
-        if (stageIndex < stages.length) requestAnimationFrame(animateDots);
+      function animateDots() {
+        dotCount = (dotCount + 1) % 4; // 0–3 dots
+        stageMsgEl.textContent = stage + ".".repeat(dotCount);
       }
-      requestAnimationFrame(animateDots);
 
-      // Duration per stage
+      // Show dots every 300ms
+      const dotInterval = setInterval(animateDots, 300);
+
+      // Stage duration
       const duration = stageIndex < 2 ? 1300 : 1500 + Math.random() * 400;
       setTimeout(() => {
+        clearInterval(dotInterval); // stop dots
         stageIndex++;
         showNextStage();
       }, duration);
