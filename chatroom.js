@@ -1527,17 +1527,12 @@ async function sendGift() {
     // Sender alert
     showGiftAlert(`✅ You sent ${giftStars} stars ⭐ to ${receiver.chatId}!`);
 
-    // Receiver alert if online in this session
-    if (currentUser.uid !== receiver.id) {
-      setTimeout(async () => {
-        const receiverSnap = await getDoc(doc(db, "users", receiver.id));
-        const receiverData = receiverSnap.data();
-        const lastSeen = receiverData.lastGiftSeen || {};
-        if (lastSeen[currentUser.username || "Someone"] === giftStars) {
-          showGiftAlert(`🎁 ${currentUser.username || "Someone"} sent you ${giftStars} stars ⭐`);
-        }
-      }, 1000);
-    }
+    // Receiver alert only if this session is the actual receiver
+if (currentUser.uid === receiver.id) {
+  setTimeout(() => {
+    showGiftAlert(`🎁 ${lastSenderName} sent you ${giftStars} stars ⭐`);
+  }, 1000);
+}
 
     console.log(`✅ Sent ${giftStars} stars ⭐ to ${receiver.chatId}`);
   } catch (err) {
