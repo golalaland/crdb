@@ -105,7 +105,7 @@ function showStarPopup(text) {
   setTimeout(() => popup.style.display = "none", 1700);
 }
 
-/* ---------- Gift Modal---------- */
+
 /* ----------------------------
    ⭐ GIFT / BALLER ALERT Glow
 ----------------------------- */
@@ -1479,25 +1479,21 @@ let userStars = 100; // example balance
 function updateStarsDisplay() {
   document.getElementById("starsBalance").textContent = `${userStars}⭐`;
 }
-/* ---------- Send gift ---------- */
+/* ---------- Gift Slider ---------- */
+giftSlider.addEventListener("input", () => {
+  giftAmountEl.textContent = giftSlider.value;
+});
+
+/* ---------- Send Gift ---------- */
 giftBtn.addEventListener("click", async () => {
   try {
     const host = hosts[currentIndex];
-    if (!host?.id) {
-      showGiftAlert("⚠️ No host selected.");
-      return;
-    }
-
-    if (!currentUser) {
-      showGiftAlert("Please log in to send stars ⭐");
-      return;
-    }
+    if (!host?.id) return showGiftAlert("⚠️ No host selected.");
+    if (!currentUser?.uid) return showGiftAlert("Please log in to send stars ⭐");
 
     const giftStars = parseInt(giftSlider.value, 10);
-    if (isNaN(giftStars) || giftStars <= 0) {
-      showGiftAlert("Invalid star amount ❌");
-      return;
-    }
+    if (isNaN(giftStars) || giftStars <= 0)
+      return showGiftAlert("Invalid star amount ❌");
 
     const senderRef = doc(db, "users", currentUser.uid);
     const receiverRef = doc(db, "users", host.id);
@@ -1513,68 +1509,28 @@ giftBtn.addEventListener("click", async () => {
       const senderData = senderSnap.data();
       if ((senderData.stars || 0) < giftStars) throw new Error("Insufficient stars");
 
-      // Deduct sender, add to receiver
+      // --- Deduct from sender and add to receiver ---
       tx.update(senderRef, { stars: increment(-giftStars), starsGifted: increment(giftStars) });
       tx.update(receiverRef, { stars: increment(giftStars) });
 
-      // Update featuredHosts
+      // --- Update featuredHosts only ---
       tx.set(featuredReceiverRef, { stars: increment(giftStars) }, { merge: true });
     });
 
-    // Notify sender
+    // Show sender alert immediately
     showGiftAlert(`You sent ${giftStars} stars ⭐ to ${host.chatId}!`);
 
-    // Notify receiver once
-    showGiftAlertToReceiver(host.id, currentUser.displayName || "Someone", giftStars);
+    // Show recipient alert 1 second later, only once
+    setTimeout(() => {
+      showGiftAlert(`You received ${giftStars} stars ⭐ from ${currentUser.username || "a fan"}!`);
+    }, 1000);
 
+    console.log(`✅ Sent ${giftStars} stars ⭐ to ${host.chatId}`);
   } catch (err) {
     console.error("❌ Gift sending failed:", err);
     showGiftAlert(`⚠️ Something went wrong: ${err.message}`);
   }
 });
-
-/* ---------- Show gift to receiver once ---------- */
-async function showGiftAlertToReceiver(receiverId, senderName, amount) {
-  const userRef = doc(db, "users", receiverId);
-  const userSnap = await getDoc(userRef);
-  if (!userSnap.exists()) return;
-
-  const userData = userSnap.data();
-  if (userData.lastGiftSeen && userData.lastGiftSeen[senderName] === amount) return;
-
-  // Show the alert
-  showGiftAlert(`🎁 ${senderName} sent you ${amount} stars!`);
-
-  // Mark as seen so it only shows once
-  await updateDoc(userRef, {
-    [`lastGiftSeen.${senderName}`]: amount
-  });
-}
-
-/* ---------- Show one-time gift notification for host ---------- */
-async function showGiftNotifications(userId) {
-  const userRef = doc(db, "users", userId);
-  const userSnap = await getDoc(userRef);
-  if (!userSnap.exists()) return;
-
-  const data = userSnap.data();
-  const notifications = (data.giftNotifications || []).filter(n => !n.seen);
-  if (notifications.length === 0) return;
-
-  // Show each notification using showGiftAlert
-  notifications.forEach(async n => {
-    showGiftAlert(`🎁 ${n.name} sent you ${n.stars} stars!`);
-
-    // Mark as seen so it only shows once
-    await updateDoc(userRef, {
-      giftNotifications: arrayRemove(n)
-    });
-    n.seen = true; // Optional: keep for history
-    await updateDoc(userRef, {
-      giftNotifications: arrayUnion(n)
-    });
-  });
-}
 
 /* ---------- Navigation ---------- */
 prevBtn.addEventListener("click", e => {
