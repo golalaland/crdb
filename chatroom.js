@@ -1479,23 +1479,34 @@ let userStars = 100; // example balance
 function updateStarsDisplay() {
   document.getElementById("starsBalance").textContent = `${userStars}⭐`;
 }
-/* ---------- Send Gift with Spinner (Stable Width) ---------- */
+
+/* ---------- Gift Slider ---------- */
+giftSlider.addEventListener("input", () => {
+  // Update number next to slider
+  giftAmountEl.textContent = giftSlider.value;
+});
+
+/* ---------- Send Gift with Spinner & Stable Slider ---------- */
 giftBtn.addEventListener("click", async () => {
+  const host = hosts[currentIndex];
+  if (!host?.id) return showGiftAlert("⚠️ No host selected.");
+  if (!currentUser?.uid) return showGiftAlert("Please log in to send stars ⭐");
+
+  const giftStars = parseInt(giftSlider.value, 10);
+  if (isNaN(giftStars) || giftStars <= 0)
+    return showGiftAlert("Invalid star amount ❌");
+
+  // Store original text & lock button width
+  const originalText = giftBtn.textContent;
+  const buttonWidth = giftBtn.offsetWidth + "px";
+  giftBtn.style.width = buttonWidth;
+  giftBtn.disabled = true;
+
+  // Create spinner element inside button
+  giftBtn.innerHTML = `<span class="gift-spinner"></span>`; 
+  // Make sure you have CSS for .gift-spinner to spin
+
   try {
-    const host = hosts[currentIndex];
-    if (!host?.id) return showGiftAlert("⚠️ No host selected.");
-    if (!currentUser?.uid) return showGiftAlert("Please log in to send stars ⭐");
-
-    const giftStars = parseInt(giftSlider.value, 10);
-    if (isNaN(giftStars) || giftStars <= 0) return showGiftAlert("Invalid star amount ❌");
-
-    // Store original text and lock button width
-    const originalText = giftBtn.textContent;
-    const buttonWidth = giftBtn.offsetWidth + "px";
-    giftBtn.style.width = buttonWidth;
-    giftBtn.innerHTML = `<span class="gift-spinner"></span>`; // use themed spinner
-    giftBtn.disabled = true;
-
     const senderRef = doc(db, "users", currentUser.uid);
     const receiverRef = doc(db, "users", host.id);
     const featuredReceiverRef = doc(db, "featuredHosts", host.id);
@@ -1505,23 +1516,23 @@ giftBtn.addEventListener("click", async () => {
       const receiverSnap = await tx.get(receiverRef);
 
       if (!senderSnap.exists()) throw new Error("Your user record not found.");
-      if (!receiverSnap.exists()) tx.set(receiverRef, { stars: 0, starsGifted: 0 }, { merge: true });
+      if (!receiverSnap.exists())
+        tx.set(receiverRef, { stars: 0, starsGifted: 0 }, { merge: true });
 
       const senderData = senderSnap.data();
-      if ((senderData.stars || 0) < giftStars) throw new Error("Insufficient stars");
+      if ((senderData.stars || 0) < giftStars)
+        throw new Error("Insufficient stars");
 
       // Deduct from sender and add to receiver
       tx.update(senderRef, { stars: increment(-giftStars), starsGifted: increment(giftStars) });
       tx.update(receiverRef, { stars: increment(giftStars) });
-
-      // Update featuredHosts only
       tx.set(featuredReceiverRef, { stars: increment(giftStars) }, { merge: true });
     });
 
-    // Show sender alert
+    // Show sender confirmation immediately
     showGiftAlert(`✅ You sent ${giftStars} stars ⭐ to ${host.chatId}!`);
 
-    // Show recipient alert 1 second later if session matches
+    // Receiver alert only if host is the current session
     if (currentUser.uid === host.id) {
       setTimeout(() => {
         showGiftAlert(`🎁 You received ${giftStars} stars ⭐ from ${currentUser.username || "a fan"}!`);
@@ -1533,7 +1544,7 @@ giftBtn.addEventListener("click", async () => {
     console.error("❌ Gift sending failed:", err);
     showGiftAlert(`⚠️ Something went wrong: ${err.message}`);
   } finally {
-    // Restore button text and unlock width
+    // Restore button text and unlock
     giftBtn.innerHTML = originalText;
     giftBtn.disabled = false;
     giftBtn.style.width = "auto";
