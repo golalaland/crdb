@@ -1308,10 +1308,25 @@ async function loadHost(idx) {
     }
   }, { passive: false });
 
-  videoEl.addEventListener("loadeddata", () => {
+  videoEl.addEventListener("loadeddata", async () => {
     shimmer.style.display = "none";
     videoEl.style.display = "block";
     showHint("Tap to unmute", 1400);
+
+    // Increment Firestore views only after video loads
+    const hostRef = doc(db, "featuredHosts", host.id);
+    await updateDoc(hostRef, { views: increment(1) }).catch(console.error);
+
+    // Update view count in DOM
+    let viewEl = document.getElementById(`hostViewCount-${host.id}`);
+    if (viewEl) {
+      const span = viewEl.querySelector("span");
+      if (span) {
+        const currentViews = host.views ? host.views + 1 : 1; // +1 because we incremented
+        span.textContent = `${currentViews} views`;
+      }
+    }
+
     videoEl.play().catch(() => {});
   });
 
@@ -1329,7 +1344,7 @@ async function loadHost(idx) {
   const country = host.country || "Nigeria";
   detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
 
-  /* ---------- View Count ---------- */
+  /* ---------- View Count Element ---------- */
   let viewEl = document.getElementById(`hostViewCount-${host.id}`);
   if (!viewEl) {
     viewEl = document.createElement("div");
@@ -1346,14 +1361,6 @@ async function loadHost(idx) {
     if (meetBtn) meetBtn.insertAdjacentElement("beforebegin", viewEl);
     else detailsEl.insertAdjacentElement("afterend", viewEl);
   }
-
-  // Firestore increment only once
-  const hostRef = doc(db, "featuredHosts", host.id);
-  updateDoc(hostRef, { views: increment(1) }).catch(console.error);
-
-  // Update live count
-  const span = viewEl.querySelector("span");
-  if (span) span.textContent = `${(host.views || 0) + 1} views`;
 
   /* ---------- Meet Button ---------- */
   let meetBtn = document.getElementById("meetBtn");
