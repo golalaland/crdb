@@ -1243,7 +1243,7 @@ function renderHostAvatars() {
 
 
 /* ---------- Load Host ---------- */
-function loadHost(idx) {
+async function loadHost(idx) {
   const host = hosts[idx];
   if (!host) return;
   currentIndex = idx;
@@ -1283,7 +1283,6 @@ function loadHost(idx) {
   hint.textContent = "Tap to unmute";
   videoContainer.appendChild(hint);
 
-  // Hint fade helper
   function showHint(msg, timeout = 1400) {
     hint.textContent = msg;
     hint.classList.add("show");
@@ -1291,7 +1290,6 @@ function loadHost(idx) {
     hint._t = setTimeout(() => hint.classList.remove("show"), timeout);
   }
 
-  // Fullscreen helpers
   function isFullscreen() {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
   }
@@ -1300,16 +1298,14 @@ function loadHost(idx) {
     else videoEl.requestFullscreen?.();
   }
 
-  // Tap events
   let lastTap = 0;
   function onTapEvent(e) {
     const now = Date.now();
     const diff = now - lastTap;
     lastTap = now;
 
-    if (diff > 0 && diff < 300) {
-      toggleFullscreen();
-    } else {
+    if (diff > 0 && diff < 300) toggleFullscreen();
+    else {
       videoEl.muted = !videoEl.muted;
       showHint(videoEl.muted ? "Tap to unmute" : "Sound on", 1200);
     }
@@ -1322,7 +1318,6 @@ function loadHost(idx) {
     onTapEvent(ev);
   }, { passive: false });
 
-  // Show video when ready
   videoEl.addEventListener("loadeddata", () => {
     shimmer.style.display = "none";
     videoEl.style.display = "block";
@@ -1330,7 +1325,6 @@ function loadHost(idx) {
     videoEl.play().catch(() => {});
   });
 
-  // Append video
   videoContainer.appendChild(videoEl);
 
   /* ---------- Host Info ---------- */
@@ -1346,13 +1340,37 @@ function loadHost(idx) {
 
   detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
 
+  /* ---------- View Count (FOMO) ---------- */
+  let viewEl = document.getElementById(`hostViewCount-${host.id}`);
+  if (!viewEl) {
+    viewEl = document.createElement("div");
+    viewEl.id = `hostViewCount-${host.id}`;
+    viewEl.style = "display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:14px;color:#fff;";
+    viewEl.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3"/> <!-- pupil -->
+        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+      </svg>
+      <span style="margin-left:6px;">${host.views || 0} views</span>
+    `;
+    detailsEl.insertAdjacentElement("afterend", viewEl);
+  }
+
+  // Firestore increment
+  const hostRef = doc(db, "featuredHosts", host.id);
+  updateDoc(hostRef, { views: increment(1) }).catch(console.error);
+
+  // Update live on page
+  const span = viewEl.querySelector("span");
+  if (span) span.textContent = `${(host.views || 0) + 1} views`;
+
   /* ---------- Meet Button ---------- */
   let meetBtn = document.getElementById("meetBtn");
   if (!meetBtn) {
     meetBtn = document.createElement("button");
     meetBtn.id = "meetBtn";
     meetBtn.textContent = "Meet";
-    meetBtn.style.marginTop = "10px";
+    meetBtn.style.marginTop = "6px";
     meetBtn.style.padding = "8px 16px";
     meetBtn.style.borderRadius = "6px";
     meetBtn.style.background = "linear-gradient(90deg,#ff0099,#ff6600)";
@@ -1360,14 +1378,14 @@ function loadHost(idx) {
     meetBtn.style.border = "none";
     meetBtn.style.fontWeight = "bold";
     meetBtn.style.cursor = "pointer";
-    detailsEl.insertAdjacentElement("afterend", meetBtn);
+    viewEl.insertAdjacentElement("afterend", meetBtn);
   }
 
   meetBtn.onclick = () => {
     showMeetModal(host);
   };
 
-  // Update avatar highlight
+  /* ---------- Avatar Highlight ---------- */
   hostListEl.querySelectorAll("img").forEach((img, i) => {
     img.classList.toggle("active", i === idx);
   });
