@@ -1476,47 +1476,30 @@ confirmBtn.onclick = async () => {
     modalContent.innerHTML = `<p id="stageMsg" style="margin-top:20px;font-weight:500;"></p>`;
     const stageMsgEl = modalContent.querySelector("#stageMsg");
 
-    let stageIndex = 0;
-
-    function showNextStage() {
-      if (stageIndex >= stages.length) {
-        // Show success
-        modalContent.innerHTML = `
-          <h3 style="margin-bottom:10px;font-weight:600;">Meet Request Sent!</h3>
-          <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is approved.</p>
-          <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send Message</button>
-        `;
-        modalContent.querySelector("#letsGoBtn").onclick = () => {
-          const telegramMessage = `Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`;
-          const telegramUrl = `https://t.me/drtantra?text=${encodeURIComponent(telegramMessage)}`;
-          window.open(telegramUrl, "_blank");
-          modal.remove();
-        };
-        return;
-      }
-
-      const stage = stages[stageIndex];
-      let dotCount = 0;
-      stageMsgEl.textContent = stage;
-
-      function animateDots() {
-        dotCount = (dotCount + 1) % 4; // 0–3 dots
-        stageMsgEl.textContent = stage + ".".repeat(dotCount);
-      }
-
-      // Show dots every 300ms
-      const dotInterval = setInterval(animateDots, 300);
-
-      // Stage duration
-      const duration = stageIndex < 2 ? 1300 : 1500 + Math.random() * 400;
+    let totalTime = 0;
+    stages.forEach((stage, index) => {
+      const duration = index < 2 ? 1300 : 1500 + Math.random() * 400;
+      totalTime += duration;
       setTimeout(() => {
-        clearInterval(dotInterval); // stop dots
-        stageIndex++;
-        showNextStage();
-      }, duration);
-    }
-
-    showNextStage();
+        stageMsgEl.textContent = stage;
+        // After last stage, show success
+        if (index === stages.length - 1) {
+          setTimeout(() => {
+            modalContent.innerHTML = `
+              <h3 style="margin-bottom:10px;font-weight:600;">Meet Request Sent!</h3>
+              <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is approved.</p>
+              <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send Message</button>
+            `;
+            modalContent.querySelector("#letsGoBtn").onclick = () => {
+              const telegramMessage = `Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`;
+              const telegramUrl = `https://t.me/drtantra?text=${encodeURIComponent(telegramMessage)}`;
+              window.open(telegramUrl, "_blank");
+              modal.remove();
+            };
+          }, 500);
+        }
+      }, totalTime);
+    });
 
   } catch (err) {
     console.error("Meet deduction failed:", err);
@@ -1524,6 +1507,7 @@ confirmBtn.onclick = async () => {
     modal.remove();
   }
 };
+
 /* ---------- Dummy helpers ---------- */
 let userStars = 100; // example balance
 function updateStarsDisplay() {
