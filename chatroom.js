@@ -107,24 +107,47 @@ function showStarPopup(text) {
 
 
 /* ----------------------------
-   ⭐ GIFT / BALLER ALERT Glow
+   ⭐ GIFT / BALLER ALERT Glow (Slider Version)
 ----------------------------- */
 async function showGiftModal(targetUid, targetData) {
   const modal = document.getElementById("giftModal");
   const titleEl = document.getElementById("giftModalTitle");
-  const amountInput = document.getElementById("giftAmountInput");
+  const sliderContainer = document.getElementById("giftSliderContainer"); // container for slider
   const confirmBtn = document.getElementById("giftConfirmBtn");
   const closeBtn = document.getElementById("giftModalClose");
 
-  if (!modal || !titleEl || !amountInput || !confirmBtn) return;
+  if (!modal || !titleEl || !sliderContainer || !confirmBtn) return;
 
   titleEl.textContent = `Gift ${targetData.chatId} stars ⭐️`;
-  amountInput.value = "";
   modal.style.display = "flex";
 
   const close = () => (modal.style.display = "none");
   closeBtn.onclick = close;
   modal.onclick = (e) => { if (e.target === modal) close(); };
+
+  // Clear old slider if exists
+  sliderContainer.innerHTML = "";
+
+  // Create new slider element
+  const giftSlider = document.createElement("input");
+  giftSlider.type = "range";
+  giftSlider.min = "100";
+  giftSlider.max = currentUser?.stars || 5000;
+  giftSlider.value = giftSlider.min;
+  giftSlider.step = "50";
+  giftSlider.className = "gift-slider";
+
+  // Display selected value
+  const giftAmountEl = document.createElement("span");
+  giftAmountEl.className = "gift-amount";
+  giftAmountEl.textContent = giftSlider.value;
+
+  giftSlider.addEventListener("input", () => {
+    giftAmountEl.textContent = giftSlider.value;
+  });
+
+  sliderContainer.appendChild(giftSlider);
+  sliderContainer.appendChild(giftAmountEl);
 
   // Replace old confirm button with fresh one
   const newConfirmBtn = confirmBtn.cloneNode(true);
@@ -147,8 +170,9 @@ async function showGiftModal(targetUid, targetData) {
     }
   };
 
+  // Confirm gift with slider value
   newConfirmBtn.addEventListener("click", async () => {
-    const amt = parseInt(amountInput.value);
+    const amt = parseInt(giftSlider.value, 10);
     if (!amt || amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
     if ((currentUser?.stars || 0) < amt) return showStarPopup("Not enough stars 💫");
 
@@ -191,34 +215,6 @@ async function showGiftModal(targetUid, targetData) {
     let starsInterval = setInterval(() => spawnFloatingStars(contentEl, 5), 300);
     setTimeout(() => clearInterval(starsInterval), 2000);
   });
-}
-
-/* ---------- Gift Alert (Floating Popup) ---------- */
-function showGiftAlert(text) {
-  const alertEl = document.getElementById("giftAlert");
-  if (!alertEl) return;
-
-  alertEl.textContent = text;
-  alertEl.classList.add("show", "glow");
-
-  createFloatingStars();
-
-  setTimeout(() => alertEl.classList.remove("show", "glow"), 4000);
-}
-
-function createFloatingStars() {
-  for (let i = 0; i < 6; i++) {
-    const star = document.createElement("div");
-    star.textContent = "⭐️";
-    star.className = "floating-star";
-    document.body.appendChild(star);
-
-    star.style.left = `${50 + (Math.random() * 100 - 50)}%`;
-    star.style.top = "45%";
-    star.style.fontSize = `${16 + Math.random() * 16}px`;
-
-    setTimeout(() => star.remove(), 2000);
-  }
 }
 
 /* ---------- Redeem Link ---------- */
@@ -367,35 +363,30 @@ if (msg.highlight && msg.content?.includes("gifted")) {
     });
   });
 }
-/* ---------- 👤 User Popup Logic (Optimized & Instant) ---------- */
+/* ---------- 👤 User Popup Logic with Slider Gift ---------- */
 const userPopup = document.getElementById("userPopup");
 const popupContent = userPopup.querySelector(".user-popup-content");
 const popupCloseBtn = document.getElementById("popupCloseBtn");
 const popupPhoto = userPopup.querySelector(".popup-photo");
 const popupUsername = document.getElementById("popupUsername");
-const popupGender = document.getElementById("popupGender");
+const popupGender = userPopup.querySelector("#popupGender");
 const popupGlow = userPopup.querySelector(".popup-glow");
 const popupSocials = document.getElementById("popupSocials");
 
 export async function showUserPopup(uid) {
+  if (!uid || uid === currentUser?.uid) return;
+
   try {
     const snap = await getDoc(doc(db, "users", uid));
-
-    if (!snap.exists()) {
-      const starPopup = document.getElementById("starPopup");
-      starPopup.style.display = "block";
-      starPopup.querySelector("#starText").textContent = "User has not unlocked profile yet!";
-      setTimeout(() => starPopup.style.display = "none", 1800);
-      return;
-    }
+    if (!snap.exists()) return;
 
     const data = snap.data();
 
     // Username
     popupUsername.textContent = data.chatId || "Unknown";
 
-    // Typewriter effect for descriptor
-    const ageGroup = (data.age >= 30) ? "30s" : "20s";
+    // Typewriter effect
+    const ageGroup = data.age >= 30 ? "30s" : "20s";
     const pronoun = data.gender?.toLowerCase() === "male" ? "his" : "her";
     const textLine = `A ${data.naturePick || "sexy"} ${data.gender || "male"} in ${pronoun} ${ageGroup}`;
     popupGender.textContent = "";
@@ -404,7 +395,7 @@ export async function showUserPopup(uid) {
       if (i < textLine.length) {
         popupGender.textContent += textLine.charAt(i);
         i++;
-        setTimeout(typeWriter, 50);
+        setTimeout(typeWriter, 30);
       }
     }
     typeWriter();
@@ -438,18 +429,67 @@ export async function showUserPopup(uid) {
       }
     });
 
-    // 🎁 Gift button
+    // 🎁 Gift Slider + Button
+    let giftContainer = popupContent.querySelector(".gift-slider-container");
+    if (!giftContainer) {
+      giftContainer = document.createElement("div");
+      giftContainer.className = "gift-slider-container";
+      giftContainer.style.display = "flex";
+      giftContainer.style.alignItems = "center";
+      giftContainer.style.margin = "15px 0";
+      popupContent.appendChild(giftContainer);
+    }
+    giftContainer.innerHTML = ""; // clear old content
+
+    const giftSlider = document.createElement("input");
+    giftSlider.type = "range";
+    giftSlider.min = "100";
+    giftSlider.max = (currentUser?.stars || 1000).toString();
+    giftSlider.value = "100";
+    giftSlider.className = "gift-slider";
+    giftSlider.style.flex = "1";
+    giftSlider.style.marginRight = "10px";
+
+    const giftAmountEl = document.createElement("span");
+    giftAmountEl.className = "gift-amount";
+    giftAmountEl.textContent = giftSlider.value;
+
+    giftSlider.addEventListener("input", () => {
+      giftAmountEl.textContent = giftSlider.value;
+    });
+
+    giftContainer.appendChild(giftSlider);
+    giftContainer.appendChild(giftAmountEl);
+
+    // Gift Button
     let giftBtn = popupContent.querySelector(".gift-btn");
     if (!giftBtn) {
       giftBtn = document.createElement("button");
       giftBtn.className = "gift-btn";
+      giftBtn.style.marginTop = "10px";
+      giftBtn.style.width = "100%";
       popupContent.appendChild(giftBtn);
     }
-    giftBtn.textContent = "Gift Stars ⭐️";
-    giftBtn.onclick = () => showGiftModal(uid, data);
+    giftBtn.textContent = "Send Gift ⭐️";
+    giftBtn.onclick = async () => {
+      const amt = parseInt(giftSlider.value, 10);
+      if (!amt || amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
+      if ((currentUser?.stars || 0) < amt) return showStarPopup("Not enough stars 💫");
+
+      const fromRef = doc(db, "users", currentUser.uid);
+      const toRef = doc(db, "users", uid);
+
+      await Promise.all([
+        updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
+        updateDoc(toRef, { stars: increment(amt) })
+      ]);
+
+      showStarPopup(`✅ You sent ${amt} ⭐️ to ${data.chatId}!`);
+    };
 
     // Show popup
     userPopup.style.display = "flex";
+    userPopup.offsetHeight; // force reflow
     setTimeout(() => popupContent.classList.add("show"), 20);
 
   } catch (err) {
@@ -460,13 +500,13 @@ export async function showUserPopup(uid) {
 // Close logic
 popupCloseBtn.onclick = () => {
   popupContent.classList.remove("show");
-  setTimeout(() => userPopup.style.display = "none", 250);
+  setTimeout(() => (userPopup.style.display = "none"), 250);
 };
 userPopup.onclick = e => {
   if (e.target === userPopup) popupCloseBtn.click();
 };
 
-/* ---------- 🪶 Detect Username Tap ---------- */
+/* ---------- Detect username tap in chat ---------- */
 document.addEventListener("pointerdown", e => {
   const el = e.target.closest(".chat-username");
   if (!el) return;
