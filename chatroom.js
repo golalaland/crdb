@@ -1381,24 +1381,25 @@ function showMeetModal(host) {
   let modal = document.getElementById("meetModal");
   if (modal) modal.remove();
 
-  // Ensure modal is always on top of video (z-index fix)
   modal = document.createElement("div");
   modal.id = "meetModal";
-  modal.style.position = "fixed";
-  modal.style.top = 0;
-  modal.style.left = 0;
-  modal.style.width = "100vw";
-  modal.style.height = "100vh";
-  modal.style.background = "rgba(0,0,0,0.75)";
-  modal.style.display = "flex";
-  modal.style.alignItems = "center";
-  modal.style.justifyContent = "center";
-  modal.style.zIndex = "999999"; // ensure it overrides video
-  modal.style.backdropFilter = "blur(3px)";
-  modal.style.webkitBackdropFilter = "blur(3px)";
+  Object.assign(modal.style, {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    background: "rgba(0,0,0,0.75)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: "999999",
+    backdropFilter: "blur(3px)",
+    WebkitBackdropFilter: "blur(3px)"
+  });
 
   modal.innerHTML = `
-    <div style="background:#111;padding:20px 22px;border-radius:12px;text-align:center;color:#fff;max-width:340px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
+    <div id="meetModalContent" style="background:#111;padding:20px 22px;border-radius:12px;text-align:center;color:#fff;max-width:340px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
       <h3 style="margin-bottom:10px;font-weight:600;">Meet ${host.chatId || "this host"}?</h3>
       <p style="margin-bottom:16px;">This will cost <b>21⭐</b>.</p>
       <div style="display:flex;gap:10px;justify-content:center;">
@@ -1410,34 +1411,80 @@ function showMeetModal(host) {
 
   document.body.appendChild(modal);
 
-  // Fix: always bring modal to top (in case of other positioned containers)
-  setTimeout(() => modal.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  const cancelBtn = modal.querySelector("#cancelMeet");
+  const confirmBtn = modal.querySelector("#confirmMeet");
+  const modalContent = modal.querySelector("#meetModalContent");
 
-  // Button actions
-  modal.querySelector("#cancelMeet").onclick = () => modal.remove();
+  cancelBtn.onclick = () => modal.remove();
 
-  modal.querySelector("#confirmMeet").onclick = () => {
-    const cost = 21;
-    const balance = window.userStars || 0; // pull from global or fallback
-    console.log("⭐ Current stars:", balance);
+  confirmBtn.onclick = async () => {
+    const COST = 21;
 
-    if (balance >= cost) {
-      window.userStars = balance - cost; // deduct safely
-      if (typeof updateStarsDisplay === "function") updateStarsDisplay();
-
-      // Send Telegram message to agent
-      const msg = `💫 Meet Request\nUser wants to meet: ${host.chatId}\nLocation: ${host.location || "Unknown"}\nGender: ${host.gender}\nFruit/Nature: ${host.fruitPick}/${host.naturePick}`;
-      const encoded = encodeURIComponent(msg);
-      window.open(`https://t.me/YOUR_AGENT_USERNAME?text=${encoded}`, "_blank");
-
+    if (!currentUser?.uid) {
+      alert("Please log in to meet ⭐");
       modal.remove();
-      alert("💫 Your meet request has been sent!");
-    } else {
+      return;
+    }
+
+    if ((currentUser.stars || 0) < COST) {
       alert("You don’t have enough stars ⭐. Earn or buy more to continue.");
+      modal.remove();
+      return;
+    }
+
+    // Disable button
+    confirmBtn.disabled = true;
+    confirmBtn.style.opacity = 0.6;
+    confirmBtn.style.cursor = "not-allowed";
+
+    try {
+      // Optimistic deduction
+      currentUser.stars -= COST;
+      if (refs?.starCountEl)
+        refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+      updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
+
+      // Replace modal content with staged messages
+      const stages = [
+        "Handling your meet request…",
+        "Collecting host’s identity…",
+        "Oh shes hella cute…"
+      ];
+
+      modalContent.innerHTML = `<p id="stageMsg" style="margin-top:20px;font-weight:500;"></p>`;
+      const stageMsgEl = modalContent.querySelector("#stageMsg");
+
+      stages.forEach((msg, index) => {
+        setTimeout(() => {
+          stageMsgEl.textContent = msg;
+
+          // After all stages, show success and redirect btn
+          if (index === stages.length - 1) {
+            setTimeout(() => {
+              modalContent.innerHTML = `
+                <h3 style="margin-bottom:10px;font-weight:600;">Meet Request Sent!</h3>
+                <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is approved.</p>
+                <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send Message</button>
+              `;
+
+              const letsGoBtn = modalContent.querySelector("#letsGoBtn");
+              letsGoBtn.onclick = () => {
+                const telegramMessage = `Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`;
+                const telegramUrl = `https://t.me/drtantra?text=${encodeURIComponent(telegramMessage)}`;
+                window.open(telegramUrl, "_blank");
+                modal.remove();
+              };
+            }, 1500);
+          }
+        }, index * 1500);
+      });
+    } catch (err) {
+      console.error("Meet deduction failed:", err);
+      alert("Something went wrong. Please try again later.");
+      modal.remove();
     }
   };
 }
-
 /* ---------- Dummy helpers ---------- */
 let userStars = 100; // example balance
 function updateStarsDisplay() {
