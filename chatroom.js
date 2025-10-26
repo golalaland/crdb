@@ -265,47 +265,38 @@ setupUsersListener();
 /* ---------- Render Messages ---------- */
 let scrollPending = false;
 
-function renderMessagesFromArray(messages) {
-  if (!refs.messagesEl) return;
+function renderMessage(msg) {
+  if (!refs.messagesEl || document.getElementById(msg.id)) return;
 
-  messages.forEach(item => {
-    if (document.getElementById(item.id)) return;
+  const m = msg.data;
+  const wrapper = document.createElement("div");
+  wrapper.className = "msg";
+  wrapper.id = msg.id;
 
-    const m = item.data;
-    const wrapper = document.createElement("div");
-    wrapper.className = "msg";
-    wrapper.id = item.id;
+  const usernameEl = document.createElement("span");
+  usernameEl.className = "meta";
+  usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
+  usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
+  usernameEl.style.marginRight = "4px";
 
-    const usernameEl = document.createElement("span");
-    usernameEl.className = "meta";
-    usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
-    usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
-    usernameEl.style.marginRight = "4px";
+  const contentEl = document.createElement("span");
+  contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
+  contentEl.textContent = " " + (m.content || "");
 
-    const contentEl = document.createElement("span");
-    contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
-    contentEl.textContent = " " + (m.content || "");
+  if (m.buzzColor) contentEl.style.background = m.buzzColor;
+  if (m.highlight) {
+    contentEl.style.color = "#000";
+    contentEl.style.fontWeight = "700";
+  }
 
-    if (m.buzzColor) contentEl.style.background = m.buzzColor;
-    if (m.highlight) {
-      contentEl.style.color = "#000";
-      contentEl.style.fontWeight = "700";
-    }
+  wrapper.append(usernameEl, contentEl);
+  refs.messagesEl.appendChild(wrapper);
 
-    wrapper.append(usernameEl, contentEl);
-    refs.messagesEl.appendChild(wrapper);
-  });
-
-  // auto-scroll logic
-  if (!scrollPending) {
-    scrollPending = true;
-    requestAnimationFrame(() => {
-      const nearBottom = refs.messagesEl.scrollHeight - refs.messagesEl.scrollTop - refs.messagesEl.clientHeight < 50;
-      if (messages.some(msg => msg.data.uid === currentUser?.uid) || nearBottom) {
-        refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
-      }
-      scrollPending = false;
-    });
+  // Scroll only if near bottom
+  const el = refs.messagesEl;
+  const nearBottomThreshold = 80;
+  if (el.scrollHeight - el.scrollTop - el.clientHeight < nearBottomThreshold || m.uid === currentUser?.uid) {
+    el.scrollTop = el.scrollHeight;
   }
 }
 
@@ -805,7 +796,6 @@ window.addEventListener("DOMContentLoaded", () => {
   refs.messageInputEl.value = "";
   showStarPopup("BUZZ sent!");
   renderMessagesFromArray([{ id: docRef.id, data: newBuzz }]);
-  scrollToBottom(refs.messagesEl);
 
   // Apply BUZZ glow
   const msgEl = document.getElementById(docRef.id);
