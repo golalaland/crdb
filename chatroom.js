@@ -1254,10 +1254,12 @@ async function loadHost(idx) {
   videoContainer.style.position = "relative";
   videoContainer.style.touchAction = "manipulation";
 
+  // Shimmer loader
   const shimmer = document.createElement("div");
   shimmer.className = "video-shimmer";
   videoContainer.appendChild(shimmer);
 
+  // Video element
   const videoEl = document.createElement("video");
   Object.assign(videoEl, {
     src: host.videoUrl || "",
@@ -1271,6 +1273,7 @@ async function loadHost(idx) {
   videoEl.setAttribute("webkit-playsinline", "true");
   videoContainer.appendChild(videoEl);
 
+  // Hint overlay
   const hint = document.createElement("div");
   hint.className = "video-hint";
   hint.textContent = "Tap to unmute";
@@ -1295,41 +1298,18 @@ async function loadHost(idx) {
     lastTap = now;
   }
   videoEl.addEventListener("click", onTapEvent);
-  videoEl.addEventListener("touchend", (ev) => { if (ev.changedTouches.length < 2) { ev.preventDefault?.(); onTapEvent(); } }, { passive: false });
+  videoEl.addEventListener("touchend", (ev) => {
+    if (ev.changedTouches.length < 2) {
+      ev.preventDefault?.();
+      onTapEvent();
+    }
+  }, { passive: false });
 
-  const hostRef = doc(db, "featuredHosts", host.id);
-
-  // Increment views only once after video loads
-  videoEl.addEventListener("loadeddata", async () => {
+  videoEl.addEventListener("loadeddata", () => {
     shimmer.style.display = "none";
     videoEl.style.display = "block";
     showHint("Tap to unmute", 1400);
-    try { await updateDoc(hostRef, { views: increment(1) }); } catch (err) { console.error(err); }
-  });
-
-  // Real-time view count update
-  let viewEl = document.getElementById(`hostViewCount-${host.id}`);
-  if (!viewEl) {
-    viewEl = document.createElement("div");
-    viewEl.id = `hostViewCount-${host.id}`;
-    viewEl.style = "display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:14px;color:#fff;gap:4px;";
-    viewEl.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
-      </svg>
-      <span>0 views</span>
-    `;
-    const meetBtn = document.getElementById("meetBtn");
-    if (meetBtn) meetBtn.insertAdjacentElement("beforebegin", viewEl);
-    else detailsEl.insertAdjacentElement("afterend", viewEl);
-  }
-  onSnapshot(hostRef, (docSnap) => {
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      const span = viewEl.querySelector("span");
-      if (span) span.textContent = `${data.views || 0} views`;
-    }
+    videoEl.play().catch(() => {});
   });
 
   /* ---------- Host Info ---------- */
@@ -1360,7 +1340,7 @@ async function loadHost(idx) {
       fontWeight: "bold",
       cursor: "pointer"
     });
-    viewEl.insertAdjacentElement("afterend", meetBtn);
+    detailsEl.insertAdjacentElement("afterend", meetBtn);
   }
   meetBtn.onclick = () => showMeetModal(host);
 
@@ -1373,7 +1353,7 @@ async function loadHost(idx) {
   giftAmountEl.textContent = "1";
 }
 
-/* ---------- Meet Modal (clean, no view duplication) ---------- */
+/* ---------- Meet Modal (clean, no view count) ---------- */
 function showMeetModal(host) {
   // Remove existing modal if present
   let modal = document.getElementById("meetModal");
