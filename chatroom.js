@@ -1481,25 +1481,26 @@ giftSlider.addEventListener("input", () => {
 
 /* ---------- Send Gift with Spinner & Receiver Notification ---------- */
 giftBtn.addEventListener("click", async () => {
+  const host = hosts[currentIndex];
+  if (!host?.id) return showGiftAlert("⚠️ No host selected.");
+  if (!currentUser?.uid) return showGiftAlert("Please log in to send stars ⭐");
+
+  const giftStars = parseInt(giftSlider.value, 10);
+  if (isNaN(giftStars) || giftStars <= 0) return showGiftAlert("Invalid star amount ❌");
+
+  // Store original text and lock button width
+  const originalText = giftBtn.textContent;
+  const buttonWidth = giftBtn.offsetWidth + "px";
+  giftBtn.style.width = buttonWidth;
+  giftBtn.disabled = true;
+
+  // Add spinner inside button
+  giftBtn.innerHTML = `<span class="gift-spinner"></span>`;
+
   try {
-    const host = hosts[currentIndex];
-    if (!host?.uid) return showGiftAlert("⚠️ No host selected.");
-    if (!currentUser?.uid) return showGiftAlert("Please log in to send stars ⭐");
-
-    const giftStars = parseInt(giftSlider.value, 10);
-    if (isNaN(giftStars) || giftStars <= 0)
-      return showGiftAlert("Invalid star amount ❌");
-
-    // Show spinner
-    const originalText = giftBtn.textContent;
-    const buttonWidth = giftBtn.offsetWidth + "px";
-    giftBtn.style.width = buttonWidth;
-    giftBtn.innerHTML = `<span class="gift-spinner"></span>`;
-    giftBtn.disabled = true;
-
     const senderRef = doc(db, "users", currentUser.uid);
-    const receiverRef = doc(db, "users", host.uid);
-    const featuredReceiverRef = doc(db, "featuredHosts", host.uid);
+    const receiverRef = doc(db, "users", host.id);
+    const featuredReceiverRef = doc(db, "featuredHosts", host.id);
 
     await runTransaction(db, async (tx) => {
       const senderSnap = await tx.get(senderRef);
@@ -1509,33 +1510,37 @@ giftBtn.addEventListener("click", async () => {
       if (!receiverSnap.exists()) tx.set(receiverRef, { stars: 0, starsGifted: 0, lastGiftSeen: {} }, { merge: true });
 
       const senderData = senderSnap.data();
-      const receiverData = receiverSnap.data();
-
       if ((senderData.stars || 0) < giftStars) throw new Error("Insufficient stars");
 
-      // Deduct from sender, add to receiver
+      // Deduct sender stars and add to receiver
       tx.update(senderRef, { stars: increment(-giftStars), starsGifted: increment(giftStars) });
       tx.update(receiverRef, { stars: increment(giftStars) });
+
+      // Update featuredHosts stars
       tx.set(featuredReceiverRef, { stars: increment(giftStars) }, { merge: true });
 
-      // --- Receiver notification (one-time) ---
-      const senderName = currentUser.username || "Someone";
-      if (!receiverData.lastGiftSeen || receiverData.lastGiftSeen[senderName] !== giftStars) {
-        // Update lastGiftSeen
-        tx.update(receiverRef, {
-          [`lastGiftSeen.${senderName}`]: giftStars
-        });
-      }
+      // Mark for one-time alert
+      tx.update(receiverRef, {
+        [`lastGiftSeen.${currentUser.uid}`]: giftStars
+      });
     });
 
     // Show sender alert immediately
     showGiftAlert(`✅ You sent ${giftStars} stars ⭐ to ${host.chatId}!`);
 
-    // Show receiver alert in this session if host is online
-    if (currentUser.uid === host.uid) {
-      setTimeout(() => {
-        showGiftAlert(`🎁 You received ${giftStars} stars ⭐ from ${currentUser.username || "Someone"}!`);
-      }, 1000);
+    // Show receiver alert if they’re online in this session
+    if (currentUser.uid !== host.id) {
+      const receiverRefCheck = doc(db, "users", host.id);
+      const receiverSnapCheck = await getDoc(receiverRefCheck);
+      if (receiverSnapCheck.exists()) {
+        const lastSeen = receiverSnapCheck.data().lastGiftSeen || {};
+        if (lastSeen[currentUser.uid] === giftStars) {
+          // Show alert only once
+          setTimeout(() => {
+            showGiftAlert(`🎁 ${currentUser.username || "Someone"} sent you ${giftStars} stars ⭐`);
+          }, 1000);
+        }
+      }
     }
 
     console.log(`✅ Sent ${giftStars} stars ⭐ to ${host.chatId}`);
