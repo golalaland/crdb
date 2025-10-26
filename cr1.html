@@ -392,130 +392,64 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   color: #fff;                  /* subtle hover effect */
 }
 
-/* ---------- Overlay ---------- */
-.user-popup {
-  display: none;
+.gift-alert {
   position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  justify-content: center;
-  align-items: center;
-  z-index: 10000;  /* above all other modals */
-  backdrop-filter: blur(6px);
-  padding: 10px;
-}
-
-/* ---------- Popup Box ---------- */
-.user-popup-content {
-  background: rgba(17,17,17,0.95);
-  color: white;
-  border-radius: 16px;
-  width: 220px;                      /* smaller width */
-  padding: 18px 14px;                /* slightly smaller padding */
-  text-align: center;
-  position: relative;
-  transform: scale(0.9);
-  transition: transform 0.25s ease, box-shadow 0.3s ease;
-  box-shadow: 0 0 20px rgba(255,0,128,0.35);
-}
-
-.user-popup-content.show { 
-  transform: scale(1); 
-  box-shadow: 0 0 30px rgba(255,0,128,0.45);
-}
-
-/* ---------- Close Button ---------- */
-.popup-close {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  background: none;
-  border: none;
-  font-size: 20px;
-  color: white;
-  cursor: pointer;
-}
-
-/* ---------- Profile Photo ---------- */
-.popup-photo {
-  width: 70px;                        /* smaller cute circle */
-  height: 70px;
-  border-radius: 50%;
-  overflow: hidden;
-  margin: 10px auto 6px;
-  background: #222;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 28px;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  background: linear-gradient(90deg,#ff6a00,#ff4081);
   color: #fff;
-  box-shadow: 0 0 16px rgba(255,0,128,0.4);
-  transition: box-shadow 0.3s ease;
-}
-
-.user-popup-content.show .popup-photo {
-  box-shadow: 0 0 22px rgba(255,0,128,0.6);
-}
-
-/* ---------- Username ---------- */
-.popup-username {
-  margin: 4px 0 2px;
+  padding: 14px 22px;
+  border-radius: 12px;
   font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  opacity: 0;
+  z-index: 99999;
+  transition: all 0.4s ease;
   font-size: 1rem;
 }
-
-/* ---------- Gender / Typewriter ---------- */
-.popup-gender {
-  font-family: 'Courier New', Courier, monospace; /* typewriter font */
-  font-size: 13px;
-  color: #ccc;
-  margin-bottom: 6px;
-}
-
-/* ---------- Pulsing Fruit ---------- */
-.popup-glow {
-  font-size: 22px;
-  margin: 4px 0;
-  text-shadow: 0 0 10px rgba(255,0,128,0.6);
-  animation: pulseGlow 2.5s infinite;
-}
-
-@keyframes pulseGlow {
-  0%, 100% { text-shadow: 0 0 10px rgba(255,0,128,0.6); transform: scale(1); }
-  50% { text-shadow: 0 0 16px rgba(255,0,128,0.8); transform: scale(1.15); }
-}
-
-/* ---------- Social Icons ---------- */
-.popup-socials img {
-  margin: 0 4px;
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
-  transition: transform 0.2s, opacity 0.2s;
-  opacity: 0.9;
-}
-.popup-socials img:hover { 
-  transform: scale(1.1);
-  opacity: 1;
-}
-
-/* ---------- Gift Button ---------- */
-.popup-gift button {
-  background: linear-gradient(135deg,#ff4081,#ff80ab);
+.gift-alert {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  background: linear-gradient(90deg,#ff6a00,#ff4081);
   color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 14px;
-  font-size: 14px;
-  cursor: pointer;
-  margin-top: 10px;
+  padding: 10px 18px;
+  border-radius: 12px;
   font-weight: 600;
-  box-shadow: 0 0 10px rgba(255,0,128,0.3);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  opacity: 0;
+  z-index: 99999;
+  transition: all 0.4s ease;
+  font-size: 1rem;
+
+  /* 🟢 One-liner behavior */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  max-width: 90%; /* optional for small screens */
 }
-.popup-gift button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 14px rgba(255,0,128,0.45);
+
+.gift-alert.show {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+.floating-star {
+  position: fixed;
+  animation: floatUp 2s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes floatUp {
+  from { transform: translateY(0) scale(1); opacity: 1; }
+  to { transform: translateY(-100px) scale(1.5); opacity: 0; }
+}
+#starPopup {
+  z-index: 5000 !important; /* always above modal blur */
+  position: fixed;
 }
 
 .modal {
@@ -665,65 +599,8 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 }
 .google-btn img{width:18px;height:18px;background:#fff;border-radius:4px;padding:2px;}
 .google-btn:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(255,20,147,0.6);}
-.gift-alert {
-  position: fixed;
-  top: 20%;
-  left: 50%;
-  transform: translateX(-50%) scale(0.9);
-  background: linear-gradient(90deg,#ff6a00,#ff4081);
-  color: #fff;
-  padding: 14px 22px;
-  border-radius: 12px;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  opacity: 0;
-  z-index: 99999;
-  transition: all 0.4s ease;
-  font-size: 1rem;
-}
-.gift-alert {
-  position: fixed;
-  top: 20%;
-  left: 50%;
-  transform: translateX(-50%) scale(0.9);
-  background: linear-gradient(90deg,#ff6a00,#ff4081);
-  color: #fff;
-  padding: 10px 18px;
-  border-radius: 12px;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  opacity: 0;
-  z-index: 99999;
-  transition: all 0.4s ease;
-  font-size: 1rem;
 
-  /* 🟢 One-liner behavior */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: inline-block;
-  max-width: 90%; /* optional for small screens */
-}
 
-.gift-alert.show {
-  opacity: 1;
-  transform: translateX(-50%) scale(1);
-}
-
-.floating-star {
-  position: fixed;
-  animation: floatUp 2s ease-out forwards;
-  pointer-events: none;
-}
-
-@keyframes floatUp {
-  from { transform: translateY(0) scale(1); opacity: 1; }
-  to { transform: translateY(-100px) scale(1.5); opacity: 0; }
-}
-#starPopup {
-  z-index: 5000 !important; /* always above modal blur */
-  position: fixed;
-}
 .video-controls {
   position: absolute;
   bottom: 12px;
@@ -1190,43 +1067,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
       <a href="#" id="nextHost" class="featured-nav-link">Next</a>
     </div>
 
-  </div>
-</div>
-
-
-<!-- USER PROFILE POPUP -->
-<div id="userPopup" class="user-popup">
-  <div class="user-popup-content">
-    <button id="popupCloseBtn" class="popup-close">&times;</button>
-
-    <!-- User Photo -->
-    <div class="popup-photo"></div>
-
-    <!-- Username -->
-    <h2 id="popupUsername" class="popup-username">Username</h2>
-
-    <!-- Descriptor -->
-    <p id="popupGender" class="popup-gender">A Sexy Female in her 20’s</p>
-
-    <!-- Centered glow emoji -->
-    <div class="popup-glow" style="font-size:28px; margin:8px 0;">🍇</div>
-
-    <!-- Social icons (static, underneath) -->
-    <div id="popupSocials" class="popup-socials" style="margin-top:12px; display:flex; justify-content:center; gap:12px;">
-      <a href="https://instagram.com" target="_blank">
-        <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram">
-      </a>
-    </div>
-  </div>
-</div>
-
-<!-- Gift Modal -->
-<div id="giftModal" class="modal">
-  <div class="modal-content">
-    <span id="giftModalClose">&times;</span>
-    <h3 id="giftModalTitle"></h3>
-    <input type="number" id="giftAmountInput" min="100" placeholder="Enter stars to gift">
-    <button id="giftConfirmBtn">Send Gift ⭐️</button>
   </div>
 </div>
 
