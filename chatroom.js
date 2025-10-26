@@ -1353,13 +1353,11 @@ async function loadHost(idx) {
   giftAmountEl.textContent = "1";
 }
 
-/* ---------- Meet Modal (clean, no view count) ---------- */
+/* ---------- Meet Modal with Randomized Stage Timings (~18s) ---------- */
 function showMeetModal(host) {
-  // Remove existing modal if present
   let modal = document.getElementById("meetModal");
   if (modal) modal.remove();
 
-  // Create modal container
   modal = document.createElement("div");
   modal.id = "meetModal";
   Object.assign(modal.style, {
@@ -1398,43 +1396,31 @@ function showMeetModal(host) {
 
   confirmBtn.onclick = async () => {
     const COST = 21;
+    if (!currentUser?.uid) { alert("Please log in to meet ⭐"); modal.remove(); return; }
+    if ((currentUser.stars || 0) < COST) { alert("Not enough stars ⭐"); modal.remove(); return; }
 
-    if (!currentUser?.uid) {
-      alert("Please log in to meet ⭐");
-      modal.remove();
-      return;
-    }
-
-    if ((currentUser.stars || 0) < COST) {
-      alert("You don’t have enough stars ⭐. Earn or buy more to continue.");
-      modal.remove();
-      return;
-    }
-
-    // Disable button
     confirmBtn.disabled = true;
     confirmBtn.style.opacity = 0.6;
     confirmBtn.style.cursor = "not-allowed";
 
     try {
-      // Deduct stars optimistically
       currentUser.stars -= COST;
-      if (refs?.starCountEl)
-        refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+      if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
       updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
 
-      // Stages to show in modal
-      const fixedStages = [
-        "Handling your meet request…",
-        "Collecting host’s identity…"
-      ];
-
+      const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
       const playfulMessages = [
-        "Oh, she’s hella cute…💋",
-        "Careful, she may be naughty..😏",
-        "Be generous with her, she’ll like you..",
-        "Ohh, she’s a real star.. 🤩",
-        "Be a real gentleman, when she texts u.."
+        "Oh, she’s hella cute…💋", "Careful, she may be naughty..😏",
+        "Be generous with her, she’ll like you..", "Ohh, she’s a real star.. 🤩",
+        "Be a real gentleman, when she texts u..", "She’s ready to dazzle you tonight.. ✨",
+        "Watch out, she might steal your heart.. ❤️", "Look sharp, she’s got a sparkle.. ✨",
+        "Don’t blink, or you’ll miss her charm.. 😉", "Get ready for some fun surprises.. 😏",
+        "She knows how to keep it exciting.. 🎉", "Better behave, she’s watching.. 👀",
+        "She might just blow your mind.. 💥", "Keep calm, she’s worth it.. 😘",
+        "She’s got a twinkle in her eyes.. ✨", "Brace yourself for some charm.. 😎",
+        "She’s not just cute, she’s 🔥", "Careful, her smile is contagious.. 😁",
+        "She might make you blush.. 😳", "She’s a star in every way.. 🌟",
+        "Don’t miss this chance.. ⏳"
       ];
 
       const randomPlayful = [];
@@ -1444,19 +1430,20 @@ function showMeetModal(host) {
       }
 
       const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
-
-      // Show stages
       modalContent.innerHTML = `<p id="stageMsg" style="margin-top:20px;font-weight:500;"></p>`;
       const stageMsgEl = modalContent.querySelector("#stageMsg");
 
       let totalTime = 0;
       stages.forEach((stage, index) => {
-        const duration = index < 2 ? 1300 : 1500 + Math.random() * 400;
+        // Random duration per stage: 1.5–2.5s for first two, 1.7–2.3s for playful, last stage 2–2.5s
+        let duration;
+        if (index < 2) duration = 1500 + Math.random() * 1000;
+        else if (index < stages.length - 1) duration = 1700 + Math.random() * 600;
+        else duration = 2000 + Math.random() * 500;
         totalTime += duration;
 
         setTimeout(() => {
           stageMsgEl.textContent = stage;
-
           if (index === stages.length - 1) {
             setTimeout(() => {
               modalContent.innerHTML = `
@@ -1464,12 +1451,13 @@ function showMeetModal(host) {
                 <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is approved.</p>
                 <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send Message</button>
               `;
-              modalContent.querySelector("#letsGoBtn").onclick = () => {
-                const telegramMessage = `Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`;
-                const telegramUrl = `https://t.me/drtantra?text=${encodeURIComponent(telegramMessage)}`;
-                window.open(telegramUrl, "_blank");
+              const letsGoBtn = modalContent.querySelector("#letsGoBtn");
+              letsGoBtn.onclick = () => {
+                window.open(`https://t.me/drtantra?text=${encodeURIComponent(`Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`)}`, "_blank");
                 modal.remove();
               };
+              // Auto-close after 7–7.5s
+              setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
             }, 500);
           }
         }, totalTime);
