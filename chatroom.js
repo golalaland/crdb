@@ -1479,28 +1479,27 @@ giftSlider.addEventListener("input", () => {
   giftAmountEl.textContent = giftSlider.value;
 });
 
-/* ---------- Send Gift with Spinner & One-Time Receiver Alert ---------- */
-giftBtn.addEventListener("click", async () => {
+/* ---------- Send Gift Function ---------- */
+async function sendGift(receiver) {
+  if (!receiver?.id) return showGiftAlert("⚠️ No host selected.");
+  if (!currentUser?.uid) return showGiftAlert("Please log in to send stars ⭐");
+
+  const giftStars = parseInt(giftSlider.value, 10);
+  if (isNaN(giftStars) || giftStars <= 0)
+    return showGiftAlert("Invalid star amount ❌");
+
+  // Show spinner inside button
+  const originalText = giftBtn.textContent;
+  const buttonWidth = giftBtn.offsetWidth + "px";
+  giftBtn.style.width = buttonWidth;
+  giftBtn.innerHTML = `<span class="gift-spinner"></span>`; // Make sure .gift-spinner is styled
+  giftBtn.disabled = true;
+
+  const senderRef = doc(db, "users", currentUser.uid);
+  const receiverRef = doc(db, "users", receiver.id);
+  const featuredReceiverRef = doc(db, "featuredHosts", receiver.id);
+
   try {
-    const receiver = hosts[currentIndex]; // host to receive gift
-    if (!receiver?.uid) return showGiftAlert("⚠️ No host selected.");
-    if (!currentUser?.uid) return showGiftAlert("Please log in to send stars ⭐");
-
-    const giftStars = parseInt(giftSlider.value, 10);
-    if (isNaN(giftStars) || giftStars <= 0)
-      return showGiftAlert("Invalid star amount ❌");
-
-    // --- Spinner setup ---
-    const originalText = giftBtn.textContent;
-    const buttonWidth = giftBtn.offsetWidth + "px";
-    giftBtn.style.width = buttonWidth;
-    giftBtn.innerHTML = `<span class="gift-spinner"></span>`;
-    giftBtn.disabled = true;
-
-    const senderRef = doc(db, "users", currentUser.uid);
-    const receiverRef = doc(db, "users", receiver.uid);
-    const featuredReceiverRef = doc(db, "featuredHosts", receiver.uid);
-
     await runTransaction(db, async (tx) => {
       const senderSnap = await tx.get(senderRef);
       const receiverSnap = await tx.get(receiverRef);
@@ -1510,36 +1509,56 @@ giftBtn.addEventListener("click", async () => {
         tx.set(receiverRef, { stars: 0, starsGifted: 0, lastGiftSeen: {} }, { merge: true });
 
       const senderData = senderSnap.data();
-      if ((senderData.stars || 0) < giftStars) throw new Error("Insufficient stars");
+      if ((senderData.stars || 0) < giftStars)
+        throw new Error("Insufficient stars");
 
-      // Deduct from sender, add to receiver
+      // Deduct sender stars, add to receiver
       tx.update(senderRef, { stars: increment(-giftStars), starsGifted: increment(giftStars) });
       tx.update(receiverRef, { stars: increment(giftStars) });
 
-      // Update featuredHosts
+      // Update featuredHosts collection too
       tx.set(featuredReceiverRef, { stars: increment(giftStars) }, { merge: true });
 
-      // Store gift in receiver's lastGiftSeen to prevent duplicate alerts
+      // Add a one-time notification for receiver
       tx.update(receiverRef, {
-        [`lastGiftSeen.${currentUser.uid}`]: giftStars
+        [`lastGiftSeen.${currentUser.username || "Someone"}`]: giftStars
       });
     });
 
-    // --- Sender confirmation ---
+    // Notify sender immediately
     showGiftAlert(`✅ You sent ${giftStars} stars ⭐ to ${receiver.chatId}!`);
 
-    // --- Restore button ---
-    giftBtn.innerHTML = originalText;
-    giftBtn.disabled = false;
-
+    console.log(`✅ Sent ${giftStars} stars ⭐ to ${receiver.chatId}`);
   } catch (err) {
     console.error("❌ Gift sending failed:", err);
     showGiftAlert(`⚠️ Something went wrong: ${err.message}`);
-    giftBtn.innerHTML = "Send Gift";
+  } finally {
+    // Restore button
+    giftBtn.innerHTML = originalText;
     giftBtn.disabled = false;
     giftBtn.style.width = "auto";
   }
-});
+}
+
+/* ---------- Listen for Gifts for Current User ---------- */
+if (currentUser?.uid) {
+  const userRef = doc(db, "users", currentUser.uid);
+  onSnapshot(userRef, (snap) => {
+    if (!snap.exists()) return;
+    const data = snap.data();
+    const lastGiftSeen = data.lastGiftSeen || {};
+
+    // Loop through gifts that haven't been shown yet
+    Object.entries(lastGiftSeen).forEach(async ([senderName, amount]) => {
+      showGiftAlert(`🎁 ${senderName} sent you ${amount} stars ⭐`);
+
+      // Remove it after showing so it appears only once
+      await updateDoc(userRef, {
+        [`lastGiftSeen.${senderName}`]: deleteField()
+      });
+    });
+  });
+}
 
 /* ---------- Listen for one-time gift notifications for logged-in user ---------- */
 if (currentUser?.uid) {
