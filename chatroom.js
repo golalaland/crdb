@@ -438,15 +438,15 @@ export async function showUserPopup(uid) {
       }
     });
 
-    // 🎁 Gift button
-    let giftBtn = popupContent.querySelector(".gift-btn");
-    if (!giftBtn) {
-      giftBtn = document.createElement("button");
-      giftBtn.className = "gift-btn";
-      popupContent.appendChild(giftBtn);
+    // 🎁 Popup-specific Gift button (unique)
+    let popupGiftBtn = popupContent.querySelector(".popup-gift-btn");
+    if (!popupGiftBtn) {
+      popupGiftBtn = document.createElement("button");
+      popupGiftBtn.className = "popup-gift-btn";
+      popupContent.appendChild(popupGiftBtn);
     }
-    giftBtn.textContent = "Gift Stars ⭐️";
-    giftBtn.onclick = () => showGiftModal(uid, data);
+    popupGiftBtn.textContent = "Gift Stars ⭐️";
+    popupGiftBtn.onclick = () => showGiftModal(uid, data);
 
     // Show popup
     userPopup.style.display = "flex";
