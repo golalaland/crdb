@@ -1508,29 +1508,48 @@ giftBtn.addEventListener("click", async () => {
       const receiverSnap = await tx.get(receiverRef);
 
       if (!senderSnap.exists()) throw new Error("Your user record not found.");
-      if (!receiverSnap.exists()) tx.set(receiverRef, { stars: 0, starsGifted: 0, giftNotifications: [] }, { merge: true });
+      if (!receiverSnap.exists()) tx.set(receiverRef, { stars: 0, starsGifted: 0 }, { merge: true });
 
       const senderData = senderSnap.data();
       if ((senderData.stars || 0) < giftStars) throw new Error("Insufficient stars");
 
-      // --- Users updates ---
+      // Deduct sender, add to receiver
       tx.update(senderRef, { stars: increment(-giftStars), starsGifted: increment(giftStars) });
-      tx.update(receiverRef, { 
-        stars: increment(giftStars), 
-        giftNotifications: arrayUnion({ from: currentUser.uid, name: currentUser.name || "Someone", stars: giftStars, seen: false, timestamp: serverTimestamp() })
-      });
+      tx.update(receiverRef, { stars: increment(giftStars) });
 
-      // --- FeaturedHosts updates ---
+      // Update featuredHosts
       tx.set(featuredReceiverRef, { stars: increment(giftStars) }, { merge: true });
     });
 
-    console.log(`✅ Sent ${giftStars} stars ⭐ to ${host.chatId}`);
+    // Notify sender
     showGiftAlert(`You sent ${giftStars} stars ⭐ to ${host.chatId}!`);
+
+    // Notify receiver once
+    showGiftAlertToReceiver(host.id, currentUser.displayName || "Someone", giftStars);
+
   } catch (err) {
     console.error("❌ Gift sending failed:", err);
     showGiftAlert(`⚠️ Something went wrong: ${err.message}`);
   }
 });
+
+/* ---------- Show gift to receiver once ---------- */
+async function showGiftAlertToReceiver(receiverId, senderName, amount) {
+  const userRef = doc(db, "users", receiverId);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) return;
+
+  const userData = userSnap.data();
+  if (userData.lastGiftSeen && userData.lastGiftSeen[senderName] === amount) return;
+
+  // Show the alert
+  showGiftAlert(`🎁 ${senderName} sent you ${amount} stars!`);
+
+  // Mark as seen so it only shows once
+  await updateDoc(userRef, {
+    [`lastGiftSeen.${senderName}`]: amount
+  });
+}
 
 /* ---------- Show one-time gift notification for host ---------- */
 async function showGiftNotifications(userId) {
