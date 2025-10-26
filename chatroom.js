@@ -367,18 +367,21 @@ if (msg.highlight && msg.content?.includes("gifted")) {
     });
   });
 }
-/* ---------- 👤 User Popup Logic (Optimized & Instant) ---------- */
-const userPopup = document.getElementById("userPopup");
-const popupContent = userPopup.querySelector(".user-popup-content");
-const popupCloseBtn = document.getElementById("popupCloseBtn");
-const popupPhoto = userPopup.querySelector(".popup-photo");
-const popupUsername = document.getElementById("popupUsername");
-const popupGender = document.getElementById("popupGender");
-const popupGlow = userPopup.querySelector(".popup-glow");
-const popupSocials = document.getElementById("popupSocials");
 
-export async function showUserPopup(uid) {
+/* =======================================
+   👤 User Popup Logic (Optimized)
+======================================= */
+async function showUserPopup(uid) {
   try {
+    const userPopup = document.getElementById("userPopup");
+    const popupContent = userPopup.querySelector(".user-popup-content");
+    const popupCloseBtn = document.getElementById("popupClose");
+    const popupPhoto = userPopup.querySelector(".popup-photo");
+    const popupUsername = document.getElementById("popupUsername");
+    const popupGender = document.getElementById("popupGender");
+    const popupGlow = userPopup.querySelector(".popup-glow");
+    const popupSocials = document.getElementById("popupSocials");
+
     const snap = await getDoc(doc(db, "users", uid));
 
     if (!snap.exists()) {
@@ -394,7 +397,7 @@ export async function showUserPopup(uid) {
     // Username
     popupUsername.textContent = data.chatId || "Unknown";
 
-    // Typewriter effect for descriptor
+    // Typewriter effect
     const ageGroup = (data.age >= 30) ? "30s" : "20s";
     const pronoun = data.gender?.toLowerCase() === "male" ? "his" : "her";
     const textLine = `A ${data.naturePick || "sexy"} ${data.gender || "male"} in ${pronoun} ${ageGroup}`;
@@ -438,7 +441,7 @@ export async function showUserPopup(uid) {
       }
     });
 
-    // 🎁 Popup-specific Gift button (unique)
+    // Popup-specific Gift button
     let popupGiftBtn = popupContent.querySelector(".popup-gift-btn");
     if (!popupGiftBtn) {
       popupGiftBtn = document.createElement("button");
@@ -452,19 +455,19 @@ export async function showUserPopup(uid) {
     userPopup.style.display = "flex";
     setTimeout(() => popupContent.classList.add("show"), 20);
 
+    // Close logic
+    popupCloseBtn.onclick = () => {
+      popupContent.classList.remove("show");
+      setTimeout(() => userPopup.style.display = "none", 250);
+    };
+    userPopup.onclick = e => {
+      if (e.target === userPopup) popupCloseBtn.click();
+    };
+
   } catch (err) {
     console.error("Error fetching user popup:", err);
   }
 }
-
-// Close logic
-popupCloseBtn.onclick = () => {
-  popupContent.classList.remove("show");
-  setTimeout(() => userPopup.style.display = "none", 250);
-};
-userPopup.onclick = e => {
-  if (e.target === userPopup) popupCloseBtn.click();
-};
 
 /* ---------- 🪶 Detect Username Tap ---------- */
 document.addEventListener("pointerdown", e => {
