@@ -1013,26 +1013,21 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   -webkit-user-select: none;
   -ms-touch-action: manipulation;
 }
-/* ---------- Spinner inside featured gift button ---------- */
+
 .gift-spinner {
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff; /* white top for contrast */
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top: 2px solid #fff;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   vertical-align: middle;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Optional: reduce button padding while spinner shows */
-.featured-gift-btn:disabled {
-  opacity: 0.85;
-  cursor: not-allowed;
+  0% { transform: rotate(0deg);}
+  100% { transform: rotate(360deg);}
 }
 </style>
 </head>
