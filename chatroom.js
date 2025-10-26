@@ -1243,7 +1243,6 @@ function renderHostAvatars() {
 
 
 /* ---------- Load Host ---------- */
-/* ---------- Load Host ---------- */
 async function loadHost(idx) {
   const host = hosts[idx];
   if (!host) return;
@@ -1251,18 +1250,14 @@ async function loadHost(idx) {
 
   const videoContainer = document.getElementById("featuredHostVideo");
   if (!videoContainer) return;
-
-  // Clear previous video
   videoContainer.innerHTML = "";
   videoContainer.style.position = "relative";
   videoContainer.style.touchAction = "manipulation";
 
-  // Shimmer loader
   const shimmer = document.createElement("div");
   shimmer.className = "video-shimmer";
   videoContainer.appendChild(shimmer);
 
-  // Video element
   const videoEl = document.createElement("video");
   Object.assign(videoEl, {
     src: host.videoUrl || "",
@@ -1274,8 +1269,8 @@ async function loadHost(idx) {
     style: "width:100%;height:100%;object-fit:cover;border-radius:8px;display:none;cursor:pointer;"
   });
   videoEl.setAttribute("webkit-playsinline", "true");
+  videoContainer.appendChild(videoEl);
 
-  // Hint
   const hint = document.createElement("div");
   hint.className = "video-hint";
   hint.textContent = "Tap to unmute";
@@ -1288,7 +1283,6 @@ async function loadHost(idx) {
     hint._t = setTimeout(() => hint.classList.remove("show"), timeout);
   }
 
-  // Fullscreen & tap events
   let lastTap = 0;
   function onTapEvent() {
     const now = Date.now();
@@ -1301,29 +1295,19 @@ async function loadHost(idx) {
     lastTap = now;
   }
   videoEl.addEventListener("click", onTapEvent);
-  videoEl.addEventListener("touchend", (ev) => {
-    if (ev.changedTouches.length < 2) { 
-      ev.preventDefault?.(); 
-      onTapEvent(); 
-    }
-  }, { passive: false });
+  videoEl.addEventListener("touchend", (ev) => { if (ev.changedTouches.length < 2) { ev.preventDefault?.(); onTapEvent(); } }, { passive: false });
 
-  videoContainer.appendChild(videoEl);
-
-  /* ---------- Host Info ---------- */
-  usernameEl.textContent = host.chatId || "Unknown Host";
-  const gender = (host.gender || "person").toLowerCase();
-  const pronoun = gender === "male" ? "his" : "her";
-  const ageGroup = !host.age ? "20s" : host.age >= 30 ? "30s" : "20s";
-  const flair = gender === "male" ? "😎" : "💋";
-  const fruit = host.fruitPick || "🍇";
-  const nature = host.naturePick || "cool";
-  const city = host.location || "Lagos";
-  const country = host.country || "Nigeria";
-  detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
-
-  /* ---------- View Count ---------- */
   const hostRef = doc(db, "featuredHosts", host.id);
+
+  // Increment views only once after video loads
+  videoEl.addEventListener("loadeddata", async () => {
+    shimmer.style.display = "none";
+    videoEl.style.display = "block";
+    showHint("Tap to unmute", 1400);
+    try { await updateDoc(hostRef, { views: increment(1) }); } catch (err) { console.error(err); }
+  });
+
+  // Real-time view count update
   let viewEl = document.getElementById(`hostViewCount-${host.id}`);
   if (!viewEl) {
     viewEl = document.createElement("div");
@@ -1340,21 +1324,6 @@ async function loadHost(idx) {
     if (meetBtn) meetBtn.insertAdjacentElement("beforebegin", viewEl);
     else detailsEl.insertAdjacentElement("afterend", viewEl);
   }
-
-  // Increment Firestore once after video loads
-  videoEl.addEventListener("loadeddata", async () => {
-    shimmer.style.display = "none";
-    videoEl.style.display = "block";
-    showHint("Tap to unmute", 1400);
-
-    try {
-      await updateDoc(hostRef, { views: increment(1) });
-    } catch (err) {
-      console.error(err);
-    }
-  });
-
-  // Real-time view updates (prevents duplication)
   onSnapshot(hostRef, (docSnap) => {
     if (docSnap.exists()) {
       const data = docSnap.data();
@@ -1362,6 +1331,18 @@ async function loadHost(idx) {
       if (span) span.textContent = `${data.views || 0} views`;
     }
   });
+
+  /* ---------- Host Info ---------- */
+  usernameEl.textContent = host.chatId || "Unknown Host";
+  const gender = (host.gender || "person").toLowerCase();
+  const pronoun = gender === "male" ? "his" : "her";
+  const ageGroup = !host.age ? "20s" : host.age >= 30 ? "30s" : "20s";
+  const flair = gender === "male" ? "😎" : "💋";
+  const fruit = host.fruitPick || "🍇";
+  const nature = host.naturePick || "cool";
+  const city = host.location || "Lagos";
+  const country = host.country || "Nigeria";
+  detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
 
   /* ---------- Meet Button ---------- */
   let meetBtn = document.getElementById("meetBtn");
@@ -1392,11 +1373,13 @@ async function loadHost(idx) {
   giftAmountEl.textContent = "1";
 }
 
-/* ---------- Meet Modal ---------- */
+/* ---------- Meet Modal (clean, no view duplication) ---------- */
 function showMeetModal(host) {
+  // Remove existing modal if present
   let modal = document.getElementById("meetModal");
   if (modal) modal.remove();
 
+  // Create modal container
   modal = document.createElement("div");
   modal.id = "meetModal";
   Object.assign(modal.style, {
@@ -1418,7 +1401,6 @@ function showMeetModal(host) {
     <div id="meetModalContent" style="background:#111;padding:20px 22px;border-radius:12px;text-align:center;color:#fff;max-width:340px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
       <h3 style="margin-bottom:10px;font-weight:600;">Meet ${host.chatId || "this host"}?</h3>
       <p style="margin-bottom:16px;">This will cost you <b>21 stars ⭐</b>.</p>
-
       <div style="display:flex;gap:10px;justify-content:center;">
         <button id="cancelMeet" style="padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">Cancel</button>
         <button id="confirmMeet" style="padding:8px 16px;background:linear-gradient(90deg,#ff0099,#ff6600);border:none;color:#fff;border-radius:8px;font-weight:600;">Yes</button>
@@ -1431,15 +1413,8 @@ function showMeetModal(host) {
   const cancelBtn = modal.querySelector("#cancelMeet");
   const confirmBtn = modal.querySelector("#confirmMeet");
   const modalContent = modal.querySelector("#meetModalContent");
-  const hostViewEl = document.getElementById(`hostViewCount-${host.id}`);
 
   cancelBtn.onclick = () => modal.remove();
-
-  // Update live view count on modal open
-  if (hostViewEl) {
-    const span = hostViewEl.querySelector("span");
-    if (span) span.textContent = `${(host.views || 0) + 1} views`;
-  }
 
   confirmBtn.onclick = async () => {
     const COST = 21;
@@ -1456,19 +1431,24 @@ function showMeetModal(host) {
       return;
     }
 
+    // Disable button
     confirmBtn.disabled = true;
     confirmBtn.style.opacity = 0.6;
     confirmBtn.style.cursor = "not-allowed";
 
     try {
+      // Deduct stars optimistically
       currentUser.stars -= COST;
       if (refs?.starCountEl)
         refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-
       updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
 
-      // Animation stages
-      const fixedStages = ["Handling your meet request…","Collecting host’s identity…"];
+      // Stages to show in modal
+      const fixedStages = [
+        "Handling your meet request…",
+        "Collecting host’s identity…"
+      ];
+
       const playfulMessages = [
         "Oh, she’s hella cute…💋",
         "Careful, she may be naughty..😏",
@@ -1485,6 +1465,7 @@ function showMeetModal(host) {
 
       const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
 
+      // Show stages
       modalContent.innerHTML = `<p id="stageMsg" style="margin-top:20px;font-weight:500;"></p>`;
       const stageMsgEl = modalContent.querySelector("#stageMsg");
 
@@ -1495,6 +1476,7 @@ function showMeetModal(host) {
 
         setTimeout(() => {
           stageMsgEl.textContent = stage;
+
           if (index === stages.length - 1) {
             setTimeout(() => {
               modalContent.innerHTML = `
@@ -1504,14 +1486,14 @@ function showMeetModal(host) {
               `;
               modalContent.querySelector("#letsGoBtn").onclick = () => {
                 const telegramMessage = `Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`;
-                window.open(`https://t.me/drtantra?text=${encodeURIComponent(telegramMessage)}`, "_blank");
+                const telegramUrl = `https://t.me/drtantra?text=${encodeURIComponent(telegramMessage)}`;
+                window.open(telegramUrl, "_blank");
                 modal.remove();
               };
             }, 500);
           }
         }, totalTime);
       });
-
     } catch (err) {
       console.error("Meet deduction failed:", err);
       alert("Something went wrong. Please try again later.");
