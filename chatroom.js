@@ -353,6 +353,18 @@ function attachMessagesListener() {
     localStorage.setItem("shownGiftAlerts", JSON.stringify([...shownGiftAlerts]));
   }
 
+async function attachMessagesListener() {
+  const q = query(collection(db, CHAT_COLLECTION), orderBy("timestamp", "asc"));
+
+  // 1️⃣ Load all existing (old) messages first
+  const initialSnap = await getDocs(q);
+  lastMessagesArray = [];
+  initialSnap.forEach(doc => {
+    lastMessagesArray.push({ id: doc.id, data: doc.data() });
+  });
+  renderMessagesFromArray(lastMessagesArray); // render all old ones at once
+
+  // 2️⃣ Listen for new messages in real time
   onSnapshot(q, snapshot => {
     snapshot.docChanges().forEach(change => {
       if (change.type !== "added") return;
@@ -363,9 +375,11 @@ function attachMessagesListener() {
       // Prevent duplicate render
       if (document.getElementById(msgId)) return;
 
-      // Add to memory + render
       lastMessagesArray.push({ id: msgId, data: msg });
-      renderMessagesFromArray([{ id: msgId, data: msg }]);
+      renderMessage({ id: msgId, data: msg }); // 🔥 now use the smarter single renderer
+    });
+  });
+}
 
 /* 💝 Detect personalized gift messages */
 if (msg.highlight && msg.content?.includes("gifted")) {
