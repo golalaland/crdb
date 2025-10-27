@@ -341,52 +341,51 @@ function renderMessage(item) {
 
 
 /* ---------- 🔔 Messages Listener ---------- */
-function attachMessagesListener() {
-  const q = query(collection(db, CHAT_COLLECTION), orderBy("timestamp", "asc"));
+async function attachMessagesListener() {
+  const q = query(collection(db, "messages"), orderBy("timestamp", "asc"));
 
-  // 💾 Load previously shown gift IDs from localStorage
-  const shownGiftAlerts = new Set(JSON.parse(localStorage.getItem("shownGiftAlerts") || "[]"));
-
-  function saveShownGift(id) {
-    shownGiftAlerts.add(id);
-    localStorage.setItem("shownGiftAlerts", JSON.stringify([...shownGiftAlerts]));
-  }
-
-  // 🔄 Clear chat container
+  // Clear chat before reloading
   refs.messagesEl.innerHTML = "";
   lastMessagesArray = [];
 
-  // ✅ Initial load + live updates
-  onSnapshot(q, (snapshot) => {
-    snapshot.docChanges().forEach((change) => {
-      if (change.type !== "added") return;
-
-      const docId = change.doc.id;
-      const data = change.doc.data();
-
-      // Skip if already rendered
-      if (document.getElementById(docId)) return;
-
-      // Store in memory
-      lastMessagesArray.push({ id: docId, data });
-
-      // Render to chat
-      renderMessagesFromArray([{ id: docId, data }]);
-
-      // 🎁 Gift alert logic (optional)
-      if (data.gift && !shownGiftAlerts.has(docId)) {
-        showGiftAlert(`${data.senderName || "Someone"} sent a gift 🎁`);
-        saveShownGift(docId);
-      }
+  try {
+    // 🧠 STEP 1: Load all existing messages once
+    const snap = await getDocs(q);
+    const all = [];
+    snap.forEach((doc) => {
+      all.push({ id: doc.id, data: doc.data() });
     });
 
-    // Auto scroll if near bottom
-    requestAnimationFrame(() => {
-      const el = refs.messagesEl;
-      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-      if (nearBottom) scrollToBottom(el);
+    lastMessagesArray = all;
+    renderMessagesFromArray(all);
+    scrollToBottom(refs.messagesEl);
+
+    // 🧠 STEP 2: Start listening for new messages live
+    onSnapshot(q, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type !== "added") return;
+
+        const id = change.doc.id;
+        const data = change.doc.data();
+
+        // Avoid duplicates
+        if (document.getElementById(id)) return;
+
+        lastMessagesArray.push({ id, data });
+        renderMessagesFromArray([{ id, data }]);
+      });
+
+      // Auto-scroll only if near bottom
+      requestAnimationFrame(() => {
+        const el = refs.messagesEl;
+        const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+        if (nearBottom) scrollToBottom(el);
+      });
     });
-  });
+
+  } catch (err) {
+    console.error("❌ Error loading messages:", err);
+  }
 }
 
 /* 💝 Detect personalized gift messages */
