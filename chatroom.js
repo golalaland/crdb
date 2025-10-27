@@ -265,13 +265,52 @@ setupUsersListener();
 /* ---------- Render Messages ---------- */
 let scrollPending = false;
 
-function renderMessage(msg) {
-  if (!refs.messagesEl || document.getElementById(msg.id)) return;
+// ---------- 1. For initial chat load ----------
+function renderMessagesFromArray(messages) {
+  if (!refs.messagesEl) return;
 
-  const m = msg.data;
+  refs.messagesEl.innerHTML = ""; // clear first
+
+  messages.forEach(item => {
+    const m = item.data;
+    const wrapper = document.createElement("div");
+    wrapper.className = "msg";
+    wrapper.id = item.id;
+
+    const usernameEl = document.createElement("span");
+    usernameEl.className = "meta";
+    usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
+    usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
+    usernameEl.style.marginRight = "4px";
+
+    const contentEl = document.createElement("span");
+    contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
+    contentEl.textContent = " " + (m.content || "");
+
+    if (m.buzzColor) contentEl.style.background = m.buzzColor;
+    if (m.highlight) {
+      contentEl.style.color = "#000";
+      contentEl.style.fontWeight = "700";
+    }
+
+    wrapper.append(usernameEl, contentEl);
+    refs.messagesEl.appendChild(wrapper);
+  });
+
+  // Scroll to bottom after load
+  requestAnimationFrame(() => {
+    refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
+  });
+}
+
+// ---------- 2. For new real-time or sent messages ----------
+function renderMessage(item) {
+  if (!refs.messagesEl || document.getElementById(item.id)) return;
+
+  const m = item.data;
   const wrapper = document.createElement("div");
   wrapper.className = "msg";
-  wrapper.id = msg.id;
+  wrapper.id = item.id;
 
   const usernameEl = document.createElement("span");
   usernameEl.className = "meta";
@@ -292,12 +331,12 @@ function renderMessage(msg) {
   wrapper.append(usernameEl, contentEl);
   refs.messagesEl.appendChild(wrapper);
 
-  // Scroll only if near bottom
+  // Smart scroll
   const el = refs.messagesEl;
-  const nearBottomThreshold = 80;
-  if (el.scrollHeight - el.scrollTop - el.clientHeight < nearBottomThreshold || m.uid === currentUser?.uid) {
-    el.scrollTop = el.scrollHeight;
-  }
+  const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+  const nearBottom = scrollBottom < 80;
+  const ownMessage = m.uid === currentUser?.uid;
+  if (nearBottom || ownMessage) el.scrollTop = el.scrollHeight;
 }
 
 
