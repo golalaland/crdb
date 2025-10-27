@@ -353,31 +353,46 @@ function attachMessagesListener() {
     localStorage.setItem("shownGiftAlerts", JSON.stringify([...shownGiftAlerts]));
   }
 
-async function attachMessagesListener() {
-  const q = query(collection(db, CHAT_COLLECTION), orderBy("timestamp", "asc"));
+function attachMessagesListener() {
+  const q = query(
+    collection(db, "messages"),
+    orderBy("createdAt", "asc")
+  );
 
-  // 1️⃣ Load all existing (old) messages first
-  const initialSnap = await getDocs(q);
+  // Clear previous if re-login
+  refs.messagesEl.innerHTML = "";
   lastMessagesArray = [];
-  initialSnap.forEach(doc => {
-    lastMessagesArray.push({ id: doc.id, data: doc.data() });
-  });
-  renderMessagesFromArray(lastMessagesArray); // render all old ones at once
 
-  // 2️⃣ Listen for new messages in real time
-  onSnapshot(q, snapshot => {
-    snapshot.docChanges().forEach(change => {
-      if (change.type !== "added") return;
+  onSnapshot(q, (snapshot) => {
+    if (snapshot.metadata.hasPendingWrites) return; // skip temp local ones
 
-      const msg = change.doc.data();
-      const msgId = change.doc.id;
+    // Initial load: render everything
+    if (!lastMessagesArray.length) {
+      const allMsgs = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        data: doc.data(),
+      }));
 
-      // Prevent duplicate render
-      if (document.getElementById(msgId)) return;
+      lastMessagesArray = allMsgs;
+      renderMessagesFromArray(allMsgs);
+      scrollToBottom(refs.messagesEl);
+      return;
+    }
 
-      lastMessagesArray.push({ id: msgId, data: msg });
-      renderMessage({ id: msgId, data: msg }); // 🔥 now use the smarter single renderer
-    });
+    // For live updates (only new ones)
+    snapshot
+      .docChanges()
+      .filter((change) => change.type === "added")
+      .forEach((change) => {
+        const msgId = change.doc.id;
+        const msgData = change.doc.data();
+
+        // Skip if already rendered
+        if (document.getElementById(msgId)) return;
+
+        lastMessagesArray.push({ id: msgId, data: msgData });
+        renderMessagesFromArray([{ id: msgId, data: msgData }]);
+      });
   });
 }
 
