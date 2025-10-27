@@ -347,52 +347,45 @@ function attachMessagesListener() {
   // 💾 Load previously shown gift IDs from localStorage
   const shownGiftAlerts = new Set(JSON.parse(localStorage.getItem("shownGiftAlerts") || "[]"));
 
-  // 💾 Save helper
   function saveShownGift(id) {
     shownGiftAlerts.add(id);
     localStorage.setItem("shownGiftAlerts", JSON.stringify([...shownGiftAlerts]));
   }
 
-function attachMessagesListener() {
-  const q = query(
-    collection(db, "messages"),
-    orderBy("createdAt", "asc")
-  );
-
-  // Clear previous if re-login
+  // 🔄 Clear chat container
   refs.messagesEl.innerHTML = "";
   lastMessagesArray = [];
 
+  // ✅ Initial load + live updates
   onSnapshot(q, (snapshot) => {
-    if (snapshot.metadata.hasPendingWrites) return; // skip temp local ones
+    snapshot.docChanges().forEach((change) => {
+      if (change.type !== "added") return;
 
-    // Initial load: render everything
-    if (!lastMessagesArray.length) {
-      const allMsgs = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        data: doc.data(),
-      }));
+      const docId = change.doc.id;
+      const data = change.doc.data();
 
-      lastMessagesArray = allMsgs;
-      renderMessagesFromArray(allMsgs);
-      scrollToBottom(refs.messagesEl);
-      return;
-    }
+      // Skip if already rendered
+      if (document.getElementById(docId)) return;
 
-    // For live updates (only new ones)
-    snapshot
-      .docChanges()
-      .filter((change) => change.type === "added")
-      .forEach((change) => {
-        const msgId = change.doc.id;
-        const msgData = change.doc.data();
+      // Store in memory
+      lastMessagesArray.push({ id: docId, data });
 
-        // Skip if already rendered
-        if (document.getElementById(msgId)) return;
+      // Render to chat
+      renderMessagesFromArray([{ id: docId, data }]);
 
-        lastMessagesArray.push({ id: msgId, data: msgData });
-        renderMessagesFromArray([{ id: msgId, data: msgData }]);
-      });
+      // 🎁 Gift alert logic (optional)
+      if (data.gift && !shownGiftAlerts.has(docId)) {
+        showGiftAlert(`${data.senderName || "Someone"} sent a gift 🎁`);
+        saveShownGift(docId);
+      }
+    });
+
+    // Auto scroll if near bottom
+    requestAnimationFrame(() => {
+      const el = refs.messagesEl;
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      if (nearBottom) scrollToBottom(el);
+    });
   });
 }
 
