@@ -344,47 +344,35 @@ function renderMessage(item) {
 async function attachMessagesListener() {
   const q = query(collection(db, "messages"), orderBy("timestamp", "asc"));
 
-  // Clear chat before reloading
   refs.messagesEl.innerHTML = "";
   lastMessagesArray = [];
 
   try {
-    // 🧠 STEP 1: Load all existing messages once
     const snap = await getDocs(q);
     const all = [];
-    snap.forEach((doc) => {
-      all.push({ id: doc.id, data: doc.data() });
-    });
-
+    snap.forEach(doc => all.push({ id: doc.id, data: doc.data() }));
     lastMessagesArray = all;
     renderMessagesFromArray(all);
     scrollToBottom(refs.messagesEl);
 
-    // 🧠 STEP 2: Start listening for new messages live
-    onSnapshot(q, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
+    onSnapshot(q, snapshot => {
+      snapshot.docChanges().forEach(change => {
         if (change.type !== "added") return;
 
         const id = change.doc.id;
         const data = change.doc.data();
-
-        // Avoid duplicates
         if (document.getElementById(id)) return;
 
         lastMessagesArray.push({ id, data });
         renderMessagesFromArray([{ id, data }]);
-      });
 
-      // Auto-scroll only if near bottom
-      requestAnimationFrame(() => {
-        const el = refs.messagesEl;
-        const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-        if (nearBottom) scrollToBottom(el);
+        if (refs.messagesEl && data.uid === currentUser?.uid) {
+          refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
+        }
       });
     });
-
   } catch (err) {
-    console.error("❌ Error loading messages:", err);
+    console.error("🔥 attachMessagesListener error:", err);
   }
 }
 
