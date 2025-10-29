@@ -1,4 +1,4 @@
-/* ---------- Imports (Firebase v10) ---------- */
+(/* ---------- Imports (Firebase v10) ---------- */
 import { 
   initializeApp 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -895,8 +895,8 @@ window.addEventListener("DOMContentLoaded", () => {
   // 🎞️ Video list (Shopify-hosted links)
   const videos = [
     "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4",
-    "https://cdn.shopify.com/videos/c/o/v/another-video-link.mp4",
-    "https://cdn.shopify.com/videos/c/o/v/yet-another-video.mp4"
+    "https://cdn.shopify.com/videos/c/o/v/second-shopify-video.mp4",
+    "https://cdn.shopify.com/videos/c/o/v/third-shopify-video.mp4"
   ];
   let currentVideo = 0;
   let hideTimeout = null;
