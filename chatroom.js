@@ -422,11 +422,9 @@ async function loginWhitelist(email, phone) {
     if (loader) loader.style.display = "flex";
     await sleep(50);
 
-    // 🔍 Normalize inputs
+    // Normalize inputs
     const emailLower = email.trim().toLowerCase();
-    const phoneNormalized = phone.replace(/\D/g, ""); // remove non-digits
-
-    console.log("Attempting login with:", emailLower, phoneNormalized);
+    const phoneNormalized = phone.replace(/\D/g, "");
 
     // 🔍 Query whitelist
     const whitelistQuery = query(
@@ -437,29 +435,33 @@ async function loginWhitelist(email, phone) {
     const whitelistSnap = await getDocs(whitelistQuery);
 
     if (whitelistSnap.empty) {
-      console.log("Whitelist query returned empty.");
       return showStarPopup("You’re not on the whitelist.");
     }
 
-    console.log("Whitelist query hit:", whitelistSnap.docs.map(d => d.data()));
-
-    // 🔑 Fetch user doc
+    // ✅ Whitelist confirmed, now fetch user
     const uidKey = sanitizeKey(emailLower);
     const userRef = doc(db, "users", uidKey);
     const userSnap = await getDoc(userRef);
 
     if (!userSnap.exists()) {
-      console.log("User doc not found for UID:", uidKey);
-      return showStarPopup("User not found. Please sign up first.");
+      // User doc missing, create a minimal record instead of failing
+      await setDoc(userRef, {
+        email: emailLower,
+        phone: phoneNormalized,
+        chatId: generateGuestName(),
+        chatIdLower: "",
+        stars: 0,
+        cash: 0,
+      });
     }
 
-    const data = userSnap.data() || {};
+    const data = (userSnap.exists() ? userSnap.data() : {}) || {};
 
-    // 🧍 Set current user details
+    // Set current user
     currentUser = {
       uid: uidKey,
-      email: data.email,
-      phone: data.phone,
+      email: data.email || emailLower,
+      phone: data.phone || phoneNormalized,
       chatId: data.chatId || generateGuestName(),
       chatIdLower: data.chatIdLower || (data.chatId || "").toLowerCase(),
       stars: data.stars || 0,
@@ -480,26 +482,24 @@ async function loginWhitelist(email, phone) {
       isHost: !!data.isHost
     };
 
-    // 🧠 Post-login setup
+    // Post-login setup
     await postLoginSetup(uidKey);
 
-    // Store in localStorage for auto-login
+    // Store in localStorage
     localStorage.setItem("vipUser", JSON.stringify({ email: emailLower, phone: phoneNormalized }));
 
-    // Prompt guest users for permanent chatID
+    // Prompt for permanent chatID if guest
     if (currentUser.chatId.startsWith("GUEST")) {
       await promptForChatID(userRef, data);
     }
 
-    // 🎨 Update UI
     showChatUI(currentUser);
-
-    console.log("✅ Login successful for:", currentUser.email);
     return true;
 
   } catch (err) {
     console.error("❌ Login error:", err);
-    showStarPopup("Login failed. Try again!");
+    // Only show generic login failure for unexpected exceptions
+    showStarPopup("An unexpected error occurred. Please try again.");
     return false;
   } finally {
     if (loader) loader.style.display = "none";
