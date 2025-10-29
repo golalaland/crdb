@@ -341,39 +341,43 @@ function renderMessage(item) {
 
 
 /* ---------- 🔔 Messages Listener ---------- */
-async function attachMessagesListener() {
-  const q = query(collection(db, "messages"), orderBy("timestamp", "asc"));
+function attachMessagesListener() {
+  const q = query(
+    collection(db, CHAT_COLLECTION),
+    orderBy("createdAt", "asc")
+  );
 
-  refs.messagesEl.innerHTML = "";
+  if (refs.messagesEl) refs.messagesEl.innerHTML = "";
   lastMessagesArray = [];
 
-  try {
-    const snap = await getDocs(q);
-    const all = [];
-    snap.forEach(doc => all.push({ id: doc.id, data: doc.data() }));
-    lastMessagesArray = all;
-    renderMessagesFromArray(all);
-    scrollToBottom(refs.messagesEl);
+  onSnapshot(q, (snapshot) => {
+    if (snapshot.metadata.hasPendingWrites) return; // skip local writes
 
-    onSnapshot(q, snapshot => {
-      snapshot.docChanges().forEach(change => {
-        if (change.type !== "added") return;
+    // --- INITIAL LOAD ---
+    if (!lastMessagesArray.length) {
+      const allMsgs = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        data: doc.data(),
+      }));
 
-        const id = change.doc.id;
-        const data = change.doc.data();
-        if (document.getElementById(id)) return;
+      lastMessagesArray = allMsgs;
+      renderMessagesFromArray(allMsgs); // render all
+      return;
+    }
 
-        lastMessagesArray.push({ id, data });
-        renderMessagesFromArray([{ id, data }]);
+    // --- NEW MESSAGE UPDATES ---
+    snapshot.docChanges().forEach((change) => {
+      if (change.type !== "added") return;
 
-        if (refs.messagesEl && data.uid === currentUser?.uid) {
-          refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
-        }
-      });
+      const msgId = change.doc.id;
+      const msgData = change.doc.data();
+
+      if (document.getElementById(msgId)) return;
+
+      lastMessagesArray.push({ id: msgId, data: msgData });
+      renderMessage({ id: msgId, data: msgData });
     });
-  } catch (err) {
-    console.error("🔥 attachMessagesListener error:", err);
-  }
+  });
 }
 
 /* 💝 Detect personalized gift messages */
