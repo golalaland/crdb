@@ -231,7 +231,7 @@ function updateRedeemLink() {
 /* ---------- Tip Link ---------- */
 function updateTipLink() {
   if (!refs.tipBtn || !currentUser) return;
-  refs.tipBtn.href = `moneytrain.html`;
+  refs.tipBtn.href = `https://golalaland.github.io/crdb/moneytrain.html?uid=${encodeURIComponent(currentUser.uid)}`;
   refs.tipBtn.style.display = "inline-block";
 }
 
