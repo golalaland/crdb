@@ -415,6 +415,9 @@ async function promptForChatID(userRef, userData) {
 /* ===============================
    🔐 VIP Login (Whitelist Check)
 ================================= */
+/* ===============================
+   🔐 VIP Login (Whitelist Check)
+================================= */
 async function loginWhitelist(email, phone) {
   const loader = document.getElementById("postLoginLoader");
   try {
@@ -443,20 +446,44 @@ async function loginWhitelist(email, phone) {
     const data = userSnap.data() || {};
 
     // 🧍 Set current user details
-    currentUser = { ...data, uid: uidKey };
+    currentUser = {
+      uid: uidKey,
+      email: data.email,
+      phone: data.phone,
+      chatId: data.chatId || generateGuestName(),
+      chatIdLower: data.chatIdLower || (data.chatId || "").toLowerCase(),
+      stars: data.stars || 0,
+      cash: data.cash || 0,
+      usernameColor: data.usernameColor || randomColor(),
+      isAdmin: !!data.isAdmin,
+      isVIP: !!data.isVIP,
+      fullName: data.fullName || "",
+      gender: data.gender || "",
+      subscriptionActive: !!data.subscriptionActive,
+      subscriptionCount: data.subscriptionCount || 0,
+      lastStarDate: data.lastStarDate || todayDate(),
+      starsGifted: data.starsGifted || 0,
+      starsToday: data.starsToday || 0,
+      hostLink: data.hostLink || null,
+      invitedBy: data.invitedBy || null,
+      inviteeGiftShown: !!data.inviteeGiftShown,
+      isHost: !!data.isHost
+    };
 
     // 🧠 Post-login setup
     await postLoginSetup(uidKey);
 
-    // Store in localStorage for fallback auto-login
+    // Store in localStorage for auto-login
     localStorage.setItem("vipUser", JSON.stringify({ email, phone }));
 
-    // Prompt guest users to set permanent chatID
-    if (currentUser.chatId?.startsWith("GUEST")) {
+    // Prompt guest users for permanent chatID
+    if (currentUser.chatId.startsWith("GUEST")) {
       await promptForChatID(userRef, data);
     }
 
+    // 🎨 Update UI
     showChatUI(currentUser);
+
     return true;
 
   } catch (err) {
@@ -467,6 +494,25 @@ async function loginWhitelist(email, phone) {
     if (loader) loader.style.display = "none";
   }
 }
+
+/* ----------------------------
+   🔁 Auto Login Session
+----------------------------- */
+async function autoLogin() {
+  const vipUser = JSON.parse(localStorage.getItem("vipUser") || "{}");
+  if (vipUser?.email && vipUser?.phone) {
+    showLoadingBar(1000);
+    await sleep(60);
+    const success = await loginWhitelist(vipUser.email, vipUser.phone);
+    if (!success) return;
+    await sleep(400);
+    updateRedeemLink();
+    updateTipLink();
+  }
+}
+
+// Call on page load
+autoLogin();
 
 /* ===============================
    💫 Auto Star Earning System
