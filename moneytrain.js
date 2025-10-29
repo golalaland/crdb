@@ -766,17 +766,102 @@ const observer = new MutationObserver(updateProfileOffset);
   const el = document.getElementById(id);
   if (el) observer.observe(el, { attributes: true, attributeFilter: ['style', 'class'] });
 });
-// Replace all literal stars (⭐️) in text with your SVG icon
-document.querySelectorAll('body *').forEach(el => {
-  if (el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
-    const txt = el.textContent.trim();
-    if (txt.includes('⭐️')) {
-      el.innerHTML = txt.replaceAll(
-        '⭐️',
-        `<img src="https://res.cloudinary.com/dekxhwh6l/image/upload/v1760596116/starssvg_k3hmsu.svg" 
-              alt="star" 
-              style="width:16px;height:16px;vertical-align:middle;margin-left:4px;">`
-      );
+// Robust star -> SVG replacer (paste once)
+(function() {
+  const STAR_SVG = 'https://res.cloudinary.com/dekxhwh6l/image/upload/v1760596116/starssvg_k3hmsu.svg';
+  const IMG_STYLE = 'width:16px;height:16px;vertical-align:middle;margin-left:4px;';
+
+  // regex to match common star emoji variants
+  const STAR_RE = /⭐️|⭐|\u2B50/g;
+
+  function replaceStarsInTextNode(textNode) {
+    const text = textNode.nodeValue;
+    if (!text || !STAR_RE.test(text)) return;
+    STAR_RE.lastIndex = 0; // reset
+    const frag = document.createDocumentFragment();
+    let lastIndex = 0;
+    let match;
+    while ((match = STAR_RE.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        frag.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+      }
+      const img = document.createElement('img');
+      img.src = STAR_SVG;
+      img.alt = 'star';
+      img.style.cssText = IMG_STYLE;
+      frag.appendChild(img);
+      lastIndex = STAR_RE.lastIndex;
+    }
+    if (lastIndex < text.length) {
+      frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+    }
+    try {
+      textNode.parentNode.replaceChild(frag, textNode);
+    } catch (err) {
+      // defensive: if replace fails, ignore
+      console.warn('replaceStarsInTextNode failed', err);
     }
   }
-});
+
+  function replaceStarsInRoot(root) {
+    const it = document.createNodeIterator(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        return (node.nodeValue && STAR_RE.test(node.nodeValue)) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+    let node;
+    while ((node = it.nextNode())) {
+      replaceStarsInTextNode(node);
+    }
+  }
+
+  function initReplace() {
+    try {
+      replaceStarsInRoot(document.body);
+      console.info('[StarReplacer] initial pass complete');
+    } catch (e) {
+      console.error('[StarReplacer] initial error', e);
+    }
+  }
+
+  function setupObserver() {
+    const mo = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        // new nodes added
+        if (m.addedNodes && m.addedNodes.length) {
+          m.addedNodes.forEach(node => {
+            if (node.nodeType === Node.TEXT_NODE) {
+              if (STAR_RE.test(node.nodeValue)) replaceStarsInTextNode(node);
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+              replaceStarsInRoot(node);
+            }
+          });
+        }
+        // characterData changes (text changes)
+        if (m.type === 'characterData' && m.target) {
+          const t = m.target;
+          if (t.nodeType === Node.TEXT_NODE && STAR_RE.test(t.nodeValue)) {
+            replaceStarsInTextNode(t);
+          }
+        }
+      }
+    });
+
+    mo.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+
+    // optional: keep reference on window so you can disconnect if needed
+    window.__StarReplacerObserver = mo;
+    console.info('[StarReplacer] mutation observer started');
+  }
+
+  // Wait for DOM ready, then run + observe
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => { initReplace(); setupObserver(); });
+  } else {
+    initReplace(); setupObserver();
+  }
+})();
