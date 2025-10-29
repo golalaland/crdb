@@ -415,6 +415,8 @@ async function promptForChatID(userRef, userData) {
 /* ===============================
    🔐 VIP Login (Whitelist Check)
 ================================= */
+import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
 async function loginWhitelist(email, phone) {
   const loader = document.getElementById("postLoginLoader");
   try {
@@ -428,10 +430,8 @@ async function loginWhitelist(email, phone) {
       where("phone", "==", phone)
     );
     const whitelistSnap = await getDocs(whitelistQuery);
-    console.log("📋 Whitelist result:", whitelistSnap.docs.map(d => d.data()));
-
     if (whitelistSnap.empty) {
-      return showStarPopup("You’re not on the whitelist. Please check your email and phone format.");
+      return showStarPopup("You’re not on the whitelist.");
     }
 
     const uidKey = sanitizeKey(email);
@@ -439,53 +439,33 @@ async function loginWhitelist(email, phone) {
     const userSnap = await getDoc(userRef);
 
     if (!userSnap.exists()) {
-      return showStarPopup("User not found. Please sign up on the main page first.");
+      return showStarPopup("User not found. Please sign up first.");
     }
 
     const data = userSnap.data() || {};
 
-    // 🧍🏽 Set current user details
-    currentUser = {
-      uid: uidKey,
-      email: data.email,
-      phone: data.phone,
-      chatId: data.chatId,
-      chatIdLower: data.chatIdLower,
-      stars: data.stars || 0,
-      cash: data.cash || 0,
-      usernameColor: data.usernameColor || randomColor(),
-      isAdmin: !!data.isAdmin,
-      isVIP: !!data.isVIP,
-      fullName: data.fullName || "",
-      gender: data.gender || "",
-      subscriptionActive: !!data.subscriptionActive,
-      subscriptionCount: data.subscriptionCount || 0,
-      lastStarDate: data.lastStarDate || todayDate(),
-      starsGifted: data.starsGifted || 0,
-      starsToday: data.starsToday || 0,
-      hostLink: data.hostLink || null,
-      invitedBy: data.invitedBy || null,
-      inviteeGiftShown: !!data.inviteeGiftShown,
-      isHost: !!data.isHost
-    };
+    // 🔐 Sign in with Firebase Auth for session persistence
+    try {
+      await signInWithEmailAndPassword(auth, email, "temporaryFallbackPassword123!");
+    } catch (err) {
+      console.warn("User might not exist in Firebase Auth yet:", err.message);
+    }
 
-    // 🧠 Setup post-login systems
-    updateRedeemLink();
-    updateTipLink();
-    setupPresence(currentUser);
-    attachMessagesListener();
-    startStarEarning(currentUser.uid);
+    // 🧍 Set current user details
+    currentUser = { ...data, uid: uidKey };
 
+    // 🧠 Post-login setup
+    await postLoginSetup(uidKey);
+
+    // Store in localStorage for fallback auto-login
     localStorage.setItem("vipUser", JSON.stringify({ email, phone }));
 
-    // Prompt guests for a permanent chatID
+    // Prompt guest users to set permanent chatID
     if (currentUser.chatId?.startsWith("GUEST")) {
       await promptForChatID(userRef, data);
     }
 
-    // 🎨 Update UI
     showChatUI(currentUser);
-
     return true;
 
   } catch (err) {
