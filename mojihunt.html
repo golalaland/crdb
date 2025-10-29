@@ -1,199 +1,162 @@
-// ------------------- MojiHunt + Firebase integration -------------------
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  onSnapshot,
-  runTransaction
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MojiHunt — Emoji Adventure</title>
 
-document.addEventListener('DOMContentLoaded', () => {
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
 
-  /* ---------------- Config ---------------- */
-  const INITIAL_POT    = 1_000_000; // $1,000,000 daily
-  const EMOJI_REWARD    = 5 * 8;    // 40 stars per emoji
-  const EMOJI_CASH      = 1_000;    // ₦1,000 per emoji
-  const STAR_COST       = 10;       // cost to join game
-  const ROUND_DURATION  = 30_000;   // 30s per round
-  const EMOJI_INTERVAL  = 1000;     // spawn emoji every 1s
+<style>
+:root {
+  --bg:#FFF9E3;             /* Soft yellow page background */
+  --card:#FFF3B0;           /* Slightly darker card tone */
+  --accent:#FFD700;         /* Gold accent for text & highlights */
+  --accent-gradient: linear-gradient(90deg,#FFD700,#FFA500); /* Gold → orange gradient */
+  --glass: rgba(255,255,255,0.05); /* Light transparency for overlays */
+}
 
-  const EMOJIS = ["🎉","🪄","💎","✨","🔥","🧸","🍀","🌟","🎁","🤑"];
+/* Base */
+body, html {margin:0;padding:0;height:100%;font-family:'Montserrat',sans-serif;background:var(--bg);color:#111;display:flex;justify-content:center;}
+#appWrapper{width:100%;max-width:480px;display:flex;flex-direction:column;height:100%;position:relative;padding-bottom:120px;}
 
-  /* ---------------- Firebase ---------------- */
-  const firebaseConfig = {
-    apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
-    authDomain: "metaverse-1010.firebaseapp.com",
-    projectId: "metaverse-1010",
-    storageBucket: "metaverse-1010.appspot.com",
-    messagingSenderId: "1044064238233",
-    appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
-    measurementId: "G-S77BMC266C",
-    databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
-  };
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+/* Header */
+#gameHeader{text-align:center;margin-top:10px;}
+#welcomeText{font-family:'Press Start 2P',cursive;font-size:12px;color:var(--accent);}
+#scrambleText{font-family:'Press Start 2P',cursive;font-size:22px;color:var(--accent);margin-top:2px;}
 
-  /* ---------------- UI Refs ---------------- */
-  const joinBtn     = document.getElementById('joinTrainBtn');
-  const confirmModal= document.getElementById('confirmModal');
-  const confirmYes  = document.getElementById('confirmYes');
-  const confirmNo   = document.getElementById('confirmNo');
-  const popupEl     = document.getElementById('popup');
-  const profileEl   = document.getElementById('profileName') || document.getElementById('username');
-  const starEl      = document.getElementById('starCount') || document.getElementById('stars-count');
-  const cashEl      = document.getElementById('cashCount') || document.getElementById('cash-count');
-  const arenaEl     = document.getElementById('problemBoard'); // reused container
+/* Join Hunt Button */
+#joinHuntBtn {
+  display: block;
+  margin: 12px auto;
+  padding: 12px 20px;
+  border-radius: 20px;
+  background: #FFF3B0; 
+  color: #111;
+  font-weight: 800;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  text-shadow: 0 0 4px #FFD700aa;
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
+  transition: 0.2s;
+}
+#joinHuntBtn::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  border-radius: 23px; 
+  background: linear-gradient(90deg, #FFD700, #FFA500, #FFD700, #FFA500);
+  background-size: 200% 200%;
+  z-index: -1;
+  animation: lightTravel 2s linear infinite;
+}
+#joinHuntBtn span { position: relative; z-index: 1; }
+@keyframes lightTravel {0% { background-position: 0% 0%; } 100% { background-position: 200% 0%; } }
+#joinHuntBtn[disabled] { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
 
-  /* ---------------- Sounds ---------------- */
-  const SOUND_PATHS = {
-    ding: './sounds/cha_ching.mp3',
-    error: './sounds/error_bell.mp3',
-    start: './sounds/train_start.mp3'
-  };
-  function playAudio(src, opts={}) {
-    try { const a = new Audio(src); a.volume = opts.volume??0.8; if(opts.loop)a.loop=true;a.play().catch(()=>{}); } catch(e){};
-  }
+/* Daily Reward */
+#dailyReward {
+  width: 90%;
+  max-width: 480px;
+  margin: 12px auto;
+  background: #FFF3B0; 
+  border-radius: 12px;
+  padding: 12px 16px;
+  text-align: center;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: #111;
+  border: 2px solid #FFD700;
+  box-shadow: 0 4px 12px rgba(255,215,0,0.3);
+}
+#dailyReward #dailyPot { display: inline-block; color: #FFA500; font-weight: 800; font-size: 22px; letter-spacing: 1px; margin-left: 6px; }
 
-  /* ---------------- Local State ---------------- */
-  let currentUser=null, currentUserUnsub=null;
-  let gameActive=false, emojiTimer=null, roundTimer=null;
-  let caughtCount=0;
+/* Emoji Blocks */
+.emoji-board { width: 90%; max-width: 480px; margin:20px auto; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+.emoji-block { width:60px; height:60px; background:#FFF3B0; border:2px solid #FFD700; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px; cursor:pointer; transition: transform 0.2s; }
+.emoji-block:hover { transform: scale(1.2); }
 
-  /* ---------------- Helpers ---------------- */
-  const sanitizeEmail = (raw) => String(raw||'').replace(/[.#$[\]]/g,',');
+/* Profile Panel */
+.profile { position: fixed; bottom: var(--profile-bottom, 120px); left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; display: flex; justify-content: center; z-index: 1000; pointer-events: auto; transition: bottom 0.3s ease; }
+.profile-card { background: var(--glass); padding: 10px; border-radius: 10px; border: 1px solid rgba(255,215,0,0.2); display: flex; flex-direction: column; gap: 6px; text-align: center; }
+.profile-name { font-weight: 800; font-size: 14px; color: var(--accent); }
+.profile-info { font-size: 12px; color: #111; }
 
-  function showPopup(text, ms=1800){
-    if(!popupEl) return;
-    popupEl.textContent=text;
-    popupEl.style.display='block';
-    popupEl.style.opacity='1';
-    setTimeout(()=>{
-      popupEl.style.opacity='0';
-      setTimeout(()=>popupEl.style.display='none',300);
-    },ms);
-  }
+/* How To Play Button */
+#howToPlayBtn { display: block; margin: 10px auto; padding: 6px 12px; min-width: 100px; max-width: 140px; font-size: 12px; font-weight: 700; border: none; border-radius: 12px; background: linear-gradient(145deg, #FFF3B0, #FFE680); color: #111; text-shadow: 0 0 4px #FFD700aa; box-shadow: 0 4px 6px rgba(255,215,0,0.3); cursor: pointer; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease; text-align: center; position: relative; z-index: 0; }
+#howToPlayBtn:hover { transform: translateY(-2px); box-shadow: 0 6px 10px rgba(255,215,0,0.5); }
 
-  function updateProfileUI(){
-    if(!currentUser) return;
-    if(profileEl) profileEl.textContent=currentUser.chatId;
-    if(starEl) starEl.textContent=(currentUser.stars||0).toLocaleString();
-    if(cashEl)  cashEl.textContent=`₦${(currentUser.cash||0).toLocaleString()}`;
-  }
+/* Confirmation Modal */
+.confirm-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.3); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
+.confirm-box { background: #FFF9E3; border: 1.5px solid #FFD700; border-radius: 12px; padding: 14px 18px; text-align: center; color: #111; box-shadow: 0 0 10px #FFD70080; font-family: 'Montserrat', sans-serif; font-size: 14px; max-width: 320px; width: 86%; }
+.confirm-box h3 { font-size:16px; margin-bottom:8px; color:#FFA500; }
+.confirm-box p { margin:0; font-size:13px; color:#666; }
+.confirm-actions { display:flex; justify-content:space-around; margin-top:12px; }
+.confirm-actions button { padding:8px 14px; border-radius:7px; border:none; cursor:pointer; font-weight:700; background:linear-gradient(90deg,#FFD700,#FFA500); color:#111; }
+</style>
+</head>
 
-  /* ---------------- Firestore Integration ---------------- */
-  async function loadUser(){
-    try {
-      const stored = JSON.parse(localStorage.getItem('vipUser') || localStorage.getItem('hostUser') || '{}');
-      if(!stored?.email){ currentUser=null; updateProfileUI(); return; }
+<body>
+<div id="appWrapper">
+  <div id="gameHeader">
+    <div id="welcomeText">WELCOME TO</div>
+    <div id="scrambleText">MOJIHUNT</div>
+  </div>
 
-      const uid = sanitizeEmail(stored.email);
-      const userRef = doc(db,'users',uid);
-      const snap = await getDoc(userRef);
-      if(!snap.exists()){
-        currentUser={uid,stars:0,cash:0,isHost:false,chatId:stored.displayName||stored.email.split('@')[0],email:stored.email};
-        updateProfileUI(); return;
-      }
-      currentUser={uid,...snap.data()};
-      if(currentUserUnsub) currentUserUnsub();
-      currentUserUnsub = onSnapshot(userRef,(docSnap)=>{
-        if(!docSnap.exists()) return;
-        currentUser={uid,...docSnap.data()};
-        localStorage.setItem(currentUser.isVIP?'vipUser':'hostUser',JSON.stringify(currentUser));
-        updateProfileUI();
-      });
-    } catch(e){ console.error('loadUser error',e); }
-  }
+  <button id="joinHuntBtn">START HUNT</button>
 
-  async function tryDeductStars(cost){
-    if(!currentUser?.uid) return {ok:false,message:'Not logged in'};
-    const ref = doc(db,'users',currentUser.uid);
-    try {
-      await runTransaction(db, async t=>{
-        const u = await t.get(ref); if(!u.exists()) throw new Error('User not found');
-        const curStars = Number(u.data().stars||0);
-        if(curStars<cost) throw new Error('Not enough stars');
-        t.update(ref,{stars:curStars-cost});
-      });
-      return {ok:true};
-    } catch(e){ return {ok:false,message:e.message||'Deduction failed'}; }
-  }
+  <div id="dailyReward">
+    DAILY REWARD: <span id="dailyPot">$ 0</span>
+  </div>
 
-  async function giveRewards(cash,stars){
-    if(!currentUser?.uid){
-      if(cashEl) cashEl.textContent=String((parseInt(cashEl.textContent.replace(/,/g,''),10)||0)+cash);
-      if(starEl) starEl.textContent=String((parseInt(starEl.textContent.replace(/,/g,''),10)||0)+stars);
-      return;
-    }
-    const ref = doc(db,'users',currentUser.uid);
-    try {
-      await runTransaction(db, async t=>{
-        const u = await t.get(ref); if(!u.exists()) throw new Error('User not found');
-        t.update(ref,{
-          cash: Number(u.data().cash||0)+Number(cash),
-          stars:Number(u.data().stars||0)+Number(stars)
-        });
-      });
-    } catch(e){ console.error('giveRewards error',e); }
-  }
+  <!-- Emoji Blocks -->
+  <div id="emojiBoard" class="emoji-board"></div>
 
-  /* ---------------- MojiHunt Mechanics ---------------- */
-  function spawnEmoji(){
-    if(!arenaEl) return;
-    const emoji = document.createElement('div');
-    emoji.textContent=EMOJIS[Math.floor(Math.random()*EMOJIS.length)];
-    emoji.style.position='absolute';
-    emoji.style.fontSize='28px';
-    emoji.style.cursor='pointer';
-    emoji.style.userSelect='none';
-    emoji.style.top = Math.random()*(arenaEl.clientHeight-40)+'px';
-    emoji.style.left= Math.random()*(arenaEl.clientWidth-40)+'px';
-    arenaEl.appendChild(emoji);
+  <!-- How to Play Modal -->
+  <div id="howToPlayModal" class="confirm-modal">
+    <div class="confirm-box">
+      <h3>How to Play</h3>
+      <div class="how-to-steps">
+        <div>Press <strong>START HUNT</strong> to spawn emojis.</div>
+        <div>Click on emojis to collect them!</div>
+        <div>Watch your stars & coins grow!</div>
+      </div>
+      <div class="confirm-actions">
+        <button id="closeHowTo">Got it!</button>
+      </div>
+    </div>
+  </div>
 
-    emoji.addEventListener('click', async ()=>{
-      if(!gameActive) return;
-      arenaEl.removeChild(emoji);
-      caughtCount++;
-      playAudio(SOUND_PATHS.ding);
-      showPopup(`+${EMOJI_CASH}₦ & +${EMOJI_REWARD}⭐`,1500);
-      await giveRewards(EMOJI_CASH,EMOJI_REWARD);
-    });
+  <!-- Confirmation Modal -->
+  <div id="confirmModal" class="confirm-modal">
+    <div class="confirm-box">
+      <h3>Ready to Hunt?</h3>
+      <p id="confirmText">Do you want to start MojiHunt?</p>
+      <div class="confirm-actions">
+        <button id="confirmYes">Yes</button>
+        <button id="confirmNo">No</button>
+      </div>
+    </div>
+  </div>
 
-    setTimeout(()=>{ if(arenaEl.contains(emoji)) arenaEl.removeChild(emoji); },1000+Math.random()*2000);
-  }
+  <!-- Profile Panel -->
+  <div class="profile" id="profilePanel">
+    <div class="profile-card">
+      <div class="profile-name" id="profileName">HUNTER 0001</div>
+      <div class="profile-info">STARS COLLECTED: <span id="starCount">0</span>⭐</div>
+      <div class="profile-info">COINS EARNED: <span id="coinCount">0</span></div>
+    </div>
+  </div>
+</div>
 
-  function startRound(){
-    if(gameActive) return;
-    gameActive=true;
-    caughtCount=0;
-    playAudio(SOUND_PATHS.start,true);
-    emojiTimer=setInterval(spawnEmoji,EMOJI_INTERVAL);
-    roundTimer=setTimeout(endRound,ROUND_DURATION);
-  }
-
-  function endRound(){
-    gameActive=false;
-    clearInterval(emojiTimer);
-    clearTimeout(roundTimer);
-    showPopup(`🏁 Round over! You caught ${caughtCount} emojis.`,3000);
-    playAudio(SOUND_PATHS.ding);
-  }
-
-  /* ---------------- Join Flow ---------------- */
-  joinBtn?.addEventListener('click',()=>{
-    if(confirmModal) confirmModal.style.display='flex';
-  });
-  confirmYes?.addEventListener('click', async ()=>{
-    if(confirmModal) confirmModal.style.display='none';
-    if(!currentUser) { showPopup('Not logged in'); playAudio(SOUND_PATHS.error); return; }
-    if((currentUser.stars||0)<STAR_COST){ showPopup('Not enough stars'); playAudio(SOUND_PATHS.error); return; }
-    const deduct = await tryDeductStars(STAR_COST);
-    if(!deduct.ok){ showPopup(deduct.message); playAudio(SOUND_PATHS.error); return; }
-    updateProfileUI(); // deduct stars
-    startRound();
-  });
-  confirmNo?.addEventListener('click',()=>{if(confirmModal) confirmModal.style.display='none';});
-
-  /* ---------------- Init ---------------- */
-  loadUser().catch(e=>console.error(e));
-});
+<script type="module" src="mojihunt.js"></script>
+</body>
+</html>
