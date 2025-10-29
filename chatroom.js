@@ -412,9 +412,7 @@ async function promptForChatID(userRef, userData) {
     };
   });
 }
-/* ===============================
-   🔐 VIP Login (Whitelist Check)
-================================= */
+
 /* ===============================
    🔐 VIP Login (Whitelist Check)
 ================================= */
@@ -745,24 +743,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
   loginBtn?.addEventListener("click", handleLogin);
 
-  /* ----------------------------
-     🔁 Auto Login Session
-  ----------------------------- */
- async function autoLogin() {
-  const vipUser = JSON.parse(localStorage.getItem("vipUser"));
-  if (vipUser?.email && vipUser?.phone) {
-    showLoadingBar(1000);
-    await sleep(60);
-    const success = await loginWhitelist(vipUser.email, vipUser.phone);
-    if (!success) return;
-    await sleep(400);
-    updateRedeemLink();
-    updateTipLink();
-  }
-}
-
-// Call on page load
-autoLogin();
 
   /* ----------------------------
      💬 Send Message Handler
