@@ -415,8 +415,6 @@ async function promptForChatID(userRef, userData) {
 /* ===============================
    🔐 VIP Login (Whitelist Check)
 ================================= */
-import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
 async function loginWhitelist(email, phone) {
   const loader = document.getElementById("postLoginLoader");
   try {
@@ -443,13 +441,6 @@ async function loginWhitelist(email, phone) {
     }
 
     const data = userSnap.data() || {};
-
-    // 🔐 Sign in with Firebase Auth for session persistence
-    try {
-      await signInWithEmailAndPassword(auth, email, "temporaryFallbackPassword123!");
-    } catch (err) {
-      console.warn("User might not exist in Firebase Auth yet:", err.message);
-    }
 
     // 🧍 Set current user details
     currentUser = { ...data, uid: uidKey };
