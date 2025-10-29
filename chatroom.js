@@ -881,7 +881,7 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 /* =====================================
- 🎥 Video Navigation & UI Fade Logic with Hint
+ 🎥 Video Navigation & UI Fade Logic
 ======================================= */
 (() => {
   const videoPlayer = document.getElementById("videoPlayer");
@@ -892,38 +892,14 @@ window.addEventListener("DOMContentLoaded", () => {
 
   if (!videoPlayer || navButtons.length === 0) return;
 
-  // 🎞️ Video list
+  // 🎞️ Video list (Shopify-hosted links)
   const videos = [
-    "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4"
-    // Add more Shopify video links here
+    "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4",
+    "https://cdn.shopify.com/videos/c/o/v/another-video-link.mp4",
+    "https://cdn.shopify.com/videos/c/o/v/yet-another-video.mp4"
   ];
   let currentVideo = 0;
   let hideTimeout = null;
-
-  // ---------- Create video hint overlay ----------
-  let hint = container.querySelector(".video-hint");
-  if (!hint) {
-    hint = document.createElement("div");
-    hint.className = "video-hint";
-    hint.style.position = "absolute";
-    hint.style.top = "10px";
-    hint.style.right = "10px";
-    hint.style.padding = "6px 12px";
-    hint.style.background = "rgba(0,0,0,0.6)";
-    hint.style.color = "#fff";
-    hint.style.borderRadius = "4px";
-    hint.style.fontSize = "14px";
-    hint.style.opacity = "0";
-    hint.style.transition = "opacity 0.5s";
-    container.appendChild(hint);
-  }
-
-  const showHint = (msg, timeout = 1400) => {
-    hint.textContent = msg;
-    hint.style.opacity = "1";
-    clearTimeout(hint._t);
-    hint._t = setTimeout(() => (hint.style.opacity = "0"), timeout);
-  };
 
   /* ----------------------------
      ▶️ Load & Play Video
@@ -940,12 +916,11 @@ window.addEventListener("DOMContentLoaded", () => {
   };
 
   /* ----------------------------
-     🔊 Toggle Mute on Tap + Hint
+     🔊 Toggle Mute on Tap
   ----------------------------- */
   videoPlayer.addEventListener("click", () => {
     videoPlayer.muted = !videoPlayer.muted;
     const state = videoPlayer.muted ? "🔇" : "🔊";
-    showHint(`Video sound: ${state}`);
     showStarPopup?.(`Video sound: ${state}`);
   });
 
@@ -988,6 +963,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // Start with first video
   loadVideo(0);
+})();
 
   // ---------- Show initial hint ----------
   showHint("Tap to unmute", 1500);
