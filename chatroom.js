@@ -884,12 +884,13 @@ window.addEventListener("DOMContentLoaded", () => {
  🎥 Shopify Video Player with Hints, Memory & Autoplay
 ======================================= */
 (() => {
-  const container = document.querySelector(".video-container");
-  if (!container) return;
-
+  const videoPlayer = document.getElementById("videoPlayer");
   const prevBtn = document.getElementById("prev");
   const nextBtn = document.getElementById("next");
+  const container = document.querySelector(".video-container");
   const navButtons = [prevBtn, nextBtn].filter(Boolean);
+
+  if (!videoPlayer || navButtons.length === 0) return;
 
   // 🎞️ Video list
   const videos = [
@@ -897,90 +898,65 @@ window.addEventListener("DOMContentLoaded", () => {
     // Add more Shopify video links here
   ];
 
+  // Remember last video/time
   let currentVideo = parseInt(localStorage.getItem("lastVideoIndex") || "0", 10);
   if (currentVideo < 0 || currentVideo >= videos.length) currentVideo = 0;
+  const lastTime = parseFloat(localStorage.getItem("lastVideoTime") || "0");
 
+  // Create video hint overlay (once)
+  let hint = container.querySelector(".video-hint");
+  if (!hint) {
+    hint = document.createElement("div");
+    hint.className = "video-hint";
+    container.appendChild(hint);
+  }
+
+  function showHint(msg, timeout = 1400) {
+    hint.textContent = msg;
+    hint.classList.add("show");
+    clearTimeout(hint._t);
+    hint._t = setTimeout(() => hint.classList.remove("show"), timeout);
+  }
+
+  // Load and play video
   const loadVideo = (index, resumeTime = 0) => {
     if (index < 0) index = videos.length - 1;
     if (index >= videos.length) index = 0;
     currentVideo = index;
 
-    container.innerHTML = "";
-    container.style.position = "relative";
-    container.style.touchAction = "manipulation";
+    videoPlayer.src = videos[currentVideo];
+    videoPlayer.muted = true;
+    videoPlayer.autoplay = true;
+    videoPlayer.loop = true;
+    videoPlayer.playsInline = true;
+    videoPlayer.preload = "auto";
 
-    // Shimmer loader
-    const shimmer = document.createElement("div");
-    shimmer.className = "video-shimmer";
-    container.appendChild(shimmer);
+    videoPlayer.play().then(() => {
+      if (resumeTime > 0) videoPlayer.currentTime = resumeTime;
+    }).catch(() => console.warn("Autoplay may be blocked by browser"));
 
-    // Video element
-    const videoEl = document.createElement("video");
-    Object.assign(videoEl, {
-      src: videos[currentVideo],
-      autoplay: true,
-      muted: true,
-      loop: true,
-      playsInline: true,
-      preload: "auto",
-      style: "width:100%;height:100%;object-fit:cover;border-radius:8px;display:none;cursor:pointer;"
-    });
-    videoEl.setAttribute("webkit-playsinline", "true");
-    container.appendChild(videoEl);
-
-    // Hint overlay
-    const hint = document.createElement("div");
-    hint.className = "video-hint";
-    container.appendChild(hint);
-
-    function showHint(msg, timeout = 1400) {
-      hint.textContent = msg;
-      hint.classList.add("show");
-      clearTimeout(hint._t);
-      hint._t = setTimeout(() => hint.classList.remove("show"), timeout);
-    }
-
-    let lastTap = 0;
-    function onTapEvent() {
-      const now = Date.now();
-      if (now - lastTap < 300) {
-        document.fullscreenElement ? document.exitFullscreen?.() : videoEl.requestFullscreen?.();
-      } else {
-        videoEl.muted = !videoEl.muted;
-        showHint(videoEl.muted ? "Tap to unmute" : "Sound on", 1200);
-      }
-      lastTap = now;
-    }
-
-    videoEl.addEventListener("click", onTapEvent);
-    videoEl.addEventListener("touchend", (ev) => {
-      if (ev.changedTouches.length < 2) {
-        ev.preventDefault?.();
-        onTapEvent();
-      }
-    }, { passive: false });
-
-    // Show video as soon as it can play
-    videoEl.addEventListener("canplay", () => {
-      shimmer.style.display = "none";
-      videoEl.style.display = "block";
-      if (resumeTime > 0) videoEl.currentTime = resumeTime;
-      showHint("Tap to unmute", 1400);
-      videoEl.play().catch(() => {});
-    });
-
-    // Save playback position periodically
-    setInterval(() => {
-      localStorage.setItem("lastVideoTime", videoEl.currentTime);
-      localStorage.setItem("lastVideoIndex", currentVideo);
-    }, 1000);
+    // Save last video index
+    localStorage.setItem("lastVideoIndex", currentVideo);
   };
 
-  // ⏪⏩ Navigation Buttons
+  // Click to toggle mute + hint
+  let lastTap = 0;
+  videoPlayer.addEventListener("click", () => {
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      document.fullscreenElement ? document.exitFullscreen?.() : videoPlayer.requestFullscreen?.();
+    } else {
+      videoPlayer.muted = !videoPlayer.muted;
+      showHint(videoPlayer.muted ? "Tap to unmute" : "Sound on", 1200);
+    }
+    lastTap = now;
+  });
+
+  // ⏪⏩ Navigation buttons
   prevBtn?.addEventListener("click", () => loadVideo(currentVideo - 1));
   nextBtn?.addEventListener("click", () => loadVideo(currentVideo + 1));
 
-  // Auto-hide nav buttons
+  // Auto-hide buttons
   const showButtons = () => {
     navButtons.forEach(btn => {
       btn.style.opacity = "1";
@@ -994,6 +970,29 @@ window.addEventListener("DOMContentLoaded", () => {
       });
     }, 3000);
   };
+
+  navButtons.forEach(btn => {
+    btn.style.transition = "opacity 0.6s ease";
+    btn.style.opacity = "0";
+    btn.style.pointerEvents = "none";
+  });
+
+  ["mouseenter", "mousemove", "click"].forEach(evt => container.addEventListener(evt, showButtons));
+  container.addEventListener("mouseleave", () => {
+    navButtons.forEach(btn => {
+      btn.style.opacity = "0";
+      btn.style.pointerEvents = "none";
+    });
+  });
+
+  // Save playback position every second
+  setInterval(() => {
+    localStorage.setItem("lastVideoTime", videoPlayer.currentTime);
+  }, 1000);
+
+  // Start with last remembered video/time
+  loadVideo(currentVideo, lastTime);
+})();
 
   navButtons.forEach(btn => {
     btn.style.transition = "opacity 0.6s ease";
