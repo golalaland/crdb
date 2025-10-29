@@ -1184,7 +1184,9 @@ async function loadHost(idx) {
   });
 
   /* ---------- Host Info ---------- */
-  usernameEl.textContent = host.chatId || "Unknown Host";
+  usernameEl.textContent = (host.chatId || "Unknown Host")
+  .toLowerCase()
+  .replace(/\b\w/g, char => char.toUpperCase());
   const gender = (host.gender || "person").toLowerCase();
   const pronoun = gender === "male" ? "his" : "her";
   const ageGroup = !host.age ? "20s" : host.age >= 30 ? "30s" : "20s";
