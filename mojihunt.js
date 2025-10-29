@@ -1,22 +1,8 @@
-// ------------------- MojiHunt + Firebase -------------------
+// mojihunt.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  onSnapshot,
-  runTransaction
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, getDoc, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', () => {
-
-  /* ---------------- Config ---------------- */
-  const EMOJI_REWARD   = 40;    // stars per emoji
-  const EMOJI_CASH     = 1000;  // ₦ per emoji
-  const STAR_COST      = 10;    // cost to join game
-  const ROUND_DURATION = 30_000;
-  const EMOJI_INTERVAL = 1000;
-  const EMOJIS = ["🎉","🪄","💎","✨","🔥","🧸","🍀","🌟","🎁","🤑"];
 
   /* ---------------- Firebase ---------------- */
   const firebaseConfig = {
@@ -32,181 +18,177 @@ document.addEventListener('DOMContentLoaded', () => {
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  /* ---------------- UI References ---------------- */
-  const joinBtn     = document.getElementById('joinTrainBtn');
-  const confirmModal= document.getElementById('confirmModal');
-  const confirmYes  = document.getElementById('confirmYes');
-  const confirmNo   = document.getElementById('confirmNo');
-  const popupEl     = document.getElementById('popup');
-  const profileEl   = document.getElementById('profileName') || document.getElementById('username');
-  const starEl      = document.getElementById('starCount') || document.getElementById('stars-count');
-  const cashEl      = document.getElementById('cashCount') || document.getElementById('cash-count');
-  const arenaEl     = document.getElementById('problemBoard');
+  /* ---------------- UI Refs ---------------- */
+  const joinBtn       = document.getElementById('joinHuntBtn');
+  const confirmModal  = document.getElementById('confirmModal');
+  const confirmYes    = document.getElementById('confirmYes');
+  const confirmNo     = document.getElementById('confirmNo');
+  const emojiBoard    = document.getElementById('emojiBoard');
+  const profileNameEl = document.getElementById('profileName');
+  const starEl        = document.getElementById('starCount');
+  const coinEl        = document.getElementById('coinCount');
+  const dailyPotEl    = document.getElementById('dailyPot');
 
-  /* ---------------- Sounds ---------------- */
-  const SOUND_PATHS = {
-    ding: './sounds/cha_ching.mp3',
-    error: './sounds/error_bell.mp3',
-    start: './sounds/train_start.mp3'
-  };
-  const playAudio = (src, opts={}) => {
-    try {
-      const a = new Audio(src);
-      a.volume = opts.volume ?? 0.8;
-      if(opts.loop) a.loop = true;
-      a.play().catch(()=>{});
-    } catch(e){}
-  };
-
-  /* ---------------- State ---------------- */
-  let currentUser=null;
-  let currentUserUnsub=null;
-  let gameActive=false, emojiTimer=null, roundTimer=null;
-  let caughtCount=0;
+  /* ---------------- Game Config ---------------- */
+  const EMOJIS        = ["🎉","🪄","💎","✨","🔥","🧸","🍀","🌟","🎁","🤑"];
+  const STAR_COST     = 10;       // cost to join
+  const EMOJI_REWARD  = 40;       // stars per emoji
+  const EMOJI_COIN    = 1000;     // coins per emoji
+  const ROUND_DURATION= 20000;    // 20s per round
+  const EMOJI_INTERVAL= 800;      // spawn emoji every 0.8s
+  let gameActive      = false;
+  let emojiTimer      = null;
+  let roundTimer      = null;
+  let caughtCount     = 0;
+  let dailyPot        = 0;
+  let currentUser     = null;
+  let userUnsub       = null;
 
   /* ---------------- Helpers ---------------- */
-  const sanitizeEmail = (email) => String(email||'').replace(/[.#$[\]]/g,',');
+  const sanitizeEmail = e => String(e||'').replace(/[.#$[\]]/g,',');
 
-  function showPopup(text, ms=1800){
-    if(!popupEl) return;
+  function showPopup(text, ms=1500){
+    const popupEl = document.createElement('div');
     popupEl.textContent = text;
-    popupEl.style.display = 'block';
-    popupEl.style.opacity = '1';
-    setTimeout(() => {
-      popupEl.style.opacity = '0';
-      setTimeout(() => popupEl.style.display='none', 300);
-    }, ms);
+    popupEl.style.position = 'fixed';
+    popupEl.style.top = '10%';
+    popupEl.style.left = '50%';
+    popupEl.style.transform = 'translateX(-50%)';
+    popupEl.style.background = '#FFD700';
+    popupEl.style.padding = '10px 18px';
+    popupEl.style.borderRadius = '8px';
+    popupEl.style.fontWeight = '700';
+    popupEl.style.zIndex = '9999';
+    document.body.appendChild(popupEl);
+    setTimeout(() => popupEl.remove(), ms);
   }
 
   function updateProfileUI(){
     if(!currentUser) return;
-    if(profileEl) profileEl.textContent = currentUser.chatId;
-    if(starEl) starEl.textContent = (currentUser.stars||0).toLocaleString();
-    if(cashEl) cashEl.textContent = `₦${(currentUser.cash||0).toLocaleString()}`;
+    profileNameEl.textContent = currentUser.chatId || "HUNTER";
+    starEl.textContent = currentUser.stars?.toLocaleString() || "0";
+    coinEl.textContent = currentUser.coins?.toLocaleString() || "0";
   }
 
-  /* ---------------- Firebase User ---------------- */
+  /* ---------------- Load User ---------------- */
   async function loadUser(){
     try {
       const stored = JSON.parse(localStorage.getItem('vipUser') || localStorage.getItem('hostUser') || '{}');
       if(!stored?.email){ currentUser=null; updateProfileUI(); return; }
-
       const uid = sanitizeEmail(stored.email);
       const userRef = doc(db,'users',uid);
-      const snap = await getDoc(userRef);
 
+      const snap = await getDoc(userRef);
       if(!snap.exists()){
         currentUser = {
           uid,
-          stars:0,
-          cash:0,
-          isHost:false,
+          stars: 50,
+          coins: 0,
           chatId: stored.displayName || stored.email.split('@')[0],
           email: stored.email
         };
-        updateProfileUI();
-        return;
-      }
+        await runTransaction(db, async t=>{
+          t.set(userRef,currentUser);
+        });
+      } else currentUser = {uid, ...snap.data()};
 
-      currentUser = {uid, ...snap.data()};
-
-      if(currentUserUnsub) currentUserUnsub();
-      currentUserUnsub = onSnapshot(userRef, (docSnap)=>{
+      if(userUnsub) userUnsub();
+      userUnsub = onSnapshot(userRef, docSnap => {
         if(!docSnap.exists()) return;
         currentUser = {uid, ...docSnap.data()};
-        localStorage.setItem(currentUser.isVIP?'vipUser':'hostUser', JSON.stringify(currentUser));
         updateProfileUI();
       });
+
     } catch(e){ console.error('loadUser error',e); }
   }
 
+  /* ---------------- Deduct Stars ---------------- */
   async function tryDeductStars(cost){
     if(!currentUser?.uid) return {ok:false,message:'Not logged in'};
     const ref = doc(db,'users',currentUser.uid);
-    try {
+    try{
       await runTransaction(db, async t=>{
-        const u = await t.get(ref); if(!u.exists()) throw new Error('User not found');
+        const u = await t.get(ref);
+        if(!u.exists()) throw new Error('User not found');
         const curStars = Number(u.data().stars||0);
         if(curStars < cost) throw new Error('Not enough stars');
-        t.update(ref, {stars: curStars - cost});
+        t.update(ref,{stars: curStars - cost});
       });
       return {ok:true};
-    } catch(e){ return {ok:false, message:e.message || 'Deduction failed'}; }
+    } catch(e){ return {ok:false,message:e.message||'Deduction failed'}; }
   }
 
-  async function giveRewards(cash, stars){
-    if(!currentUser?.uid){
-      if(cashEl) cashEl.textContent = String((parseInt(cashEl.textContent.replace(/,/g,''),10)||0) + cash);
-      if(starEl) starEl.textContent = String((parseInt(starEl.textContent.replace(/,/g,''),10)||0) + stars);
-      return;
-    }
+  /* ---------------- Give Rewards ---------------- */
+  async function giveRewards(stars, coins){
+    if(!currentUser?.uid) return;
     const ref = doc(db,'users',currentUser.uid);
-    try {
+    try{
       await runTransaction(db, async t=>{
-        const u = await t.get(ref); if(!u.exists()) throw new Error('User not found');
+        const u = await t.get(ref);
+        if(!u.exists()) throw new Error('User not found');
         t.update(ref,{
-          cash: Number(u.data().cash||0) + cash,
-          stars: Number(u.data().stars||0) + stars
+          stars: Number(u.data().stars||0)+stars,
+          coins: Number(u.data().coins||0)+coins
         });
       });
+      dailyPot += coins;
+      dailyPotEl.textContent = `$ ${dailyPot.toLocaleString()}`;
     } catch(e){ console.error('giveRewards error',e); }
   }
 
-  /* ---------------- MojiHunt Mechanics ---------------- */
+  /* ---------------- Emoji Mechanics ---------------- */
   function spawnEmoji(){
-    if(!arenaEl) return;
-    const emoji = document.createElement('div');
-    emoji.textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
-    emoji.style.position='absolute';
-    emoji.style.fontSize='28px';
-    emoji.style.cursor='pointer';
-    emoji.style.userSelect='none';
-    emoji.style.top = Math.random()*(arenaEl.clientHeight-40)+'px';
-    emoji.style.left = Math.random()*(arenaEl.clientWidth-40)+'px';
-    arenaEl.appendChild(emoji);
+    const emojiEl = document.createElement('div');
+    emojiEl.textContent = EMOJIS[Math.floor(Math.random()*EMOJIS.length)];
+    emojiEl.className = 'emoji-block';
+    emojiEl.style.position = 'absolute';
+    emojiEl.style.top = Math.random() * (emojiBoard.clientHeight-50) + 'px';
+    emojiEl.style.left = Math.random() * (emojiBoard.clientWidth-50) + 'px';
+    emojiBoard.appendChild(emojiEl);
 
-    emoji.addEventListener('click', async ()=>{
+    emojiEl.addEventListener('click', ()=>{
       if(!gameActive) return;
-      arenaEl.removeChild(emoji);
+      emojiBoard.removeChild(emojiEl);
       caughtCount++;
-      playAudio(SOUND_PATHS.ding);
-      showPopup(`+${EMOJI_CASH}₦ & +${EMOJI_REWARD}⭐`, 1500);
-      await giveRewards(EMOJI_CASH, EMOJI_REWARD);
+      giveRewards(EMOJI_REWARD, EMOJI_COIN);
+      showPopup(`+${EMOJI_COIN}₦ & +${EMOJI_REWARD}⭐`,1200);
     });
 
-    setTimeout(()=>{ if(arenaEl.contains(emoji)) arenaEl.removeChild(emoji); }, 1000 + Math.random()*2000);
+    setTimeout(()=> {
+      if(emojiBoard.contains(emojiEl)) emojiBoard.removeChild(emojiEl);
+    }, 1500 + Math.random()*1500);
   }
 
   function startRound(){
     if(gameActive) return;
     gameActive = true;
     caughtCount = 0;
-    playAudio(SOUND_PATHS.start,true);
     emojiTimer = setInterval(spawnEmoji, EMOJI_INTERVAL);
     roundTimer = setTimeout(endRound, ROUND_DURATION);
+    joinBtn.disabled = true;
+    showPopup("🟢 MojiHunt Started!");
   }
 
   function endRound(){
     gameActive = false;
     clearInterval(emojiTimer);
     clearTimeout(roundTimer);
-    showPopup(`🏁 Round over! You caught ${caughtCount} emojis.`, 3000);
-    playAudio(SOUND_PATHS.ding);
+    joinBtn.disabled = false;
+    showPopup(`🏁 Round over! You caught ${caughtCount} emojis.`,2500);
   }
 
   /* ---------------- Join Flow ---------------- */
-  joinBtn?.addEventListener('click', ()=>{ if(confirmModal) confirmModal.style.display='flex'; });
-  confirmYes?.addEventListener('click', async ()=>{
-    if(confirmModal) confirmModal.style.display='none';
-    if(!currentUser){ showPopup('Not logged in'); playAudio(SOUND_PATHS.error); return; }
-    if((currentUser.stars||0) < STAR_COST){ showPopup('Not enough stars'); playAudio(SOUND_PATHS.error); return; }
+  joinBtn.addEventListener('click', ()=> confirmModal.style.display='flex');
+  confirmYes.addEventListener('click', async ()=>{
+    confirmModal.style.display='none';
+    if(!currentUser) { showPopup("❌ Not logged in!"); return; }
     const deduct = await tryDeductStars(STAR_COST);
-    if(!deduct.ok){ showPopup(deduct.message); playAudio(SOUND_PATHS.error); return; }
-    updateProfileUI();
+    if(!deduct.ok){ showPopup(`❌ ${deduct.message}`); return; }
     startRound();
   });
-  confirmNo?.addEventListener('click', ()=>{ if(confirmModal) confirmModal.style.display='none'; });
+  confirmNo.addEventListener('click', ()=> confirmModal.style.display='none');
 
   /* ---------------- Init ---------------- */
-  loadUser().catch(console.error);
+  loadUser().catch(e=>console.error(e));
+
 });
