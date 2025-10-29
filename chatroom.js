@@ -731,18 +731,31 @@ window.addEventListener("DOMContentLoaded", () => {
   /* ----------------------------
      🔁 Auto Login Session
   ----------------------------- */
+  async function autoLogin() {
   const vipUser = JSON.parse(localStorage.getItem("vipUser"));
-  if (vipUser?.email && vipUser?.phone) {
-    (async () => {
-      showLoadingBar(1000);
-      await sleep(60);
-      const success = await loginWhitelist(vipUser.email, vipUser.phone);
-      if (!success) return;
-      await sleep(400);
-      updateRedeemLink();
-      updateTipLink();
-    })();
+
+  // If Firebase already has an auth user, use it
+  if (auth.currentUser) {
+    console.log("✅ Already logged in via Firebase Auth");
+    currentUser = auth.currentUser;
+    await postLoginSetup(currentUser.uid);
+    return;
   }
+
+  // Otherwise fallback to whitelist login
+  if (vipUser?.email && vipUser?.phone) {
+    showLoadingBar(1000);
+    await sleep(60);
+    const success = await loginWhitelist(vipUser.email, vipUser.phone);
+    if (!success) return;
+    await sleep(400);
+    updateRedeemLink();
+    updateTipLink();
+  }
+}
+
+// Call this on page load
+autoLogin();
 
   /* ----------------------------
      💬 Send Message Handler
