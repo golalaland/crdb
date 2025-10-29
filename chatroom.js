@@ -879,8 +879,9 @@ window.addEventListener("DOMContentLoaded", () => {
   };
   const sleep = ms => new Promise(res => setTimeout(res, ms));
 });
+
 /* =====================================
- 🎥 Video Navigation & UI Fade Logic
+ 🎥 Shopify Video Player with Memory & Autoplay
 ======================================= */
 (() => {
   const videoPlayer = document.getElementById("videoPlayer");
@@ -891,18 +892,19 @@ window.addEventListener("DOMContentLoaded", () => {
 
   if (!videoPlayer || navButtons.length === 0) return;
 
-  // 🎞️ Video list (replace/add Shopify-hosted videos here)
+  // 🎞️ Video list (Shopify videos)
   const videos = [
     "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4"
-    // Add more Shopify video links here as needed
+    // Add more Shopify video links here
   ];
-  let currentVideo = 0;
+
+  // Load last video & time from localStorage if available
+  let lastIndex = parseInt(localStorage.getItem("lastVideoIndex") || "0", 10);
+  if (lastIndex < 0 || lastIndex >= videos.length) lastIndex = 0;
+  let currentVideo = lastIndex;
   let hideTimeout = null;
 
-  /* ----------------------------
-     ▶️ Load & Play Video
-  ----------------------------- */
-  const loadVideo = (index) => {
+  const loadVideo = (index, resumeTime = 0) => {
     if (index < 0) index = videos.length - 1;
     if (index >= videos.length) index = 0;
 
@@ -910,27 +912,28 @@ window.addEventListener("DOMContentLoaded", () => {
     videoPlayer.src = videos[currentVideo];
     videoPlayer.muted = true;
 
-    videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
+    videoPlayer.play().then(() => {
+      if (resumeTime > 0) {
+        videoPlayer.currentTime = resumeTime;
+      }
+    }).catch(() => console.warn("Autoplay may be blocked by browser"));
+
+    // Save last played video index
+    localStorage.setItem("lastVideoIndex", currentVideo);
   };
 
-  /* ----------------------------
-     🔊 Toggle Mute on Tap
-  ----------------------------- */
+  // 🔊 Toggle mute on click
   videoPlayer.addEventListener("click", () => {
     videoPlayer.muted = !videoPlayer.muted;
     const state = videoPlayer.muted ? "🔇" : "🔊";
     showStarPopup?.(`Video sound: ${state}`);
   });
 
-  /* ----------------------------
-     ⏪⏩ Navigation Buttons
-  ----------------------------- */
+  // ⏪⏩ Navigation Buttons
   prevBtn?.addEventListener("click", () => loadVideo(currentVideo - 1));
   nextBtn?.addEventListener("click", () => loadVideo(currentVideo + 1));
 
-  /* ----------------------------
-     👀 Auto Hide/Show Buttons
-  ----------------------------- */
+  // 👀 Auto hide/show buttons
   const showButtons = () => {
     navButtons.forEach(btn => {
       btn.style.opacity = "1";
@@ -959,8 +962,14 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Start with first video
-  loadVideo(0);
+  // 🕒 Save playback position periodically
+  setInterval(() => {
+    localStorage.setItem("lastVideoTime", videoPlayer.currentTime);
+  }, 1000);
+
+  // Start video with resume position if available
+  const lastTime = parseFloat(localStorage.getItem("lastVideoTime") || "0");
+  loadVideo(currentVideo, lastTime);
 })();
 
 // URL of your custom star SVG
