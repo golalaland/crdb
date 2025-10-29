@@ -881,30 +881,26 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 /* =====================================
- 🎥 Shopify Video Player with Hints, Memory & Autoplay
+ 🎥 Video Navigation & UI Fade Logic with Hint
 ======================================= */
 (() => {
   const videoPlayer = document.getElementById("videoPlayer");
   const prevBtn = document.getElementById("prev");
   const nextBtn = document.getElementById("next");
   const container = document.querySelector(".video-container");
-
-  if (!videoPlayer || !container) return;
-
   const navButtons = [prevBtn, nextBtn].filter(Boolean);
 
-  // Video list
+  if (!videoPlayer || navButtons.length === 0) return;
+
+  // 🎞️ Video list
   const videos = [
     "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4"
-    // add more URLs here
+    // Add more Shopify video links here
   ];
+  let currentVideo = 0;
+  let hideTimeout = null;
 
-  // Last played video/time
-  let currentVideo = parseInt(localStorage.getItem("lastVideoIndex") || "0", 10);
-  if (currentVideo < 0 || currentVideo >= videos.length) currentVideo = 0;
-  const lastTime = parseFloat(localStorage.getItem("lastVideoTime") || "0");
-
-  // Hint overlay
+  // ---------- Create video hint overlay ----------
   let hint = container.querySelector(".video-hint");
   if (!hint) {
     hint = document.createElement("div");
@@ -929,51 +925,72 @@ window.addEventListener("DOMContentLoaded", () => {
     hint._t = setTimeout(() => (hint.style.opacity = "0"), timeout);
   };
 
-  const loadVideo = (index, resumeTime = 0) => {
+  /* ----------------------------
+     ▶️ Load & Play Video
+  ----------------------------- */
+  const loadVideo = (index) => {
     if (index < 0) index = videos.length - 1;
     if (index >= videos.length) index = 0;
-    currentVideo = index;
 
+    currentVideo = index;
     videoPlayer.src = videos[currentVideo];
     videoPlayer.muted = true;
-    videoPlayer.loop = true;
-    videoPlayer.playsInline = true;
-    videoPlayer.autoplay = true;
-    videoPlayer.preload = "auto";
 
-    videoPlayer.currentTime = resumeTime;
-
-    videoPlayer.play().catch(() => console.warn("Autoplay blocked"));
-
-    localStorage.setItem("lastVideoIndex", currentVideo);
+    videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
   };
 
-  // Toggle mute on tap
-  let lastTap = 0;
+  /* ----------------------------
+     🔊 Toggle Mute on Tap + Hint
+  ----------------------------- */
   videoPlayer.addEventListener("click", () => {
-    const now = Date.now();
-    if (now - lastTap < 300) {
-      document.fullscreenElement
-        ? document.exitFullscreen?.()
-        : videoPlayer.requestFullscreen?.();
-    } else {
-      videoPlayer.muted = !videoPlayer.muted;
-      showHint(videoPlayer.muted ? "Tap to unmute" : "Sound on");
-    }
-    lastTap = now;
+    videoPlayer.muted = !videoPlayer.muted;
+    const state = videoPlayer.muted ? "🔇" : "🔊";
+    showHint(`Video sound: ${state}`);
+    showStarPopup?.(`Video sound: ${state}`);
   });
 
-  // Navigation buttons
+  /* ----------------------------
+     ⏪⏩ Navigation Buttons
+  ----------------------------- */
   prevBtn?.addEventListener("click", () => loadVideo(currentVideo - 1));
   nextBtn?.addEventListener("click", () => loadVideo(currentVideo + 1));
 
-  // Save playback position
-  setInterval(() => {
-    localStorage.setItem("lastVideoTime", videoPlayer.currentTime);
-  }, 1000);
+  /* ----------------------------
+     👀 Auto Hide/Show Buttons
+  ----------------------------- */
+  const showButtons = () => {
+    navButtons.forEach(btn => {
+      btn.style.opacity = "1";
+      btn.style.pointerEvents = "auto";
+    });
+    clearTimeout(hideTimeout);
+    hideTimeout = setTimeout(() => {
+      navButtons.forEach(btn => {
+        btn.style.opacity = "0";
+        btn.style.pointerEvents = "none";
+      });
+    }, 3000);
+  };
 
-  // Start video
-  loadVideo(currentVideo, lastTime);
+  navButtons.forEach(btn => {
+    btn.style.transition = "opacity 0.6s ease";
+    btn.style.opacity = "0";
+    btn.style.pointerEvents = "none";
+  });
+
+  ["mouseenter", "mousemove", "click"].forEach(evt => container?.addEventListener(evt, showButtons));
+  container?.addEventListener("mouseleave", () => {
+    navButtons.forEach(btn => {
+      btn.style.opacity = "0";
+      btn.style.pointerEvents = "none";
+    });
+  });
+
+  // Start with first video
+  loadVideo(0);
+
+  // ---------- Show initial hint ----------
+  showHint("Tap to unmute", 1500);
 })();
 
 // URL of your custom star SVG
