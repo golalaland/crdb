@@ -888,37 +888,47 @@ window.addEventListener("DOMContentLoaded", () => {
   const prevBtn = document.getElementById("prev");
   const nextBtn = document.getElementById("next");
   const container = document.querySelector(".video-container");
+
+  if (!videoPlayer || !container) return;
+
   const navButtons = [prevBtn, nextBtn].filter(Boolean);
 
-  if (!videoPlayer || navButtons.length === 0) return;
-
-  // 🎞️ Video list
+  // Video list
   const videos = [
     "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4"
-    // Add more Shopify video links here
+    // add more URLs here
   ];
 
-  // Remember last video/time
+  // Last played video/time
   let currentVideo = parseInt(localStorage.getItem("lastVideoIndex") || "0", 10);
   if (currentVideo < 0 || currentVideo >= videos.length) currentVideo = 0;
   const lastTime = parseFloat(localStorage.getItem("lastVideoTime") || "0");
 
-  // Create video hint overlay (once)
+  // Hint overlay
   let hint = container.querySelector(".video-hint");
   if (!hint) {
     hint = document.createElement("div");
     hint.className = "video-hint";
+    hint.style.position = "absolute";
+    hint.style.top = "10px";
+    hint.style.right = "10px";
+    hint.style.padding = "6px 12px";
+    hint.style.background = "rgba(0,0,0,0.6)";
+    hint.style.color = "#fff";
+    hint.style.borderRadius = "4px";
+    hint.style.fontSize = "14px";
+    hint.style.opacity = "0";
+    hint.style.transition = "opacity 0.5s";
     container.appendChild(hint);
   }
 
-  function showHint(msg, timeout = 1400) {
+  const showHint = (msg, timeout = 1400) => {
     hint.textContent = msg;
-    hint.classList.add("show");
+    hint.style.opacity = "1";
     clearTimeout(hint._t);
-    hint._t = setTimeout(() => hint.classList.remove("show"), timeout);
-  }
+    hint._t = setTimeout(() => (hint.style.opacity = "0"), timeout);
+  };
 
-  // Load and play video
   const loadVideo = (index, resumeTime = 0) => {
     if (index < 0) index = videos.length - 1;
     if (index >= videos.length) index = 0;
@@ -926,92 +936,44 @@ window.addEventListener("DOMContentLoaded", () => {
 
     videoPlayer.src = videos[currentVideo];
     videoPlayer.muted = true;
-    videoPlayer.autoplay = true;
     videoPlayer.loop = true;
     videoPlayer.playsInline = true;
+    videoPlayer.autoplay = true;
     videoPlayer.preload = "auto";
 
-    videoPlayer.play().then(() => {
-      if (resumeTime > 0) videoPlayer.currentTime = resumeTime;
-    }).catch(() => console.warn("Autoplay may be blocked by browser"));
+    videoPlayer.currentTime = resumeTime;
 
-    // Save last video index
+    videoPlayer.play().catch(() => console.warn("Autoplay blocked"));
+
     localStorage.setItem("lastVideoIndex", currentVideo);
   };
 
-  // Click to toggle mute + hint
+  // Toggle mute on tap
   let lastTap = 0;
   videoPlayer.addEventListener("click", () => {
     const now = Date.now();
     if (now - lastTap < 300) {
-      document.fullscreenElement ? document.exitFullscreen?.() : videoPlayer.requestFullscreen?.();
+      document.fullscreenElement
+        ? document.exitFullscreen?.()
+        : videoPlayer.requestFullscreen?.();
     } else {
       videoPlayer.muted = !videoPlayer.muted;
-      showHint(videoPlayer.muted ? "Tap to unmute" : "Sound on", 1200);
+      showHint(videoPlayer.muted ? "Tap to unmute" : "Sound on");
     }
     lastTap = now;
   });
 
-  // ⏪⏩ Navigation buttons
+  // Navigation buttons
   prevBtn?.addEventListener("click", () => loadVideo(currentVideo - 1));
   nextBtn?.addEventListener("click", () => loadVideo(currentVideo + 1));
 
-  // Auto-hide buttons
-  const showButtons = () => {
-    navButtons.forEach(btn => {
-      btn.style.opacity = "1";
-      btn.style.pointerEvents = "auto";
-    });
-    clearTimeout(window._hideNavTimeout);
-    window._hideNavTimeout = setTimeout(() => {
-      navButtons.forEach(btn => {
-        btn.style.opacity = "0";
-        btn.style.pointerEvents = "none";
-      });
-    }, 3000);
-  };
-
-  navButtons.forEach(btn => {
-    btn.style.transition = "opacity 0.6s ease";
-    btn.style.opacity = "0";
-    btn.style.pointerEvents = "none";
-  });
-
-  ["mouseenter", "mousemove", "click"].forEach(evt => container.addEventListener(evt, showButtons));
-  container.addEventListener("mouseleave", () => {
-    navButtons.forEach(btn => {
-      btn.style.opacity = "0";
-      btn.style.pointerEvents = "none";
-    });
-  });
-
-  // Save playback position every second
+  // Save playback position
   setInterval(() => {
     localStorage.setItem("lastVideoTime", videoPlayer.currentTime);
   }, 1000);
 
-  // Start with last remembered video/time
+  // Start video
   loadVideo(currentVideo, lastTime);
-})();
-
-  navButtons.forEach(btn => {
-    btn.style.transition = "opacity 0.6s ease";
-    btn.style.opacity = "0";
-    btn.style.pointerEvents = "none";
-  });
-
-  ["mouseenter", "mousemove", "click"].forEach(evt => container.addEventListener(evt, showButtons));
-  container.addEventListener("mouseleave", () => {
-    navButtons.forEach(btn => {
-      btn.style.opacity = "0";
-      btn.style.pointerEvents = "none";
-    });
-  });
-
-  // Start video with last remembered time
-  const lastTime = parseFloat(localStorage.getItem("lastVideoTime") || "0");
-  loadVideo(currentVideo, lastTime);
-
 })();
 
 // URL of your custom star SVG
