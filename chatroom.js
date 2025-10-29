@@ -902,7 +902,7 @@ window.addEventListener("DOMContentLoaded", () => {
   let hideTimeout = null;
 
   /* ----------------------------
-     ▶️ Load & Play Video
+     ▶️ Load & Play Video (with canplay check)
   ----------------------------- */
   const loadVideo = (index) => {
     if (index < 0) index = videos.length - 1;
@@ -912,7 +912,14 @@ window.addEventListener("DOMContentLoaded", () => {
     videoPlayer.src = videos[currentVideo];
     videoPlayer.muted = true;
 
-    videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
+    // Wait until the video can play, then play
+    videoPlayer.addEventListener(
+      "canplay",
+      function onCanPlay() {
+        videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
+        videoPlayer.removeEventListener("canplay", onCanPlay);
+      }
+    );
   };
 
   /* ----------------------------
