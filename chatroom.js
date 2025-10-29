@@ -1450,6 +1450,30 @@ window.addEventListener("click", e => {
 
 /* ---------- Init ---------- */
 fetchFeaturedHosts();
+
+const isHost = true; // set dynamically
+
+const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
+const hostModal = document.getElementById("hostModal");
+const hostSettingsBtn = document.getElementById("hostSettingsBtn");
+const closeModal = hostModal.querySelector(".close");
+
+if (isHost) hostSettingsWrapper.style.display = "block";
+
+hostSettingsBtn.onclick = () => hostModal.style.display = "block";
+closeModal.onclick = () => hostModal.style.display = "none";
+window.onclick = e => { if (e.target === hostModal) hostModal.style.display = "none"; };
+
+document.getElementById("saveHostSettings").onclick = () => {
+  const popupPhoto = document.getElementById("popupPhoto").files[0];
+  const naturePick = document.getElementById("naturePick").files[0];
+  const fruitPick = document.getElementById("fruitPick").files[0];
+  const videoUrl = document.getElementById("videoUrl").value;
+
+  console.log("Uploads:", { popupPhoto, naturePick, fruitPick, videoUrl });
+  hostModal.style.display = "none";
+};
+
   // --- Initial random values for first load ---
 (function() {
   const onlineCountEl = document.getElementById('onlineCount');
