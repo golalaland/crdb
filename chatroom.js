@@ -265,13 +265,12 @@ setupUsersListener();
 /* ---------- Render Messages ---------- */
 let scrollPending = false;
 
-// ---------- 1. For initial chat load ----------
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
 
-  refs.messagesEl.innerHTML = ""; // clear first
-
   messages.forEach(item => {
+    if (document.getElementById(item.id)) return;
+
     const m = item.data;
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
@@ -297,88 +296,46 @@ function renderMessagesFromArray(messages) {
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // Scroll to bottom after load
-  requestAnimationFrame(() => {
-    refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
-  });
-}
-
-// ---------- 2. For new real-time or sent messages ----------
-function renderMessage(item) {
-  if (!refs.messagesEl || document.getElementById(item.id)) return;
-
-  const m = item.data;
-  const wrapper = document.createElement("div");
-  wrapper.className = "msg";
-  wrapper.id = item.id;
-
-  const usernameEl = document.createElement("span");
-  usernameEl.className = "meta";
-  usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
-  usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
-  usernameEl.style.marginRight = "4px";
-
-  const contentEl = document.createElement("span");
-  contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
-  contentEl.textContent = " " + (m.content || "");
-
-  if (m.buzzColor) contentEl.style.background = m.buzzColor;
-  if (m.highlight) {
-    contentEl.style.color = "#000";
-    contentEl.style.fontWeight = "700";
+  // auto-scroll logic
+  if (!scrollPending) {
+    scrollPending = true;
+    requestAnimationFrame(() => {
+      const nearBottom = refs.messagesEl.scrollHeight - refs.messagesEl.scrollTop - refs.messagesEl.clientHeight < 50;
+      if (messages.some(msg => msg.data.uid === currentUser?.uid) || nearBottom) {
+        refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
+      }
+      scrollPending = false;
+    });
   }
-
-  wrapper.append(usernameEl, contentEl);
-  refs.messagesEl.appendChild(wrapper);
-
-  // Smart scroll
-  const el = refs.messagesEl;
-  const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-  const nearBottom = scrollBottom < 80;
-  const ownMessage = m.uid === currentUser?.uid;
-  if (nearBottom || ownMessage) el.scrollTop = el.scrollHeight;
 }
 
 
 /* ---------- 🔔 Messages Listener ---------- */
 function attachMessagesListener() {
-  const q = query(
-    collection(db, CHAT_COLLECTION),
-    orderBy("createdAt", "asc")
-  );
+  const q = query(collection(db, CHAT_COLLECTION), orderBy("timestamp", "asc"));
 
-  if (refs.messagesEl) refs.messagesEl.innerHTML = "";
-  lastMessagesArray = [];
+  // 💾 Load previously shown gift IDs from localStorage
+  const shownGiftAlerts = new Set(JSON.parse(localStorage.getItem("shownGiftAlerts") || "[]"));
 
-  onSnapshot(q, (snapshot) => {
-    if (snapshot.metadata.hasPendingWrites) return; // skip local writes
+  // 💾 Save helper
+  function saveShownGift(id) {
+    shownGiftAlerts.add(id);
+    localStorage.setItem("shownGiftAlerts", JSON.stringify([...shownGiftAlerts]));
+  }
 
-    // --- INITIAL LOAD ---
-    if (!lastMessagesArray.length) {
-      const allMsgs = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        data: doc.data(),
-      }));
-
-      lastMessagesArray = allMsgs;
-      renderMessagesFromArray(allMsgs); // render all
-      return;
-    }
-
-    // --- NEW MESSAGE UPDATES ---
-    snapshot.docChanges().forEach((change) => {
+  onSnapshot(q, snapshot => {
+    snapshot.docChanges().forEach(change => {
       if (change.type !== "added") return;
 
+      const msg = change.doc.data();
       const msgId = change.doc.id;
-      const msgData = change.doc.data();
 
+      // Prevent duplicate render
       if (document.getElementById(msgId)) return;
 
-      lastMessagesArray.push({ id: msgId, data: msgData });
-      renderMessage({ id: msgId, data: msgData });
-    });
-  });
-}
+      // Add to memory + render
+      lastMessagesArray.push({ id: msgId, data: msg });
+      renderMessagesFromArray([{ id: msgId, data: msg }]);
 
 /* 💝 Detect personalized gift messages */
 if (msg.highlight && msg.content?.includes("gifted")) {
@@ -848,6 +805,7 @@ window.addEventListener("DOMContentLoaded", () => {
   refs.messageInputEl.value = "";
   showStarPopup("BUZZ sent!");
   renderMessagesFromArray([{ id: docRef.id, data: newBuzz }]);
+  scrollToBottom(refs.messagesEl);
 
   // Apply BUZZ glow
   const msgEl = document.getElementById(docRef.id);
