@@ -881,66 +881,113 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 /* =====================================
- 🎥 Shopify Video Player with Memory & Autoplay
+ 🎥 Shopify Video Player with Hints, Memory & Autoplay
 ======================================= */
 (() => {
-  const videoPlayer = document.getElementById("videoPlayer");
+  const container = document.querySelector(".video-container");
+  if (!container) return;
+
   const prevBtn = document.getElementById("prev");
   const nextBtn = document.getElementById("next");
-  const container = document.querySelector(".video-container");
   const navButtons = [prevBtn, nextBtn].filter(Boolean);
 
-  if (!videoPlayer || navButtons.length === 0) return;
-
-  // 🎞️ Video list (Shopify videos)
+  // 🎞️ Video list
   const videos = [
     "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4"
     // Add more Shopify video links here
   ];
 
-  // Load last video & time from localStorage if available
-  let lastIndex = parseInt(localStorage.getItem("lastVideoIndex") || "0", 10);
-  if (lastIndex < 0 || lastIndex >= videos.length) lastIndex = 0;
-  let currentVideo = lastIndex;
-  let hideTimeout = null;
+  let currentVideo = parseInt(localStorage.getItem("lastVideoIndex") || "0", 10);
+  if (currentVideo < 0 || currentVideo >= videos.length) currentVideo = 0;
 
   const loadVideo = (index, resumeTime = 0) => {
     if (index < 0) index = videos.length - 1;
     if (index >= videos.length) index = 0;
-
     currentVideo = index;
-    videoPlayer.src = videos[currentVideo];
-    videoPlayer.muted = true;
 
-    videoPlayer.play().then(() => {
-      if (resumeTime > 0) {
-        videoPlayer.currentTime = resumeTime;
+    container.innerHTML = "";
+    container.style.position = "relative";
+    container.style.touchAction = "manipulation";
+
+    // Shimmer loader
+    const shimmer = document.createElement("div");
+    shimmer.className = "video-shimmer";
+    container.appendChild(shimmer);
+
+    // Video element
+    const videoEl = document.createElement("video");
+    Object.assign(videoEl, {
+      src: videos[currentVideo],
+      autoplay: true,
+      muted: true,
+      loop: true,
+      playsInline: true,
+      preload: "auto",
+      style: "width:100%;height:100%;object-fit:cover;border-radius:8px;display:none;cursor:pointer;"
+    });
+    videoEl.setAttribute("webkit-playsinline", "true");
+    container.appendChild(videoEl);
+
+    // Hint overlay
+    const hint = document.createElement("div");
+    hint.className = "video-hint";
+    container.appendChild(hint);
+
+    function showHint(msg, timeout = 1400) {
+      hint.textContent = msg;
+      hint.classList.add("show");
+      clearTimeout(hint._t);
+      hint._t = setTimeout(() => hint.classList.remove("show"), timeout);
+    }
+
+    let lastTap = 0;
+    function onTapEvent() {
+      const now = Date.now();
+      if (now - lastTap < 300) {
+        document.fullscreenElement ? document.exitFullscreen?.() : videoEl.requestFullscreen?.();
+      } else {
+        videoEl.muted = !videoEl.muted;
+        showHint(videoEl.muted ? "Tap to unmute" : "Sound on", 1200);
       }
-    }).catch(() => console.warn("Autoplay may be blocked by browser"));
+      lastTap = now;
+    }
 
-    // Save last played video index
-    localStorage.setItem("lastVideoIndex", currentVideo);
+    videoEl.addEventListener("click", onTapEvent);
+    videoEl.addEventListener("touchend", (ev) => {
+      if (ev.changedTouches.length < 2) {
+        ev.preventDefault?.();
+        onTapEvent();
+      }
+    }, { passive: false });
+
+    // Show video as soon as it can play
+    videoEl.addEventListener("canplay", () => {
+      shimmer.style.display = "none";
+      videoEl.style.display = "block";
+      if (resumeTime > 0) videoEl.currentTime = resumeTime;
+      showHint("Tap to unmute", 1400);
+      videoEl.play().catch(() => {});
+    });
+
+    // Save playback position periodically
+    setInterval(() => {
+      localStorage.setItem("lastVideoTime", videoEl.currentTime);
+      localStorage.setItem("lastVideoIndex", currentVideo);
+    }, 1000);
   };
-
-  // 🔊 Toggle mute on click
-  videoPlayer.addEventListener("click", () => {
-    videoPlayer.muted = !videoPlayer.muted;
-    const state = videoPlayer.muted ? "🔇" : "🔊";
-    showStarPopup?.(`Video sound: ${state}`);
-  });
 
   // ⏪⏩ Navigation Buttons
   prevBtn?.addEventListener("click", () => loadVideo(currentVideo - 1));
   nextBtn?.addEventListener("click", () => loadVideo(currentVideo + 1));
 
-  // 👀 Auto hide/show buttons
+  // Auto-hide nav buttons
   const showButtons = () => {
     navButtons.forEach(btn => {
       btn.style.opacity = "1";
       btn.style.pointerEvents = "auto";
     });
-    clearTimeout(hideTimeout);
-    hideTimeout = setTimeout(() => {
+    clearTimeout(window._hideNavTimeout);
+    window._hideNavTimeout = setTimeout(() => {
       navButtons.forEach(btn => {
         btn.style.opacity = "0";
         btn.style.pointerEvents = "none";
@@ -954,22 +1001,18 @@ window.addEventListener("DOMContentLoaded", () => {
     btn.style.pointerEvents = "none";
   });
 
-  ["mouseenter", "mousemove", "click"].forEach(evt => container?.addEventListener(evt, showButtons));
-  container?.addEventListener("mouseleave", () => {
+  ["mouseenter", "mousemove", "click"].forEach(evt => container.addEventListener(evt, showButtons));
+  container.addEventListener("mouseleave", () => {
     navButtons.forEach(btn => {
       btn.style.opacity = "0";
       btn.style.pointerEvents = "none";
     });
   });
 
-  // 🕒 Save playback position periodically
-  setInterval(() => {
-    localStorage.setItem("lastVideoTime", videoPlayer.currentTime);
-  }, 1000);
-
-  // Start video with resume position if available
+  // Start video with last remembered time
   const lastTime = parseFloat(localStorage.getItem("lastVideoTime") || "0");
   loadVideo(currentVideo, lastTime);
+
 })();
 
 // URL of your custom star SVG
