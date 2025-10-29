@@ -960,11 +960,22 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     z-index: 10;
 }
 
-img[src*="starssvg_k3hmsu.svg"] {
-  width: 16px;
-  height: 16px;
-  vertical-align: middle;
-  margin-left: 4px;
+#hostModal .modal-body {
+  background: var(--modal-bg, #111);
+  color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 400px;
+  margin: 10% auto;
+}
+
+#hostModal input {
+  display: block;
+  width: 100%;
+  margin: 6px 0 12px;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
 }
 </style>
 </head>
@@ -1075,8 +1086,8 @@ img[src*="starssvg_k3hmsu.svg"] {
       </div>
 
       <div class="profile-actions">
-        <a id="redeemBtn" class="small-btn" href="#" target="_blank" style="display:none">Redeem</a>
-        <a id="tipBtn" class="small-btn" href="#" target="_blank" style="display:none">🕹️</a>
+        <a id="redeemBtn" class="small-btn" href="#" target="_blank" style="display:none;">Redeem</a>
+        <a id="tipBtn" class="small-btn" href="#" target="_blank" style="display:none;">🕹️</a>
         <button id="hostSettingsBtn" class="small-btn" style="display:none;">⚙️</button>
       </div>
     </div>
@@ -1087,6 +1098,29 @@ img[src*="starssvg_k3hmsu.svg"] {
     </div>
   </div>
 </div>
+
+<!-- Host Settings Modal -->
+<div id="hostModal" class="modal">
+  <div class="modal-body">
+    <span class="close">&times;</span>
+    <h3>Host Upload Panel</h3>
+
+    <label>Popup Photo</label>
+    <input type="file" id="popupPhoto" accept="image/*">
+
+    <label>Nature Pick</label>
+    <input type="file" id="naturePick" accept="image/*">
+
+    <label>Fruit Pick</label>
+    <input type="file" id="fruitPick" accept="image/*">
+
+    <label>Video URL</label>
+    <input type="url" id="videoUrl" placeholder="Paste video link">
+
+    <button id="saveHostSettings" class="small-btn" style="margin-top:10px;">Save</button>
+  </div>
+</div>
+
 <div class="star-popup" id="starPopup">
   <div id="starText">You've just earned +1 star! ⭐</div>
 </div>
