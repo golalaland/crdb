@@ -231,7 +231,7 @@ function updateRedeemLink() {
 /* ---------- Tip Link ---------- */
 function updateTipLink() {
   if (!refs.tipBtn || !currentUser) return;
-  refs.tipBtn.href = `https://golalaland.github.io/chat/moneymaths.html?uid=${encodeURIComponent(currentUser.uid)}`;
+  refs.tipBtn.href = `moneytrain.html`;
   refs.tipBtn.style.display = "inline-block";
 }
 
