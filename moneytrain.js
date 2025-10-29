@@ -766,3 +766,17 @@ const observer = new MutationObserver(updateProfileOffset);
   const el = document.getElementById(id);
   if (el) observer.observe(el, { attributes: true, attributeFilter: ['style', 'class'] });
 });
+// Replace all literal stars (⭐️) in text with your SVG icon
+document.querySelectorAll('body *').forEach(el => {
+  if (el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
+    const txt = el.textContent.trim();
+    if (txt.includes('⭐️')) {
+      el.innerHTML = txt.replaceAll(
+        '⭐️',
+        `<img src="https://res.cloudinary.com/dekxhwh6l/image/upload/v1760596116/starssvg_k3hmsu.svg" 
+              alt="star" 
+              style="width:16px;height:16px;vertical-align:middle;margin-left:4px;">`
+      );
+    }
+  }
+});
