@@ -1108,48 +1108,6 @@ function renderHostAvatars() {
   });
 }
 
-const isHost = true; // set dynamically
-
-const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
-const hostModal = document.getElementById("hostModal");
-const hostSettingsBtn = document.getElementById("hostSettingsBtn");
-const closeModal = hostModal.querySelector(".close");
-
-if (isHost) hostSettingsWrapper.style.display = "block";
-
-// modal open/close
-hostSettingsBtn.onclick = () => hostModal.style.display = "block";
-closeModal.onclick = () => hostModal.style.display = "none";
-window.onclick = e => { if (e.target === hostModal) hostModal.style.display = "none"; };
-
-// tab switching
-document.querySelectorAll(".tab-btn").forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach(tab => tab.style.display = "none");
-    btn.classList.add("active");
-    document.getElementById(btn.dataset.tab).style.display = "block";
-  };
-});
-
-// save handlers
-document.getElementById("saveMedia").onclick = () => {
-  const popupPhoto = document.getElementById("popupPhoto").files[0];
-  const naturePick = document.getElementById("naturePick").files[0];
-  const fruitPick = document.getElementById("fruitPick").files[0];
-  const videoUrl = document.getElementById("videoUrl").value;
-  console.log("Media uploaded:", { popupPhoto, naturePick, fruitPick, videoUrl });
-  hostModal.style.display = "none";
-};
-
-document.getElementById("saveInfo").onclick = () => {
-  const city = document.getElementById("hostCity").value;
-  const country = document.getElementById("hostCountry").value;
-  const bio = document.getElementById("hostBio").value;
-  console.log("Info updated:", { city, country, bio });
-  hostModal.style.display = "none";
-};
-
 /* ---------- Load Host (Faster Video Loading) ---------- */
 async function loadHost(idx) {
   const host = hosts[idx];
@@ -1552,3 +1510,44 @@ fetchFeaturedHosts();
     }
   }, 30000);
 })();
+const isHost = true; // set dynamically
+
+const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
+const hostModal = document.getElementById("hostModal");
+const hostSettingsBtn = document.getElementById("hostSettingsBtn");
+const closeModal = hostModal.querySelector(".close");
+
+if (isHost) hostSettingsWrapper.style.display = "block";
+
+// modal open/close
+hostSettingsBtn.onclick = () => hostModal.style.display = "block";
+closeModal.onclick = () => hostModal.style.display = "none";
+window.onclick = e => { if (e.target === hostModal) hostModal.style.display = "none"; };
+
+// tab switching
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(tab => tab.style.display = "none");
+    btn.classList.add("active");
+    document.getElementById(btn.dataset.tab).style.display = "block";
+  };
+});
+
+// save handlers
+document.getElementById("saveMedia").onclick = () => {
+  const popupPhoto = document.getElementById("popupPhoto").files[0];
+  const naturePick = document.getElementById("naturePick").files[0];
+  const fruitPick = document.getElementById("fruitPick").files[0];
+  const videoUrl = document.getElementById("videoUrl").value;
+  console.log("Media uploaded:", { popupPhoto, naturePick, fruitPick, videoUrl });
+  hostModal.style.display = "none";
+};
+
+document.getElementById("saveInfo").onclick = () => {
+  const city = document.getElementById("hostCity").value;
+  const country = document.getElementById("hostCountry").value;
+  const bio = document.getElementById("hostBio").value;
+  console.log("Info updated:", { city, country, bio });
+  hostModal.style.display = "none";
+};
