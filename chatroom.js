@@ -901,8 +901,28 @@ window.addEventListener("DOMContentLoaded", () => {
   let currentVideo = 0;
   let hideTimeout = null;
 
+  /* =====================================
+ 🎥 Video Navigation & UI Fade Logic
+======================================= */
+(() => {
+  const videoPlayer = document.getElementById("videoPlayer");
+  const prevBtn = document.getElementById("prev");
+  const nextBtn = document.getElementById("next");
+  const container = document.querySelector(".video-container");
+  const navButtons = [prevBtn, nextBtn].filter(Boolean);
+
+  if (!videoPlayer || navButtons.length === 0) return;
+
+  // 🎞️ Video list (replace/add Shopify-hosted videos here)
+  const videos = [
+    "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4"
+    // Add more Shopify video links here as needed
+  ];
+  let currentVideo = 0;
+  let hideTimeout = null;
+
   /* ----------------------------
-     ▶️ Load & Play Video (with canplay check)
+     ▶️ Load & Play Video
   ----------------------------- */
   const loadVideo = (index) => {
     if (index < 0) index = videos.length - 1;
@@ -912,14 +932,7 @@ window.addEventListener("DOMContentLoaded", () => {
     videoPlayer.src = videos[currentVideo];
     videoPlayer.muted = true;
 
-    // Wait until the video can play, then play
-    videoPlayer.addEventListener(
-      "canplay",
-      function onCanPlay() {
-        videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
-        videoPlayer.removeEventListener("canplay", onCanPlay);
-      }
-    );
+    videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
   };
 
   /* ----------------------------
