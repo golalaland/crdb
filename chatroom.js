@@ -369,51 +369,86 @@ if (msg.highlight && msg.content?.includes("gifted")) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const isHost = true; // <- set this dynamically later
+  const isHost = true; // <-- set dynamically later
   const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
   const hostModal = document.getElementById("hostModal");
   const hostSettingsBtn = document.getElementById("hostSettingsBtn");
   const closeModal = hostModal.querySelector(".close");
 
-  // Only show button if host
+  // 🟣 Show Host Button Only for Hosts
   if (isHost && hostSettingsWrapper) {
     hostSettingsWrapper.style.display = "block";
   }
 
-  // Modal controls
+  // 🟢 Modal Controls
   hostSettingsBtn.onclick = () => (hostModal.style.display = "block");
   closeModal.onclick = () => (hostModal.style.display = "none");
-  window.onclick = e => {
+  window.onclick = (e) => {
     if (e.target === hostModal) hostModal.style.display = "none";
   };
 
-  // Tab logic
-  document.querySelectorAll(".tab-btn").forEach(btn => {
+  // 🟠 Tab Logic
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
     btn.onclick = () => {
-      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-      document.querySelectorAll(".tab-content").forEach(tab => (tab.style.display = "none"));
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach((tab) => (tab.style.display = "none"));
       btn.classList.add("active");
       document.getElementById(btn.dataset.tab).style.display = "block";
     };
   });
 
-  // Save handlers
+  // 🍓 Fruit Selection Highlight
+  document.querySelectorAll(".fruit").forEach((fruit) => {
+    fruit.addEventListener("click", () => {
+      fruit.classList.toggle("selected");
+    });
+  });
+
+  // 💾 Save Media Handler
   document.getElementById("saveMedia").onclick = () => {
     const popupPhoto = document.getElementById("popupPhoto").files[0];
-    const naturePick = document.getElementById("naturePick").files[0];
-    const fruitPick = document.getElementById("fruitPick").files[0];
-    const videoUrl = document.getElementById("videoUrl").value;
-    console.log("Media uploaded:", { popupPhoto, naturePick, fruitPick, videoUrl });
+    const naturePick = document.getElementById("naturePick").value;
+    const selectedFruits = Array.from(document.querySelectorAll(".fruit.selected")).map(
+      (f) => f.dataset.fruit
+    );
+    const uploadVideo = document.getElementById("uploadVideo").files[0];
+
+    console.log("🎥 Media Uploaded:", {
+      popupPhoto,
+      naturePick,
+      selectedFruits,
+      uploadVideo,
+    });
+
+    alert("Your media has been saved successfully!");
     hostModal.style.display = "none";
   };
 
+  // 📝 Save Info Handler
   document.getElementById("saveInfo").onclick = () => {
     const city = document.getElementById("hostCity").value;
     const country = document.getElementById("hostCountry").value;
     const bio = document.getElementById("hostBio").value;
-    console.log("Info updated:", { city, country, bio });
+
+    console.log("🧾 Info Updated:", { city, country, bio });
+    alert("Profile info saved!");
     hostModal.style.display = "none";
   };
+
+  // 🔔 Mock Notification Example
+  const notificationsList = document.getElementById("notificationsList");
+  if (notificationsList) {
+    // Example notifications (can later come from Firebase)
+    const notifications = [
+      "⭐ You received 5 stars from User123!",
+      "💌 New meet request from User456!",
+      "📢 System message: Your profile is now featured!",
+    ];
+
+    notificationsList.innerHTML = notifications
+      .map((note) => `<div class='notification-item'>${note}</div>`)
+      .join("");
+  }
 });
 
 /* ---------- 🆔 ChatID Modal ---------- */
