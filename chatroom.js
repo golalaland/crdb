@@ -504,29 +504,45 @@ window.addEventListener("DOMContentLoaded", async () => {
   const vipUser = JSON.parse(localStorage.getItem("vipUser"));
   if (vipUser?.email && vipUser?.phone) {
     const loader = document.getElementById("postLoginLoader");
-    try {
-      if (loader) loader.style.display = "flex";
-      await sleep(50);
+    const loadingBar = document.getElementById("loadingBar");
 
+    try {
+      // ✅ Make sure loader and bar are visible
+      if (loader) loader.style.display = "flex";
+      if (loadingBar) loadingBar.style.width = "0%";
+
+      // 🩷 Animate bar while logging in
+      let progress = 0;
+      const interval = 80;
+      const loadingInterval = setInterval(() => {
+        if (progress < 90) { // don’t fill completely until login ends
+          progress += Math.random() * 5;
+          loadingBar.style.width = `${Math.min(progress, 90)}%`;
+        }
+      }, interval);
+
+      // 🧠 Run the login
       const success = await loginWhitelist(vipUser.email, vipUser.phone);
 
-      if (!success) return; // stop if login failed
+      // Finish bar smoothly
+      clearInterval(loadingInterval);
+      loadingBar.style.width = "100%";
 
-      // ✅ Optional small delay after login
-      await sleep(400);
-
-      // Links and UI already handled inside loginWhitelist
-      // But if you want, you can force-update any extra UI here
-      updateRedeemLink();
-      updateTipLink();
+      if (success) {
+        await sleep(400);
+        updateRedeemLink();
+        updateTipLink();
+      }
 
     } catch (err) {
       console.error("❌ Auto-login error:", err);
     } finally {
+      await sleep(300);
       if (loader) loader.style.display = "none";
     }
   }
 });
+
 
 /* ===============================
    💫 Auto Star Earning System
