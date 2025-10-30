@@ -881,14 +881,39 @@ autoLogin();
 
   if (!videoPlayer || navButtons.length === 0) return;
 
-  // 🎞️ Video list
+  // 🎞️ Video list (Shopify video)
   const videos = [
-    "https://res.cloudinary.com/dekxhwh6l/video/upload/v1695/35a6ff0764563d1dcfaaaedac912b2c7_zfzxlw.mp4",
-    "https://xixi.b-cdn.net/Petitie%20Bubble%20Butt%20Stripper.mp4",
-    "https://xixi.b-cdn.net/Bootylicious%20Ebony%20Queen%20Kona%20Jade%20Twerks%20Teases%20and%20Rides%20POV%20u.mp4"
+    "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4"
+    // add more Shopify videos here if needed
   ];
   let currentVideo = 0;
   let hideTimeout = null;
+
+  // ---------- Create gentle "tap to unmute" hint ----------
+  let hint = container.querySelector(".video-hint");
+  if (!hint) {
+    hint = document.createElement("div");
+    hint.className = "video-hint";
+    hint.style.position = "absolute";
+    hint.style.bottom = "12px";
+    hint.style.left = "50%";
+    hint.style.transform = "translateX(-50%)";
+    hint.style.padding = "6px 12px";
+    hint.style.background = "rgba(0,0,0,0.6)";
+    hint.style.color = "#fff";
+    hint.style.borderRadius = "4px";
+    hint.style.fontSize = "14px";
+    hint.style.opacity = "0";
+    hint.style.transition = "opacity 0.5s";
+    container.appendChild(hint);
+  }
+
+  const showHint = (msg, timeout = 1500) => {
+    hint.textContent = msg;
+    hint.style.opacity = "1";
+    clearTimeout(hint._t);
+    hint._t = setTimeout(() => (hint.style.opacity = "0"), timeout);
+  };
 
   /* ----------------------------
      ▶️ Load & Play Video
@@ -901,16 +926,22 @@ autoLogin();
     videoPlayer.src = videos[currentVideo];
     videoPlayer.muted = true;
 
-    videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
+    // Wait for video to be ready before playing
+    videoPlayer.addEventListener(
+      "canplay",
+      function onCanPlay() {
+        videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
+        videoPlayer.removeEventListener("canplay", onCanPlay);
+      }
+    );
   };
 
   /* ----------------------------
-     🔊 Toggle Mute on Tap
+     🔊 Toggle Mute on Tap (gentle hint)
   ----------------------------- */
   videoPlayer.addEventListener("click", () => {
     videoPlayer.muted = !videoPlayer.muted;
-    const state = videoPlayer.muted ? "🔇" : "🔊";
-    showStarPopup(`Video sound: ${state}`);
+    showHint(videoPlayer.muted ? "Tap to unmute" : "Sound on");
   });
 
   /* ----------------------------
@@ -952,6 +983,9 @@ autoLogin();
 
   // Start with first video
   loadVideo(0);
+
+  // Show initial hint gently
+  showHint("Tap to unmute", 1500);
 })();
 
 // URL of your custom star SVG
