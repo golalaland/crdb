@@ -1024,8 +1024,8 @@ videoPlayer.parentElement.appendChild(hint);
   showHint("Tap to unmute", 1500);
 })();
 
-// URL of your custom star SVG
-const customStarURL = "https://res.cloudinary.com/dekxhwh6l/image/upload/v1760596116/starssvg_k3hmsu.svg";
+// URL of your Shopify-hosted star SVG
+const customStarURL = "https://cdn.shopify.com/s/files/1/0962/6648/6067/files/starssvg.svg?v=1761770774";
 
 // Replace stars in text nodes with SVG + floating stars
 function replaceStarsWithSVG(root = document.body) {
@@ -1075,7 +1075,7 @@ function replaceStarsWithSVG(root = document.body) {
         span.appendChild(inlineStar);
         parent.insertBefore(span, textNode);
 
-        // Floating star (same for BallerAlert)
+        // Floating star
         const floatingStar = document.createElement("img");
         floatingStar.src = customStarURL;
         floatingStar.alt = "⭐";
@@ -1085,7 +1085,6 @@ function replaceStarsWithSVG(root = document.body) {
         floatingStar.style.pointerEvents = "none";
         floatingStar.style.zIndex = "9999";
 
-        // Get bounding rect relative to viewport + scroll
         const rect = inlineStar.getBoundingClientRect();
         floatingStar.style.top = `${rect.top + rect.height / 2 + window.scrollY}px`;
         floatingStar.style.left = `${rect.left + rect.width / 2 + window.scrollX}px`;
@@ -1107,7 +1106,7 @@ function replaceStarsWithSVG(root = document.body) {
   });
 }
 
-// Observe dynamic content including BallerAlert
+// Observe dynamic content
 const observer = new MutationObserver(mutations => {
   mutations.forEach(m => {
     m.addedNodes.forEach(node => {
