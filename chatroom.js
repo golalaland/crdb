@@ -1357,124 +1357,99 @@ function showMeetModal(host) {
   const modalContent = modal.querySelector("#meetModalContent");
 
   cancelBtn.onclick = () => modal.remove();
-
 confirmBtn.onclick = async () => {
-  const COST = 21;
-  if (!currentUser?.uid) { alert("Please log in to meet ⭐"); modal.remove(); return; }
-  if ((currentUser.stars || 0) < COST) { alert("Not enough stars ⭐"); modal.remove(); return; }
+  const COST = 21;
+  if (!currentUser?.uid) { alert("Please log in to meet ⭐"); modal.remove(); return; }
+  if ((currentUser.stars || 0) < COST) { alert("Not enough stars ⭐"); modal.remove(); return; }
 
-  confirmBtn.disabled = true;
-  confirmBtn.style.opacity = 0.6;
-  confirmBtn.style.cursor = "not-allowed";
+  confirmBtn.disabled = true;
+  confirmBtn.style.opacity = 0.6;
+  confirmBtn.style.cursor = "not-allowed";
 
-  try {
-    // Deduct stars
-    currentUser.stars -= COST;
-    if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-    updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
+  try {
+    // Deduct stars
+    currentUser.stars -= COST;
+    if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+    updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
 
-    // --- Modal content setup ---
-    modalContent.innerHTML = `
-      <div style="text-align:center; margin-top:20px;">
-        <div class="spinner" style="
-          border: 4px solid rgba(255,255,255,0.1);
-          border-top: 4px solid #ff0099;
-          border-radius: 50%;
-          width: 48px;
-          height: 48px;
-          margin: 0 auto 12px auto;
-          animation: spin 1s linear infinite;
-        "></div>
-        <p id="stageMsg" style="margin-top:12px;font-weight:500;">Preparing your meet…</p>
-        <div id="finalBtnContainer" style="margin-top:16px;"></div>
-      </div>
-    `;
+    // --- modal setup ---
+    modalContent.innerHTML = `
+      <div style="text-align:center; margin-top:20px;">
+        <div class="spinner" style="
+          border: 4px solid rgba(255,255,255,0.1);
+          border-top: 4px solid #ff0099;
+          border-radius: 50%;
+          width: 48px;
+          height: 48px;
+          margin: 0 auto 12px auto;
+          animation: spin 1s linear infinite;
+        "></div>
+        <p id="stageMsg" style="margin-top:12px;font-weight:500;">Preparing your meet…</p>
+        <div id="finalBtnContainer" style="margin-top:16px;"></div>
+      </div>
+    `;
 
-    if (!document.getElementById("spinnerStyle")) {
-      const styleEl = document.createElement("style");
-      styleEl.id = "spinnerStyle";
-      styleEl.textContent = `
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-      `;
-      document.head.appendChild(styleEl);
-    }
+    if (!document.getElementById("spinnerStyle")) {
+      const styleEl = document.createElement("style");
+      styleEl.id = "spinnerStyle";
+      styleEl.textContent = `
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      `;
+      document.head.appendChild(styleEl);
+    }
 
-    const stageMsgEl = modalContent.querySelector("#stageMsg");
-    const finalBtnContainer = modalContent.querySelector("#finalBtnContainer");
+    const stageMsgEl = modalContent.querySelector("#stageMsg");
+    const finalBtnContainer = modalContent.querySelector("#finalBtnContainer");
 
-    // --- Staged messages ---
-    const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
-    const playfulMessages = [
-      "Oh, she’s hella cute…💋", "Careful, she may be naughty..😏",
-      "Be generous with her, she’ll like you..", "Ohh, she’s a real star.. 🤩",
-      "Be a real gentleman, when she texts u..", "She’s ready to dazzle you tonight.. ✨",
-      "Watch out, she might steal your heart.. ❤️", "Look sharp, she’s got a sparkle.. ✨",
-      "Don’t blink, or you’ll miss her charm.. 😉", "Get ready for some fun surprises.. 😏",
-      "She knows how to keep it exciting.. 🎉", "Better behave, she’s watching.. 👀",
-      "She might just blow your mind.. 💥", "Keep calm, she’s worth it.. 😘",
-      "She’s got a twinkle in her eyes.. ✨", "Brace yourself for some charm.. 😎",
-      "She’s not just cute, she’s 🔥", "Careful, her smile is contagious.. 😁",
-      "She might make you blush.. 😳", "She’s a star in every way.. 🌟",
-      "Don’t miss this chance.. ⏳"
-    ];
+    const stages = [
+      { text: "Handling your meet request…", duration: 1800 },
+      { text: "Collecting host’s identity…", duration: 1800 },
+      { text: "Oh, she’s hella cute…💋", duration: 2000 },
+      { text: "Careful, she may be naughty..😏", duration: 2000 },
+      { text: "Generating secure token…", duration: 2200 }
+    ];
 
-    const randomPlayful = [];
-    while (randomPlayful.length < 3) {
-      const choice = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
-      if (!randomPlayful.includes(choice)) randomPlayful.push(choice);
-    }
+    // --- sequential updates ---
+    for (let i = 0; i < stages.length; i++) {
+      const stage = stages[i];
+      stageMsgEl.textContent = stage.text;
 
-    const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
+      // hide spinner after first stage
+      if (i === 0) {
+        const spinner = modalContent.querySelector(".spinner");
+        if (spinner) spinner.style.display = "none";
+      }
 
-    // --- Sequentially update messages ---
-    let accumulatedTime = 0;
-    stages.forEach((stage, index) => {
-      let duration;
-      if (index < 2) duration = 1500 + Math.random() * 1000;
-      else if (index < stages.length - 1) duration = 1700 + Math.random() * 600;
-      else duration = 2000 + Math.random() * 500;
-      accumulatedTime += duration;
+      await new Promise(resolve => setTimeout(resolve, stage.duration));
+    }
 
-      setTimeout(() => {
-        stageMsgEl.textContent = stage;
+    // --- final button ---
+    const btn = document.createElement("button");
+    btn.textContent = "Send Message";
+    Object.assign(btn.style, {
+      marginTop: "6px",
+      padding: "10px 18px",
+      border: "none",
+      borderRadius: "8px",
+      fontWeight: 600,
+      background: "linear-gradient(90deg,#ff0099,#ff6600)",
+      color: "#fff",
+      cursor: "pointer"
+    });
+    btn.onclick = () => {
+      window.open(`https://t.me/drtantra?text=${encodeURIComponent(`Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`)}`, "_blank");
+      modal.remove();
+    };
+    finalBtnContainer.appendChild(btn);
 
-        // Hide spinner after first stage
-        if (index === 0) {
-          const spinner = modalContent.querySelector(".spinner");
-          if (spinner) spinner.style.display = "none";
-        }
+    // Auto-close after 7–7.5s
+    setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
 
-        // Final stage → add button without overwriting container
-        if (index === stages.length - 1) {
-          const btn = document.createElement("button");
-          btn.textContent = "Send Message";
-          Object.assign(btn.style, {
-            marginTop: "6px",
-            padding: "10px 18px",
-            border: "none",
-            borderRadius: "8px",
-            fontWeight: 600,
-            background: "linear-gradient(90deg,#ff0099,#ff6600)",
-            color: "#fff",
-            cursor: "pointer"
-          });
-          btn.onclick = () => {
-            window.open(`https://t.me/drtantra?text=${encodeURIComponent(`Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`)}`, "_blank");
-            modal.remove();
-          };
-          finalBtnContainer.appendChild(btn);
-
-          // Auto-close modal after 7–7.5s
-          setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
-        }
-      }, accumulatedTime);
-    });
-
-  } catch (err) {
-    console.error("Meet deduction failed:", err);
-    alert("Something went wrong. Please try again later.");
-    modal.remove();
-  }
+  } catch (err) {
+    console.error("Meet deduction failed:", err);
+    alert("Something went wrong. Please try again later.");
+    modal.remove();
+  }
 };
 
 /* ---------- Gift Slider ---------- */
