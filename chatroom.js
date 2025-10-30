@@ -796,6 +796,25 @@ window.addEventListener("DOMContentLoaded", () => {
 // Call on page load
 autoLogin();
 
+  // Wait for DOM to be ready
+    const googleBtn = document.getElementById("googleSignInBtn");
+    if (!googleBtn) return;
+
+    googleBtn.addEventListener("click", (e) => {
+      e.preventDefault(); // Prevent actual sign-in
+      e.stopPropagation();
+
+      // Check if showStarPopup exists
+      if (typeof showStarPopup === "function") {
+        showStarPopup("Google sign in not available in your country");
+      } else {
+        // Fallback alert
+        alert("Google sign in not available in your country");
+      }
+    });
+  });
+
+
   /* ----------------------------
      💬 Send Message Handler
   ----------------------------- */
