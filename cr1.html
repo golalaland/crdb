@@ -1014,6 +1014,40 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 }
 #whitelistLoginBtn img {
   background: transparent;
+  .fruit-row {
+  display: flex;
+  justify-content: space-around;
+  margin: 10px 0;
+  font-size: 26px;
+}
+
+.fruit {
+  cursor: pointer;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.fruit.selected {
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 5px #ff0080);
+}
+
+.styled-select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  background: white;
+}
+
+.notifications-list {
+  max-height: 200px;
+  overflow-y: auto;
+  background: #fafafa;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #eee;
+}
 </style>
 </head>
 <body>
@@ -1132,10 +1166,10 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     </div>
 
     <!-- ⚙️ Host Button -->
-    <div id="hostSettingsWrapper" style="text-align:center; margin-top:10px; display:none;">
-      <button id="hostSettingsBtn" class="small-btn">⚙️ Manage Host</button>
-    </div>
-  </div>
+<div id="hostSettingsWrapper" style="text-align:center; margin-top:10px; display:none;">
+  <button id="hostSettingsBtn" class="small-btn">⚙️ Manage Host</button>
+</div>
+</div>
 </div>
 
 <!-- Host Modal -->
@@ -1147,24 +1181,49 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     <div class="tab-header">
       <button class="tab-btn active" data-tab="mediaTab">Upload Media</button>
       <button class="tab-btn" data-tab="infoTab">Edit Info</button>
+      <button class="tab-btn" data-tab="notificationsTab">Notifications</button>
     </div>
 
+    <!-- 🖼️ MEDIA TAB -->
     <div id="mediaTab" class="tab-content active">
+      <!-- Popup Photo -->
       <label>Popup Photo</label>
       <input type="file" id="popupPhoto" accept="image/*">
 
-      <label>Nature Pick</label>
-      <input type="file" id="naturePick" accept="image/*">
+      <!-- Nature Pick -->
+      <label>Nature Pick 
+        <small style="font-size:11px; opacity:0.7;">(What best describes you?)</small>
+      </label>
+      <select id="naturePick" class="styled-select">
+        <option value="">Select your vibe</option>
+        <option value="Sexy">Sexy</option>
+        <option value="Cool">Cool</option>
+        <option value="Hot">Hot</option>
+      </select>
 
-      <label>Fruit Pick</label>
-      <input type="file" id="fruitPick" accept="image/*">
+      <!-- Fruit Pick -->
+      <label>Fruit Pick 
+        <small style="font-size:11px; opacity:0.7;">(What fruit interests you?)</small>
+      </label>
+      <a href="#" style="font-size:11px; display:block; margin-bottom:6px; color:#ff0080;">
+        🍉 A Girl’s Guide to Fruits
+      </a>
 
-      <label>Video URL</label>
-      <input type="url" id="videoUrl" placeholder="Paste video link">
+      <div id="fruitOptions" class="fruit-row">
+        <span class="fruit" data-fruit="🍒" title="In for passionate romance / Date nights">🍒</span>
+        <span class="fruit" data-fruit="🍑" title="In for thrills / Paid meetups">🍑</span>
+        <span class="fruit" data-fruit="🍇" title="In for casual hangouts / Friendships">🍇</span>
+        <span class="fruit" data-fruit="🍓" title="In for love adventures / Soulmate">🍓</span>
+      </div>
+
+      <!-- Upload Video -->
+      <label>Upload Video</label>
+      <input type="file" id="uploadVideo" accept="video/*">
 
       <button id="saveMedia" class="small-btn" style="margin-top:10px;">Save</button>
     </div>
 
+    <!-- 📝 INFO TAB -->
     <div id="infoTab" class="tab-content" style="display:none;">
       <label>City</label>
       <input type="text" id="hostCity" placeholder="Enter your city">
@@ -1176,6 +1235,14 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
       <textarea id="hostBio" rows="3" placeholder="Write a short bio..."></textarea>
 
       <button id="saveInfo" class="small-btn" style="margin-top:10px;">Save</button>
+    </div>
+
+    <!-- 🔔 NOTIFICATIONS TAB -->
+    <div id="notificationsTab" class="tab-content" style="display:none;">
+      <h4>Your Notifications</h4>
+      <div id="notificationsList" class="notifications-list">
+        <p>No new notifications yet.</p>
+      </div>
     </div>
   </div>
 </div>
