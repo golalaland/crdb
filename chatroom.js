@@ -1881,19 +1881,25 @@ hostSettingsBtn.addEventListener("click", () => {
   }
 });
   const scrollArrow = document.getElementById('scrollArrow');
-  const chatContainer = document.querySelector('#chatContainer'); // make sure this matches your chat wrapper
+  const chatContainer = document.querySelector('#chatContainer'); // replace with your chat wrapper ID
+  let fadeTimeout;
+
+  function showArrow() {
+    scrollArrow.classList.add('show');
+    if (fadeTimeout) clearTimeout(fadeTimeout);
+    fadeTimeout = setTimeout(() => {
+      scrollArrow.classList.remove('show');
+    }, 2000); // fades away after 2 seconds
+  }
 
   function checkScroll() {
     if (!chatContainer) return;
     const distanceFromBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight;
     if (distanceFromBottom > 200) {
-      scrollArrow.classList.add('show');
-    } else {
-      scrollArrow.classList.remove('show');
+      showArrow();
     }
   }
 
-  // Scroll chat container
   chatContainer.addEventListener('scroll', checkScroll);
 
   // Scroll to bottom on click
