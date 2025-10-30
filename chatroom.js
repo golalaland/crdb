@@ -1880,18 +1880,23 @@ hostSettingsBtn.addEventListener("click", () => {
     });
   }
 });
- const scrollArrow = document.getElementById('scrollArrow');
-  const chatContainer = document.querySelector('#chatContainer'); // replace with your chat container ID or class
+  const scrollArrow = document.getElementById('scrollArrow');
+  const chatContainer = document.querySelector('#chatContainer'); // make sure this matches your chat wrapper
 
-  function checkScrollPosition() {
+  function checkScroll() {
+    if (!chatContainer) return;
     const distanceFromBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight;
-    if (distanceFromBottom > 200) { // show arrow when scrolled up more than 200px
+    if (distanceFromBottom > 200) {
       scrollArrow.classList.add('show');
     } else {
       scrollArrow.classList.remove('show');
     }
   }
 
+  // Scroll chat container
+  chatContainer.addEventListener('scroll', checkScroll);
+
+  // Scroll to bottom on click
   scrollArrow.addEventListener('click', () => {
     chatContainer.scrollTo({
       top: chatContainer.scrollHeight,
@@ -1899,7 +1904,5 @@ hostSettingsBtn.addEventListener("click", () => {
     });
   });
 
-  chatContainer.addEventListener('scroll', checkScrollPosition);
-
   // Initial check
-  checkScrollPosition();
+  checkScroll();
