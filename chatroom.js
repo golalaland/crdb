@@ -1730,28 +1730,36 @@ document.addEventListener("DOMContentLoaded", () => {
   
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
+  if (!str) return "";
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 function showGreeting() {
-  const chatId = currentUser?.chatId || "Queen";
+  const chatId = currentUser?.chatId || "Guest";
   const name = capitalizeFirstLetter(chatId);
   const hour = new Date().getHours();
-  let greeting = "";
-  let emoji = "🌙";
 
-  if (hour < 12) { greeting = `Good Morning, ${name}!`; emoji = "☀️"; }
-  else if (hour < 18) { greeting = `Good Afternoon, ${name}!`; emoji = "⛅️"; }
-  else { greeting = `Good Evening, ${name}!`; emoji = "🌙"; }
+  let greeting, emoji;
+  if (hour < 12) {
+    greeting = `Good Morning, ${name}!`;
+    emoji = "☀️";
+  } else if (hour < 18) {
+    greeting = `Good Afternoon, ${name}!`;
+    emoji = "⛅️";
+  } else {
+    greeting = `Good Evening, ${name}!`;
+    emoji = "🌙";
+  }
 
   const textEl = document.getElementById("greetingText");
   const emojiEl = document.querySelector(".greeting-emoji");
 
-  // Reset for replay
+  // Reset content each time modal opens
   textEl.textContent = "";
   emojiEl.textContent = emoji;
   emojiEl.classList.remove("show");
 
+  // Typewriter animation
   let i = 0;
   function typeWriter() {
     if (i < greeting.length) {
@@ -1759,17 +1767,15 @@ function showGreeting() {
       i++;
       setTimeout(typeWriter, 50);
     } else {
-      // Slide in emoji after typing finishes
       emojiEl.classList.add("show");
     }
   }
-
   typeWriter();
 }
 
-// Call every time the modal opens
+// 🔥 Trigger when modal opens
 hostSettingsBtn.addEventListener("click", () => {
-  showGreeting();
+  showGreeting(); // call only once modal is clicked/opened
 });
 
 
