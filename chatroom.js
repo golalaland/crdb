@@ -1881,7 +1881,7 @@ hostSettingsBtn.addEventListener("click", () => {
   }
 });
   const scrollArrow = document.getElementById('scrollArrow');
-  const chatContainer = document.querySelector('#chatContainer'); // replace with your chat wrapper ID
+  const chatContainer = document.querySelector('#chatContainer'); // chat wrapper
   let fadeTimeout;
 
   function showArrow() {
@@ -1889,7 +1889,7 @@ hostSettingsBtn.addEventListener("click", () => {
     if (fadeTimeout) clearTimeout(fadeTimeout);
     fadeTimeout = setTimeout(() => {
       scrollArrow.classList.remove('show');
-    }, 2000); // fades away after 2 seconds
+    }, 2000);
   }
 
   function checkScroll() {
@@ -1902,7 +1902,6 @@ hostSettingsBtn.addEventListener("click", () => {
 
   chatContainer.addEventListener('scroll', checkScroll);
 
-  // Scroll to bottom on click
   scrollArrow.addEventListener('click', () => {
     chatContainer.scrollTo({
       top: chatContainer.scrollHeight,
@@ -1910,5 +1909,4 @@ hostSettingsBtn.addEventListener("click", () => {
     });
   });
 
-  // Initial check
   checkScroll();
