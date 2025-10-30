@@ -1141,6 +1141,124 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   margin-bottom: 6px;
   box-shadow: 0 0 3px rgba(0,0,0,0.1);
 }
+/* ========= TINDER-STYLE MEDIA TAB UPGRADE ========= */
+
+.media-section {
+  margin-top: 14px;
+}
+
+.media-preview {
+  margin-top: 8px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.media-preview img,
+.media-preview video {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.08);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+}
+
+/* Dropdown styling stays same, just add hover feedback */
+.styled-select:hover {
+  border-color: #ff66aa;
+}
+
+/* Fruit grid (Tinder card blocks) */
+.fruit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.fruit-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.04);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: visible;
+  color: #fff;
+}
+
+.fruit-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.6);
+  border-color: rgba(255,102,204,0.2);
+}
+
+.fruit-emoji {
+  font-size: 30px;
+  margin-bottom: 4px;
+}
+
+.fruit-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+
+.fruit-sub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.7);
+}
+
+/* Selected State */
+.fruit-card.selected {
+  background: linear-gradient(135deg, #ff0099, #ff6600);
+  color: #000;
+  box-shadow: 0 6px 20px rgba(255, 102, 0, 0.5);
+  transform: translateY(-8px) scale(1.05);
+}
+
+.fruit-card.selected .fruit-title {
+  color: #000;
+}
+
+.fruit-card .fruit-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  background: rgba(255,255,255,0.9);
+  color: #000;
+}
+
+.fruit-card.selected .fruit-check {
+  display: flex;
+}
+
+/* Tally counter */
+#fruitTally {
+  margin: 8px 0;
+  font-size: 13px;
+  color: #fff;
+  opacity: 0.85;
+}
+
+/* Mobile view: single column */
+@media (max-width: 400px) {
+  .fruit-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
 </head>
 <body>
@@ -1278,46 +1396,83 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     </div>
 
     <!-- 🖼️ MEDIA TAB -->
-    <div id="mediaTab" class="tab-content active">
+    <!-- === MEDIA TAB (Tinder-style card blocks + dropdown + tally) === -->
+<div id="mediaTab" class="tab-content active">
 
   <!-- Popup Photo -->
   <label class="upload-label">Popup Photo</label>
   <input type="file" id="popupPhoto" accept="image/*" class="upload-input">
 
-  <!-- Nature Pick -->
+  <!-- Preview -->
+  <div id="popupPreview" class="media-preview" style="display:none;">
+    <img id="popupPreviewImg" alt="popup preview" />
+  </div>
+
+  <!-- Nature Pick (styled dropdown) -->
   <label class="upload-label">
     Nature Pick
     <small class="hint-text">What best describes you?</small>
   </label>
   <select id="naturePick" class="styled-select">
     <option value="">Select your vibe...</option>
-    <option value="sexy">Sexy</option>
-    <option value="cool">Cool</option>
-    <option value="hot">Hot</option>
-    <option value="classy">Classy</option>
-    <option value="vibrant">Vibrant</option>
+    <option value="Sexy">Sexy</option>
+    <option value="Cool">Cool</option>
+    <option value="Hot">Hot</option>
+    <option value="Classy">Classy</option>
+    <option value="Vibrant">Vibrant</option>
   </select>
 
-  <!-- Fruit Pick -->
-  <label class="upload-label">
+  <!-- Fruit Pick (Tinder-style selectable blocks) -->
+  <label class="upload-label" style="margin-top:14px;">
     Fruit Pick
-    <small class="hint-text">What fruit interests you? <a href="#" class="fruit-guide">A Girl’s Guide to Fruits</a></small>
+    <small class="hint-text">Select one or more — click the blocks</small>
   </label>
 
-  <div class="fruit-container">
-    <div class="fruit" data-fruit="🍇" data-tooltip="🍇 In for casual hangouts / friendships.">🍇</div>
-    <div class="fruit" data-fruit="🍑" data-tooltip="🍑 In for thrills / paid meetups.">🍑</div>
-    <div class="fruit" data-fruit="🍒" data-tooltip="🍒 In for passionate romance / date nights.">🍒</div>
-    <div class="fruit" data-fruit="🍓" data-tooltip="🍓 In for love adventures / finding your soulmate.">🍓</div>
+  <!-- Tally -->
+  <div id="fruitTally" style="font-size:13px; color:#fff; margin-bottom:8px; opacity:0.9;">
+    Selected: <span id="fruitCount">0</span>
+  </div>
+
+  <div class="fruit-grid" id="fruitGrid">
+    <div class="fruit-card" data-fruit="🍇" data-key="grape">
+      <div class="fruit-emoji">🍇</div>
+      <div class="fruit-title">Grapes</div>
+      <div class="fruit-sub">Casual hangouts / friendships</div>
+      <div class="fruit-check" aria-hidden>✓</div>
+    </div>
+
+    <div class="fruit-card" data-fruit="🍑" data-key="peach">
+      <div class="fruit-emoji">🍑</div>
+      <div class="fruit-title">Peach</div>
+      <div class="fruit-sub">Thrills / paid meetups</div>
+      <div class="fruit-check" aria-hidden>✓</div>
+    </div>
+
+    <div class="fruit-card" data-fruit="🍒" data-key="cherry">
+      <div class="fruit-emoji">🍒</div>
+      <div class="fruit-title">Cherry</div>
+      <div class="fruit-sub">Passionate romance / date nights</div>
+      <div class="fruit-check" aria-hidden>✓</div>
+    </div>
+
+    <div class="fruit-card" data-fruit="🍓" data-key="strawberry">
+      <div class="fruit-emoji">🍓</div>
+      <div class="fruit-title">Strawberry</div>
+      <div class="fruit-sub">Love adventures / soulmate</div>
+      <div class="fruit-check" aria-hidden>✓</div>
+    </div>
   </div>
 
   <!-- Upload Video -->
-  <label class="upload-label">Upload Video</label>
+  <label class="upload-label" style="margin-top:14px;">Upload Video</label>
   <input type="file" id="uploadVideo" accept="video/*" class="upload-input">
+
+  <div id="videoPreview" class="media-preview" style="display:none;">
+    <video id="uploadVideoPreview" controls muted playsinline></video>
+  </div>
 
   <button id="saveMedia" class="small-btn" style="margin-top:12px;">Save</button>
 </div>
-
     <!-- 📝 INFO TAB -->
     <div id="infoTab" class="tab-content" style="display:none;">
       <label>City</label>
