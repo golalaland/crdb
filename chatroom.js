@@ -1373,9 +1373,9 @@ confirmBtn.onclick = async () => {
     if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
     updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
 
-    // Show spinner immediately
+    // Spinner + bouncing stars container
     modalContent.innerHTML = `
-      <div style="margin-top:20px;">
+      <div style="position: relative; margin-top:20px;">
         <div class="spinner" style="
           border: 4px solid rgba(255,255,255,0.1);
           border-top: 4px solid #ff0099;
@@ -1385,26 +1385,44 @@ confirmBtn.onclick = async () => {
           margin: 0 auto 12px auto;
           animation: spin 1s linear infinite;
         "></div>
+        <div class="stars-container" style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:100%;height:100%;pointer-events:none;"></div>
         <p id="stageMsg" style="margin-top:8px;font-weight:500;">Preparing your meet…</p>
       </div>
     `;
 
-    // Add spinner animation style dynamically if not already added
+    // Spinner animation style
     if (!document.getElementById("spinnerStyle")) {
       const styleEl = document.createElement("style");
       styleEl.id = "spinnerStyle";
       styleEl.textContent = `
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes bounceStars {
+          0% { transform: translateY(0) scale(0.8); opacity: 0.8; }
+          50% { transform: translateY(-8px) scale(1); opacity: 1; }
+          100% { transform: translateY(0) scale(0.8); opacity: 0.8; }
         }
       `;
       document.head.appendChild(styleEl);
     }
 
+    // Spawn bouncing stars
+    const starsContainer = modalContent.querySelector(".stars-container");
+    const starCount = 6;
+    for (let i = 0; i < starCount; i++) {
+      const star = document.createElement("div");
+      star.textContent = "⭐";
+      Object.assign(star.style, {
+        position: "absolute",
+        fontSize: `${12 + Math.random() * 8}px`,
+        top: `${20 + Math.random() * 40}%`,
+        left: `${Math.random() * 80 + 10}%`,
+        animation: `bounceStars ${0.8 + Math.random() * 0.4}s ease-in-out ${Math.random() * 0.5}s infinite`
+      });
+      starsContainer.appendChild(star);
+    }
+
     const stageMsgEl = modalContent.querySelector("#stageMsg");
 
-    // Then proceed with your staged messages as before
     const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
     const playfulMessages = [
       "Oh, she’s hella cute…💋", "Careful, she may be naughty..😏",
@@ -1439,7 +1457,6 @@ confirmBtn.onclick = async () => {
       setTimeout(() => {
         stageMsgEl.textContent = stage;
 
-        // Hide spinner after first stage
         if (index === 0) {
           const spinner = modalContent.querySelector(".spinner");
           if (spinner) spinner.style.display = "none";
