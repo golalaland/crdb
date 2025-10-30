@@ -369,7 +369,7 @@ if (msg.highlight && msg.content?.includes("gifted")) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const isHost = true; // <-- set dynamically later
+  const isHost = true; // <-- later dynamic
   const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
   const hostModal = document.getElementById("hostModal");
   const hostSettingsBtn = document.getElementById("hostSettingsBtn");
@@ -397,90 +397,71 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   });
 
-  // 🍓 Fruit Selection Highlight
-  document.querySelectorAll(".fruit").forEach((fruit) => {
-    fruit.addEventListener("click", () => {
-      fruit.classList.toggle("selected");
-    });
-  });
-
   // 💾 Save Media Handler
-  document.getElementById("saveMedia").onclick = () => {
-    const popupPhoto = document.getElementById("popupPhoto").files[0];
-    const naturePick = document.getElementById("naturePick").value;
-    const selectedFruits = Array.from(document.querySelectorAll(".fruit.selected")).map(
-      (f) => f.dataset.fruit
-    );
-    const uploadVideo = document.getElementById("uploadVideo").files[0];
+  const saveMediaBtn = document.getElementById("saveMedia");
+  if (saveMediaBtn) {
+    saveMediaBtn.onclick = () => {
+      const popupPhoto = document.getElementById("popupPhoto").files[0];
+      const uploadVideo = document.getElementById("uploadVideo").files[0];
 
-    console.log("🎥 Media Uploaded:", {
-      popupPhoto,
-      naturePick,
-      selectedFruits,
-      uploadVideo,
-    });
-
-    alert("Your media has been saved successfully!");
-    hostModal.style.display = "none";
-  };
+      console.log("🎥 Media Uploaded:", { popupPhoto, uploadVideo });
+      alert("Your media has been saved successfully!");
+      hostModal.style.display = "none";
+    };
+  }
 
   // 📝 Save Info Handler
-  document.getElementById("saveInfo").onclick = () => {
-    const city = document.getElementById("hostCity").value;
-    const country = document.getElementById("hostCountry").value;
-    const bio = document.getElementById("hostBio").value;
+  const saveInfoBtn = document.getElementById("saveInfo");
+  if (saveInfoBtn) {
+    saveInfoBtn.onclick = () => {
+      const city = document.getElementById("hostCity").value;
+      const country = document.getElementById("hostCountry").value;
+      const bio = document.getElementById("hostBio").value;
 
-    console.log("🧾 Info Updated:", { city, country, bio });
-    alert("Profile info saved!");
-    hostModal.style.display = "none";
-  };
+      console.log("🧾 Info Updated:", { city, country, bio });
+      alert("Profile info saved!");
+      hostModal.style.display = "none";
+    };
+  }
 
-  // 🔔 Mock Notification Example
+  // 🔔 Notifications (Dynamic Injection)
   const notificationsList = document.getElementById("notificationsList");
   if (notificationsList) {
-    // Example notifications (can later come from Firebase)
     const notifications = [
       "⭐ You received 5 stars from User123!",
       "💌 New meet request from User456!",
-      "📢 System message: Your profile is now featured!",
+      "📢 Your profile is now featured!",
     ];
-
     notificationsList.innerHTML = notifications
-      .map((note) => `<div class='notification-item'>${note}</div>`)
+      .map(
+        (note) =>
+          `<div class='notification-item new'>${note}<span class="time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span></div>`
+      )
       .join("");
+
+    // Glow pulse animation for each new notification
+    setTimeout(() => {
+      document.querySelectorAll(".notification-item.new").forEach((n) => n.classList.remove("new"));
+    }, 1500);
   }
 });
 
-// === Nature Pick Dropdown ===
-const natureSelect = document.getElementById("natureSelect");
-const natureSelected = document.getElementById("natureSelected");
-const natureOptions = document.getElementById("natureOptions");
-const natureChoices = document.querySelectorAll(".nature-option");
-
-// Toggle dropdown
-natureSelect.addEventListener("click", (e) => {
-  e.stopPropagation();
-  natureSelect.classList.toggle("open");
-  natureOptions.style.display = natureOptions.style.display === "block" ? "none" : "block";
-});
-
-// Select an option
-natureChoices.forEach(option => {
-  option.addEventListener("click", () => {
-    const value = option.getAttribute("data-value");
-    const text = option.textContent;
-    natureSelected.textContent = text;
-    natureSelect.classList.remove("open");
-    natureOptions.style.display = "none";
-    console.log("Selected Nature:", value);
-  });
-});
-
-// Close dropdown when clicking outside
-document.addEventListener("click", (e) => {
-  if (!natureSelect.contains(e.target)) {
-    natureSelect.classList.remove("open");
-    natureOptions.style.display = "none";
+// === 🖼️ Photo Upload Preview ===
+document.addEventListener("change", (e) => {
+  if (e.target.id === "popupPhoto") {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const photoPreview = document.getElementById("photoPreview");
+      const photoPlaceholder = document.getElementById("photoPlaceholder");
+      if (photoPreview && photoPlaceholder) {
+        photoPreview.src = reader.result;
+        photoPreview.style.display = "block";
+        photoPlaceholder.style.display = "none";
+      }
+    };
+    reader.readAsDataURL(file);
   }
 });
 
