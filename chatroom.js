@@ -880,26 +880,6 @@ window.addEventListener("DOMContentLoaded", () => {
   const sleep = ms => new Promise(res => setTimeout(res, ms));
 });
 
-/* =====================================
- 🎥 Video Navigation & UI Fade Logic
-======================================= */
-(() => {
-  const videoPlayer = document.getElementById("videoPlayer");
-  const prevBtn = document.getElementById("prev");
-  const nextBtn = document.getElementById("next");
-  const container = document.querySelector(".video-container");
-  const navButtons = [prevBtn, nextBtn].filter(Boolean);
-
-  if (!videoPlayer || navButtons.length === 0) return;
-
-  // 🎞️ Video list (Shopify-hosted links)
-  const videos = [
-    "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4",
-    "https://cdn.shopify.com/videos/c/o/v/second-shopify-video.mp4",
-    "https://cdn.shopify.com/videos/c/o/v/third-shopify-video.mp4"
-  ];
-  let currentVideo = 0;
-  let hideTimeout = null;
 
   /* =====================================
  🎥 Video Navigation & UI Fade Logic
