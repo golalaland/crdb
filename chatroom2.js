@@ -34,7 +34,7 @@ import {
   onAuthStateChanged 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-/* ---------- Firebase Config ---------- */
+/* ---------- Firebase Config ---------- == */
 const firebaseConfig = {
   apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
@@ -231,7 +231,7 @@ function updateRedeemLink() {
 /* ---------- Tip Link ---------- */
 function updateTipLink() {
   if (!refs.tipBtn || !currentUser) return;
-  refs.tipBtn.href = `https://golalaland.github.io/chat/moneymaths.html?uid=${encodeURIComponent(currentUser.uid)}`;
+  refs.tipBtn.href = `https://golalaland.github.io/crdb/moneytrain.html?uid=${encodeURIComponent(currentUser.uid)}`;
   refs.tipBtn.style.display = "inline-block";
 }
 
@@ -367,117 +367,6 @@ if (msg.highlight && msg.content?.includes("gifted")) {
     });
   });
 }
-/* ---------- 👤 User Popup Logic (Optimized & Instant) ---------- */
-const userPopup = document.getElementById("userPopup");
-const popupContent = userPopup.querySelector(".user-popup-content");
-const popupCloseBtn = document.getElementById("popupCloseBtn");
-const popupPhoto = userPopup.querySelector(".popup-photo");
-const popupUsername = document.getElementById("popupUsername");
-const popupGender = document.getElementById("popupGender");
-const popupGlow = userPopup.querySelector(".popup-glow");
-const popupSocials = document.getElementById("popupSocials");
-
-export async function showUserPopup(uid) {
-  try {
-    const snap = await getDoc(doc(db, "users", uid));
-
-    if (!snap.exists()) {
-      const starPopup = document.getElementById("starPopup");
-      starPopup.style.display = "block";
-      starPopup.querySelector("#starText").textContent = "User has not unlocked profile yet!";
-      setTimeout(() => starPopup.style.display = "none", 1800);
-      return;
-    }
-
-    const data = snap.data();
-
-    // Username
-    popupUsername.textContent = data.chatId || "Unknown";
-
-    // Typewriter effect for descriptor
-    const ageGroup = (data.age >= 30) ? "30s" : "20s";
-    const pronoun = data.gender?.toLowerCase() === "male" ? "his" : "her";
-    const textLine = `A ${data.naturePick || "sexy"} ${data.gender || "male"} in ${pronoun} ${ageGroup}`;
-    popupGender.textContent = "";
-    let i = 0;
-    function typeWriter() {
-      if (i < textLine.length) {
-        popupGender.textContent += textLine.charAt(i);
-        i++;
-        setTimeout(typeWriter, 50);
-      }
-    }
-    typeWriter();
-
-    // Photo
-    if (data.photoURL) {
-      popupPhoto.innerHTML = `<img src="${data.photoURL}" alt="Profile" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
-    } else {
-      popupPhoto.textContent = (data.chatId || "?").slice(0, 2).toUpperCase();
-      popupPhoto.style.background = "#222";
-    }
-
-    // Fruit emoji
-    popupGlow.textContent = data.fruitPick || "🍇";
-
-    // Socials
-    popupSocials.innerHTML = "";
-    const socialsMap = {
-      instagram: "https://cdn-icons-png.flaticon.com/512/2111/2111463.png",
-      telegram: "https://cdn-icons-png.flaticon.com/512/2111/2111646.png",
-      tiktok: "https://cdn-icons-png.flaticon.com/512/3046/3046122.png",
-      whatsapp: "https://cdn-icons-png.flaticon.com/512/733/733585.png"
-    };
-    Object.keys(socialsMap).forEach(key => {
-      if (data[key]) {
-        const a = document.createElement("a");
-        a.href = data[key].startsWith("http") ? data[key] : `https://${data[key]}`;
-        a.target = "_blank";
-        a.innerHTML = `<img src="${socialsMap[key]}" alt="${key}">`;
-        popupSocials.appendChild(a);
-      }
-    });
-
-    // 🎁 Gift button
-    let giftBtn = popupContent.querySelector(".gift-btn");
-    if (!giftBtn) {
-      giftBtn = document.createElement("button");
-      giftBtn.className = "gift-btn";
-      popupContent.appendChild(giftBtn);
-    }
-    giftBtn.textContent = "Gift Stars ⭐️";
-    giftBtn.onclick = () => showGiftModal(uid, data);
-
-    // Show popup
-    userPopup.style.display = "flex";
-    setTimeout(() => popupContent.classList.add("show"), 20);
-
-  } catch (err) {
-    console.error("Error fetching user popup:", err);
-  }
-}
-
-// Close logic
-popupCloseBtn.onclick = () => {
-  popupContent.classList.remove("show");
-  setTimeout(() => userPopup.style.display = "none", 250);
-};
-userPopup.onclick = e => {
-  if (e.target === userPopup) popupCloseBtn.click();
-};
-
-/* ---------- 🪶 Detect Username Tap ---------- */
-document.addEventListener("pointerdown", e => {
-  const el = e.target.closest(".chat-username");
-  if (!el) return;
-
-  const uid = el.dataset.username;
-  if (uid && uid !== currentUser?.uid) showUserPopup(uid);
-
-  el.style.transition = "opacity 0.15s";
-  el.style.opacity = "0.5";
-  setTimeout(() => (el.style.opacity = "1"), 150);
-});
 
 /* ---------- 🆔 ChatID Modal ---------- */
 async function promptForChatID(userRef, userData) {
@@ -607,6 +496,53 @@ async function loginWhitelist(email, phone) {
     if (loader) loader.style.display = "none";
   }
 }
+
+/* ----------------------------
+   🔁 Auto Login Session
+----------------------------- */
+window.addEventListener("DOMContentLoaded", async () => {
+  const vipUser = JSON.parse(localStorage.getItem("vipUser"));
+  if (vipUser?.email && vipUser?.phone) {
+    const loader = document.getElementById("postLoginLoader");
+    const loadingBar = document.getElementById("loadingBar");
+
+    try {
+      // ✅ Make sure loader and bar are visible
+      if (loader) loader.style.display = "flex";
+      if (loadingBar) loadingBar.style.width = "0%";
+
+      // 🩷 Animate bar while logging in
+      let progress = 0;
+      const interval = 80;
+      const loadingInterval = setInterval(() => {
+        if (progress < 90) { // don’t fill completely until login ends
+          progress += Math.random() * 5;
+          loadingBar.style.width = `${Math.min(progress, 90)}%`;
+        }
+      }, interval);
+
+      // 🧠 Run the login
+      const success = await loginWhitelist(vipUser.email, vipUser.phone);
+
+      // Finish bar smoothly
+      clearInterval(loadingInterval);
+      loadingBar.style.width = "100%";
+
+      if (success) {
+        await sleep(400);
+        updateRedeemLink();
+        updateTipLink();
+      }
+
+    } catch (err) {
+      console.error("❌ Auto-login error:", err);
+    } finally {
+      await sleep(300);
+      if (loader) loader.style.display = "none";
+    }
+  }
+});
+
 
 /* ===============================
    💫 Auto Star Earning System
@@ -842,18 +778,21 @@ window.addEventListener("DOMContentLoaded", () => {
   /* ----------------------------
      🔁 Auto Login Session
   ----------------------------- */
+ async function autoLogin() {
   const vipUser = JSON.parse(localStorage.getItem("vipUser"));
   if (vipUser?.email && vipUser?.phone) {
-    (async () => {
-      showLoadingBar(1000);
-      await sleep(60);
-      const success = await loginWhitelist(vipUser.email, vipUser.phone);
-      if (!success) return;
-      await sleep(400);
-      updateRedeemLink();
-      updateTipLink();
-    })();
+    showLoadingBar(1000);
+    await sleep(60);
+    const success = await loginWhitelist(vipUser.email, vipUser.phone);
+    if (!success) return;
+    await sleep(400);
+    updateRedeemLink();
+    updateTipLink();
   }
+}
+
+// Call on page load
+autoLogin();
 
   /* ----------------------------
      💬 Send Message Handler
@@ -958,8 +897,9 @@ window.addEventListener("DOMContentLoaded", () => {
   };
   const sleep = ms => new Promise(res => setTimeout(res, ms));
 });
+
 /* =====================================
- 🎥 Video Navigation & UI Fade Logic
+   🎥 Video Navigation & UI Fade Logic
 ======================================= */
 (() => {
   const videoPlayer = document.getElementById("videoPlayer");
@@ -970,17 +910,50 @@ window.addEventListener("DOMContentLoaded", () => {
 
   if (!videoPlayer || navButtons.length === 0) return;
 
-  // 🎞️ Video list (Shopify-hosted links)
+  // Wrap the video in a relative container if not already
+  const videoWrapper = document.createElement("div");
+  videoWrapper.style.position = "relative";
+  videoWrapper.style.display = "inline-block";
+  videoPlayer.parentNode.insertBefore(videoWrapper, videoPlayer);
+  videoWrapper.appendChild(videoPlayer);
+
+  // ---------- Create hint overlay inside video ----------
+  let hint = document.createElement("div");
+hint = document.createElement("div");
+hint.className = "video-hint";
+hint.style.position = "absolute";
+hint.style.bottom = "10%";            // slightly above bottom
+hint.style.left = "50%";
+hint.style.transform = "translateX(-50%)"; // horizontal center
+hint.style.padding = "2px 8px";       // small pill
+hint.style.background = "rgba(0,0,0,0.5)";
+hint.style.color = "#fff";
+hint.style.borderRadius = "12px";     // pill shape
+hint.style.fontSize = "14px";         // readable small font
+hint.style.opacity = "0";
+hint.style.pointerEvents = "none";
+hint.style.transition = "opacity 0.4s";
+// ensure parent is positioned
+videoPlayer.parentElement.style.position = "relative";
+videoPlayer.parentElement.appendChild(hint);
+
+  const showHint = (msg, timeout = 1500) => {
+    hint.textContent = msg;
+    hint.style.opacity = "1";
+    clearTimeout(hint._t);
+    hint._t = setTimeout(() => (hint.style.opacity = "0"), timeout);
+  };
+
+  // 🎞️ Video list (Shopify video)
   const videos = [
-    "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4",
-    "https://cdn.shopify.com/videos/c/o/v/second-shopify-video.mp4",
-    "https://cdn.shopify.com/videos/c/o/v/third-shopify-video.mp4"
+    "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4"
+    // Add more Shopify videos if needed
   ];
   let currentVideo = 0;
   let hideTimeout = null;
 
   /* ----------------------------
-     ▶️ Load & Play Video (with canplay check)
+     ▶️ Load & Play Video
   ----------------------------- */
   const loadVideo = (index) => {
     if (index < 0) index = videos.length - 1;
@@ -990,7 +963,6 @@ window.addEventListener("DOMContentLoaded", () => {
     videoPlayer.src = videos[currentVideo];
     videoPlayer.muted = true;
 
-    // Wait until the video can play, then play
     videoPlayer.addEventListener(
       "canplay",
       function onCanPlay() {
@@ -1005,8 +977,7 @@ window.addEventListener("DOMContentLoaded", () => {
   ----------------------------- */
   videoPlayer.addEventListener("click", () => {
     videoPlayer.muted = !videoPlayer.muted;
-    const state = videoPlayer.muted ? "🔇" : "🔊";
-    showStarPopup?.(`Video sound: ${state}`);
+    showHint(videoPlayer.muted ? "Tap to unmute" : "Sound on");
   });
 
   /* ----------------------------
@@ -1048,10 +1019,13 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // Start with first video
   loadVideo(0);
+
+  // Show initial hint inside video
+  showHint("Tap to unmute", 1500);
 })();
 
-// URL of your custom star SVG
-const customStarURL = "https://res.cloudinary.com/dekxhwh6l/image/upload/v1760596116/starssvg_k3hmsu.svg";
+// URL of your Shopify-hosted heart SVG
+const customStarURL = "https://cdn.shopify.com/s/files/1/0962/6648/6067/files/hearts__128_x_128_px.svg?v=1761809626";
 
 // Replace stars in text nodes with SVG + floating stars
 function replaceStarsWithSVG(root = document.body) {
@@ -1101,7 +1075,7 @@ function replaceStarsWithSVG(root = document.body) {
         span.appendChild(inlineStar);
         parent.insertBefore(span, textNode);
 
-        // Floating star (same for BallerAlert)
+        // Floating star
         const floatingStar = document.createElement("img");
         floatingStar.src = customStarURL;
         floatingStar.alt = "⭐";
@@ -1111,7 +1085,6 @@ function replaceStarsWithSVG(root = document.body) {
         floatingStar.style.pointerEvents = "none";
         floatingStar.style.zIndex = "9999";
 
-        // Get bounding rect relative to viewport + scroll
         const rect = inlineStar.getBoundingClientRect();
         floatingStar.style.top = `${rect.top + rect.height / 2 + window.scrollY}px`;
         floatingStar.style.left = `${rect.left + rect.width / 2 + window.scrollX}px`;
@@ -1133,7 +1106,7 @@ function replaceStarsWithSVG(root = document.body) {
   });
 }
 
-// Observe dynamic content including BallerAlert
+// Observe dynamic content
 const observer = new MutationObserver(mutations => {
   mutations.forEach(m => {
     m.addedNodes.forEach(node => {
@@ -1146,29 +1119,7 @@ observer.observe(document.body, { childList: true, subtree: true });
 
 // Initial run
 replaceStarsWithSVG();
-/* =======================================
-   🧱 User Popup Close Logic (Mobile + PC)
-======================================= */
-(() => {
-  const popup = document.getElementById("userPopup");
-  const closeBtn = document.getElementById("popupClose");
 
-  if (!popup || !closeBtn) return;
-
-  const hidePopup = () => {
-    popup.style.display = "none";
-    popup.classList.remove("show");
-  };
-
-  closeBtn.addEventListener("pointerdown", (e) => {
-    e.stopPropagation();
-    hidePopup();
-  });
-
-  popup.addEventListener("pointerdown", (e) => {
-    if (e.target === popup) hidePopup();
-  });
-})();
 
 /* ---------- DOM Elements ---------- */
 const openBtn = document.getElementById("openHostsBtn");
@@ -1248,7 +1199,6 @@ function renderHostAvatars() {
   });
 }
 
-
 /* ---------- Load Host (Faster Video Loading) ---------- */
 async function loadHost(idx) {
   const host = hosts[idx];
@@ -1324,7 +1274,9 @@ async function loadHost(idx) {
   });
 
   /* ---------- Host Info ---------- */
-  usernameEl.textContent = host.chatId || "Unknown Host";
+  usernameEl.textContent = (host.chatId || "Unknown Host")
+  .toLowerCase()
+  .replace(/\b\w/g, char => char.toUpperCase());
   const gender = (host.gender || "person").toLowerCase();
   const pronoun = gender === "male" ? "his" : "her";
   const ageGroup = !host.age ? "20s" : host.age >= 30 ? "30s" : "20s";
@@ -1389,7 +1341,7 @@ function showMeetModal(host) {
   modal.innerHTML = `
     <div id="meetModalContent" style="background:#111;padding:20px 22px;border-radius:12px;text-align:center;color:#fff;max-width:340px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
       <h3 style="margin-bottom:10px;font-weight:600;">Meet ${host.chatId || "this host"}?</h3>
-      <p style="margin-bottom:16px;">This will cost you <b>21 stars ⭐</b>.</p>
+      <p style="margin-bottom:16px;">Request meet with <b>21 stars ⭐ ?</b>.</p>
       <div style="display:flex;gap:10px;justify-content:center;">
         <button id="cancelMeet" style="padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">Cancel</button>
         <button id="confirmMeet" style="padding:8px 16px;background:linear-gradient(90deg,#ff0099,#ff6600);border:none;color:#fff;border-radius:8px;font-weight:600;">Yes</button>
@@ -1404,168 +1356,81 @@ function showMeetModal(host) {
   const modalContent = modal.querySelector("#meetModalContent");
 
   cancelBtn.onclick = () => modal.remove();
+  confirmBtn.onclick = async () => {
+    const COST = 21;
+    if (!currentUser?.uid) { alert("Please log in to request meets"); modal.remove(); return; }
+    if ((currentUser.stars || 0) < COST) { alert("Uh oh, not enough stars ⭐"); modal.remove(); return; }
 
-  confirmBtn.onclick = async () => {
-    const COST = 21;
-    if (!currentUser?.uid) { alert("Please log in to meet ⭐"); modal.remove(); return; }
-    if ((currentUser.stars || 0) < COST) { alert("Not enough stars ⭐"); modal.remove(); return; }
+    confirmBtn.disabled = true;
+    confirmBtn.style.opacity = 0.6;
+    confirmBtn.style.cursor = "not-allowed";
 
-    confirmBtn.disabled = true;
-    confirmBtn.style.opacity = 0.6;
-    confirmBtn.style.cursor = "not-allowed";
+    try {
+      currentUser.stars -= COST;
+      if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+      updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
 
-    try {
-      currentUser.stars -= COST;
-      if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-      updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
+      const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
+      const playfulMessages = [
+        "Oh, she’s hella cute…💋", "Careful, she may be naughty..😏",
+        "Be generous with her, she’ll like you..", "Ohh, she’s a real star.. 🤩",
+        "Be a real gentleman, when she texts u..", "She’s ready to dazzle you tonight.. ✨",
+        "Watch out, she might steal your heart.. ❤️", "Look sharp, she’s got a sparkle.. ✨",
+        "Don’t blink, or you’ll miss her charm.. 😉", "Get ready for some fun surprises.. 😏",
+        "She knows how to keep it exciting.. 🎉", "Better behave, she’s watching.. 👀",
+        "She might just blow your mind.. 💥", "Keep calm, she’s worth it.. 😘",
+        "She’s got a twinkle in her eyes.. ✨", "Brace yourself for some charm.. 😎",
+        "She’s not just cute, she’s 🔥", "Careful, her smile is contagious.. 😁",
+        "She might make you blush.. 😳", "She’s a star in every way.. 🌟",
+        "Don’t miss this chance.. ⏳"
+      ];
 
-      const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
-      const playfulMessages = [
-        "Oh, she’s hella cute…💋", "Careful, she may be naughty..😏",
-        "Be generous with her, she’ll like you..", "Ohh, she’s a real star.. 🤩",
-        "Be a real gentleman, when she texts u..", "She’s ready to dazzle you tonight.. ✨",
-        "Watch out, she might steal your heart.. ❤️", "Look sharp, she’s got a sparkle.. ✨",
-        "Don’t blink, or you’ll miss her charm.. 😉", "Get ready for some fun surprises.. 😏",
-        "She knows how to keep it exciting.. 🎉", "Better behave, she’s watching.. 👀",
-        "She might just blow your mind.. 💥", "Keep calm, she’s worth it.. 😘",
-        "She’s got a twinkle in her eyes.. ✨", "Brace yourself for some charm.. 😎",
-        "She’s not just cute, she’s 🔥", "Careful, her smile is contagious.. 😁",
-        "She might make you blush.. 😳", "She’s a star in every way.. 🌟",
-        "Don’t miss this chance.. ⏳"
-      ];
+      const randomPlayful = [];
+      while (randomPlayful.length < 3) {
+        const choice = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
+        if (!randomPlayful.includes(choice)) randomPlayful.push(choice);
+      }
 
-      const randomPlayful = [];
-      while (randomPlayful.length < 3) {
-        const choice = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
-        if (!randomPlayful.includes(choice)) randomPlayful.push(choice);
-      }
+      const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
+      modalContent.innerHTML = `<p id="stageMsg" style="margin-top:20px;font-weight:500;"></p>`;
+      const stageMsgEl = modalContent.querySelector("#stageMsg");
 
-      const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
-      modalContent.innerHTML = `<p id="stageMsg" style="margin-top:20px;font-weight:500;"></p>`;
-      const stageMsgEl = modalContent.querySelector("#stageMsg");
+      let totalTime = 0;
+      stages.forEach((stage, index) => {
+        // Random duration per stage: 1.5–2.5s for first two, 1.7–2.3s for playful, last stage 2–2.5s
+        let duration;
+        if (index < 2) duration = 1500 + Math.random() * 1000;
+        else if (index < stages.length - 1) duration = 1700 + Math.random() * 600;
+        else duration = 2000 + Math.random() * 500;
+        totalTime += duration;
 
-      let totalTime = 0;
-      stages.forEach((stage, index) => {
-        // Random duration per stage: 1.5–2.5s for first two, 1.7–2.3s for playful, last stage 2–2.5s
-        let duration;
-        if (index < 2) duration = 1500 + Math.random() * 1000;
-        else if (index < stages.length - 1) duration = 1700 + Math.random() * 600;
-        else duration = 2000 + Math.random() * 500;
-        totalTime += duration;
-
-        setTimeout(() => {
-          stageMsgEl.textContent = stage;
-          if (index === stages.length - 1) {
-            setTimeout(() => {
-              modalContent.innerHTML = `
-                <h3 style="margin-bottom:10px;font-weight:600;">Meet Request Sent!</h3>
-                <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is approved.</p>
-                <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send Message</button>
-              `;
-              const letsGoBtn = modalContent.querySelector("#letsGoBtn");
-              letsGoBtn.onclick = () => {
-                window.open(`https://t.me/drtantra?text=${encodeURIComponent(`Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`)}`, "_blank");
-                modal.remove();
-              };
-              // Auto-close after 7–7.5s
-              setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
-            }, 500);
-          }
-        }, totalTime);
-      });
-    } catch (err) {
-      console.error("Meet deduction failed:", err);
-      alert("Something went wrong. Please try again later.");
-      modal.remove();
-    }
-  };
+        setTimeout(() => {
+          stageMsgEl.textContent = stage;
+          if (index === stages.length - 1) {
+            setTimeout(() => {
+              modalContent.innerHTML = `
+                <h3 style="margin-bottom:10px;font-weight:600;">Meet Request Sent!</h3>
+                <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is approved.</p>
+                <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send Message</button>
+              `;
+              const letsGoBtn = modalContent.querySelector("#letsGoBtn");
+              letsGoBtn.onclick = () => {
+                window.open(`https://t.me/drtantra?text=${encodeURIComponent(`Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`)}`, "_blank");
+                modal.remove();
+              };
+              // Auto-close after 7–7.5s
+              setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
+            }, 500);
+          }
+        }, totalTime);
+      });
+    } catch (err) {
+      console.error("Meet deduction failed:", err);
+      alert("Something went wrong. Please try again later.");
+      modal.remove();
+    }
+  };
 }
-
-/* ---------- Gift Slider ---------- */
-giftSlider.addEventListener("input", () => {
-  giftAmountEl.textContent = giftSlider.value;
-});
-
-/* ---------- Send Gift Function (Dynamic Receiver) ---------- */
-async function sendGift() {
-  const receiver = hosts[currentIndex]; // dynamically pick current host
-  if (!receiver?.id) return showGiftAlert("⚠️ No host selected.");
-  if (!currentUser?.uid) return showGiftAlert("Please log in to send stars ⭐");
-
-  const giftStars = parseInt(giftSlider.value, 10);
-  if (isNaN(giftStars) || giftStars <= 0)
-    return showGiftAlert("Invalid star amount ❌");
-
-  // Spinner inside button
-  const originalText = giftBtn.textContent;
-  const buttonWidth = giftBtn.offsetWidth + "px";
-  giftBtn.style.width = buttonWidth;
-  giftBtn.disabled = true;
-  giftBtn.innerHTML = `<span class="gift-spinner"></span>`; // Make sure CSS spins it
-
-  try {
-    const senderRef = doc(db, "users", currentUser.uid);
-    const receiverRef = doc(db, "users", receiver.id);
-    const featuredReceiverRef = doc(db, "featuredHosts", receiver.id);
-
-    await runTransaction(db, async (tx) => {
-      const senderSnap = await tx.get(senderRef);
-      const receiverSnap = await tx.get(receiverRef);
-
-      if (!senderSnap.exists()) throw new Error("Your user record not found.");
-      if (!receiverSnap.exists()) 
-        tx.set(receiverRef, { stars: 0, starsGifted: 0, lastGiftSeen: {} }, { merge: true });
-
-      const senderData = senderSnap.data();
-      if ((senderData.stars || 0) < giftStars)
-        throw new Error("Insufficient stars");
-
-      // Deduct from sender, add to receiver
-      tx.update(senderRef, { stars: increment(-giftStars), starsGifted: increment(giftStars) });
-      tx.update(receiverRef, { stars: increment(giftStars) });
-      tx.set(featuredReceiverRef, { stars: increment(giftStars) }, { merge: true });
-
-      // Push a one-time notification to receiver
-      tx.update(receiverRef, {
-        [`lastGiftSeen.${currentUser.username || "Someone"}`]: giftStars
-      });
-    });
-
-    // Sender alert
-    showGiftAlert(`✅ You sent ${giftStars} stars ⭐ to ${receiver.chatId}!`);
-
-    // Receiver alert only if this session is the actual receiver
-if (currentUser.uid === receiver.id) {
-  setTimeout(() => {
-    showGiftAlert(`🎁 ${lastSenderName} sent you ${giftStars} stars ⭐`);
-  }, 1000);
-}
-
-    console.log(`✅ Sent ${giftStars} stars ⭐ to ${receiver.chatId}`);
-  } catch (err) {
-    console.error("❌ Gift sending failed:", err);
-    showGiftAlert(`⚠️ Something went wrong: ${err.message}`);
-  } finally {
-    giftBtn.innerHTML = originalText;
-    giftBtn.disabled = false;
-    giftBtn.style.width = "auto";
-  }
-}
-
-/* ---------- Assign gift button click ---------- */
-giftBtn.onclick = sendGift;
-
-/* ---------- Navigation ---------- */
-prevBtn.addEventListener("click", e => {
-  e.preventDefault();
-  loadHost((currentIndex - 1 + hosts.length) % hosts.length);
-});
-
-nextBtn.addEventListener("click", e => {
-  e.preventDefault();
-  loadHost((currentIndex + 1) % hosts.length);
-});
-
 /* ---------- Modal control ---------- */
 openBtn.addEventListener("click", () => {
   modal.style.display = "flex";
@@ -1588,6 +1453,8 @@ window.addEventListener("click", e => {
 
 /* ---------- Init ---------- */
 fetchFeaturedHosts();
+
+
   // --- Initial random values for first load ---
 (function() {
   const onlineCountEl = document.getElementById('onlineCount');
