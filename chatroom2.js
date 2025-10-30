@@ -1,3 +1,6 @@
+Crjs 
+
+
 /* ---------- Imports (Firebase v10) ---------- */
 import { 
   initializeApp 
@@ -367,7 +370,162 @@ if (msg.highlight && msg.content?.includes("gifted")) {
     });
   });
 }
+/* ---------- 👤 User Popup Logic (Optimized & Instant) ---------- */
+const userPopup = document.getElementById("userPopup");
+const popupContent = userPopup.querySelector(".user-popup-content");
+const popupCloseBtn = document.getElementById("popupCloseBtn");
+const popupPhoto = userPopup.querySelector(".popup-photo");
+const popupUsername = document.getElementById("popupUsername");
+const popupGender = document.getElementById("popupGender");
+const popupGlow = userPopup.querySelector(".popup-glow");
+const popupSocials = document.getElementById("popupSocials");
 
+export async function showUserPopup(uid) {
+  try {
+    const snap = await getDoc(doc(db, "users", uid));
+
+    if (!snap.exists()) {
+      const starPopup = document.getElementById("starPopup");
+      starPopup.style.display = "block";
+      starPopup.querySelector("#starText").textContent = "User has not unlocked profile yet!";
+      setTimeout(() => starPopup.style.display = "none", 1800);
+      return;
+    }
+
+    const data = snap.data();
+
+    // Username
+    popupUsername.textContent = data.chatId || "Unknown";
+
+    // Typewriter effect for descriptor
+    const ageGroup = (data.age >= 30) ? "30s" : "20s";
+    const pronoun = data.gender?.toLowerCase() === "male" ? "his" : "her";
+    const textLine = `A ${data.naturePick || "sexy"} ${data.gender || "male"} in ${pronoun} ${ageGroup}`;
+    popupGender.textContent = "";
+    let i = 0;
+    function typeWriter() {
+      if (i < textLine.length) {
+        popupGender.textContent += textLine.charAt(i);
+        i++;
+        setTimeout(typeWriter, 50);
+      }
+    }
+    typeWriter();
+
+    // Photo
+    if (data.photoURL) {
+      popupPhoto.innerHTML = `<img src="${data.photoURL}" alt="Profile" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+    } else {
+      popupPhoto.textContent = (data.chatId || "?").slice(0, 2).toUpperCase();
+      popupPhoto.style.background = "#222";
+    }
+
+    // Fruit emoji
+    popupGlow.textContent = data.fruitPick || "🍇";
+
+    // Socials
+    popupSocials.innerHTML = "";
+    const socialsMap = {
+      instagram: "https://cdn-icons-png.flaticon.com/512/2111/2111463.png",
+      telegram: "https://cdn-icons-png.flaticon.com/512/2111/2111646.png",
+      tiktok: "https://cdn-icons-png.flaticon.com/512/3046/3046122.png",
+      whatsapp: "https://cdn-icons-png.flaticon.com/512/733/733585.png"
+    };
+    Object.keys(socialsMap).forEach(key => {
+      if (data[key]) {
+        const a = document.createElement("a");
+        a.href = data[key].startsWith("http") ? data[key] : `https://${data[key]}`;
+        a.target = "_blank";
+        a.innerHTML = `<img src="${socialsMap[key]}" alt="${key}">`;
+        popupSocials.appendChild(a);
+      }
+    });
+
+    // 🎁 Gift button
+    let giftBtn = popupContent.querySelector(".gift-btn");
+    if (!giftBtn) {
+      giftBtn = document.createElement("button");
+      giftBtn.className = "gift-btn";
+      popupContent.appendChild(giftBtn);
+    }
+    giftBtn.textContent = "Gift Stars ⭐️";
+    giftBtn.onclick = () => showGiftModal(uid, data);
+
+    // Show popup
+    userPopup.style.display = "flex";
+    setTimeout(() => popupContent.classList.add("show"), 20);
+
+  } catch (err) {
+    console.error("Error fetching user popup:", err);
+  }
+}
+
+// Close logic
+popupCloseBtn.onclick = () => {
+  popupContent.classList.remove("show");
+  setTimeout(() => userPopup.style.display = "none", 250);
+};
+userPopup.onclick = e => {
+  if (e.target === userPopup) popupCloseBtn.click();
+};
+
+/* ---------- 🪶 Detect Username Tap ---------- */
+document.addEventListener("pointerdown", e => {
+  const el = e.target.closest(".chat-username");
+  if (!el) return;
+
+  const uid = el.dataset.username;
+  if (uid && uid !== currentUser?.uid) showUserPopup(uid);
+
+  el.style.transition = "opacity 0.15s";
+  el.style.opacity = "0.5";
+  setTimeout(() => (el.style.opacity = "1"), 150);
+});
+
+/* ---------- 🆔 ChatID Modal ---------- */
+async function promptForChatID(userRef, userData) {
+  if (!refs.chatIDModal || !refs.chatIDInput || !refs.chatIDConfirmBtn)
+    return userData?.chatId || null;
+
+  // Skip if user already set chatId
+  if (userData?.chatId && !userData.chatId.startsWith("GUEST"))
+    return userData.chatId;
+
+  refs.chatIDInput.value = "";
+  refs.chatIDModal.style.display = "flex";
+  if (refs.sendAreaEl) refs.sendAreaEl.style.display = "none";
+
+  return new Promise(resolve => {
+    refs.chatIDConfirmBtn.onclick = async () => {
+      const chosen = refs.chatIDInput.value.trim();
+      if (chosen.length < 3 || chosen.length > 12)
+        return alert("Chat ID must be 3–12 characters");
+
+      const lower = chosen.toLowerCase();
+      const q = query(collection(db, "users"), where("chatIdLower", "==", lower));
+      const snap = await getDocs(q);
+
+      let taken = false;
+      snap.forEach(docSnap => {
+        if (docSnap.id !== userRef.id) taken = true;
+      });
+      if (taken) return alert("This Chat ID is taken 💬");
+
+      try {
+        await updateDoc(userRef, { chatId: chosen, chatIdLower: lower });
+        currentUser.chatId = chosen;
+        currentUser.chatIdLower = lower;
+        refs.chatIDModal.style.display = "none";
+        if (refs.sendAreaEl) refs.sendAreaEl.style.display = "flex";
+        showStarPopup(`Welcome ${chosen}! 🎉`);
+        resolve(chosen);
+      } catch (err) {
+        console.error(err);
+        alert("Failed to save Chat ID");
+      }
+    };
+  });
+}
 /* ===============================
    🔐 VIP Login (Whitelist Check)
 ================================= */
@@ -776,162 +934,6 @@ window.addEventListener("DOMContentLoaded", () => {
   }, 12000); // same as CSS animation
 });
 
-  /* ---------- 👤 User Popup Logic (Optimized & Instant) ---------- */
-const userPopup = document.getElementById("userPopup");
-const popupContent = userPopup.querySelector(".user-popup-content");
-const popupCloseBtn = document.getElementById("popupCloseBtn");
-const popupPhoto = userPopup.querySelector(".popup-photo");
-const popupUsername = document.getElementById("popupUsername");
-const popupGender = document.getElementById("popupGender");
-const popupGlow = userPopup.querySelector(".popup-glow");
-const popupSocials = document.getElementById("popupSocials");
-
-export async function showUserPopup(uid) {
-  try {
-    const snap = await getDoc(doc(db, "users", uid));
-
-    if (!snap.exists()) {
-      const starPopup = document.getElementById("starPopup");
-      starPopup.style.display = "block";
-      starPopup.querySelector("#starText").textContent = "User has not unlocked profile yet!";
-      setTimeout(() => starPopup.style.display = "none", 1800);
-      return;
-    }
-
-    const data = snap.data();
-
-    // Username
-    popupUsername.textContent = data.chatId || "Unknown";
-
-    // Typewriter effect for descriptor
-    const ageGroup = (data.age >= 30) ? "30s" : "20s";
-    const pronoun = data.gender?.toLowerCase() === "male" ? "his" : "her";
-    const textLine = `A ${data.naturePick || "sexy"} ${data.gender || "male"} in ${pronoun} ${ageGroup}`;
-    popupGender.textContent = "";
-    let i = 0;
-    function typeWriter() {
-      if (i < textLine.length) {
-        popupGender.textContent += textLine.charAt(i);
-        i++;
-        setTimeout(typeWriter, 50);
-      }
-    }
-    typeWriter();
-
-    // Photo
-    if (data.photoURL) {
-      popupPhoto.innerHTML = `<img src="${data.photoURL}" alt="Profile" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
-    } else {
-      popupPhoto.textContent = (data.chatId || "?").slice(0, 2).toUpperCase();
-      popupPhoto.style.background = "#222";
-    }
-
-    // Fruit emoji
-    popupGlow.textContent = data.fruitPick || "🍇";
-
-    // Socials
-    popupSocials.innerHTML = "";
-    const socialsMap = {
-      instagram: "https://cdn-icons-png.flaticon.com/512/2111/2111463.png",
-      telegram: "https://cdn-icons-png.flaticon.com/512/2111/2111646.png",
-      tiktok: "https://cdn-icons-png.flaticon.com/512/3046/3046122.png",
-      whatsapp: "https://cdn-icons-png.flaticon.com/512/733/733585.png"
-    };
-    Object.keys(socialsMap).forEach(key => {
-      if (data[key]) {
-        const a = document.createElement("a");
-        a.href = data[key].startsWith("http") ? data[key] : `https://${data[key]}`;
-        a.target = "_blank";
-        a.innerHTML = `<img src="${socialsMap[key]}" alt="${key}">`;
-        popupSocials.appendChild(a);
-      }
-    });
-
-    // 🎁 Gift button
-    let giftBtn = popupContent.querySelector(".gift-btn");
-    if (!giftBtn) {
-      giftBtn = document.createElement("button");
-      giftBtn.className = "gift-btn";
-      popupContent.appendChild(giftBtn);
-    }
-    giftBtn.textContent = "Gift Stars ⭐️";
-    giftBtn.onclick = () => showGiftModal(uid, data);
-
-    // Show popup
-    userPopup.style.display = "flex";
-    setTimeout(() => popupContent.classList.add("show"), 20);
-
-  } catch (err) {
-    console.error("Error fetching user popup:", err);
-  }
-}
-
-// Close logic
-popupCloseBtn.onclick = () => {
-  popupContent.classList.remove("show");
-  setTimeout(() => userPopup.style.display = "none", 250);
-};
-userPopup.onclick = e => {
-  if (e.target === userPopup) popupCloseBtn.click();
-};
-
-/* ---------- 🪶 Detect Username Tap ---------- */
-document.addEventListener("pointerdown", e => {
-  const el = e.target.closest(".chat-username");
-  if (!el) return;
-
-  const uid = el.dataset.username;
-  if (uid && uid !== currentUser?.uid) showUserPopup(uid);
-
-  el.style.transition = "opacity 0.15s";
-  el.style.opacity = "0.5";
-  setTimeout(() => (el.style.opacity = "1"), 150);
-});
-
-/* ---------- 🆔 ChatID Modal ---------- */
-async function promptForChatID(userRef, userData) {
-  if (!refs.chatIDModal || !refs.chatIDInput || !refs.chatIDConfirmBtn)
-    return userData?.chatId || null;
-
-  // Skip if user already set chatId
-  if (userData?.chatId && !userData.chatId.startsWith("GUEST"))
-    return userData.chatId;
-
-  refs.chatIDInput.value = "";
-  refs.chatIDModal.style.display = "flex";
-  if (refs.sendAreaEl) refs.sendAreaEl.style.display = "none";
-
-  return new Promise(resolve => {
-    refs.chatIDConfirmBtn.onclick = async () => {
-      const chosen = refs.chatIDInput.value.trim();
-      if (chosen.length < 3 || chosen.length > 12)
-        return alert("Chat ID must be 3–12 characters");
-
-      const lower = chosen.toLowerCase();
-      const q = query(collection(db, "users"), where("chatIdLower", "==", lower));
-      const snap = await getDocs(q);
-
-      let taken = false;
-      snap.forEach(docSnap => {
-        if (docSnap.id !== userRef.id) taken = true;
-      });
-      if (taken) return alert("This Chat ID is taken 💬");
-
-      try {
-        await updateDoc(userRef, { chatId: chosen, chatIdLower: lower });
-        currentUser.chatId = chosen;
-        currentUser.chatIdLower = lower;
-        refs.chatIDModal.style.display = "none";
-        if (refs.sendAreaEl) refs.sendAreaEl.style.display = "flex";
-        showStarPopup(`Welcome ${chosen}! 🎉`);
-        resolve(chosen);
-      } catch (err) {
-        console.error(err);
-        alert("Failed to save Chat ID");
-      }
-    };
-  });
-}
   /* ----------------------------
      👋 Rotating Hello Text
   ----------------------------- */
@@ -1043,6 +1045,103 @@ async function promptForChatID(userRef, userData) {
   // Start with first video
   loadVideo(0);
 })();
+
+// URL of your custom star SVG
+const customStarURL = "https://res.cloudinary.com/dekxhwh6l/image/upload/v1760596116/starssvg_k3hmsu.svg";
+
+// Replace stars in text nodes with SVG + floating stars
+function replaceStarsWithSVG(root = document.body) {
+  if (!root) return;
+
+  const walker = document.createTreeWalker(
+    root,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: node => {
+        if (node.nodeValue.includes("⭐") || node.nodeValue.includes("⭐️")) {
+          return NodeFilter.FILTER_ACCEPT;
+        }
+        return NodeFilter.FILTER_REJECT;
+      }
+    }
+  );
+
+  const nodesToReplace = [];
+  while (walker.nextNode()) nodesToReplace.push(walker.currentNode);
+
+  nodesToReplace.forEach(textNode => {
+    const parent = textNode.parentNode;
+    if (!parent) return;
+
+    const fragments = textNode.nodeValue.split(/⭐️?|⭐/);
+
+    fragments.forEach((frag, i) => {
+      if (frag) parent.insertBefore(document.createTextNode(frag), textNode);
+
+      if (i < fragments.length - 1) {
+        // Inline star
+        const span = document.createElement("span");
+        span.style.display = "inline-flex";
+        span.style.alignItems = "center";
+        span.style.position = "relative";
+
+        const inlineStar = document.createElement("img");
+        inlineStar.src = customStarURL;
+        inlineStar.alt = "⭐";
+        inlineStar.style.width = "1.2em";
+        inlineStar.style.height = "1.2em";
+        inlineStar.style.display = "inline-block";
+        inlineStar.style.verticalAlign = "text-bottom";
+        inlineStar.style.transform = "translateY(0.15em) scale(1.2)";
+
+        span.appendChild(inlineStar);
+        parent.insertBefore(span, textNode);
+
+        // Floating star (same for BallerAlert)
+        const floatingStar = document.createElement("img");
+        floatingStar.src = customStarURL;
+        floatingStar.alt = "⭐";
+        floatingStar.style.width = "40px";
+        floatingStar.style.height = "40px";
+        floatingStar.style.position = "absolute";
+        floatingStar.style.pointerEvents = "none";
+        floatingStar.style.zIndex = "9999";
+
+        // Get bounding rect relative to viewport + scroll
+        const rect = inlineStar.getBoundingClientRect();
+        floatingStar.style.top = `${rect.top + rect.height / 2 + window.scrollY}px`;
+        floatingStar.style.left = `${rect.left + rect.width / 2 + window.scrollX}px`;
+        floatingStar.style.transform = "translate(-50%, -50%) scale(0)";
+
+        document.body.appendChild(floatingStar);
+
+        floatingStar.animate([
+          { transform: "translate(-50%, -50%) scale(0)", opacity: 0 },
+          { transform: "translate(-50%, -50%) scale(1.2)", opacity: 1 },
+          { transform: "translate(-50%, -50%) scale(1)", opacity: 1 }
+        ], { duration: 600, easing: "ease-out" });
+
+        setTimeout(() => floatingStar.remove(), 1500);
+      }
+    });
+
+    parent.removeChild(textNode);
+  });
+}
+
+// Observe dynamic content including BallerAlert
+const observer = new MutationObserver(mutations => {
+  mutations.forEach(m => {
+    m.addedNodes.forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE) replaceStarsWithSVG(node.parentNode);
+      else if (node.nodeType === Node.ELEMENT_NODE) replaceStarsWithSVG(node);
+    });
+  });
+});
+observer.observe(document.body, { childList: true, subtree: true });
+
+// Initial run
+replaceStarsWithSVG();
 /* =======================================
    🧱 User Popup Close Logic (Mobile + PC)
 ======================================= */
@@ -1251,7 +1350,6 @@ async function loadHost(idx) {
     detailsEl.insertAdjacentElement("afterend", meetBtn);
   }
   meetBtn.onclick = () => showMeetModal(host);
-  
 
   /* ---------- Avatar Highlight ---------- */
   hostListEl.querySelectorAll("img").forEach((img, i) => {
@@ -1545,100 +1643,3 @@ fetchFeaturedHosts();
     }
   }, 30000);
 })();
-
-// URL of your custom star SVG
-const customStarURL = "https://res.cloudinary.com/dekxhwh6l/image/upload/v1760596116/starssvg_k3hmsu.svg";
-
-// Replace stars in text nodes with SVG + floating stars
-function replaceStarsWithSVG(root = document.body) {
-  if (!root) return;
-
-  const walker = document.createTreeWalker(
-    root,
-    NodeFilter.SHOW_TEXT,
-    {
-      acceptNode: node => {
-        if (node.nodeValue.includes("⭐") || node.nodeValue.includes("⭐️")) {
-          return NodeFilter.FILTER_ACCEPT;
-        }
-        return NodeFilter.FILTER_REJECT;
-      }
-    }
-  );
-
-  const nodesToReplace = [];
-  while (walker.nextNode()) nodesToReplace.push(walker.currentNode);
-
-  nodesToReplace.forEach(textNode => {
-    const parent = textNode.parentNode;
-    if (!parent) return;
-
-    const fragments = textNode.nodeValue.split(/⭐️?|⭐/);
-
-    fragments.forEach((frag, i) => {
-      if (frag) parent.insertBefore(document.createTextNode(frag), textNode);
-
-      if (i < fragments.length - 1) {
-        // Inline star
-        const span = document.createElement("span");
-        span.style.display = "inline-flex";
-        span.style.alignItems = "center";
-        span.style.position = "relative";
-
-        const inlineStar = document.createElement("img");
-        inlineStar.src = customStarURL;
-        inlineStar.alt = "⭐";
-        inlineStar.style.width = "1.2em";
-        inlineStar.style.height = "1.2em";
-        inlineStar.style.display = "inline-block";
-        inlineStar.style.verticalAlign = "text-bottom";
-        inlineStar.style.transform = "translateY(0.15em) scale(1.2)";
-
-        span.appendChild(inlineStar);
-        parent.insertBefore(span, textNode);
-
-        // Floating star (same for BallerAlert)
-        const floatingStar = document.createElement("img");
-        floatingStar.src = customStarURL;
-        floatingStar.alt = "⭐";
-        floatingStar.style.width = "40px";
-        floatingStar.style.height = "40px";
-        floatingStar.style.position = "absolute";
-        floatingStar.style.pointerEvents = "none";
-        floatingStar.style.zIndex = "9999";
-
-        // Get bounding rect relative to viewport + scroll
-        const rect = inlineStar.getBoundingClientRect();
-        floatingStar.style.top = `${rect.top + rect.height / 2 + window.scrollY}px`;
-        floatingStar.style.left = `${rect.left + rect.width / 2 + window.scrollX}px`;
-        floatingStar.style.transform = "translate(-50%, -50%) scale(0)";
-
-        document.body.appendChild(floatingStar);
-
-        floatingStar.animate([
-          { transform: "translate(-50%, -50%) scale(0)", opacity: 0 },
-          { transform: "translate(-50%, -50%) scale(1.2)", opacity: 1 },
-          { transform: "translate(-50%, -50%) scale(1)", opacity: 1 }
-        ], { duration: 600, easing: "ease-out" });
-
-        setTimeout(() => floatingStar.remove(), 1500);
-      }
-    });
-
-    parent.removeChild(textNode);
-  });
-}
-
-// Observe dynamic content including BallerAlert
-const observer = new MutationObserver(mutations => {
-  mutations.forEach(m => {
-    m.addedNodes.forEach(node => {
-      if (node.nodeType === Node.TEXT_NODE) replaceStarsWithSVG(node.parentNode);
-      else if (node.nodeType === Node.ELEMENT_NODE) replaceStarsWithSVG(node);
-    });
-  });
-});
-observer.observe(document.body, { childList: true, subtree: true });
-
-// Initial run
-replaceStarsWithSVG();
