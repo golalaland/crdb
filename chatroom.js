@@ -1632,102 +1632,134 @@ fetchFeaturedHosts();
 
 
 document.addEventListener("DOMContentLoaded", () => {
-  // ========== 🟣 HOST SETTINGS LOGIC ==========
-  const isHost = true; // <-- later dynamic
-  const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
-  const hostModal = document.getElementById("hostModal");
-  const hostSettingsBtn = document.getElementById("hostSettingsBtn");
-  const closeModal = hostModal?.querySelector(".close");
+// ========== 🟣 HOST SETTINGS LOGIC ==========
+const isHost = true; // <-- later dynamic
+const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
+const hostModal = document.getElementById("hostModal");
+const hostSettingsBtn = document.getElementById("hostSettingsBtn");
+const closeModal = hostModal?.querySelector(".close");
 
-  if (isHost && hostSettingsWrapper) hostSettingsWrapper.style.display = "block";
+if (isHost && hostSettingsWrapper) hostSettingsWrapper.style.display = "block";
 
-  if (hostSettingsBtn && hostModal && closeModal) {
-    hostSettingsBtn.onclick = () => (hostModal.style.display = "block");
-    closeModal.onclick = () => (hostModal.style.display = "none");
-    window.onclick = (e) => {
-      if (e.target === hostModal) hostModal.style.display = "none";
+if (hostSettingsBtn && hostModal && closeModal) {
+  hostSettingsBtn.onclick = async () => {
+    hostModal.style.display = "block";
+
+    // ✅ Populate fields from Firestore when modal opens
+    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
+    const userRef = doc(db, "users", currentUser.uid);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) return showStarPopup("⚠️ User data not found.");
+
+    const data = snap.data();
+    document.getElementById("city").value = data.city || "";
+    document.getElementById("location").value = data.location || "";
+    document.getElementById("bio").value = data.bioPick || "";
+    document.getElementById("bankAccountNumber").value = data.bankAccountNumber || "";
+    document.getElementById("bankName").value = data.bankName || "";
+    document.getElementById("telegram").value = data.telegram || "";
+    document.getElementById("tiktok").value = data.tiktok || "";
+    document.getElementById("whatsapp").value = data.whatsapp || "";
+    document.getElementById("instagram").value = data.instagram || "";
+  };
+
+  closeModal.onclick = () => (hostModal.style.display = "none");
+  window.onclick = (e) => {
+    if (e.target === hostModal) hostModal.style.display = "none";
+  };
+}
+
+// 🟠 Tab Logic
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.onclick = () => {
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach((tab) => (tab.style.display = "none"));
+    btn.classList.add("active");
+    document.getElementById(btn.dataset.tab).style.display = "block";
+  };
+});
+
+// === 🖼️ Photo Upload Preview ===
+document.addEventListener("change", (e) => {
+  if (e.target.id === "popupPhoto") {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const photoPreview = document.getElementById("photoPreview");
+      const photoPlaceholder = document.getElementById("photoPlaceholder");
+      if (photoPreview && photoPlaceholder) {
+        photoPreview.src = reader.result;
+        photoPreview.style.display = "block";
+        photoPlaceholder.style.display = "none";
+      }
     };
+    reader.readAsDataURL(file);
   }
+});
 
-  // 🟠 Tab Logic
-  document.querySelectorAll(".tab-btn").forEach((btn) => {
-    btn.onclick = () => {
-      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
-      document.querySelectorAll(".tab-content").forEach((tab) => (tab.style.display = "none"));
-      btn.classList.add("active");
-      document.getElementById(btn.dataset.tab).style.display = "block";
-    };
-  });
+// ========== 📝 SAVE INFO HANDLER (LINKED TO FIRESTORE) ==========
+const saveInfoBtn = document.getElementById("saveInfo");
+if (saveInfoBtn) {
+  saveInfoBtn.onclick = async () => {
+    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in to update info.");
 
-  // === 🖼️ Photo Upload Preview ===
-  document.addEventListener("change", (e) => {
-    if (e.target.id === "popupPhoto") {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const photoPreview = document.getElementById("photoPreview");
-        const photoPlaceholder = document.getElementById("photoPlaceholder");
-        if (photoPreview && photoPlaceholder) {
-          photoPreview.src = reader.result;
-          photoPreview.style.display = "block";
-          photoPlaceholder.style.display = "none";
-        }
-      };
-      reader.readAsDataURL(file);
+    const userRef = doc(db, "users", currentUser.uid);
+
+    // 🧩 Grab values
+    let fullName = document.getElementById("fullName")?.value || "";
+    let chatId = document.getElementById("chatId")?.value || "";
+    const city = document.getElementById("city")?.value || "";
+    const location = document.getElementById("location")?.value || "";
+    const bio = document.getElementById("bio")?.value || "";
+    const bankAccountNumber = document.getElementById("bankAccountNumber")?.value || "";
+    const bankName = document.getElementById("bankName")?.value || "";
+    const telegram = document.getElementById("telegram")?.value || "";
+    const tiktok = document.getElementById("tiktok")?.value || "";
+    const whatsapp = document.getElementById("whatsapp")?.value || "";
+    const instagram = document.getElementById("instagram")?.value || "";
+
+    // ✳️ Capitalize full name initials
+    fullName = fullName
+      .split(" ")
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+
+    // ✳️ Lowercase chatId
+    chatId = chatId.toLowerCase();
+
+    // ✳️ Validate numeric fields
+    if (bankAccountNumber && !/^\d{1,11}$/.test(bankAccountNumber)) {
+      return showStarPopup("⚠️ Bank account number must be digits only and up to 11.");
     }
-  });
+    if (whatsapp && !/^\d+$/.test(whatsapp)) {
+      return showStarPopup("⚠️ WhatsApp number must be numbers only.");
+    }
 
-  // ========== 📝 SAVE INFO HANDLER (LINKED TO FIRESTORE) ==========
-  const saveInfoBtn = document.getElementById("saveInfo");
-  if (saveInfoBtn) {
-    saveInfoBtn.onclick = async () => {
-      const userRef = doc(db, "users", currentUser.uid);
+    try {
+      await updateDoc(userRef, {
+        fullName,
+        chatId,
+        city,
+        location,
+        bioPick: bio,
+        bankAccountNumber,
+        bankName,
+        telegram,
+        tiktok,
+        whatsapp,
+        instagram,
+        lastUpdated: serverTimestamp(),
+      });
 
-      // 🧩 Grab values
-      const city = document.getElementById("city")?.value || "";
-      const location = document.getElementById("location")?.value || "";
-      const bio = document.getElementById("bio")?.value || "";
-      const bankAccountNumber = document.getElementById("bankAccountNumber")?.value || "";
-      const bankName = document.getElementById("bankName")?.value || "";
-      const telegram = document.getElementById("telegram")?.value || "";
-      const tiktok = document.getElementById("tiktok")?.value || "";
-      const whatsapp = document.getElementById("whatsapp")?.value || "";
-      const instagram = document.getElementById("instagram")?.value || "";
-
-      // ✳️ Validate numeric fields
-      if (bankAccountNumber && !/^\d{1,11}$/.test(bankAccountNumber)) {
-        alert("⚠️ Bank account number must be digits only and up to 11.");
-        return;
-      }
-      if (whatsapp && !/^\d+$/.test(whatsapp)) {
-        alert("⚠️ WhatsApp number must be numbers only.");
-        return;
-      }
-
-      try {
-        await updateDoc(userRef, {
-          city,
-          location,
-          bioPick: bio,
-          bankAccountNumber,
-          bankName,
-          telegram,
-          tiktok,
-          whatsapp,
-          instagram,
-          lastUpdated: serverTimestamp(),
-        });
-
-        alert("✅ Profile updated successfully!");
-        hostModal.style.display = "none";
-      } catch (err) {
-        console.error("❌ Error updating Firestore:", err);
-        alert("⚠️ Failed to update info. Please try again.");
-      }
-    };
-  }
-  
+      showStarPopup("Profile updated successfully!");
+      hostModal.style.display = "none";
+    } catch (err) {
+      console.error("❌ Error updating Firestore:", err);
+      showStarPopup("⚠️ Failed to update info. Please try again.");
+    }
+  };
+}
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
   if (!str) return "";
