@@ -500,21 +500,33 @@ async function loginWhitelist(email, phone) {
 /* ----------------------------
    🔁 Auto Login Session
 ----------------------------- */
-async function autoLogin() {
-  const vipUser = JSON.parse(localStorage.getItem("vipUser") || "{}");
+window.addEventListener("DOMContentLoaded", async () => {
+  const vipUser = JSON.parse(localStorage.getItem("vipUser"));
   if (vipUser?.email && vipUser?.phone) {
-    showLoadingBar(1000);
-    await sleep(60);
-    const success = await loginWhitelist(vipUser.email, vipUser.phone);
-    if (!success) return;
-    await sleep(400);
-    updateRedeemLink();
-    updateTipLink();
-  }
-}
+    const loader = document.getElementById("postLoginLoader");
+    try {
+      if (loader) loader.style.display = "flex";
+      await sleep(50);
 
-// Call on page load
-autoLogin();
+      const success = await loginWhitelist(vipUser.email, vipUser.phone);
+
+      if (!success) return; // stop if login failed
+
+      // ✅ Optional small delay after login
+      await sleep(400);
+
+      // Links and UI already handled inside loginWhitelist
+      // But if you want, you can force-update any extra UI here
+      updateRedeemLink();
+      updateTipLink();
+
+    } catch (err) {
+      console.error("❌ Auto-login error:", err);
+    } finally {
+      if (loader) loader.style.display = "none";
+    }
+  }
+});
 
 /* ===============================
    💫 Auto Star Earning System
