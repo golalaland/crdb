@@ -1259,6 +1259,66 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     grid-template-columns: 1fr;
   }
 }
+/* ========= NATURE PICK DROPDOWN ========= */
+
+.nature-section {
+  margin-top: 14px;
+}
+
+.nature-dropdown {
+  position: relative;
+  margin-top: 6px;
+}
+
+.nature-selected {
+  background: #1c1c1c;
+  color: #fff;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nature-selected::after {
+  content: "▾";
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.nature-options {
+  display: none;
+  position: absolute;
+  width: 100%;
+  top: 42px;
+  left: 0;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  z-index: 10;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.nature-option {
+  padding: 10px;
+  color: #fff;
+  font-size: 13px;
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+
+.nature-option:hover {
+  background: linear-gradient(135deg, #ff0099, #ff6600);
+}
+
+/* active/open state */
+.nature-dropdown.active .nature-options {
+  display: block;
+}
 </style>
 </head>
 <body>
@@ -1400,17 +1460,21 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
       <label>Popup Photo</label>
       <input type="file" id="popupPhoto" accept="image/*">
 
-      <!-- Nature Pick -->
-      <label>Nature Pick 
-        <small style="font-size:11px; opacity:0.7;">(What best describes you?)</small>
-      </label>
-      <select id="naturePick" class="styled-select">
-        <option value="">Select your vibe</option>
-        <option value="Sexy">Sexy</option>
-        <option value="Cool">Cool</option>
-        <option value="Hot">Hot</option>
-      </select>
+  <!-- Nature Pick -->
+<div class="nature-section">
+  <label class="upload-label">Nature Pick 
+    <small class="hint-text">(What best describes you?)</small>
+  </label>
 
+  <div class="nature-dropdown">
+    <div class="nature-selected" id="natureSelected">Select your vibe</div>
+    <div class="nature-options" id="natureOptions">
+      <div class="nature-option" data-value="Sexy">🔥 Sexy</div>
+      <div class="nature-option" data-value="Cool">😎 Cool</div>
+      <div class="nature-option" data-value="Hot">💋 Hot</div>
+    </div>
+  </div>
+</div>
       <!-- Fruit Pick -->
       <label>Fruit Pick 
         <small style="font-size:11px; opacity:0.7;">(What fruit interests you?)</small>
