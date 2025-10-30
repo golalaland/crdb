@@ -871,126 +871,127 @@ autoLogin();
 });
 
 /* =====================================
-   🎥 Video Navigation & UI Fade Logic
+   🎥 Video Navigation & UI Fade Logic
 ======================================= */
 (() => {
-  const videoPlayer = document.getElementById("videoPlayer");
-  const prevBtn = document.getElementById("prev");
-  const nextBtn = document.getElementById("next");
-  const container = document.querySelector(".video-container");
-  const navButtons = [prevBtn, nextBtn].filter(Boolean);
+  const videoPlayer = document.getElementById("videoPlayer");
+  const prevBtn = document.getElementById("prev");
+  const nextBtn = document.getElementById("next");
+  const container = document.querySelector(".video-container");
+  const navButtons = [prevBtn, nextBtn].filter(Boolean);
 
-  if (!videoPlayer || navButtons.length === 0) return;
+  if (!videoPlayer || navButtons.length === 0) return;
 
-  // 🎞️ Video list (Shopify video)
-  const videos = [
-    "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4"
-    // add more Shopify videos here if needed
-  ];
-  let currentVideo = 0;
-  let hideTimeout = null;
+  // Wrap the video in a relative container if not already
+  const videoWrapper = document.createElement("div");
+  videoWrapper.style.position = "relative";
+  videoWrapper.style.display = "inline-block";
+  videoPlayer.parentNode.insertBefore(videoWrapper, videoPlayer);
+  videoWrapper.appendChild(videoPlayer);
 
-  // ---------- Create hint overlay inside video ----------
-  let hint = videoPlayer.parentElement.querySelector(".video-hint");
-  if (!hint) {
-    hint = document.createElement("div");
-    hint.className = "video-hint";
-    hint.style.position = "absolute";
-    hint.style.top = "50%";
-    hint.style.left = "50%";
-    hint.style.transform = "translate(-50%, -50%)";
-    hint.style.padding = "8px 16px";
-    hint.style.background = "rgba(0,0,0,0.5)";
-    hint.style.color = "#fff";
-    hint.style.borderRadius = "6px";
-    hint.style.fontSize = "16px";
-    hint.style.opacity = "0";
-    hint.style.pointerEvents = "none";
-    hint.style.transition = "opacity 0.4s";
-    // ensure parent is positioned
-    videoPlayer.parentElement.style.position = "relative";
-    videoPlayer.parentElement.appendChild(hint);
-  }
+  // ---------- Create hint overlay inside video ----------
+  let hint = document.createElement("div");
+  hint.className = "video-hint";
+  hint.style.position = "absolute";
+  hint.style.top = "50%";
+  hint.style.left = "50%";
+  hint.style.transform = "translate(-50%, -50%)";
+  hint.style.padding = "8px 16px";
+  hint.style.background = "rgba(0,0,0,0.5)";
+  hint.style.color = "#fff";
+  hint.style.borderRadius = "6px";
+  hint.style.fontSize = "16px";
+  hint.style.opacity = "0";
+  hint.style.pointerEvents = "none";
+  hint.style.transition = "opacity 0.4s";
+  videoWrapper.appendChild(hint);
 
-  const showHint = (msg, timeout = 1500) => {
-    hint.textContent = msg;
-    hint.style.opacity = "1";
-    clearTimeout(hint._t);
-    hint._t = setTimeout(() => (hint.style.opacity = "0"), timeout);
-  };
+  const showHint = (msg, timeout = 1500) => {
+    hint.textContent = msg;
+    hint.style.opacity = "1";
+    clearTimeout(hint._t);
+    hint._t = setTimeout(() => (hint.style.opacity = "0"), timeout);
+  };
 
-  /* ----------------------------
-     ▶️ Load & Play Video
-  ----------------------------- */
-  const loadVideo = (index) => {
-    if (index < 0) index = videos.length - 1;
-    if (index >= videos.length) index = 0;
+  // 🎞️ Video list (Shopify video)
+  const videos = [
+    "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4"
+    // Add more Shopify videos if needed
+  ];
+  let currentVideo = 0;
+  let hideTimeout = null;
 
-    currentVideo = index;
-    videoPlayer.src = videos[currentVideo];
-    videoPlayer.muted = true;
+  /* ----------------------------
+     ▶️ Load & Play Video
+  ----------------------------- */
+  const loadVideo = (index) => {
+    if (index < 0) index = videos.length - 1;
+    if (index >= videos.length) index = 0;
 
-    videoPlayer.addEventListener(
-      "canplay",
-      function onCanPlay() {
-        videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
-        videoPlayer.removeEventListener("canplay", onCanPlay);
-      }
-    );
-  };
+    currentVideo = index;
+    videoPlayer.src = videos[currentVideo];
+    videoPlayer.muted = true;
 
-  /* ----------------------------
-     🔊 Toggle Mute on Tap (show hint inside video)
-  ----------------------------- */
-  videoPlayer.addEventListener("click", () => {
-    videoPlayer.muted = !videoPlayer.muted;
-    showHint(videoPlayer.muted ? "Tap to unmute" : "Sound on");
-  });
+    videoPlayer.addEventListener(
+      "canplay",
+      function onCanPlay() {
+        videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
+        videoPlayer.removeEventListener("canplay", onCanPlay);
+      }
+    );
+  };
 
-  /* ----------------------------
-     ⏪⏩ Navigation Buttons
-  ----------------------------- */
-  prevBtn?.addEventListener("click", () => loadVideo(currentVideo - 1));
-  nextBtn?.addEventListener("click", () => loadVideo(currentVideo + 1));
+  /* ----------------------------
+     🔊 Toggle Mute on Tap
+  ----------------------------- */
+  videoPlayer.addEventListener("click", () => {
+    videoPlayer.muted = !videoPlayer.muted;
+    showHint(videoPlayer.muted ? "Tap to unmute" : "Sound on");
+  });
 
-  /* ----------------------------
-     👀 Auto Hide/Show Buttons
-  ----------------------------- */
-  const showButtons = () => {
-    navButtons.forEach(btn => {
-      btn.style.opacity = "1";
-      btn.style.pointerEvents = "auto";
-    });
-    clearTimeout(hideTimeout);
-    hideTimeout = setTimeout(() => {
-      navButtons.forEach(btn => {
-        btn.style.opacity = "0";
-        btn.style.pointerEvents = "none";
-      });
-    }, 3000);
-  };
+  /* ----------------------------
+     ⏪⏩ Navigation Buttons
+  ----------------------------- */
+  prevBtn?.addEventListener("click", () => loadVideo(currentVideo - 1));
+  nextBtn?.addEventListener("click", () => loadVideo(currentVideo + 1));
 
-  navButtons.forEach(btn => {
-    btn.style.transition = "opacity 0.6s ease";
-    btn.style.opacity = "0";
-    btn.style.pointerEvents = "none";
-  });
+  /* ----------------------------
+     👀 Auto Hide/Show Buttons
+  ----------------------------- */
+  const showButtons = () => {
+    navButtons.forEach(btn => {
+      btn.style.opacity = "1";
+      btn.style.pointerEvents = "auto";
+    });
+    clearTimeout(hideTimeout);
+    hideTimeout = setTimeout(() => {
+      navButtons.forEach(btn => {
+        btn.style.opacity = "0";
+        btn.style.pointerEvents = "none";
+      });
+    }, 3000);
+  };
 
-  ["mouseenter", "mousemove", "click"].forEach(evt => container?.addEventListener(evt, showButtons));
-  container?.addEventListener("mouseleave", () => {
-    navButtons.forEach(btn => {
-      btn.style.opacity = "0";
-      btn.style.pointerEvents = "none";
-    });
-  });
+  navButtons.forEach(btn => {
+    btn.style.transition = "opacity 0.6s ease";
+    btn.style.opacity = "0";
+    btn.style.pointerEvents = "none";
+  });
 
-  // Start with first video
-  loadVideo(0);
+  ["mouseenter", "mousemove", "click"].forEach(evt => container?.addEventListener(evt, showButtons));
+  container?.addEventListener("mouseleave", () => {
+    navButtons.forEach(btn => {
+      btn.style.opacity = "0";
+      btn.style.pointerEvents = "none";
+    });
+  });
 
-  // Show initial hint gently inside video
-  showHint("Tap to unmute", 1500);
+  // Start with first video
+  loadVideo(0);
+
+  // Show initial hint inside video
+  showHint("Tap to unmute", 1500);
 })();
-
 
 // URL of your custom star SVG
 const customStarURL = "https://res.cloudinary.com/dekxhwh6l/image/upload/v1760596116/starssvg_k3hmsu.svg";
