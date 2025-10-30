@@ -1734,50 +1734,27 @@ function capitalizeFirstLetter(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-function showGreeting() {
+function setGreeting() {
   const chatId = currentUser?.chatId || "Guest";
   const name = capitalizeFirstLetter(chatId);
   const hour = new Date().getHours();
 
   let greeting, emoji;
   if (hour < 12) {
-    greeting = `Good Morning, ${name}!`;
-    emoji = "☀️";
+    greeting = `Good Morning, ${name}! ☀️`;
   } else if (hour < 18) {
-    greeting = `Good Afternoon, ${name}!`;
-    emoji = "⛅️";
+    greeting = `Good Afternoon, ${name}! ⛅️`;
   } else {
-    greeting = `Good Evening, ${name}!`;
-    emoji = "🌙";
+    greeting = `Good Evening, ${name}! 🌙`;
   }
 
-  const textEl = document.getElementById("greetingText");
-  const emojiEl = document.querySelector(".greeting-emoji");
-
-  // Reset content each time modal opens
-  textEl.textContent = "";
-  emojiEl.textContent = emoji;
-  emojiEl.classList.remove("show");
-
-  // Typewriter animation
-  let i = 0;
-  function typeWriter() {
-    if (i < greeting.length) {
-      textEl.textContent += greeting.charAt(i);
-      i++;
-      setTimeout(typeWriter, 50);
-    } else {
-      emojiEl.classList.add("show");
-    }
-  }
-  typeWriter();
+  document.getElementById("hostPanelTitle").textContent = greeting;
 }
 
-// 🔥 Trigger when modal opens
+// Run whenever the modal opens
 hostSettingsBtn.addEventListener("click", () => {
-  showGreeting(); // call only once modal is clicked/opened
+  setGreeting();
 });
-
 
   // ========== 🔔 FIRESTORE LIVE NOTIFICATIONS ==========
   const notificationsList = document.getElementById("notificationsList");
