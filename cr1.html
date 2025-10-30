@@ -1337,26 +1337,22 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   opacity: 0.85;
 }
 /* chat scroller */
- #chatContainer {
-    position: relative; /* make chat wrapper the reference for the arrow */
-  }
-
   #scrollArrow {
-    position: absolute;
-    bottom: 20px; /* distance from bottom of chat */
+    position: fixed; /* float above chat messages anywhere on screen */
+    bottom: 40px; /* distance from bottom of viewport */
     left: 50%;
     transform: translateX(-50%);
     background: rgba(255, 255, 255, 0.95);
     color: #ff4500;
-    font-size: 2rem;
-    padding: 10px;
+    font-size: 2.2rem;
+    padding: 12px;
     border-radius: 50%;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     cursor: pointer;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease, transform 0.2s ease;
-    z-index: 10;
+    z-index: 999; /* above everything */
   }
 
   #scrollArrow.show {
@@ -1365,7 +1361,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   }
 
   #scrollArrow:hover {
-    transform: translate(-50%, -4px);
+    transform: translate(-50%, -5px);
   }
 </style>
 </head>
