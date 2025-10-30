@@ -1881,7 +1881,7 @@ hostSettingsBtn.addEventListener("click", () => {
   }
 });
 const scrollArrow = document.getElementById('scrollArrow');
-  const chatContainer = document.querySelector('#chatContainer'); // chat wrapper
+  const chatContainer = document.querySelector('#chatContainer'); // your chat wrapper
   let fadeTimeout;
 
   function showArrow() {
@@ -1889,13 +1889,12 @@ const scrollArrow = document.getElementById('scrollArrow');
     if (fadeTimeout) clearTimeout(fadeTimeout);
     fadeTimeout = setTimeout(() => {
       scrollArrow.classList.remove('show');
-    }, 2000);
+    }, 2000); // disappears after 2 seconds
   }
 
   function checkScroll() {
-    if (!chatContainer) return;
     const distanceFromBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight;
-    if (distanceFromBottom > 200) {
+    if (distanceFromBottom > 200) { // threshold for showing arrow
       showArrow();
     }
   }
@@ -1909,4 +1908,4 @@ const scrollArrow = document.getElementById('scrollArrow');
     });
   });
 
-  checkScroll();
+  checkScroll(); // initial check
