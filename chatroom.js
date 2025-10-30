@@ -425,50 +425,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 
-// 🔔 Firestore Live Notifications
-const notificationsList = document.getElementById("notificationsList");
-const markAllBtn = document.getElementById("markAllRead");
 
-// Example user ID – later link it dynamically
-const userId = "guest0000";
-
-// Real-time listener
-const notifRef = collection(db, "users", userId, "notifications");
-
-onSnapshot(notifRef, (snapshot) => {
-  if (snapshot.empty) {
-    notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-    return;
-  }
-
-  const items = snapshot.docs.map((doc) => {
-    const n = doc.data();
-    const time = new Date(n.timestamp?.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    return `
-      <div class="notification-item ${n.read ? '' : 'unread'}" data-id="${doc.id}">
-        <span>${n.message}</span>
-        <span class="notification-time">${time}</span>
-      </div>
-    `;
-  });
-
-  notificationsList.innerHTML = items.join("");
-});
-
-markAllBtn.addEventListener("click", async () => {
-  const snapshot = await getDocs(notifRef);
-  snapshot.forEach(async (docSnap) => {
-    const ref = doc(db, "users", userId, "notifications", docSnap.id);
-    await updateDoc(ref, { read: true });
-  });
-  alert("✅ All notifications marked as read.");
-});
-
-await addDoc(collection(db, "users", "guest0000", "notifications"), {
-  message: "⭐ You just got 3 new stars!",
-  read: false,
-  timestamp: serverTimestamp()
-});
 
 // === 🖼️ Photo Upload Preview ===
 document.addEventListener("change", (e) => {
