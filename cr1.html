@@ -1336,6 +1336,33 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .scrollable-form button:hover {
   opacity: 0.85;
 }
+/* chat scroller */
+  #scrollArrow {
+    position: fixed;
+    bottom: 80px; /* adjust above input if needed */
+    right: 30px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #ff4500; /* bright accent color */
+    font-size: 2rem;
+    padding: 12px;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none; /* prevent clicks when hidden */
+    transition: opacity 0.3s ease, transform 0.2s ease;
+    z-index: 9999;
+  }
+
+  #scrollArrow.show {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  #scrollArrow:hover {
+    transform: translateY(-4px); /* subtle lift on hover */
+  }
 </style>
 </head>
 <body>
@@ -1593,6 +1620,9 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
   </div>
 </div>
+
+<!-- Scroll-to-Bottom Arrow -->
+<div id="scrollArrow">&#x2193;</div>
 
 <!-- Gift Alert -->
 <div id="giftAlert" class="gift-alert"></div>
