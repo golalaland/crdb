@@ -1629,3 +1629,128 @@ fetchFeaturedHosts();
     }
   }, 30000);
 })();
+
+document.addEventListener("DOMContentLoaded", () => {
+  // ========== 🟣 HOST SETTINGS LOGIC ==========
+  const isHost = true; // <-- later dynamic
+  const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
+  const hostModal = document.getElementById("hostModal");
+  const hostSettingsBtn = document.getElementById("hostSettingsBtn");
+  const closeModal = hostModal?.querySelector(".close");
+
+  if (isHost && hostSettingsWrapper) {
+    hostSettingsWrapper.style.display = "block";
+  }
+
+  if (hostSettingsBtn && hostModal && closeModal) {
+    hostSettingsBtn.onclick = () => (hostModal.style.display = "block");
+    closeModal.onclick = () => (hostModal.style.display = "none");
+    window.onclick = (e) => {
+      if (e.target === hostModal) hostModal.style.display = "none";
+    };
+  }
+
+  // 🟠 Tab Logic
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.onclick = () => {
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach((tab) => (tab.style.display = "none"));
+      btn.classList.add("active");
+      document.getElementById(btn.dataset.tab).style.display = "block";
+    };
+  });
+
+  // 💾 Save Media Handler
+  const saveMediaBtn = document.getElementById("saveMedia");
+  if (saveMediaBtn) {
+    saveMediaBtn.onclick = () => {
+      const popupPhoto = document.getElementById("popupPhoto").files[0];
+      const uploadVideo = document.getElementById("uploadVideo").files[0];
+      console.log("🎥 Media Uploaded:", { popupPhoto, uploadVideo });
+      alert("Your media has been saved successfully!");
+      hostModal.style.display = "none";
+    };
+  }
+
+  // 📝 Save Info Handler
+  const saveInfoBtn = document.getElementById("saveInfo");
+  if (saveInfoBtn) {
+    saveInfoBtn.onclick = () => {
+      const city = document.getElementById("hostCity").value;
+      const country = document.getElementById("hostCountry").value;
+      const bio = document.getElementById("hostBio").value;
+      console.log("🧾 Info Updated:", { city, country, bio });
+      alert("Profile info saved!");
+      hostModal.style.display = "none";
+    };
+  }
+
+  // === 🖼️ Photo Upload Preview ===
+  document.addEventListener("change", (e) => {
+    if (e.target.id === "popupPhoto") {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const photoPreview = document.getElementById("photoPreview");
+        const photoPlaceholder = document.getElementById("photoPlaceholder");
+        if (photoPreview && photoPlaceholder) {
+          photoPreview.src = reader.result;
+          photoPreview.style.display = "block";
+          photoPlaceholder.style.display = "none";
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // ========== 🔔 FIRESTORE NOTIFICATIONS ==========
+  const notificationsList = document.getElementById("notificationsList");
+  const markAllBtn = document.getElementById("markAllRead");
+
+  if (notificationsList) {
+    const userId = "guest0000"; // 🔹 later dynamic
+    const notifRef = collection(db, "users", userId, "notifications");
+
+    onSnapshot(notifRef, (snapshot) => {
+      if (snapshot.empty) {
+        notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+        return;
+      }
+
+      const items = snapshot.docs.map((doc) => {
+        const n = doc.data();
+        const time = n.timestamp?.seconds
+          ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "Just now";
+
+        return `
+          <div class="notification-item ${n.read ? "" : "unread"}" data-id="${doc.id}">
+            <span>${n.message}</span>
+            <span class="notification-time">${time}</span>
+          </div>
+        `;
+      });
+
+      notificationsList.innerHTML = items.join("<hr style='opacity:0.1;'>");
+    });
+
+    if (markAllBtn) {
+      markAllBtn.addEventListener("click", async () => {
+        const snapshot = await getDocs(notifRef);
+        const batch = writeBatch(db);
+        snapshot.forEach((docSnap) => {
+          const ref = doc(db, "users", userId, "notifications", docSnap.id);
+          batch.update(ref, { read: true });
+        });
+        await batch.commit();
+        alert("✅ All notifications marked as read.");
+      });
+    }
+  }
+});
+
+
