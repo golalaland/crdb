@@ -1234,6 +1234,22 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   opacity: 0.8;
 }
 
+.upload-input + label {
+  display: inline-block;
+  margin-top: 8px;
+  cursor: pointer;
+  /* This will make it look like a button */
+  padding: 8px 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #ff0099, #ff6600);
+  color: #fff;
+  font-weight: 500;
+  transition: 0.2s;
+}
+
+.upload-input + label:hover {
+  background: linear-gradient(90deg, #ff33aa, #ff9933);
+}
 /* ==== NOTIFICATIONS ==== */
 .notifications-header {
   display: flex;
