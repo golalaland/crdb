@@ -1163,6 +1163,63 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   transform: scale(1.05);
   box-shadow: 0 0 10px rgba(255, 102, 0, 0.5);
 }
+/* ==== BUTTON THEME ==== */
+.themed-btn {
+  background: linear-gradient(135deg, #ff0080, #ff6600);
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+.themed-btn:hover {
+  opacity: 0.8;
+}
+
+/* ==== NOTIFICATIONS ==== */
+.notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.notifications-list {
+  background: #121212;
+  border-radius: 8px;
+  border: 1px solid #333;
+  padding: 10px;
+  color: #fff;
+}
+
+.notification-item {
+  padding: 10px 8px;
+  border-bottom: 1px solid #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.3s;
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.notification-item.unread {
+  background: rgba(255, 102, 0, 0.08);
+}
+
+.notification-time {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.notification-item:hover {
+  background: rgba(255, 102, 0, 0.12);
+}
 </style>
 </head>
 <body>
@@ -1336,14 +1393,12 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 <div id="notificationsTab" class="tab-content" style="display:none;">
   <div class="notifications-header">
     <h3>Notifications</h3>
-    <button id="markAllRead" class="mark-read-btn">Mark all as read</button>
+    <button id="markAllRead" class="themed-btn small">Mark all as read</button>
   </div>
 
   <div id="notificationsList" class="notifications-list">
-    <!-- Notifications dynamically injected via JS -->
+    <p style="opacity:0.7;">No new notifications yet.</p>
   </div>
-</div>
-</div>
 </div>
 
     <!-- 📝 INFO TAB -->
