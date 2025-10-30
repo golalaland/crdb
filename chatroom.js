@@ -1880,3 +1880,28 @@ hostSettingsBtn.addEventListener("click", () => {
     });
   }
 });
+const scrollArrow = document.getElementById('scrollArrow');
+
+  function toggleScrollArrow() {
+    const scrollPosition = window.innerHeight + window.scrollY;
+    const threshold = document.body.offsetHeight - 150; // distance from bottom
+
+    if (scrollPosition < threshold) {
+      scrollArrow.classList.add('show');
+    } else {
+      scrollArrow.classList.remove('show');
+    }
+  }
+
+  scrollArrow.addEventListener('click', () => {
+    window.scrollTo({
+      top: document.body.scrollHeight,
+      behavior: 'smooth'
+    });
+  });
+
+  window.addEventListener('scroll', toggleScrollArrow);
+  window.addEventListener('resize', toggleScrollArrow);
+
+  // Initial check
+  toggleScrollArrow();
