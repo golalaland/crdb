@@ -1,3 +1,6 @@
+Crjs 
+
+
 /* ---------- Imports (Firebase v10) ---------- */
 import { 
   initializeApp 
@@ -105,7 +108,7 @@ function showStarPopup(text) {
   setTimeout(() => popup.style.display = "none", 1700);
 }
 
-/* ---------- Gift Modal---------- */
+
 /* ----------------------------
    ⭐ GIFT / BALLER ALERT Glow
 ----------------------------- */
@@ -1242,16 +1245,14 @@ function renderHostAvatars() {
 }
 
 
-/* ---------- Load Host ---------- */
-function loadHost(idx) {
+/* ---------- Load Host (Faster Video Loading) ---------- */
+async function loadHost(idx) {
   const host = hosts[idx];
   if (!host) return;
   currentIndex = idx;
 
   const videoContainer = document.getElementById("featuredHostVideo");
   if (!videoContainer) return;
-
-  // Clear previous
   videoContainer.innerHTML = "";
   videoContainer.style.position = "relative";
   videoContainer.style.touchAction = "manipulation";
@@ -1261,29 +1262,29 @@ function loadHost(idx) {
   shimmer.className = "video-shimmer";
   videoContainer.appendChild(shimmer);
 
-  // Create video element
+  // Video element
   const videoEl = document.createElement("video");
-  videoEl.src = host.videoUrl || "";
-  videoEl.autoplay = true;
-  videoEl.muted = true;
-  videoEl.loop = true;
-  videoEl.playsInline = true;
-  videoEl.preload = "metadata";
-  videoEl.style.width = "100%";
-  videoEl.style.height = "100%";
-  videoEl.style.objectFit = "cover";
-  videoEl.style.borderRadius = "8px";
-  videoEl.style.display = "none";
-  videoEl.style.cursor = "pointer";
+  Object.assign(videoEl, {
+    src: host.videoUrl || "",
+    autoplay: true,
+    muted: true,
+    loop: true,
+    playsInline: true,
+    preload: "auto", // preload more data
+    style: "width:100%;height:100%;object-fit:cover;border-radius:8px;display:none;cursor:pointer;"
+  });
   videoEl.setAttribute("webkit-playsinline", "true");
+  videoContainer.appendChild(videoEl);
 
-  // Hint (bottom center)
+  // Force video to start loading immediately
+  videoEl.load();
+
+  // Hint overlay
   const hint = document.createElement("div");
   hint.className = "video-hint";
   hint.textContent = "Tap to unmute";
   videoContainer.appendChild(hint);
 
-  // Hint fade helper
   function showHint(msg, timeout = 1400) {
     hint.textContent = msg;
     hint.classList.add("show");
@@ -1291,47 +1292,32 @@ function loadHost(idx) {
     hint._t = setTimeout(() => hint.classList.remove("show"), timeout);
   }
 
-  // Fullscreen helpers
-  function isFullscreen() {
-    return !!(document.fullscreenElement || document.webkitFullscreenElement);
-  }
-  function toggleFullscreen() {
-    if (isFullscreen()) document.exitFullscreen?.();
-    else videoEl.requestFullscreen?.();
-  }
-
-  // Tap events
   let lastTap = 0;
-  function onTapEvent(e) {
+  function onTapEvent() {
     const now = Date.now();
-    const diff = now - lastTap;
-    lastTap = now;
-
-    if (diff > 0 && diff < 300) {
-      toggleFullscreen();
+    if (now - lastTap < 300) {
+      document.fullscreenElement ? document.exitFullscreen?.() : videoEl.requestFullscreen?.();
     } else {
       videoEl.muted = !videoEl.muted;
       showHint(videoEl.muted ? "Tap to unmute" : "Sound on", 1200);
     }
+    lastTap = now;
   }
-
   videoEl.addEventListener("click", onTapEvent);
   videoEl.addEventListener("touchend", (ev) => {
-    if (ev.changedTouches && ev.changedTouches.length > 1) return;
-    ev.preventDefault?.();
-    onTapEvent(ev);
+    if (ev.changedTouches.length < 2) {
+      ev.preventDefault?.();
+      onTapEvent();
+    }
   }, { passive: false });
 
-  // Show video when ready
-  videoEl.addEventListener("loadeddata", () => {
+  // Show video as soon as it can play
+  videoEl.addEventListener("canplay", () => {
     shimmer.style.display = "none";
     videoEl.style.display = "block";
     showHint("Tap to unmute", 1400);
     videoEl.play().catch(() => {});
   });
-
-  // Append video
-  videoContainer.appendChild(videoEl);
 
   /* ---------- Host Info ---------- */
   usernameEl.textContent = host.chatId || "Unknown Host";
@@ -1343,7 +1329,6 @@ function loadHost(idx) {
   const nature = host.naturePick || "cool";
   const city = host.location || "Lagos";
   const country = host.country || "Nigeria";
-
   detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
 
   /* ---------- Meet Button ---------- */
@@ -1352,22 +1337,21 @@ function loadHost(idx) {
     meetBtn = document.createElement("button");
     meetBtn.id = "meetBtn";
     meetBtn.textContent = "Meet";
-    meetBtn.style.marginTop = "10px";
-    meetBtn.style.padding = "8px 16px";
-    meetBtn.style.borderRadius = "6px";
-    meetBtn.style.background = "linear-gradient(90deg,#ff0099,#ff6600)";
-    meetBtn.style.color = "#fff";
-    meetBtn.style.border = "none";
-    meetBtn.style.fontWeight = "bold";
-    meetBtn.style.cursor = "pointer";
+    Object.assign(meetBtn.style, {
+      marginTop: "6px",
+      padding: "8px 16px",
+      borderRadius: "6px",
+      background: "linear-gradient(90deg,#ff0099,#ff6600)",
+      color: "#fff",
+      border: "none",
+      fontWeight: "bold",
+      cursor: "pointer"
+    });
     detailsEl.insertAdjacentElement("afterend", meetBtn);
   }
+  meetBtn.onclick = () => showMeetModal(host);
 
-  meetBtn.onclick = () => {
-    showMeetModal(host);
-  };
-
-  // Update avatar highlight
+  /* ---------- Avatar Highlight ---------- */
   hostListEl.querySelectorAll("img").forEach((img, i) => {
     img.classList.toggle("active", i === idx);
   });
@@ -1376,31 +1360,32 @@ function loadHost(idx) {
   giftAmountEl.textContent = "1";
 }
 
-/* ---------- Meet Modal (fixed to appear above video + proper stars logic) ---------- */
+/* ---------- Meet Modal with Randomized Stage Timings (~18s) ---------- */
 function showMeetModal(host) {
   let modal = document.getElementById("meetModal");
   if (modal) modal.remove();
 
-  // Ensure modal is always on top of video (z-index fix)
   modal = document.createElement("div");
   modal.id = "meetModal";
-  modal.style.position = "fixed";
-  modal.style.top = 0;
-  modal.style.left = 0;
-  modal.style.width = "100vw";
-  modal.style.height = "100vh";
-  modal.style.background = "rgba(0,0,0,0.75)";
-  modal.style.display = "flex";
-  modal.style.alignItems = "center";
-  modal.style.justifyContent = "center";
-  modal.style.zIndex = "999999"; // ensure it overrides video
-  modal.style.backdropFilter = "blur(3px)";
-  modal.style.webkitBackdropFilter = "blur(3px)";
+  Object.assign(modal.style, {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    background: "rgba(0,0,0,0.75)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: "999999",
+    backdropFilter: "blur(3px)",
+    WebkitBackdropFilter: "blur(3px)"
+  });
 
   modal.innerHTML = `
-    <div style="background:#111;padding:20px 22px;border-radius:12px;text-align:center;color:#fff;max-width:340px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
+    <div id="meetModalContent" style="background:#111;padding:20px 22px;border-radius:12px;text-align:center;color:#fff;max-width:340px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
       <h3 style="margin-bottom:10px;font-weight:600;">Meet ${host.chatId || "this host"}?</h3>
-      <p style="margin-bottom:16px;">This will cost <b>21⭐</b>.</p>
+      <p style="margin-bottom:16px;">This will cost you <b>21 stars ⭐</b>.</p>
       <div style="display:flex;gap:10px;justify-content:center;">
         <button id="cancelMeet" style="padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">Cancel</button>
         <button id="confirmMeet" style="padding:8px 16px;background:linear-gradient(90deg,#ff0099,#ff6600);border:none;color:#fff;border-radius:8px;font-weight:600;">Yes</button>
@@ -1410,93 +1395,162 @@ function showMeetModal(host) {
 
   document.body.appendChild(modal);
 
-  // Fix: always bring modal to top (in case of other positioned containers)
-  setTimeout(() => modal.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  const cancelBtn = modal.querySelector("#cancelMeet");
+  const confirmBtn = modal.querySelector("#confirmMeet");
+  const modalContent = modal.querySelector("#meetModalContent");
 
-  // Button actions
-  modal.querySelector("#cancelMeet").onclick = () => modal.remove();
+  cancelBtn.onclick = () => modal.remove();
 
-  modal.querySelector("#confirmMeet").onclick = () => {
-    const cost = 21;
-    const balance = window.userStars || 0; // pull from global or fallback
-    console.log("⭐ Current stars:", balance);
+  confirmBtn.onclick = async () => {
+    const COST = 21;
+    if (!currentUser?.uid) { alert("Please log in to meet ⭐"); modal.remove(); return; }
+    if ((currentUser.stars || 0) < COST) { alert("Not enough stars ⭐"); modal.remove(); return; }
 
-    if (balance >= cost) {
-      window.userStars = balance - cost; // deduct safely
-      if (typeof updateStarsDisplay === "function") updateStarsDisplay();
+    confirmBtn.disabled = true;
+    confirmBtn.style.opacity = 0.6;
+    confirmBtn.style.cursor = "not-allowed";
 
-      // Send Telegram message to agent
-      const msg = `💫 Meet Request\nUser wants to meet: ${host.chatId}\nLocation: ${host.location || "Unknown"}\nGender: ${host.gender}\nFruit/Nature: ${host.fruitPick}/${host.naturePick}`;
-      const encoded = encodeURIComponent(msg);
-      window.open(`https://t.me/YOUR_AGENT_USERNAME?text=${encoded}`, "_blank");
+    try {
+      currentUser.stars -= COST;
+      if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+      updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
 
+      const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
+      const playfulMessages = [
+        "Oh, she’s hella cute…💋", "Careful, she may be naughty..😏",
+        "Be generous with her, she’ll like you..", "Ohh, she’s a real star.. 🤩",
+        "Be a real gentleman, when she texts u..", "She’s ready to dazzle you tonight.. ✨",
+        "Watch out, she might steal your heart.. ❤️", "Look sharp, she’s got a sparkle.. ✨",
+        "Don’t blink, or you’ll miss her charm.. 😉", "Get ready for some fun surprises.. 😏",
+        "She knows how to keep it exciting.. 🎉", "Better behave, she’s watching.. 👀",
+        "She might just blow your mind.. 💥", "Keep calm, she’s worth it.. 😘",
+        "She’s got a twinkle in her eyes.. ✨", "Brace yourself for some charm.. 😎",
+        "She’s not just cute, she’s 🔥", "Careful, her smile is contagious.. 😁",
+        "She might make you blush.. 😳", "She’s a star in every way.. 🌟",
+        "Don’t miss this chance.. ⏳"
+      ];
+
+      const randomPlayful = [];
+      while (randomPlayful.length < 3) {
+        const choice = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
+        if (!randomPlayful.includes(choice)) randomPlayful.push(choice);
+      }
+
+      const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
+      modalContent.innerHTML = `<p id="stageMsg" style="margin-top:20px;font-weight:500;"></p>`;
+      const stageMsgEl = modalContent.querySelector("#stageMsg");
+
+      let totalTime = 0;
+      stages.forEach((stage, index) => {
+        // Random duration per stage: 1.5–2.5s for first two, 1.7–2.3s for playful, last stage 2–2.5s
+        let duration;
+        if (index < 2) duration = 1500 + Math.random() * 1000;
+        else if (index < stages.length - 1) duration = 1700 + Math.random() * 600;
+        else duration = 2000 + Math.random() * 500;
+        totalTime += duration;
+
+        setTimeout(() => {
+          stageMsgEl.textContent = stage;
+          if (index === stages.length - 1) {
+            setTimeout(() => {
+              modalContent.innerHTML = `
+                <h3 style="margin-bottom:10px;font-weight:600;">Meet Request Sent!</h3>
+                <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is approved.</p>
+                <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send Message</button>
+              `;
+              const letsGoBtn = modalContent.querySelector("#letsGoBtn");
+              letsGoBtn.onclick = () => {
+                window.open(`https://t.me/drtantra?text=${encodeURIComponent(`Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`)}`, "_blank");
+                modal.remove();
+              };
+              // Auto-close after 7–7.5s
+              setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
+            }, 500);
+          }
+        }, totalTime);
+      });
+    } catch (err) {
+      console.error("Meet deduction failed:", err);
+      alert("Something went wrong. Please try again later.");
       modal.remove();
-      alert("💫 Your meet request has been sent!");
-    } else {
-      alert("You don’t have enough stars ⭐. Earn or buy more to continue.");
     }
   };
 }
 
-/* ---------- Dummy helpers ---------- */
-let userStars = 100; // example balance
-function updateStarsDisplay() {
-  document.getElementById("starsBalance").textContent = `${userStars}⭐`;
-}
-/* ---------- Gift slider ---------- */
+/* ---------- Gift Slider ---------- */
 giftSlider.addEventListener("input", () => {
   giftAmountEl.textContent = giftSlider.value;
 });
 
-/* ---------- Send gift ---------- */
-giftBtn.addEventListener("click", async () => {
+/* ---------- Send Gift Function (Dynamic Receiver) ---------- */
+async function sendGift() {
+  const receiver = hosts[currentIndex]; // dynamically pick current host
+  if (!receiver?.id) return showGiftAlert("⚠️ No host selected.");
+  if (!currentUser?.uid) return showGiftAlert("Please log in to send stars ⭐");
+
+  const giftStars = parseInt(giftSlider.value, 10);
+  if (isNaN(giftStars) || giftStars <= 0)
+    return showGiftAlert("Invalid star amount ❌");
+
+  // Spinner inside button
+  const originalText = giftBtn.textContent;
+  const buttonWidth = giftBtn.offsetWidth + "px";
+  giftBtn.style.width = buttonWidth;
+  giftBtn.disabled = true;
+  giftBtn.innerHTML = `<span class="gift-spinner"></span>`; // Make sure CSS spins it
+
   try {
-    const host = hosts[currentIndex];
-    if (!host?.id) {
-      showGiftAlert("⚠️ No host selected.");
-      return;
-    }
-
-    if (!currentUser) {
-      showGiftAlert("Please log in to send stars ⭐");
-      return;
-    }
-
-    const giftStars = parseInt(giftSlider.value, 10);
-    if (isNaN(giftStars) || giftStars <= 0) {
-      showGiftAlert("Invalid star amount ❌");
-      return;
-    }
-
     const senderRef = doc(db, "users", currentUser.uid);
-    const receiverRef = doc(db, "users", host.id);
-    const featuredReceiverRef = doc(db, "featuredHosts", host.id);
+    const receiverRef = doc(db, "users", receiver.id);
+    const featuredReceiverRef = doc(db, "featuredHosts", receiver.id);
 
     await runTransaction(db, async (tx) => {
       const senderSnap = await tx.get(senderRef);
       const receiverSnap = await tx.get(receiverRef);
 
       if (!senderSnap.exists()) throw new Error("Your user record not found.");
-      if (!receiverSnap.exists()) tx.set(receiverRef, { stars: 0, starsGifted: 0 }, { merge: true });
+      if (!receiverSnap.exists()) 
+        tx.set(receiverRef, { stars: 0, starsGifted: 0, lastGiftSeen: {} }, { merge: true });
 
       const senderData = senderSnap.data();
-      if ((senderData.stars || 0) < giftStars) throw new Error("Insufficient stars");
+      if ((senderData.stars || 0) < giftStars)
+        throw new Error("Insufficient stars");
 
-      // --- Users updates only ---
+      // Deduct from sender, add to receiver
       tx.update(senderRef, { stars: increment(-giftStars), starsGifted: increment(giftStars) });
       tx.update(receiverRef, { stars: increment(giftStars) });
-
-      // --- Only receiver in featuredHosts ---
       tx.set(featuredReceiverRef, { stars: increment(giftStars) }, { merge: true });
+
+      // Push a one-time notification to receiver
+      tx.update(receiverRef, {
+        [`lastGiftSeen.${currentUser.username || "Someone"}`]: giftStars
+      });
     });
 
-    console.log(`✅ Sent ${giftStars} stars ⭐ to ${host.chatId}`);
-    showGiftAlert(`You sent ${giftStars} stars ⭐ to ${host.chatId}!`);
+    // Sender alert
+    showGiftAlert(`✅ You sent ${giftStars} stars ⭐ to ${receiver.chatId}!`);
+
+    // Receiver alert only if this session is the actual receiver
+if (currentUser.uid === receiver.id) {
+  setTimeout(() => {
+    showGiftAlert(`🎁 ${lastSenderName} sent you ${giftStars} stars ⭐`);
+  }, 1000);
+}
+
+    console.log(`✅ Sent ${giftStars} stars ⭐ to ${receiver.chatId}`);
   } catch (err) {
     console.error("❌ Gift sending failed:", err);
     showGiftAlert(`⚠️ Something went wrong: ${err.message}`);
+  } finally {
+    giftBtn.innerHTML = originalText;
+    giftBtn.disabled = false;
+    giftBtn.style.width = "auto";
   }
-});
+}
+
+/* ---------- Assign gift button click ---------- */
+giftBtn.onclick = sendGift;
+
 /* ---------- Navigation ---------- */
 prevBtn.addEventListener("click", e => {
   e.preventDefault();
