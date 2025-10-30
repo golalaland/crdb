@@ -1483,36 +1483,34 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     <span class="close">&times;</span>
     <h3 id="hostPanelTitle">Loading...</h3>
 
-    <!-- 🧭 TAB HEADER -->
-    <div class="tab-header">
-      <button class="tab-btn active" data-tab="mediaTab">Upload Media</button>
-      <button class="tab-btn" data-tab="infoTab">Edit Info</button>
-      <button class="tab-btn" data-tab="notificationsTab">Notifications</button>
-    </div>
+<!-- 🧭 TAB HEADER -->
+<div class="tab-header">
+  <button class="tab-btn active" data-tab="mediaTab">Upload Media</button>
+  <button class="tab-btn" data-tab="infoTab">Messages</button> <!-- visually renamed -->
+  <button class="tab-btn" data-tab="notificationsTab">Notifications</button>
+</div>
 
-    <!-- 🎥 MEDIA TAB -->
-    <div id="mediaTab" class="tab-content active">
-      <label class="upload-label">Popup Photo</label>
-      <input type="file" id="popupPhoto" accept="image/*" class="upload-input">
+<!-- 🎥 MEDIA TAB -->
+<div id="mediaTab" class="tab-content active" style="max-height:500px; overflow-y:auto; padding-right:8px;">
+  <!-- Media Uploads -->
+  <label class="upload-label">Popup Photo</label>
+  <input type="file" id="popupPhoto" accept="image/*" class="upload-input">
 
-      <div class="photo-preview">
-        <img id="photoPreview" src="" alt="Preview" style="display:none;">
-        <span id="photoPlaceholder">📸</span>
-      </div>
+  <div class="photo-preview">
+    <img id="photoPreview" src="" alt="Preview" style="display:none;">
+    <span id="photoPlaceholder">📸</span>
+  </div>
 
-      <label class="upload-label" style="margin-top:15px;">Upload Video</label>
-      <input type="file" id="uploadVideo" accept="video/*" class="upload-input">
+  <label class="upload-label" style="margin-top:15px;">Upload Video</label>
+  <input type="file" id="uploadVideo" accept="video/*" class="upload-input">
 
-      <button id="saveMedia" class="small-btn" style="margin-top:15px;">Save</button>
-    </div>
+  <button id="saveMedia" class="small-btn" style="margin-top:15px;">Save</button>
 
-   <!-- 📝 INFO TAB -->
-<div id="infoTab" class="tab-content" style="display:none; max-height:400px; overflow-y:auto; padding-right:8px;">
+  <hr class="divider" style="margin:15px 0;">
 
-  <!-- Name & Username -->
+  <!-- Profile Info (formerly infoTab) -->
   <label>Name</label>
   <input type="text" id="fullName" placeholder="Enter your full name">
-
 
   <label>Location</label>
   <input type="text" id="location" placeholder="Enter your location">
