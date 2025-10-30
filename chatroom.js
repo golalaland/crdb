@@ -1433,8 +1433,36 @@ function showMeetModal(host) {
 }
 
 /* ---------- Gift Slider ---------- */
+const fieryColors = [
+  ["#ff0000", "#ff8c00"], // red to orange
+  ["#ff4500", "#ffd700"], // orange to gold
+  ["#ff1493", "#ff6347"], // pinkish red
+  ["#ff0055", "#ff7a00"], // magenta to orange
+  ["#ff5500", "#ffcc00"], // deep orange to yellow
+  ["#ff3300", "#ff0066"], // neon red to hot pink
+];
+
+// Generate a random fiery gradient
+function randomFieryGradient() {
+  const [c1, c2] = fieryColors[Math.floor(Math.random() * fieryColors.length)];
+  return `linear-gradient(90deg, ${c1}, ${c2})`;
+}
+
+/* ---------- Gift Slider ---------- */
 giftSlider.addEventListener("input", () => {
   giftAmountEl.textContent = giftSlider.value;
+  giftSlider.style.background = randomFieryGradient(); // change fiery color as it slides
+});
+
+/* ---------- Modal open (new color each popup) ---------- */
+openBtn.addEventListener("click", () => {
+  modal.style.display = "flex";
+  modal.style.justifyContent = "center";
+  modal.style.alignItems = "center";
+
+  // Give it a fiery flash on open
+  giftSlider.style.background = randomFieryGradient();
+  console.log("📺 Modal opened");
 });
 
 /* ---------- Send Gift Function (Dynamic Receiver) ---------- */
