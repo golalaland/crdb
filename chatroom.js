@@ -451,6 +451,39 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+// === Nature Pick Dropdown ===
+const natureSelect = document.getElementById("natureSelect");
+const natureSelected = document.getElementById("natureSelected");
+const natureOptions = document.getElementById("natureOptions");
+const natureChoices = document.querySelectorAll(".nature-option");
+
+// Toggle dropdown
+natureSelect.addEventListener("click", (e) => {
+  e.stopPropagation();
+  natureSelect.classList.toggle("open");
+  natureOptions.style.display = natureOptions.style.display === "block" ? "none" : "block";
+});
+
+// Select an option
+natureChoices.forEach(option => {
+  option.addEventListener("click", () => {
+    const value = option.getAttribute("data-value");
+    const text = option.textContent;
+    natureSelected.textContent = text;
+    natureSelect.classList.remove("open");
+    natureOptions.style.display = "none";
+    console.log("Selected Nature:", value);
+  });
+});
+
+// Close dropdown when clicking outside
+document.addEventListener("click", (e) => {
+  if (!natureSelect.contains(e.target)) {
+    natureSelect.classList.remove("open");
+    natureOptions.style.display = "none";
+  }
+});
+
 /* ---------- 🆔 ChatID Modal ---------- */
 async function promptForChatID(userRef, userData) {
   if (!refs.chatIDModal || !refs.chatIDInput || !refs.chatIDConfirmBtn)
