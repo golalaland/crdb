@@ -1702,13 +1702,11 @@ document.addEventListener("change", (e) => {
 const saveInfoBtn = document.getElementById("saveInfo");
 if (saveInfoBtn) {
   saveInfoBtn.onclick = async () => {
-    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in to update info.");
-
     const userRef = doc(db, "users", currentUser.uid);
 
     // 🧩 Grab values
-    let fullName = document.getElementById("fullName")?.value || "";
-    let chatId = document.getElementById("chatId")?.value || "";
+    const fullName = document.getElementById("fullName")?.value || "";
+    const chatId = document.getElementById("chatId")?.value.toLowerCase() || "";
     const city = document.getElementById("city")?.value || "";
     const location = document.getElementById("location")?.value || "";
     const bio = document.getElementById("bio")?.value || "";
@@ -1719,26 +1717,19 @@ if (saveInfoBtn) {
     const whatsapp = document.getElementById("whatsapp")?.value || "";
     const instagram = document.getElementById("instagram")?.value || "";
 
-    // ✳️ Capitalize full name initials
-    fullName = fullName
-      .split(" ")
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(" ");
-
-    // ✳️ Lowercase chatId
-    chatId = chatId.toLowerCase();
-
     // ✳️ Validate numeric fields
     if (bankAccountNumber && !/^\d{1,11}$/.test(bankAccountNumber)) {
-      return showStarPopup("⚠️ Bank account number must be digits only and up to 11.");
+      showStarPopup("⚠️ Bank account number must be digits only and up to 11.");
+      return;
     }
     if (whatsapp && !/^\d+$/.test(whatsapp)) {
-      return showStarPopup("⚠️ WhatsApp number must be numbers only.");
+      showStarPopup("⚠️ WhatsApp number must be numbers only.");
+      return;
     }
 
     try {
       await updateDoc(userRef, {
-        fullName,
+        fullName: fullName.replace(/\b\w/g, l => l.toUpperCase()), // capitalize initials
         chatId,
         city,
         location,
@@ -1752,8 +1743,11 @@ if (saveInfoBtn) {
         lastUpdated: serverTimestamp(),
       });
 
-      showStarPopup("Profile updated successfully!");
-      hostModal.style.display = "none";
+      showStarPopup("✅ Profile updated successfully!");
+
+      // Clear focus from all fields
+      document.querySelectorAll("#infoTab input, #infoTab textarea").forEach(input => input.blur());
+
     } catch (err) {
       console.error("❌ Error updating Firestore:", err);
       showStarPopup("⚠️ Failed to update info. Please try again.");
