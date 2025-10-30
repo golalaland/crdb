@@ -1630,6 +1630,7 @@ fetchFeaturedHosts();
   }, 30000);
 })();
 
+
 document.addEventListener("DOMContentLoaded", () => {
   // ========== 🟣 HOST SETTINGS LOGIC ==========
   const isHost = true; // <-- later dynamic
@@ -1638,9 +1639,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const hostSettingsBtn = document.getElementById("hostSettingsBtn");
   const closeModal = hostModal?.querySelector(".close");
 
-  if (isHost && hostSettingsWrapper) {
-    hostSettingsWrapper.style.display = "block";
-  }
+  if (isHost && hostSettingsWrapper) hostSettingsWrapper.style.display = "block";
 
   if (hostSettingsBtn && hostModal && closeModal) {
     hostSettingsBtn.onclick = () => (hostModal.style.display = "block");
@@ -1659,31 +1658,6 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById(btn.dataset.tab).style.display = "block";
     };
   });
-
-  // 💾 Save Media Handler
-  const saveMediaBtn = document.getElementById("saveMedia");
-  if (saveMediaBtn) {
-    saveMediaBtn.onclick = () => {
-      const popupPhoto = document.getElementById("popupPhoto").files[0];
-      const uploadVideo = document.getElementById("uploadVideo").files[0];
-      console.log("🎥 Media Uploaded:", { popupPhoto, uploadVideo });
-      alert("Your media has been saved successfully!");
-      hostModal.style.display = "none";
-    };
-  }
-
-  // 📝 Save Info Handler
-  const saveInfoBtn = document.getElementById("saveInfo");
-  if (saveInfoBtn) {
-    saveInfoBtn.onclick = () => {
-      const city = document.getElementById("hostCity").value;
-      const country = document.getElementById("hostCountry").value;
-      const bio = document.getElementById("hostBio").value;
-      console.log("🧾 Info Updated:", { city, country, bio });
-      alert("Profile info saved!");
-      hostModal.style.display = "none";
-    };
-  }
 
   // === 🖼️ Photo Upload Preview ===
   document.addEventListener("change", (e) => {
@@ -1704,53 +1678,94 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // ========== 🔔 FIRESTORE NOTIFICATIONS ==========
-  const notificationsList = document.getElementById("notificationsList");
-  const markAllBtn = document.getElementById("markAllRead");
+  // ========== 📝 SAVE INFO HANDLER (LINKED TO FIRESTORE) ==========
+  const saveInfoBtn = document.getElementById("saveInfo");
+  if (saveInfoBtn) {
+    saveInfoBtn.onclick = async () => {
+      const userRef = doc(db, "users", currentUser.uid);
 
-  if (notificationsList) {
-    const userId = "guest0000"; // 🔹 later dynamic
-    const notifRef = collection(db, "users", userId, "notifications");
+      // 🧩 Grab values
+      const city = document.getElementById("city")?.value || "";
+      const location = document.getElementById("location")?.value || "";
+      const bio = document.getElementById("bio")?.value || "";
+      const bankAccountNumber = document.getElementById("bankAccountNumber")?.value || "";
+      const bankName = document.getElementById("bankName")?.value || "";
+      const telegram = document.getElementById("telegram")?.value || "";
+      const tiktok = document.getElementById("tiktok")?.value || "";
+      const whatsapp = document.getElementById("whatsapp")?.value || "";
+      const instagram = document.getElementById("instagram")?.value || "";
 
-    onSnapshot(notifRef, (snapshot) => {
-      if (snapshot.empty) {
-        notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+      // ✳️ Validate numeric fields
+      if (bankAccountNumber && !/^\d{1,11}$/.test(bankAccountNumber)) {
+        alert("⚠️ Bank account number must be digits only and up to 11.");
+        return;
+      }
+      if (whatsapp && !/^\d+$/.test(whatsapp)) {
+        alert("⚠️ WhatsApp number must be numbers only.");
         return;
       }
 
-      const items = snapshot.docs.map((doc) => {
-        const n = doc.data();
-        const time = n.timestamp?.seconds
-          ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : "Just now";
+      try {
+        await updateDoc(userRef, {
+          city,
+          location,
+          bioPick: bio,
+          bankAccountNumber,
+          bankName,
+          telegram,
+          tiktok,
+          whatsapp,
+          instagram,
+          lastUpdated: serverTimestamp(),
+        });
 
-        return `
-          <div class="notification-item ${n.read ? "" : "unread"}" data-id="${doc.id}">
-            <span>${n.message}</span>
-            <span class="notification-time">${time}</span>
-          </div>
-        `;
+        alert("✅ Profile updated successfully!");
+        hostModal.style.display = "none";
+      } catch (err) {
+        console.error("❌ Error updating Firestore:", err);
+        alert("⚠️ Failed to update info. Please try again.");
+      }
+    };
+  }
+
+  // ========== 🔔 FIRESTORE LIVE NOTIFICATIONS ==========
+  const notificationsList = document.getElementById("notificationsList");
+  const markAllBtn = document.getElementById("markAllRead");
+  const userId = currentUser?.uid || "guest0000"; // temp fallback
+
+  const notifRef = collection(db, "users", userId, "notifications");
+
+  onSnapshot(notifRef, (snapshot) => {
+    if (snapshot.empty) {
+      notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+      return;
+    }
+
+    const items = snapshot.docs.map((doc) => {
+      const n = doc.data();
+      const time = new Date(n.timestamp?.seconds * 1000).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
       });
-
-      notificationsList.innerHTML = items.join("<hr style='opacity:0.1;'>");
+      return `
+        <div class="notification-item ${n.read ? "" : "unread"}" data-id="${doc.id}">
+          <span>${n.message}</span>
+          <span class="notification-time">${time}</span>
+        </div>
+      `;
     });
 
-    if (markAllBtn) {
-      markAllBtn.addEventListener("click", async () => {
-        const snapshot = await getDocs(notifRef);
-        const batch = writeBatch(db);
-        snapshot.forEach((docSnap) => {
-          const ref = doc(db, "users", userId, "notifications", docSnap.id);
-          batch.update(ref, { read: true });
-        });
-        await batch.commit();
-        alert("✅ All notifications marked as read.");
+    notificationsList.innerHTML = items.join("");
+  });
+
+  if (markAllBtn) {
+    markAllBtn.addEventListener("click", async () => {
+      const snapshot = await getDocs(notifRef);
+      snapshot.forEach(async (docSnap) => {
+        const ref = doc(db, "users", userId, "notifications", docSnap.id);
+        await updateDoc(ref, { read: true });
       });
-    }
+      alert("✅ All notifications marked as read.");
+    });
   }
 });
-
-
