@@ -1034,6 +1034,21 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+/* Force labels to stay on one line */
+.tab-content label {
+  display: block;           /* keep block for spacing */
+  white-space: nowrap;      /* prevent text wrap */
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #fff;
+}
+
+/* Optional: make them ellipsis if really long */
+.tab-content label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 #postLoginLoader {
   transition: opacity 0.4s ease;
 }
@@ -1467,10 +1482,11 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
       <label class="upload-label" style="margin-top:15px;">Upload Video</label>
       <input type="file" id="uploadVideo" accept="video/*" class="upload-input">
 
-      <button id="saveMedia" class="small-btn" style="margin-top:15px;">Save Media</button>
+      <button id="saveMedia" class="small-btn" style="margin-top:15px;">Save</button>
     </div>
 
     <!-- 📝 INFO TAB -->
+    
     <div id="infoTab" class="tab-content" style="display:none; max-height:400px; overflow-y:auto; padding-right:8px;">
       <label>Location</label>
       <input type="text" id="location" placeholder="Enter your location">
@@ -1479,7 +1495,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
       <input type="text" id="city" placeholder="Enter your city">
 
       <label>Short Bio</label>
-      <textarea id="bio" rows="3" placeholder="Write a short bio..."></textarea>
+      <textarea id="bio" rows="3" placeholder="What do you wanna say?..."></textarea>
 
       <hr class="divider">
 
@@ -1492,20 +1508,20 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
       <hr class="divider">
 
-      <label>WhatsApp Number</label>
+      <label>WhatsApp</label>
       <input type="number" id="whatsapp" placeholder="Enter WhatsApp number"
         oninput="if(this.value.length>15)this.value=this.value.slice(0,15);">
 
-      <label>Telegram Username</label>
+      <label>Telegram</label>
       <input type="text" id="telegram" placeholder="@username">
 
-      <label>TikTok Username</label>
+      <label>TikTok</label>
       <input type="text" id="tiktok" placeholder="@username">
 
-      <label>Instagram Username</label>
+      <label>Instagram</label>
       <input type="text" id="instagram" placeholder="@username">
 
-      <button id="saveInfo" class="small-btn" style="margin-top:10px;">Save Info</button>
+      <button id="saveInfo" class="small-btn" style="margin-top:10px;">Save</button>
     </div>
 
     <!-- 🔔 NOTIFICATIONS TAB -->
