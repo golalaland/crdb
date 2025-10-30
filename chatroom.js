@@ -1,3 +1,5 @@
+See full JS: 
+
 /* ---------- Imports (Firebase v10) ---------- */
 import { 
   initializeApp 
@@ -412,7 +414,6 @@ async function promptForChatID(userRef, userData) {
     };
   });
 }
-
 /* ===============================
    🔐 VIP Login (Whitelist Check)
 ================================= */
@@ -501,48 +502,21 @@ async function loginWhitelist(email, phone) {
 /* ----------------------------
    🔁 Auto Login Session
 ----------------------------- */
-window.addEventListener("DOMContentLoaded", async () => {
-  const vipUser = JSON.parse(localStorage.getItem("vipUser"));
+async function autoLogin() {
+  const vipUser = JSON.parse(localStorage.getItem("vipUser") || "{}");
   if (vipUser?.email && vipUser?.phone) {
-    const loader = document.getElementById("postLoginLoader");
-    const loadingBar = document.getElementById("loadingBar");
-
-    try {
-      // ✅ Make sure loader and bar are visible
-      if (loader) loader.style.display = "flex";
-      if (loadingBar) loadingBar.style.width = "0%";
-
-      // 🩷 Animate bar while logging in
-      let progress = 0;
-      const interval = 80;
-      const loadingInterval = setInterval(() => {
-        if (progress < 90) { // don’t fill completely until login ends
-          progress += Math.random() * 5;
-          loadingBar.style.width = `${Math.min(progress, 90)}%`;
-        }
-      }, interval);
-
-      // 🧠 Run the login
-      const success = await loginWhitelist(vipUser.email, vipUser.phone);
-
-      // Finish bar smoothly
-      clearInterval(loadingInterval);
-      loadingBar.style.width = "100%";
-
-      if (success) {
-        await sleep(400);
-        updateRedeemLink();
-        updateTipLink();
-      }
-
-    } catch (err) {
-      console.error("❌ Auto-login error:", err);
-    } finally {
-      await sleep(300);
-      if (loader) loader.style.display = "none";
-    }
+    showLoadingBar(1000);
+    await sleep(60);
+    const success = await loginWhitelist(vipUser.email, vipUser.phone);
+    if (!success) return;
+    await sleep(400);
+    updateRedeemLink();
+    updateTipLink();
   }
-});
+}
+
+// Call on page load
+autoLogin();
 
 /* ===============================
    💫 Auto Star Earning System
@@ -775,6 +749,24 @@ window.addEventListener("DOMContentLoaded", () => {
 
   loginBtn?.addEventListener("click", handleLogin);
 
+  /* ----------------------------
+     🔁 Auto Login Session
+  ----------------------------- */
+ async function autoLogin() {
+  const vipUser = JSON.parse(localStorage.getItem("vipUser"));
+  if (vipUser?.email && vipUser?.phone) {
+    showLoadingBar(1000);
+    await sleep(60);
+    const success = await loginWhitelist(vipUser.email, vipUser.phone);
+    if (!success) return;
+    await sleep(400);
+    updateRedeemLink();
+    updateTipLink();
+  }
+}
+
+// Call on page load
+autoLogin();
 
   /* ----------------------------
      💬 Send Message Handler
@@ -879,8 +871,6 @@ window.addEventListener("DOMContentLoaded", () => {
   };
   const sleep = ms => new Promise(res => setTimeout(res, ms));
 });
-
-
   /* =====================================
    🎥 Video Navigation & UI Fade Logic
 ======================================= */
@@ -964,8 +954,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // Start with first video
   loadVideo(0);
-
-
+})();
 
 // URL of your custom star SVG
 const customStarURL = "https://res.cloudinary.com/dekxhwh6l/image/upload/v1760596116/starssvg_k3hmsu.svg";
