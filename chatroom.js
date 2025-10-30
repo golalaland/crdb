@@ -1727,6 +1727,34 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     };
   }
+  
+// 🌤️ Dynamic Host Panel Greeting
+function getHostGreeting(chatId) {
+  const hour = new Date().getHours();
+  if (hour < 12) return `Good Morning ${chatId}! ☀️`;
+  if (hour < 18) return `Good Afternoon ${chatId}! ⛅️`;
+  return `Good Evening ${chatId}! 🌙`;
+}
+
+function updateHostPanelGreeting() {
+  // use chatId from Firestore or currentUser
+  const chatId = currentUser?.chatId || currentUser?.displayName || "Guest";
+  const hostPanelTitle = document.getElementById("hostPanelTitle");
+  if (hostPanelTitle) hostPanelTitle.textContent = getHostGreeting(chatId);
+}
+
+// 🟣 Trigger greeting when modal opens
+if (hostSettingsBtn && hostModal && closeModal) {
+  hostSettingsBtn.onclick = () => {
+    hostModal.style.display = "block";
+    updateHostPanelGreeting(); // update greeting on open
+  };
+  closeModal.onclick = () => (hostModal.style.display = "none");
+  window.onclick = (e) => {
+    if (e.target === hostModal) hostModal.style.display = "none";
+  };
+}
+
 
   // ========== 🔔 FIRESTORE LIVE NOTIFICATIONS ==========
   const notificationsList = document.getElementById("notificationsList");
