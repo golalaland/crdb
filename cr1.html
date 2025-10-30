@@ -1408,107 +1408,87 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
       <span class="profile-value">₦<span id="cashCount">0</span></span>
     </div>
 
-    <!-- ⚙️ Host Button -->
+<!-- ⚙️ HOST BUTTON -->
 <div id="hostSettingsWrapper" style="text-align:center; margin-top:10px; display:none;">
-  <button id="hostSettingsBtn" class="small-btn">⚙️ Manage Host</button>
-</div>
-</div>
+  <button id="hostSettingsBtn" class="small-btn">⚙️ settings</button>
 </div>
 
-<!-- Host Modal -->
+<!-- 🟣 HOST MODAL -->
 <div id="hostModal" class="modal">
   <div class="modal-body">
     <span class="close">&times;</span>
     <h3>Host Panel</h3>
 
+    <!-- 🧭 TAB HEADER -->
     <div class="tab-header">
       <button class="tab-btn active" data-tab="mediaTab">Upload Media</button>
       <button class="tab-btn" data-tab="infoTab">Edit Info</button>
       <button class="tab-btn" data-tab="notificationsTab">Notifications</button>
     </div>
-    
-   <div id="mediaTab" class="tab-content active">
 
-  <!-- Popup Photo Upload -->
-  <label class="upload-label">Popup Photo</label>
-  <input type="file" id="popupPhoto" accept="image/*" class="upload-input">
-  
-  <!-- Circle Preview -->
-  <div class="photo-preview">
-    <img id="photoPreview" src="" alt="Preview" style="display:none;">
-    <span id="photoPlaceholder">📸</span>
-  </div>
+    <!-- 🎥 MEDIA TAB -->
+    <div id="mediaTab" class="tab-content active">
+      <label class="upload-label">Popup Photo</label>
+      <input type="file" id="popupPhoto" accept="image/*" class="upload-input">
 
-  <!-- Video Upload -->
-  <label class="upload-label" style="margin-top:15px;">Upload Video</label>
-  <input type="file" id="uploadVideo" accept="video/*" class="upload-input">
+      <div class="photo-preview">
+        <img id="photoPreview" src="" alt="Preview" style="display:none;">
+        <span id="photoPlaceholder">📸</span>
+      </div>
 
-  <button id="saveMedia" class="small-btn" style="margin-top:15px;">Save</button>
-</div>
-    
+      <label class="upload-label" style="margin-top:15px;">Upload Video</label>
+      <input type="file" id="uploadVideo" accept="video/*" class="upload-input">
+
+      <button id="saveMedia" class="small-btn" style="margin-top:15px;">Save Media</button>
+    </div>
 
     <!-- 📝 INFO TAB -->
-    <div id="infoTab" class="tab-content" style="display:none;">
-      <label>City</label>
-      <input type="text" id="hostCity" placeholder="Enter your city">
+    <div id="infoTab" class="tab-content" style="display:none; max-height:400px; overflow-y:auto; padding-right:8px;">
+      <label>Location</label>
+      <input type="text" id="location" placeholder="Enter your location">
 
-      <label>Country</label>
-      <input type="text" id="hostCountry" placeholder="Enter your country">
+      <label>City</label>
+      <input type="text" id="city" placeholder="Enter your city">
 
       <label>Short Bio</label>
-      <textarea id="hostBio" rows="3" placeholder="Write a short bio..."></textarea>
+      <textarea id="bio" rows="3" placeholder="Write a short bio..."></textarea>
 
-      <button id="saveInfo" class="small-btn" style="margin-top:10px;">Save</button>
+      <hr class="divider">
+
+      <label>Bank Account Name</label>
+      <input type="text" id="bankName" placeholder="Enter your bank name">
+
+      <label>Bank Account Number</label>
+      <input type="number" id="bankAccountNumber" maxlength="11" placeholder="Enter 11-digit account number"
+        oninput="if(this.value.length>11)this.value=this.value.slice(0,11);">
+
+      <hr class="divider">
+
+      <label>WhatsApp Number</label>
+      <input type="number" id="whatsapp" placeholder="Enter WhatsApp number"
+        oninput="if(this.value.length>15)this.value=this.value.slice(0,15);">
+
+      <label>Telegram Username</label>
+      <input type="text" id="telegram" placeholder="@username">
+
+      <label>TikTok Username</label>
+      <input type="text" id="tiktok" placeholder="@username">
+
+      <label>Instagram Username</label>
+      <input type="text" id="instagram" placeholder="@username">
+
+      <button id="saveInfo" class="small-btn" style="margin-top:10px;">Save Info</button>
     </div>
-<!-- 🔔 NOTIFICATIONS TAB -->
-<div id="notificationsTab" class="tab-content" style="display:none;">
-  <div class="notifications-header">
-    <h3>Notifications</h3>
-    <button id="markAllRead" class="themed-btn small">Mark all as read</button>
-  </div>
-
-  <div id="notificationsList" class="notifications-list">
-    <p style="opacity:0.7;">No new notifications yet.</p>
-  </div>
-</div>
-
-    <!-- 📝 INFO TAB -->
-   <div id="infoTab" class="tab-content" style="display:none; max-height:400px; overflow-y:auto; padding-right:8px;">
-  <label>Location</label>
-  <input type="text" id="location" placeholder="Enter your location">
-
-  <label>City</label>
-  <input type="text" id="city" placeholder="Enter your city">
-
-  <label>Short Bio</label>
-  <textarea id="bio" rows="3" placeholder="Write a short bio..."></textarea>
-
-  <label>Bank Account Name</label>
-  <input type="text" id="bankName" placeholder="Enter your bank name">
-
-  <label>Bank Account Number</label>
-  <input type="number" id="bankAccountNumber" maxlength="11" placeholder="Enter 11-digit account number" oninput="if(this.value.length>11)this.value=this.value.slice(0,11);">
-
-  <label>WhatsApp Number</label>
-  <input type="number" id="whatsapp" placeholder="Enter WhatsApp number" oninput="if(this.value.length>15)this.value=this.value.slice(0,15);">
-
-  <label>Telegram Username</label>
-  <input type="text" id="telegram" placeholder="@username">
-
-  <label>TikTok Username</label>
-  <input type="text" id="tiktok" placeholder="@username">
-
-  <label>Instagram Username</label>
-  <input type="text" id="instagram" placeholder="@username">
-
-  <button id="saveInfo" class="small-btn" style="margin-top:10px;">Save</button>
-</div>
 
     <!-- 🔔 NOTIFICATIONS TAB -->
-    <div id="notificationsTab" class="tab-content" style="display:none;">
-      <h4>Your Notifications</h4>
+    <div id="notificationsTab" class="tab-content" style="display:none; max-height:400px; overflow-y:auto;">
+      <div class="notifications-header">
+        <h3>Notifications</h3>
+        <button id="markAllRead" class="themed-btn small">Mark all as read</button>
+      </div>
+
       <div id="notificationsList" class="notifications-list">
-        <p>No new notifications yet.</p>
+        <p style="opacity:0.7;">No new notifications yet.</p>
       </div>
     </div>
   </div>
