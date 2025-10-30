@@ -392,64 +392,130 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   color: #fff;                  /* subtle hover effect */
 }
 
-.gift-alert {
+/* ---------- Overlay ---------- */
+.user-popup {
+  display: none;
   position: fixed;
-  top: 20%;
-  left: 50%;
-  transform: translateX(-50%) scale(0.9);
-  background: linear-gradient(90deg,#ff6a00,#ff4081);
-  color: #fff;
-  padding: 14px 22px;
-  border-radius: 12px;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  opacity: 0;
-  z-index: 99999;
-  transition: all 0.4s ease;
-  font-size: 1rem;
+  inset: 0;
+  background: rgba(0,0,0,0.6);       /* nice dim overlay */
+  justify-content: center;
+  align-items: center;
+  z-index: 2500;
+  backdrop-filter: blur(6px);
+  padding: 10px;                     /* small spacing on tiny screens */
 }
-.gift-alert {
-  position: fixed;
-  top: 20%;
-  left: 50%;
-  transform: translateX(-50%) scale(0.9);
-  background: linear-gradient(90deg,#ff6a00,#ff4081);
-  color: #fff;
-  padding: 10px 18px;
-  border-radius: 12px;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  opacity: 0;
-  z-index: 99999;
-  transition: all 0.4s ease;
-  font-size: 1rem;
 
-  /* 🟢 One-liner behavior */
-  white-space: nowrap;
+/* ---------- Popup Box ---------- */
+.user-popup-content {
+  background: rgba(17,17,17,0.95);
+  color: white;
+  border-radius: 16px;
+  width: 220px;                      /* smaller width */
+  padding: 18px 14px;                /* slightly smaller padding */
+  text-align: center;
+  position: relative;
+  transform: scale(0.9);
+  transition: transform 0.25s ease, box-shadow 0.3s ease;
+  box-shadow: 0 0 20px rgba(255,0,128,0.35);
+}
+
+.user-popup-content.show { 
+  transform: scale(1); 
+  box-shadow: 0 0 30px rgba(255,0,128,0.45);
+}
+
+/* ---------- Close Button ---------- */
+.popup-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: white;
+  cursor: pointer;
+}
+
+/* ---------- Profile Photo ---------- */
+.popup-photo {
+  width: 70px;                        /* smaller cute circle */
+  height: 70px;
+  border-radius: 50%;
   overflow: hidden;
-  text-overflow: ellipsis;
-  display: inline-block;
-  max-width: 90%; /* optional for small screens */
+  margin: 10px auto 6px;
+  background: #222;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 28px;
+  color: #fff;
+  box-shadow: 0 0 16px rgba(255,0,128,0.4);
+  transition: box-shadow 0.3s ease;
 }
 
-.gift-alert.show {
+.user-popup-content.show .popup-photo {
+  box-shadow: 0 0 22px rgba(255,0,128,0.6);
+}
+
+/* ---------- Username ---------- */
+.popup-username {
+  margin: 4px 0 2px;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+/* ---------- Gender / Typewriter ---------- */
+.popup-gender {
+  font-family: 'Courier New', Courier, monospace; /* typewriter font */
+  font-size: 13px;
+  color: #ccc;
+  margin-bottom: 6px;
+}
+
+/* ---------- Pulsing Fruit ---------- */
+.popup-glow {
+  font-size: 22px;
+  margin: 4px 0;
+  text-shadow: 0 0 10px rgba(255,0,128,0.6);
+  animation: pulseGlow 2.5s infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { text-shadow: 0 0 10px rgba(255,0,128,0.6); transform: scale(1); }
+  50% { text-shadow: 0 0 16px rgba(255,0,128,0.8); transform: scale(1.15); }
+}
+
+/* ---------- Social Icons ---------- */
+.popup-socials img {
+  margin: 0 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  transition: transform 0.2s, opacity 0.2s;
+  opacity: 0.9;
+}
+.popup-socials img:hover { 
+  transform: scale(1.1);
   opacity: 1;
-  transform: translateX(-50%) scale(1);
 }
 
-.floating-star {
-  position: fixed;
-  animation: floatUp 2s ease-out forwards;
-  pointer-events: none;
+/* ---------- Gift Button ---------- */
+.popup-gift button {
+  background: linear-gradient(135deg,#ff4081,#ff80ab);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 10px;
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(255,0,128,0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-
-@keyframes floatUp {
-  from { transform: translateY(0) scale(1); opacity: 1; }
-  to { transform: translateY(-100px) scale(1.5); opacity: 0; }
-}
-#starPopup {
-  z-index: 5000 !important; /* always above modal blur */
-  position: fixed;
+.popup-gift button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 14px rgba(255,0,128,0.45);
 }
 
 .modal {
@@ -599,8 +665,65 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 }
 .google-btn img{width:18px;height:18px;background:#fff;border-radius:4px;padding:2px;}
 .google-btn:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(255,20,147,0.6);}
+.gift-alert {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  background: linear-gradient(90deg,#ff6a00,#ff4081);
+  color: #fff;
+  padding: 14px 22px;
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  opacity: 0;
+  z-index: 99999;
+  transition: all 0.4s ease;
+  font-size: 1rem;
+}
+.gift-alert {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  background: linear-gradient(90deg,#ff6a00,#ff4081);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  opacity: 0;
+  z-index: 99999;
+  transition: all 0.4s ease;
+  font-size: 1rem;
 
+  /* 🟢 One-liner behavior */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  max-width: 90%; /* optional for small screens */
+}
 
+.gift-alert.show {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+.floating-star {
+  position: fixed;
+  animation: floatUp 2s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes floatUp {
+  from { transform: translateY(0) scale(1); opacity: 1; }
+  to { transform: translateY(-100px) scale(1.5); opacity: 0; }
+}
+#starPopup {
+  z-index: 5000 !important; /* always above modal blur */
+  position: fixed;
+}
 .video-controls {
   position: absolute;
   bottom: 12px;
@@ -639,379 +762,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .video-controls svg {
   pointer-events: none;
 }
-/* ====== Featured Hosts Styles ====== */
-.featured-btn {
-  background: linear-gradient(90deg, #ff007a, #ffa500);
-  color: #fff;
-  border: none;
-  border-radius: 25px;
-  padding: 10px 20px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  display: block;
-  margin: 20px auto;
-  box-shadow: 0 0 10px rgba(255, 0, 122, 0.6);
-  transition: transform 0.2s;
-}
-.featured-btn:hover { transform: scale(1.05); }
-
-/* 🌟 Featured Hosts Modal (Compact Mobile Layout) */
-.featured-modal {
-  display: none;
-  position: fixed;
-  z-index: 10000;
-  inset: 0;
-  justify-content: center;
-  align-items: center;
-  background: rgba(0,0,0,0.85);
-  backdrop-filter: blur(10px);
-}
-
-/* 🔲 Compact modal card */
-.featured-modal-content {
-  position: relative;
-  background: #111;
-  border-radius: 18px;
-  width: 82%; /* smaller screen-inside-screen look */
-  max-width: 320px; /* tighter fit for mobile */
-  color: #fff;
-  box-shadow: 0 0 25px rgba(255, 255, 255, 0.08);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  animation: modalPop 0.25s ease-out;
-  transform: translateY(0);
-}
-
-/* ❌ Close button */
-.featured-close {
-  position: absolute;
-  top: 8px;
-  right: 12px;
-  color: #fff;
-  font-size: 20px;
-  cursor: pointer;
-  opacity: 0.9;
-  z-index: 10;
-}
-.featured-close:hover {
-  opacity: 1;
-}
-
-/* 🎥 Video area (smaller height for compactness) */
-.featured-host-video-container {
-  width: 100%;
-  aspect-ratio: 9 / 14; /* slightly shorter than portrait */
-  background: #000;
-  border-radius: 18px 18px 0 0;
-  overflow: hidden;
-}
-.featured-host-video-container iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
-  object-fit: cover;
-}
-
-/* 👤 Info and actions section */
-.featured-host-footer {
-  padding: 10px 14px;
-  background: #1a1a1a;
-  text-align: center;
-  font-size: 0.9rem;
-}
-
-/* Username + Details */
-.featured-host-username {
-  font-weight: 600;
-  font-size: 1.05em;
-}
-.featured-host-details {
-  font-size: 0.85em;
-  opacity: 0.8;
-  margin-bottom: 6px;
-}
-
-/* 🎁 Gift slider section */
-.gift-slider-container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  padding: 8px 10px;
-  margin-top: 8px;
-  backdrop-filter: blur(4px);
-}
-
-/* Pink gradient slider */
-#giftSlider {
-  flex: 1;
-  appearance: none;
-  height: 6px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #ff4da6, #ff80c8);
-  outline: none;
-  cursor: pointer;
-}
-#giftSlider::-webkit-slider-thumb {
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #ff4da6;
-  border: 2px solid #fff;
-  transition: 0.2s ease;
-}
-#giftSlider::-webkit-slider-thumb:hover {
-  transform: scale(1.1);
-}
-
-/* Gift button */
-.featured-gift-btn {
-  padding: 5px 10px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #ff4081, #ff80ab);
-  border: none;
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.25s ease;
-}
-.featured-gift-btn:hover {
-  transform: scale(1.05);
-}
-
-.gift-slider-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-#giftAmount, #giftAmount + span {
-  vertical-align: middle;
-  line-height: 1;
-}
-#giftAmount + span {
-  transform: translateY(0);
-}
-
-/* 🖼 Avatar list */
-.featured-host-list {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 8px;
-}
-.featured-host-list img {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: border 0.25s, transform 0.25s;
-}
-.featured-host-list img.active {
-  border: 2px solid #ff4da6;
-  transform: scale(1.05);
-}
-
-/* Bottom nav buttons */
-.featured-nav-buttons {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 14px 14px;
-  font-size: 0.85rem;
-}
-.featured-nav-buttons a {
-  color: #fff;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-/* Animation */
-@keyframes modalPop {
-  from {
-    transform: scale(0.9);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-#onlineWrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center; /* centers horizontally */
-  gap: 6px;
-  font-family: sans-serif;
-  font-weight: 500;
-  font-size: 16px;
-  color: #fff; /* optional: match your theme */
-  width: 100%; /* take full width for perfect centering */
-  margin: 20px 0;
-}
-.featured-host-video-container {
-  position: relative;
-  overflow: hidden;
-}
-/* hint at bottom center, fades smoothly */
-.video-hint {
-  position: absolute;
-  left: 50%;
-  bottom: 18px;
-  transform: translateX(-50%);
-  background: rgba(0,0,0,0.6);
-  color: #fff;
-  padding: 8px 12px;
-  border-radius: 18px;
-  font-size: 13px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.35s ease, transform 0.25s ease;
-  z-index: 5;
-  white-space: nowrap;
-}
-
-.video-hint.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-/* ensure container allows pointer gestures without zooming */
-#featuredHostVideo {
-  touch-action: manipulation;
-  -webkit-user-select: none;
-  -ms-touch-action: manipulation;
-}
-
-.gift-spinner {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top: 2px solid #fff;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  vertical-align: middle;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg);}
-  100% { transform: rotate(360deg);}
-}
-/* ---------- Video Wrapper ---------- */
-.video-wrapper {
-    position: relative;
-    width: 100%;
-    max-width: 800px; /* adjust as needed */
-    margin: 0 auto;
-}
-
-.video-wrapper video {
-    width: 100%;
-    height: auto;
-    display: block;
-    border-radius: 8px;
-}
-
-/* ---------- Controls Under Video ---------- */
-#videoUnderControls {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px; /* reduced from 8px */
-    margin-top: 6px; /* reduced from 12px */
-}
-
-#helloText,
-.room-desc,
-#videoUnderControls {
-    margin: 2px 0;  /* reduce space between elements */
-    padding: 0;      /* remove extra padding if any */
-}
-
-#onlineWrapper {
-    font-size: 14px;
-    color: #fff;     /* white text for visibility */
-    gap: 2px;        /* reduce gap between icon, count, and text */
-}
-
-#openHostsBtn {
-    margin-top: 2px; /* bring the button closer to the online count */
-}
-#hostSettingsBtn:hover {
-  transform: translateY(-2px) rotate(10deg);
-  box-shadow: 0 4px 10px rgba(255,20,147,0.3);
-}
-
-/* Optional sticky under video */
-.video-wrapper.sticky + #helloText,
-.video-wrapper.sticky + #helloText + .room-desc,
-.video-wrapper.sticky + #helloText + .room-desc + #videoUnderControls {
-    position: sticky;
-    top: 8px; /* adjust spacing from top */
-    z-index: 10;
-}
-
-#hostModal .modal-body {
-  background: var(--modal-bg, #111);
-  color: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  max-width: 400px;
-  margin: 10% auto;
-}
-
-#hostModal input {
-  display: block;
-  width: 100%;
-  margin: 6px 0 12px;
-  padding: 8px;
-  border: none;
-  border-radius: 4px;
-}
-.tab-header {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-
-.tab-btn {
-  flex: 1;
-  background: rgba(255,255,255,0.1);
-  color: #fff;
-  border: none;
-  padding: 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-}
-
-.tab-btn.active {
-  background: linear-gradient(90deg, #ff0099, #ff6600);
-}
-
-.tab-content input,
-.tab-content textarea {
-  width: 100%;
-  margin-bottom: 10px;
-  padding: 8px;
-  border-radius: 4px;
-  border: none;
-}
-#postLoginLoader {
-  transition: opacity 0.4s ease;
-}
-#postLoginLoader[style*="display: none"] {
-  opacity: 0;
-}
 </style>
 </head>
 <body>
@@ -1035,26 +785,11 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   <button class="arrow" id="prev">&#10094;</button>
   <button class="arrow" id="next">&#10095;</button>
 </div>
-<!-- Hello text -->
-<div id="helloText" aria-live="polite">HELLO</div>
-
-<!-- Chat / room description -->
-<!--div class="room-desc">Chat. Own your vibe.</div>
-
-<!-- Controls under the video -->
-<div id="videoUnderControls">
-    <div id="onlineWrapper" style="display:flex; justify-content:center; align-items:center; gap:4px; font-family:sans-serif; font-weight:500; font-size:14px;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-            <circle cx="12" cy="12" r="3"/>
-        </svg>
-        <span id="onlineCount">…</span>
-        <span>people are interacting in this room</span>
-    </div>
-
-    <button id="openHostsBtn" class="featured-btn" style="display:none;">🌟 Star Hosts 🌟</button>
-</div>
+      <div id="helloText" aria-live="polite">HELLO</div>
+      <div class="room-desc">Chat. Own your vibe.
+        
 <div id="roomSubtitle" class="room-subtitle">Sign in to Chat & Start collecting stars.</div>
+<span id="onlineCount" class="onlineCount"></span>
 
  <div id="guestMsg"></div>
 <div id="authBox">
@@ -1109,128 +844,75 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   <button id="sendBtn" class="send-btn">Send</button>
 </div>
     </div>
-<div class="profile" id="profileBox">
-  <div class="profile-card">
-    <div class="profile-top">
-      <div class="profile-left">
-        <div id="profileName" class="profile-name">GUEST 0000</div>
-        <div>
-          <span class="profile-label">STARS COLLECTED:</span>
-          <span class="profile-value"><span id="starCount">0</span>⭐️</span>
+    <div class="profile" id="profileBox">
+      <div class="profile-card">
+        <div class="profile-top">
+          <div class="profile-left">
+            <div id="profileName" class="profile-name">GUEST 0000</div>
+            <div>
+              <span class="profile-label">STARS COLLECTED:</span>
+              <span class="profile-value"><span id="starCount">0</span>⭐️</span>
+            </div>
+          </div>
+          <div class="profile-actions">
+           <a id="redeemBtn" class="small-btn" href="#" target="_blank" style="display:none">Redeem</a>
+            <button id="tipBtn" class="small-btn">💵</button>
+          </div>
         </div>
-      </div>
-
-      <div class="profile-actions">
-        <a id="redeemBtn" class="small-btn" href="#" target="_blank" style="display:none;">Redeem</a>
-        <a id="tipBtn" class="small-btn" href="#" target="_blank" style="display:none;">🕹️</a>
-      </div>
-    </div>
-
-    <div class="profile-cash">
-      <span class="profile-label">CASH EARNED:</span>
-      <span class="profile-value">₦<span id="cashCount">0</span></span>
-    </div>
-
-    <!-- ⚙️ Host Button -->
-    <div id="hostSettingsWrapper" style="text-align:center; margin-top:10px; display:none;">
-      <button id="hostSettingsBtn" class="small-btn">⚙️ Manage Host</button>
+        <div>
+          <span class="profile-label">CASH EARNED:</span>
+          <span class="profile-value">₦<span id="cashCount">0</span></span>
+        </div>
     </div>
   </div>
 </div>
-
-<!-- Host Modal -->
-<div id="hostModal" class="modal">
-  <div class="modal-body">
-    <span class="close">&times;</span>
-    <h3>Host Panel</h3>
-
-    <div class="tab-header">
-      <button class="tab-btn active" data-tab="mediaTab">Upload Media</button>
-      <button class="tab-btn" data-tab="infoTab">Edit Info</button>
-    </div>
-
-    <div id="mediaTab" class="tab-content active">
-      <label>Popup Photo</label>
-      <input type="file" id="popupPhoto" accept="image/*">
-
-      <label>Nature Pick</label>
-      <input type="file" id="naturePick" accept="image/*">
-
-      <label>Fruit Pick</label>
-      <input type="file" id="fruitPick" accept="image/*">
-
-      <label>Video URL</label>
-      <input type="url" id="videoUrl" placeholder="Paste video link">
-
-      <button id="saveMedia" class="small-btn" style="margin-top:10px;">Save</button>
-    </div>
-
-    <div id="infoTab" class="tab-content" style="display:none;">
-      <label>City</label>
-      <input type="text" id="hostCity" placeholder="Enter your city">
-
-      <label>Country</label>
-      <input type="text" id="hostCountry" placeholder="Enter your country">
-
-      <label>Short Bio</label>
-      <textarea id="hostBio" rows="3" placeholder="Write a short bio..."></textarea>
-
-      <button id="saveInfo" class="small-btn" style="margin-top:10px;">Save</button>
-    </div>
-  </div>
-</div>
-
 <div class="star-popup" id="starPopup">
   <div id="starText">You've just earned +1 star! ⭐</div>
 </div>
+<!-- USER PROFILE POPUP -->
+<div id="userPopup" class="user-popup">
+  <div class="user-popup-content">
+    <button id="popupCloseBtn" class="popup-close">&times;</button>
 
+    <!-- User Photo -->
+    <div class="popup-photo"></div>
 
-<!-- 🌟 Featured Hosts Modal -->
-<div id="featuredHostsModal" class="featured-modal">
-  <div class="featured-modal-content">
+    <!-- Username -->
+    <h2 id="popupUsername" class="popup-username">Username</h2>
 
-    <span class="featured-close">&times;</span>
+    <!-- Descriptor -->
+    <p id="popupGender" class="popup-gender">A Sexy Female in her 20’s</p>
 
-<!-- 🎥 Video + Info -->
-<div id="featuredHostVideo" class="featured-host-video-container">
-  <!-- Player will be dynamically inserted here -->
-</div>
-<div class="video-shimmer"></div>
+    <!-- Centered glow emoji -->
+    <div class="popup-glow" style="font-size:28px; margin:8px 0;">🍇</div>
 
-   <div class="featured-host-footer">
-  <div>
-    <div id="featuredHostUsername" class="featured-host-username"></div>
-    <div id="featuredHostDetails" class="featured-host-details"></div>
-  </div>
-
-<div class="gift-slider-container">
-  <!-- Slider -->
-  <input type="range" id="giftSlider" min="1" max="999" value="1">
-
-  <!-- Number + star inline -->
-  <span id="giftDisplay">
-    <span id="giftAmount">1</span>
-    <span class="star-emoji">⭐</span>
-  </span>
-
-  <!-- Button -->
-  <button id="featuredGiftBtn" class="featured-gift-btn">GIFT</button>
-</div>
-
-    <!-- Host avatars list -->
-    <div id="featuredHostList" class="featured-host-list"></div>
-
-    <!-- Navigation -->
-    <div class="featured-nav-buttons">
-      <a href="#" id="prevHost" class="featured-nav-link">Previous</a>
-      <a href="#" id="nextHost" class="featured-nav-link">Next</a>
+    <!-- Gift button -->
+    <div class="popup-gift">
+      <button id="popupGiftBtn" class="gift-btn">Gift Username stars ⭐️</button>
     </div>
 
+    <!-- Social icons (static, underneath) -->
+    <div id="popupSocials" class="popup-socials" style="margin-top:12px; display:flex; justify-content:center; gap:12px;">
+      <a href="https://instagram.com" target="_blank">
+        <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram">
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Gift Modal -->
+<div id="giftModal" class="modal">
+  <div class="modal-content">
+    <span id="giftModalClose">&times;</span>
+    <h3 id="giftModalTitle"></h3>
+    <input type="number" id="giftAmountInput" min="100" placeholder="Enter stars to gift">
+    <button id="giftConfirmBtn">Send Gift ⭐️</button>
   </div>
 </div>
 
 <!-- Gift Alert -->
 <div id="giftAlert" class="gift-alert"></div>
-<script type="module" src="chatroom2.js"></script>
+
+<script type="module" src="app.js"></script>
 </body>
 </html>
