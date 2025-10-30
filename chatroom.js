@@ -367,7 +367,7 @@ if (msg.highlight && msg.content?.includes("gifted")) {
     });
   });
 }
-
+  
 document.addEventListener("DOMContentLoaded", () => {
   const isHost = true; // <-- later dynamic
   const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
@@ -424,27 +424,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // 🔔 Notifications (Dynamic Injection)
-  const notificationsList = document.getElementById("notificationsList");
-  if (notificationsList) {
-    const notifications = [
-      "⭐ You received 5 stars from User123!",
-      "💌 New meet request from User456!",
-      "📢 Your profile is now featured!",
-    ];
-    notificationsList.innerHTML = notifications
-      .map(
-        (note) =>
-          `<div class='notification-item new'>${note}<span class="time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span></div>`
-      )
-      .join("");
-
-    // Glow pulse animation for each new notification
-    setTimeout(() => {
-      document.querySelectorAll(".notification-item.new").forEach((n) => n.classList.remove("new"));
-    }, 1500);
-  }
-});
 
 // 🔔 Firestore Live Notifications
 const notificationsList = document.getElementById("notificationsList");
@@ -476,6 +455,21 @@ onSnapshot(notifRef, (snapshot) => {
   notificationsList.innerHTML = items.join("");
 });
 
+markAllBtn.addEventListener("click", async () => {
+  const snapshot = await getDocs(notifRef);
+  snapshot.forEach(async (docSnap) => {
+    const ref = doc(db, "users", userId, "notifications", docSnap.id);
+    await updateDoc(ref, { read: true });
+  });
+  alert("✅ All notifications marked as read.");
+});
+
+await addDoc(collection(db, "users", "guest0000", "notifications"), {
+  message: "⭐ You just got 3 new stars!",
+  read: false,
+  timestamp: serverTimestamp()
+});
+
 // === 🖼️ Photo Upload Preview ===
 document.addEventListener("change", (e) => {
   if (e.target.id === "popupPhoto") {
@@ -502,6 +496,8 @@ markAllBtn.addEventListener("click", async () => {
     await updateDoc(ref, { read: true });
   });
 });
+
+
 /* ---------- 🆔 ChatID Modal ---------- */
 async function promptForChatID(userRef, userData) {
   if (!refs.chatIDModal || !refs.chatIDInput || !refs.chatIDConfirmBtn)
@@ -546,6 +542,7 @@ async function promptForChatID(userRef, userData) {
     };
   });
 }
+
 /* ===============================
    🔐 VIP Login (Whitelist Check)
 ================================= */
