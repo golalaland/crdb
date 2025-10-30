@@ -1,6 +1,3 @@
-Crjs 
-
-
 /* ---------- Imports (Firebase v10) ---------- */
 import { 
   initializeApp 
