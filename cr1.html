@@ -1021,25 +1021,77 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   font-size: 26px;
 }
 
-/* ========= NOTIFICATIONS ========= */
+/* ===== Notifications Tab ===== */
+.notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.notifications-header h3 {
+  font-size: 15px;
+  color: #fff;
+  margin: 0;
+}
+
+.mark-read-btn {
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ff6ec7;
+  border: none;
+  border-radius: 20px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.mark-read-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
 
 .notifications-list {
-  max-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 260px;
   overflow-y: auto;
-  background: #fafafa;
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #eee;
 }
 
 .notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
   font-size: 13px;
-  background: #fff;
-  border-radius: 6px;
-  padding: 8px;
-  margin-bottom: 6px;
-  box-shadow: 0 0 3px rgba(0,0,0,0.1);
+  line-height: 1.4;
+  color: #eee;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
 }
+
+.notification-item.unread {
+  background: rgba(255, 255, 255, 0.12);
+  font-weight: 600;
+}
+
+.notification-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.01);
+}
+
+.notification-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.notification-time {
+  font-size: 10px;
+  color: #bbb;
+  margin-top: 2px;
+}
+
 /* ==== Upload Labels ==== */
 .upload-label {
   display: block;
@@ -1280,15 +1332,18 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
       <button id="saveInfo" class="small-btn" style="margin-top:10px;">Save</button>
     </div>
-
-    <!-- 🔔 NOTIFICATIONS TAB -->
-    <div id="notificationsTab" class="tab-content" style="display:none;">
-      <h4>Your Notifications</h4>
-      <div id="notificationsList" class="notifications-list">
-        <p>No new notifications yet.</p>
-      </div>
-    </div>
+<!-- 🔔 NOTIFICATIONS TAB -->
+<div id="notificationsTab" class="tab-content" style="display:none;">
+  <div class="notifications-header">
+    <h3>Notifications</h3>
+    <button id="markAllRead" class="mark-read-btn">Mark all as read</button>
   </div>
+
+  <div id="notificationsList" class="notifications-list">
+    <!-- Notifications dynamically injected via JS -->
+  </div>
+</div>
+</div>
 </div>
 
     <!-- 📝 INFO TAB -->
