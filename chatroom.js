@@ -1739,22 +1739,27 @@ function setGreeting() {
   const name = capitalizeFirstLetter(chatId);
   const hour = new Date().getHours();
 
-  let greeting, emoji;
+  let greetingText, emoji;
   if (hour < 12) {
-    greeting = `Good Morning, ${name}! ☀️`;
+    greetingText = `Good Morning, ${name}! `;
+    emoji = "☀️";
   } else if (hour < 18) {
-    greeting = `Good Afternoon, ${name}! ⛅️`;
+    greetingText = `Good Afternoon, ${name}! `;
+    emoji = "⛅️";
   } else {
-    greeting = `Good Evening, ${name}! 🌙`;
+    greetingText = `Good Evening, ${name}! `;
+    emoji = "🌙";
   }
 
-  document.getElementById("hostPanelTitle").textContent = greeting;
-}
+  document.getElementById("hostPanelTitle").childNodes[0].textContent = greetingText;
+  const emojiSpan = document.getElementById("greetingEmoji");
+  emojiSpan.textContent = emoji;
 
-// Run whenever the modal opens
-hostSettingsBtn.addEventListener("click", () => {
-  setGreeting();
-});
+  // Trigger animation
+  emojiSpan.classList.remove("slide-up");
+  void emojiSpan.offsetWidth; // trigger reflow
+  emojiSpan.classList.add("slide-up");
+}
 
   // ========== 🔔 FIRESTORE LIVE NOTIFICATIONS ==========
   const notificationsList = document.getElementById("notificationsList");
