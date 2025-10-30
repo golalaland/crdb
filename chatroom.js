@@ -881,8 +881,8 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 
-/* =====================================
- 🎥 Shopify Video Player with Memory & Autoplay
+  /* =====================================
+   🎥 Video Navigation & UI Fade Logic
 ======================================= */
 (() => {
   const videoPlayer = document.getElementById("videoPlayer");
@@ -893,19 +893,19 @@ window.addEventListener("DOMContentLoaded", () => {
 
   if (!videoPlayer || navButtons.length === 0) return;
 
-  // 🎞️ Video list (Shopify videos)
+  // 🎞️ Video list
   const videos = [
-    "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4"
-    // Add more Shopify video links here
+    "https://res.cloudinary.com/dekxhwh6l/video/upload/v1695/35a6ff0764563d1dcfaaaedac912b2c7_zfzxlw.mp4",
+    "https://xixi.b-cdn.net/Petitie%20Bubble%20Butt%20Stripper.mp4",
+    "https://xixi.b-cdn.net/Bootylicious%20Ebony%20Queen%20Kona%20Jade%20Twerks%20Teases%20and%20Rides%20POV%20u.mp4"
   ];
-
-  // Load last video & time from localStorage if available
-  let lastIndex = parseInt(localStorage.getItem("lastVideoIndex") || "0", 10);
-  if (lastIndex < 0 || lastIndex >= videos.length) lastIndex = 0;
-  let currentVideo = lastIndex;
+  let currentVideo = 0;
   let hideTimeout = null;
 
-  const loadVideo = (index, resumeTime = 0) => {
+  /* ----------------------------
+     ▶️ Load & Play Video
+  ----------------------------- */
+  const loadVideo = (index) => {
     if (index < 0) index = videos.length - 1;
     if (index >= videos.length) index = 0;
 
@@ -913,28 +913,27 @@ window.addEventListener("DOMContentLoaded", () => {
     videoPlayer.src = videos[currentVideo];
     videoPlayer.muted = true;
 
-    videoPlayer.play().then(() => {
-      if (resumeTime > 0) {
-        videoPlayer.currentTime = resumeTime;
-      }
-    }).catch(() => console.warn("Autoplay may be blocked by browser"));
-
-    // Save last played video index
-    localStorage.setItem("lastVideoIndex", currentVideo);
+    videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
   };
 
-  // 🔊 Toggle mute on click
+  /* ----------------------------
+     🔊 Toggle Mute on Tap
+  ----------------------------- */
   videoPlayer.addEventListener("click", () => {
     videoPlayer.muted = !videoPlayer.muted;
     const state = videoPlayer.muted ? "🔇" : "🔊";
-    showStarPopup?.(`Video sound: ${state}`);
+    showStarPopup(`Video sound: ${state}`);
   });
 
-  // ⏪⏩ Navigation Buttons
+  /* ----------------------------
+     ⏪⏩ Navigation Buttons
+  ----------------------------- */
   prevBtn?.addEventListener("click", () => loadVideo(currentVideo - 1));
   nextBtn?.addEventListener("click", () => loadVideo(currentVideo + 1));
 
-  // 👀 Auto hide/show buttons
+  /* ----------------------------
+     👀 Auto Hide/Show Buttons
+  ----------------------------- */
   const showButtons = () => {
     navButtons.forEach(btn => {
       btn.style.opacity = "1";
@@ -963,15 +962,9 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // 🕒 Save playback position periodically
-  setInterval(() => {
-    localStorage.setItem("lastVideoTime", videoPlayer.currentTime);
-  }, 1000);
+  // Start with first video
+  loadVideo(0);
 
-  // Start video with resume position if available
-  const lastTime = parseFloat(localStorage.getItem("lastVideoTime") || "0");
-  loadVideo(currentVideo, lastTime);
-})();
 
 
 // URL of your custom star SVG
