@@ -1880,13 +1880,12 @@ hostSettingsBtn.addEventListener("click", () => {
     });
   }
 });
-const scrollArrow = document.getElementById('scrollArrow');
+ const scrollArrow = document.getElementById('scrollArrow');
+  const chatContainer = document.querySelector('#chatContainer'); // replace with your chat container ID or class
 
-  function toggleScrollArrow() {
-    const scrollPosition = window.innerHeight + window.scrollY;
-    const threshold = document.body.offsetHeight - 150; // distance from bottom
-
-    if (scrollPosition < threshold) {
+  function checkScrollPosition() {
+    const distanceFromBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight;
+    if (distanceFromBottom > 200) { // show arrow when scrolled up more than 200px
       scrollArrow.classList.add('show');
     } else {
       scrollArrow.classList.remove('show');
@@ -1894,14 +1893,13 @@ const scrollArrow = document.getElementById('scrollArrow');
   }
 
   scrollArrow.addEventListener('click', () => {
-    window.scrollTo({
-      top: document.body.scrollHeight,
+    chatContainer.scrollTo({
+      top: chatContainer.scrollHeight,
       behavior: 'smooth'
     });
   });
 
-  window.addEventListener('scroll', toggleScrollArrow);
-  window.addEventListener('resize', toggleScrollArrow);
+  chatContainer.addEventListener('scroll', checkScrollPosition);
 
   // Initial check
-  toggleScrollArrow();
+  checkScrollPosition();
