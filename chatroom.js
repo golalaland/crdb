@@ -1729,31 +1729,48 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   
 // 🌤️ Dynamic Host Panel Greeting
-function getHostGreeting(chatId) {
+function capitalizeFirstLetter(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function showGreeting() {
+  const chatId = currentUser?.chatId || "Queen";
+  const name = capitalizeFirstLetter(chatId);
   const hour = new Date().getHours();
-  if (hour < 12) return `Good Morning ${chatId}! ☀️`;
-  if (hour < 18) return `Good Afternoon ${chatId}! ⛅️`;
-  return `Good Evening ${chatId}! 🌙`;
+  let greeting = "";
+  let emoji = "🌙";
+
+  if (hour < 12) { greeting = `Good Morning, ${name}!`; emoji = "☀️"; }
+  else if (hour < 18) { greeting = `Good Afternoon, ${name}!`; emoji = "⛅️"; }
+  else { greeting = `Good Evening, ${name}!`; emoji = "🌙"; }
+
+  const textEl = document.getElementById("greetingText");
+  const emojiEl = document.querySelector(".greeting-emoji");
+
+  // Reset for replay
+  textEl.textContent = "";
+  emojiEl.textContent = emoji;
+  emojiEl.classList.remove("show");
+
+  let i = 0;
+  function typeWriter() {
+    if (i < greeting.length) {
+      textEl.textContent += greeting.charAt(i);
+      i++;
+      setTimeout(typeWriter, 50);
+    } else {
+      // Slide in emoji after typing finishes
+      emojiEl.classList.add("show");
+    }
+  }
+
+  typeWriter();
 }
 
-function updateHostPanelGreeting() {
-  // use chatId from Firestore or currentUser
-  const chatId = currentUser?.chatId || currentUser?.displayName || "Guest";
-  const hostPanelTitle = document.getElementById("hostPanelTitle");
-  if (hostPanelTitle) hostPanelTitle.textContent = getHostGreeting(chatId);
-}
-
-// 🟣 Trigger greeting when modal opens
-if (hostSettingsBtn && hostModal && closeModal) {
-  hostSettingsBtn.onclick = () => {
-    hostModal.style.display = "block";
-    updateHostPanelGreeting(); // update greeting on open
-  };
-  closeModal.onclick = () => (hostModal.style.display = "none");
-  window.onclick = (e) => {
-    if (e.target === hostModal) hostModal.style.display = "none";
-  };
-}
+// Call every time the modal opens
+hostSettingsBtn.addEventListener("click", () => {
+  showGreeting();
+});
 
 
   // ========== 🔔 FIRESTORE LIVE NOTIFICATIONS ==========
