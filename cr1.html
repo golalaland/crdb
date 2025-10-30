@@ -1247,6 +1247,50 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .notification-item:hover {
   background: rgba(255, 102, 0, 0.12);
 }
+.scrollable-form {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.scrollable-form input,
+.scrollable-form textarea {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  color: #fff;
+  font-size: 14px;
+}
+
+.scrollable-form textarea {
+  resize: none;
+}
+
+.scrollable-form label {
+  font-size: 13px;
+  color: #ddd;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.scrollable-form button {
+  width: 100%;
+  background: linear-gradient(90deg, #ff6a00, #ff0066);
+  border: none;
+  color: #fff;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.scrollable-form button:hover {
+  opacity: 0.85;
+}
 </style>
 </head>
 <body>
@@ -1429,18 +1473,36 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 </div>
 
     <!-- 📝 INFO TAB -->
-    <div id="infoTab" class="tab-content" style="display:none;">
-      <label>City</label>
-      <input type="text" id="hostCity" placeholder="Enter your city">
+   <div id="infoTab" class="tab-content" style="display:none; max-height:400px; overflow-y:auto; padding-right:8px;">
+  <label>Location</label>
+  <input type="text" id="location" placeholder="Enter your location">
 
-      <label>Country</label>
-      <input type="text" id="hostCountry" placeholder="Enter your country">
+  <label>City</label>
+  <input type="text" id="city" placeholder="Enter your city">
 
-      <label>Short Bio</label>
-      <textarea id="hostBio" rows="3" placeholder="Write a short bio..."></textarea>
+  <label>Short Bio</label>
+  <textarea id="bio" rows="3" placeholder="Write a short bio..."></textarea>
 
-      <button id="saveInfo" class="small-btn" style="margin-top:10px;">Save</button>
-    </div>
+  <label>Bank Account Name</label>
+  <input type="text" id="bankName" placeholder="Enter your bank name">
+
+  <label>Bank Account Number</label>
+  <input type="number" id="bankAccountNumber" maxlength="11" placeholder="Enter 11-digit account number" oninput="if(this.value.length>11)this.value=this.value.slice(0,11);">
+
+  <label>WhatsApp Number</label>
+  <input type="number" id="whatsapp" placeholder="Enter WhatsApp number" oninput="if(this.value.length>15)this.value=this.value.slice(0,15);">
+
+  <label>Telegram Username</label>
+  <input type="text" id="telegram" placeholder="@username">
+
+  <label>TikTok Username</label>
+  <input type="text" id="tiktok" placeholder="@username">
+
+  <label>Instagram Username</label>
+  <input type="text" id="instagram" placeholder="@username">
+
+  <button id="saveInfo" class="small-btn" style="margin-top:10px;">Save</button>
+</div>
 
     <!-- 🔔 NOTIFICATIONS TAB -->
     <div id="notificationsTab" class="tab-content" style="display:none;">
