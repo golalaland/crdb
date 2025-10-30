@@ -1372,7 +1372,7 @@ confirmBtn.onclick = async () => {
     if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
     updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
 
-    // --- modal setup ---
+    // --- Spinner + stage container ---
     modalContent.innerHTML = `
       <div style="text-align:center; margin-top:20px;">
         <div class="spinner" style="
@@ -1401,49 +1401,60 @@ confirmBtn.onclick = async () => {
     const stageMsgEl = modalContent.querySelector("#stageMsg");
     const finalBtnContainer = modalContent.querySelector("#finalBtnContainer");
 
-    const stages = [
-      { text: "Handling your meet request…", duration: 1800 },
-      { text: "Collecting host’s identity…", duration: 1800 },
-      { text: "Oh, she’s hella cute…💋", duration: 2000 },
-      { text: "Careful, she may be naughty..😏", duration: 2000 },
-      { text: "Generating secure token…", duration: 2200 }
+    const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
+    const playfulMessages = [
+      "Oh, she’s hella cute…💋", "Careful, she may be naughty..😏",
+      "Be generous with her, she’ll like you..", "Ohh, she’s a real star.. 🤩",
+      "She’s ready to dazzle you tonight.. ✨", "Watch out, she might steal your heart.. ❤️",
+      "Don’t blink, or you’ll miss her charm.. 😉", "Get ready for some fun surprises.. 😏",
+      "She knows how to keep it exciting.. 🎉"
     ];
-
-    // --- sequential updates ---
-    for (let i = 0; i < stages.length; i++) {
-      const stage = stages[i];
-      stageMsgEl.textContent = stage.text;
-
-      // hide spinner after first stage
-      if (i === 0) {
-        const spinner = modalContent.querySelector(".spinner");
-        if (spinner) spinner.style.display = "none";
-      }
-
-      await new Promise(resolve => setTimeout(resolve, stage.duration));
+    const randomPlayful = [];
+    while (randomPlayful.length < 3) {
+      const choice = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
+      if (!randomPlayful.includes(choice)) randomPlayful.push(choice);
     }
 
-    // --- final button ---
-    const btn = document.createElement("button");
-    btn.textContent = "Send Message";
-    Object.assign(btn.style, {
-      marginTop: "6px",
-      padding: "10px 18px",
-      border: "none",
-      borderRadius: "8px",
-      fontWeight: 600,
-      background: "linear-gradient(90deg,#ff0099,#ff6600)",
-      color: "#fff",
-      cursor: "pointer"
-    });
-    btn.onclick = () => {
-      window.open(`https://t.me/drtantra?text=${encodeURIComponent(`Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`)}`, "_blank");
-      modal.remove();
-    };
-    finalBtnContainer.appendChild(btn);
+    const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
 
-    // Auto-close after 7–7.5s
-    setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
+    // Schedule each stage asynchronously
+    let delay = 0;
+    stages.forEach((stage, index) => {
+      const duration = (index < 2) ? 1500 + Math.random() * 1000 :
+                       (index < stages.length - 1) ? 1700 + Math.random() * 600 :
+                       2000 + Math.random() * 500;
+      delay += duration;
+
+      setTimeout(() => {
+        stageMsgEl.textContent = stage;
+        if (index === 0) {
+          const spinner = modalContent.querySelector(".spinner");
+          if (spinner) spinner.style.display = "none"; // hide spinner after first stage
+        }
+        if (index === stages.length - 1) {
+          // Show final button after last stage
+          const btn = document.createElement("button");
+          btn.textContent = "Send Message";
+          Object.assign(btn.style, {
+            marginTop: "6px",
+            padding: "10px 18px",
+            border: "none",
+            borderRadius: "8px",
+            fontWeight: 600,
+            background: "linear-gradient(90deg,#ff0099,#ff6600)",
+            color: "#fff",
+            cursor: "pointer"
+          });
+          btn.onclick = () => {
+            window.open(`https://t.me/drtantra?text=${encodeURIComponent(`Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`)}`, "_blank");
+            modal.remove();
+          };
+          finalBtnContainer.appendChild(btn);
+
+          setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
+        }
+      }, delay);
+    });
 
   } catch (err) {
     console.error("Meet deduction failed:", err);
