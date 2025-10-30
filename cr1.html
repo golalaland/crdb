@@ -1395,59 +1395,66 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
       <button class="tab-btn" data-tab="notificationsTab">Notifications</button>
     </div>
 
-<div class="media-section">
-  <label class="upload-label">Popup Photo</label>
-  <input type="file" id="popupPhoto" accept="image/*" class="upload-input">
-  <div id="popupPreview" class="media-preview" style="display:none;">
-    <img id="popupPreviewImg" alt="Preview">
+    <div id="mediaTab" class="tab-content active">
+      <!-- Popup Photo -->
+      <label>Popup Photo</label>
+      <input type="file" id="popupPhoto" accept="image/*">
+
+      <!-- Nature Pick -->
+      <label>Nature Pick 
+        <small style="font-size:11px; opacity:0.7;">(What best describes you?)</small>
+      </label>
+      <select id="naturePick" class="styled-select">
+        <option value="">Select your vibe</option>
+        <option value="Sexy">Sexy</option>
+        <option value="Cool">Cool</option>
+        <option value="Hot">Hot</option>
+      </select>
+
+      <!-- Fruit Pick -->
+      <label>Fruit Pick 
+        <small style="font-size:11px; opacity:0.7;">(What fruit interests you?)</small>
+      </label>
+      <a href="#" style="font-size:11px; display:block; margin-bottom:6px; color:#ff0080;">
+        🍉 A Girl’s Guide to Fruits
+      </a>
+
+      <div id="fruitOptions" class="fruit-row">
+        <span class="fruit" data-fruit="🍒" title="In for passionate romance / Date nights">🍒</span>
+        <span class="fruit" data-fruit="🍑" title="In for thrills / Paid meetups">🍑</span>
+        <span class="fruit" data-fruit="🍇" title="In for casual hangouts / Friendships">🍇</span>
+        <span class="fruit" data-fruit="🍓" title="In for love adventures / Soulmate">🍓</span>
+      </div>
+
+      <!-- Upload Video -->
+      <label>Upload Video</label>
+      <input type="file" id="uploadVideo" accept="video/*">
+
+      <button id="saveMedia" class="small-btn" style="margin-top:10px;">Save</button>
+    </div>
+
+    <!-- 📝 INFO TAB -->
+    <div id="infoTab" class="tab-content" style="display:none;">
+      <label>City</label>
+      <input type="text" id="hostCity" placeholder="Enter your city">
+
+      <label>Country</label>
+      <input type="text" id="hostCountry" placeholder="Enter your country">
+
+      <label>Short Bio</label>
+      <textarea id="hostBio" rows="3" placeholder="Write a short bio..."></textarea>
+
+      <button id="saveInfo" class="small-btn" style="margin-top:10px;">Save</button>
+    </div>
+
+    <!-- 🔔 NOTIFICATIONS TAB -->
+    <div id="notificationsTab" class="tab-content" style="display:none;">
+      <h4>Your Notifications</h4>
+      <div id="notificationsList" class="notifications-list">
+        <p>No new notifications yet.</p>
+      </div>
+    </div>
   </div>
-
-  <label class="upload-label">Nature Pick</label>
-  <select id="naturePick" class="styled-select">
-    <option value="">Select vibe</option>
-    <option value="Chill">Chill</option>
-    <option value="Wild">Wild</option>
-    <option value="Romantic">Romantic</option>
-    <option value="Luxury">Luxury</option>
-  </select>
-
-  <label class="upload-label" style="margin-top:14px;">Fruit Pick</label>
-  <div id="fruitTally">Selected: <span id="fruitCount">0</span></div>
-
-  <div class="fruit-grid" id="fruitGrid">
-    <div class="fruit-card" data-fruit="🍓" data-key="strawberry">
-      <div class="fruit-emoji">🍓</div>
-      <div class="fruit-title">Strawberry</div>
-      <div class="fruit-sub">Love adventures</div>
-      <div class="fruit-check">✓</div>
-    </div>
-    <div class="fruit-card" data-fruit="🍒" data-key="cherry">
-      <div class="fruit-emoji">🍒</div>
-      <div class="fruit-title">Cherry</div>
-      <div class="fruit-sub">Date nights</div>
-      <div class="fruit-check">✓</div>
-    </div>
-    <div class="fruit-card" data-fruit="🍑" data-key="peach">
-      <div class="fruit-emoji">🍑</div>
-      <div class="fruit-title">Peach</div>
-      <div class="fruit-sub">Flirty fun</div>
-      <div class="fruit-check">✓</div>
-    </div>
-    <div class="fruit-card" data-fruit="🍇" data-key="grape">
-      <div class="fruit-emoji">🍇</div>
-      <div class="fruit-title">Grapes</div>
-      <div class="fruit-sub">Chill vibes</div>
-      <div class="fruit-check">✓</div>
-    </div>
-  </div>
-
-  <label class="upload-label" style="margin-top:14px;">Video Upload</label>
-  <input type="file" id="uploadVideo" accept="video/*" class="upload-input">
-  <div id="videoPreview" class="media-preview" style="display:none;">
-    <video id="uploadVideoPreview" controls muted></video>
-  </div>
-
-  <button id="saveMedia" class="small-btn" style="margin-top:12px;">Save</button>
 </div>
 
     <!-- 📝 INFO TAB -->
