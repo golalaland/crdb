@@ -1002,19 +1002,32 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   background: linear-gradient(90deg, #ff0099, #ff6600);
 }
 
-/* Tab Content Inputs */
-.tab-content input,
-.tab-content textarea {
-  width: 100%;         /* full width of container */
-  max-width: 250px;    /* limits how wide they stretch */
-  margin-bottom: 8px;  /* tighter spacing */
-  padding: 6px;        /* smaller padding */
-  border-radius: 4px;
-  border: none;
-  font-size: 13px;     /* slightly smaller text */
+/* General tab content styling */
+.tab-content label {
+  display: inline-block;      /* keeps label inline-friendly */
+  width: 100px;               /* fixed width for alignment */
+  margin-right: 8px;
+  vertical-align: top;        /* aligns with input top */
+  font-size: 13px;
+  color: #fff;
 }
 
-/* Optional: divider spacing for clarity */
+/* Inputs & textareas */
+.tab-content input,
+.tab-content textarea {
+  display: inline-block;      /* allows horizontal alignment with label */
+  width: calc(100% - 120px);  /* accounts for label width + gap */
+  max-width: 250px;
+  margin-bottom: 8px;
+  padding: 6px;
+  border-radius: 4px;
+  border: none;
+  font-size: 13px;
+  vertical-align: top;        /* ensures alignment with label */
+  resize: vertical;           /* allows bio to expand vertically */
+}
+
+/* Divider spacing */
 .tab-content .divider {
   margin: 12px 0;
   border: 0;
