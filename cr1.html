@@ -1057,13 +1057,16 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   overflow-y: auto;
 }
 
+/* 🔥 Each Notification */
 .notification-item {
   display: flex;
-  align-items: flex-start;
+  justify-content: space-between;
+  align-items: center;
   gap: 8px;
-  padding: 10px;
+  padding: 10px 12px;
   background: rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
   font-size: 13px;
   line-height: 1.4;
   color: #eee;
@@ -1071,9 +1074,12 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   transition: background 0.2s, transform 0.15s;
 }
 
-.notification-item.unread {
-  background: rgba(255, 255, 255, 0.12);
+.notification-item.unread,
+.notification-item.new {
+  background: linear-gradient(90deg, #ff6a00, #ff0055);
+  color: #fff;
   font-weight: 600;
+  animation: fadePulse 0.8s ease-in-out;
 }
 
 .notification-item:hover {
@@ -1089,7 +1095,28 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .notification-time {
   font-size: 10px;
   color: #bbb;
-  margin-top: 2px;
+  margin-left: 10px;
+}
+
+.mark-read {
+  background: #ff0055;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 10px;
+  padding: 4px 8px;
+  cursor: pointer;
+  margin-left: 10px;
+  transition: all 0.2s;
+}
+.mark-read:hover {
+  opacity: 0.8;
+}
+
+/* ✨ Pulse animation for new notifications */
+@keyframes fadePulse {
+  0% { opacity: 0; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 /* ==== Upload Labels ==== */
