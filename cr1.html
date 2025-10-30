@@ -1021,24 +1021,108 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   font-size: 26px;
 }
 
-.fruit {
-  cursor: pointer;
-  transition: transform 0.2s ease, filter 0.2s ease;
+/* ========= GENERAL UPLOAD AREA ========= */
+
+.upload-label {
+  display: block;
+  font-weight: 600;
+  margin-top: 12px;
+  color: #fff;
+  font-size: 14px;
 }
 
-.fruit.selected {
-  transform: scale(1.2);
-  filter: drop-shadow(0 0 5px #ff0080);
+.hint-text {
+  display: block;
+  font-weight: normal;
+  font-size: 11px;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+/* ========= INPUTS & SELECT ========= */
+
+.upload-input {
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #121212;
+  color: #fff;
+  font-size: 13px;
 }
 
 .styled-select {
   width: 100%;
   padding: 8px;
   border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  background: white;
+  border: 1px solid #444;
+  background: #1c1c1c;
+  color: #fff;
+  font-size: 13px;
+  margin-top: 6px;
+  appearance: none;
+  cursor: pointer;
 }
+
+/* ========= FRUIT PICK AREA ========= */
+
+.fruit-container {
+  display: flex;
+  justify-content: space-around;
+  margin: 10px 0;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.fruit {
+  font-size: 28px;
+  cursor: pointer;
+  border-radius: 10px;
+  padding: 8px;
+  transition: transform 0.2s ease, box-shadow 0.3s ease, filter 0.2s ease;
+  position: relative;
+}
+
+.fruit:hover {
+  transform: scale(1.1);
+}
+
+.fruit.selected {
+  background: linear-gradient(135deg, #ff0099, #ff6600);
+  box-shadow: 0 0 12px rgba(255, 102, 0, 0.7);
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 8px #ff0080);
+}
+
+.fruit::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: -38px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.fruit:hover::after {
+  opacity: 1;
+}
+
+.fruit-guide {
+  color: #ff99cc;
+  text-decoration: underline;
+  font-size: 12px;
+}
+
+/* ========= NOTIFICATIONS ========= */
 
 .notifications-list {
   max-height: 200px;
@@ -1047,6 +1131,15 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   padding: 10px;
   border-radius: 6px;
   border: 1px solid #eee;
+}
+
+.notification-item {
+  font-size: 13px;
+  background: #fff;
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 6px;
+  box-shadow: 0 0 3px rgba(0,0,0,0.1);
 }
 </style>
 </head>
@@ -1186,42 +1279,44 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
     <!-- 🖼️ MEDIA TAB -->
     <div id="mediaTab" class="tab-content active">
-      <!-- Popup Photo -->
-      <label>Popup Photo</label>
-      <input type="file" id="popupPhoto" accept="image/*">
 
-      <!-- Nature Pick -->
-      <label>Nature Pick 
-        <small style="font-size:11px; opacity:0.7;">(What best describes you?)</small>
-      </label>
-      <select id="naturePick" class="styled-select">
-        <option value="">Select your vibe</option>
-        <option value="Sexy">Sexy</option>
-        <option value="Cool">Cool</option>
-        <option value="Hot">Hot</option>
-      </select>
+  <!-- Popup Photo -->
+  <label class="upload-label">Popup Photo</label>
+  <input type="file" id="popupPhoto" accept="image/*" class="upload-input">
 
-      <!-- Fruit Pick -->
-      <label>Fruit Pick 
-        <small style="font-size:11px; opacity:0.7;">(What fruit interests you?)</small>
-      </label>
-      <a href="#" style="font-size:11px; display:block; margin-bottom:6px; color:#ff0080;">
-        🍉 A Girl’s Guide to Fruits
-      </a>
+  <!-- Nature Pick -->
+  <label class="upload-label">
+    Nature Pick
+    <small class="hint-text">What best describes you?</small>
+  </label>
+  <select id="naturePick" class="styled-select">
+    <option value="">Select your vibe...</option>
+    <option value="sexy">Sexy</option>
+    <option value="cool">Cool</option>
+    <option value="hot">Hot</option>
+    <option value="classy">Classy</option>
+    <option value="vibrant">Vibrant</option>
+  </select>
 
-      <div id="fruitOptions" class="fruit-row">
-        <span class="fruit" data-fruit="🍒" title="In for passionate romance / Date nights">🍒</span>
-        <span class="fruit" data-fruit="🍑" title="In for thrills / Paid meetups">🍑</span>
-        <span class="fruit" data-fruit="🍇" title="In for casual hangouts / Friendships">🍇</span>
-        <span class="fruit" data-fruit="🍓" title="In for love adventures / Soulmate">🍓</span>
-      </div>
+  <!-- Fruit Pick -->
+  <label class="upload-label">
+    Fruit Pick
+    <small class="hint-text">What fruit interests you? <a href="#" class="fruit-guide">A Girl’s Guide to Fruits</a></small>
+  </label>
 
-      <!-- Upload Video -->
-      <label>Upload Video</label>
-      <input type="file" id="uploadVideo" accept="video/*">
+  <div class="fruit-container">
+    <div class="fruit" data-fruit="🍇" data-tooltip="🍇 In for casual hangouts / friendships.">🍇</div>
+    <div class="fruit" data-fruit="🍑" data-tooltip="🍑 In for thrills / paid meetups.">🍑</div>
+    <div class="fruit" data-fruit="🍒" data-tooltip="🍒 In for passionate romance / date nights.">🍒</div>
+    <div class="fruit" data-fruit="🍓" data-tooltip="🍓 In for love adventures / finding your soulmate.">🍓</div>
+  </div>
 
-      <button id="saveMedia" class="small-btn" style="margin-top:10px;">Save</button>
-    </div>
+  <!-- Upload Video -->
+  <label class="upload-label">Upload Video</label>
+  <input type="file" id="uploadVideo" accept="video/*" class="upload-input">
+
+  <button id="saveMedia" class="small-btn" style="margin-top:12px;">Save</button>
+</div>
 
     <!-- 📝 INFO TAB -->
     <div id="infoTab" class="tab-content" style="display:none;">
