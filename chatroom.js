@@ -973,9 +973,6 @@ window.addEventListener("DOMContentLoaded", () => {
   loadVideo(currentVideo, lastTime);
 })();
 
-  // ---------- Show initial hint ----------
-  showHint("Tap to unmute", 1500);
-})();
 
 // URL of your custom star SVG
 const customStarURL = "https://res.cloudinary.com/dekxhwh6l/image/upload/v1760596116/starssvg_k3hmsu.svg";
