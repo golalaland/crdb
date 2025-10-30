@@ -1431,6 +1431,92 @@ function showMeetModal(host) {
     }
   };
 }
+
+/* ---------- Gift Slider ---------- */
+giftSlider.addEventListener("input", () => {
+  giftAmountEl.textContent = giftSlider.value;
+});
+
+/* ---------- Send Gift Function (Dynamic Receiver) ---------- */
+async function sendGift() {
+  const receiver = hosts[currentIndex]; // dynamically pick current host
+  if (!receiver?.id) return showGiftAlert("⚠️ No host selected.");
+  if (!currentUser?.uid) return showGiftAlert("Please log in to send stars ⭐");
+
+  const giftStars = parseInt(giftSlider.value, 10);
+  if (isNaN(giftStars) || giftStars <= 0)
+    return showGiftAlert("Invalid star amount ❌");
+
+  // Spinner inside button
+  const originalText = giftBtn.textContent;
+  const buttonWidth = giftBtn.offsetWidth + "px";
+  giftBtn.style.width = buttonWidth;
+  giftBtn.disabled = true;
+  giftBtn.innerHTML = `<span class="gift-spinner"></span>`; // Make sure CSS spins it
+
+  try {
+    const senderRef = doc(db, "users", currentUser.uid);
+    const receiverRef = doc(db, "users", receiver.id);
+    const featuredReceiverRef = doc(db, "featuredHosts", receiver.id);
+
+    await runTransaction(db, async (tx) => {
+      const senderSnap = await tx.get(senderRef);
+      const receiverSnap = await tx.get(receiverRef);
+
+      if (!senderSnap.exists()) throw new Error("Your user record not found.");
+      if (!receiverSnap.exists()) 
+        tx.set(receiverRef, { stars: 0, starsGifted: 0, lastGiftSeen: {} }, { merge: true });
+
+      const senderData = senderSnap.data();
+      if ((senderData.stars || 0) < giftStars)
+        throw new Error("Insufficient stars");
+
+      // Deduct from sender, add to receiver
+      tx.update(senderRef, { stars: increment(-giftStars), starsGifted: increment(giftStars) });
+      tx.update(receiverRef, { stars: increment(giftStars) });
+      tx.set(featuredReceiverRef, { stars: increment(giftStars) }, { merge: true });
+
+      // Push a one-time notification to receiver
+      tx.update(receiverRef, {
+        [`lastGiftSeen.${currentUser.username || "Someone"}`]: giftStars
+      });
+    });
+
+    // Sender alert
+    showGiftAlert(`✅ You sent ${giftStars} stars ⭐ to ${receiver.chatId}!`);
+
+    // Receiver alert only if this session is the actual receiver
+if (currentUser.uid === receiver.id) {
+  setTimeout(() => {
+    showGiftAlert(`🎁 ${lastSenderName} sent you ${giftStars} stars ⭐`);
+  }, 1000);
+}
+
+    console.log(`✅ Sent ${giftStars} stars ⭐ to ${receiver.chatId}`);
+  } catch (err) {
+    console.error("❌ Gift sending failed:", err);
+    showGiftAlert(`⚠️ Something went wrong: ${err.message}`);
+  } finally {
+    giftBtn.innerHTML = originalText;
+    giftBtn.disabled = false;
+    giftBtn.style.width = "auto";
+  }
+}
+
+/* ---------- Assign gift button click ---------- */
+giftBtn.onclick = sendGift;
+
+/* ---------- Navigation ---------- */
+prevBtn.addEventListener("click", e => {
+  e.preventDefault();
+  loadHost((currentIndex - 1 + hosts.length) % hosts.length);
+});
+
+nextBtn.addEventListener("click", e => {
+  e.preventDefault();
+  loadHost((currentIndex + 1) % hosts.length);
+});
+
 /* ---------- Modal control ---------- */
 openBtn.addEventListener("click", () => {
   modal.style.display = "flex";
@@ -1450,7 +1536,6 @@ window.addEventListener("click", e => {
     console.log("🪟 Modal dismissed");
   }
 });
-
 /* ---------- Init ---------- */
 fetchFeaturedHosts();
 
