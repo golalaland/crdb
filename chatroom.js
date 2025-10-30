@@ -368,6 +368,54 @@ if (msg.highlight && msg.content?.includes("gifted")) {
   });
 }
 
+document.addEventListener("DOMContentLoaded", () => {
+  const isHost = true; // <- set this dynamically later
+  const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
+  const hostModal = document.getElementById("hostModal");
+  const hostSettingsBtn = document.getElementById("hostSettingsBtn");
+  const closeModal = hostModal.querySelector(".close");
+
+  // Only show button if host
+  if (isHost && hostSettingsWrapper) {
+    hostSettingsWrapper.style.display = "block";
+  }
+
+  // Modal controls
+  hostSettingsBtn.onclick = () => (hostModal.style.display = "block");
+  closeModal.onclick = () => (hostModal.style.display = "none");
+  window.onclick = e => {
+    if (e.target === hostModal) hostModal.style.display = "none";
+  };
+
+  // Tab logic
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(tab => (tab.style.display = "none"));
+      btn.classList.add("active");
+      document.getElementById(btn.dataset.tab).style.display = "block";
+    };
+  });
+
+  // Save handlers
+  document.getElementById("saveMedia").onclick = () => {
+    const popupPhoto = document.getElementById("popupPhoto").files[0];
+    const naturePick = document.getElementById("naturePick").files[0];
+    const fruitPick = document.getElementById("fruitPick").files[0];
+    const videoUrl = document.getElementById("videoUrl").value;
+    console.log("Media uploaded:", { popupPhoto, naturePick, fruitPick, videoUrl });
+    hostModal.style.display = "none";
+  };
+
+  document.getElementById("saveInfo").onclick = () => {
+    const city = document.getElementById("hostCity").value;
+    const country = document.getElementById("hostCountry").value;
+    const bio = document.getElementById("hostBio").value;
+    console.log("Info updated:", { city, country, bio });
+    hostModal.style.display = "none";
+  };
+});
+
 /* ---------- 🆔 ChatID Modal ---------- */
 async function promptForChatID(userRef, userData) {
   if (!refs.chatIDModal || !refs.chatIDInput || !refs.chatIDConfirmBtn)
