@@ -958,89 +958,96 @@ window.addEventListener("DOMContentLoaded", () => {
   };
   const sleep = ms => new Promise(res => setTimeout(res, ms));
 });
-  /* =====================================
-   🎥 Video Navigation & UI Fade Logic
+/* =====================================
+ 🎥 Video Navigation & UI Fade Logic
 ======================================= */
 (() => {
-  const videoPlayer = document.getElementById("videoPlayer");
-  const prevBtn = document.getElementById("prev");
-  const nextBtn = document.getElementById("next");
-  const container = document.querySelector(".video-container");
-  const navButtons = [prevBtn, nextBtn].filter(Boolean);
+  const videoPlayer = document.getElementById("videoPlayer");
+  const prevBtn = document.getElementById("prev");
+  const nextBtn = document.getElementById("next");
+  const container = document.querySelector(".video-container");
+  const navButtons = [prevBtn, nextBtn].filter(Boolean);
 
-  if (!videoPlayer || navButtons.length === 0) return;
+  if (!videoPlayer || navButtons.length === 0) return;
 
-  // 🎞️ Video list
-  const videos = [
-    "https://res.cloudinary.com/dekxhwh6l/video/upload/v1695/35a6ff0764563d1dcfaaaedac912b2c7_zfzxlw.mp4",
-    "https://xixi.b-cdn.net/Petitie%20Bubble%20Butt%20Stripper.mp4",
-    "https://xixi.b-cdn.net/Bootylicious%20Ebony%20Queen%20Kona%20Jade%20Twerks%20Teases%20and%20Rides%20POV%20u.mp4"
-  ];
-  let currentVideo = 0;
-  let hideTimeout = null;
+  // 🎞️ Video list (Shopify-hosted links)
+  const videos = [
+    "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4",
+    "https://cdn.shopify.com/videos/c/o/v/second-shopify-video.mp4",
+    "https://cdn.shopify.com/videos/c/o/v/third-shopify-video.mp4"
+  ];
+  let currentVideo = 0;
+  let hideTimeout = null;
 
-  /* ----------------------------
-     ▶️ Load & Play Video
-  ----------------------------- */
-  const loadVideo = (index) => {
-    if (index < 0) index = videos.length - 1;
-    if (index >= videos.length) index = 0;
+  /* ----------------------------
+     ▶️ Load & Play Video (with canplay check)
+  ----------------------------- */
+  const loadVideo = (index) => {
+    if (index < 0) index = videos.length - 1;
+    if (index >= videos.length) index = 0;
 
-    currentVideo = index;
-    videoPlayer.src = videos[currentVideo];
-    videoPlayer.muted = true;
+    currentVideo = index;
+    videoPlayer.src = videos[currentVideo];
+    videoPlayer.muted = true;
 
-    videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
-  };
+    // Wait until the video can play, then play
+    videoPlayer.addEventListener(
+      "canplay",
+      function onCanPlay() {
+        videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
+        videoPlayer.removeEventListener("canplay", onCanPlay);
+      }
+    );
+  };
 
-  /* ----------------------------
-     🔊 Toggle Mute on Tap
-  ----------------------------- */
-  videoPlayer.addEventListener("click", () => {
-    videoPlayer.muted = !videoPlayer.muted;
-    const state = videoPlayer.muted ? "🔇" : "🔊";
-    showStarPopup(`Video sound: ${state}`);
-  });
+  /* ----------------------------
+     🔊 Toggle Mute on Tap
+  ----------------------------- */
+  videoPlayer.addEventListener("click", () => {
+    videoPlayer.muted = !videoPlayer.muted;
+    const state = videoPlayer.muted ? "🔇" : "🔊";
+    showStarPopup?.(`Video sound: ${state}`);
+  });
 
-  /* ----------------------------
-     ⏪⏩ Navigation Buttons
-  ----------------------------- */
-  prevBtn?.addEventListener("click", () => loadVideo(currentVideo - 1));
-  nextBtn?.addEventListener("click", () => loadVideo(currentVideo + 1));
+  /* ----------------------------
+     ⏪⏩ Navigation Buttons
+  ----------------------------- */
+  prevBtn?.addEventListener("click", () => loadVideo(currentVideo - 1));
+  nextBtn?.addEventListener("click", () => loadVideo(currentVideo + 1));
 
-  /* ----------------------------
-     👀 Auto Hide/Show Buttons
-  ----------------------------- */
-  const showButtons = () => {
-    navButtons.forEach(btn => {
-      btn.style.opacity = "1";
-      btn.style.pointerEvents = "auto";
-    });
-    clearTimeout(hideTimeout);
-    hideTimeout = setTimeout(() => {
-      navButtons.forEach(btn => {
-        btn.style.opacity = "0";
-        btn.style.pointerEvents = "none";
-      });
-    }, 3000);
-  };
+  /* ----------------------------
+     👀 Auto Hide/Show Buttons
+  ----------------------------- */
+  const showButtons = () => {
+    navButtons.forEach(btn => {
+      btn.style.opacity = "1";
+      btn.style.pointerEvents = "auto";
+    });
+    clearTimeout(hideTimeout);
+    hideTimeout = setTimeout(() => {
+      navButtons.forEach(btn => {
+        btn.style.opacity = "0";
+        btn.style.pointerEvents = "none";
+      });
+    }, 3000);
+  };
 
-  navButtons.forEach(btn => {
-    btn.style.transition = "opacity 0.6s ease";
-    btn.style.opacity = "0";
-    btn.style.pointerEvents = "none";
-  });
+  navButtons.forEach(btn => {
+    btn.style.transition = "opacity 0.6s ease";
+    btn.style.opacity = "0";
+    btn.style.pointerEvents = "none";
+  });
 
-  ["mouseenter", "mousemove", "click"].forEach(evt => container?.addEventListener(evt, showButtons));
-  container?.addEventListener("mouseleave", () => {
-    navButtons.forEach(btn => {
-      btn.style.opacity = "0";
-      btn.style.pointerEvents = "none";
-    });
-  });
+  ["mouseenter", "mousemove", "click"].forEach(evt => container?.addEventListener(evt, showButtons));
+  container?.addEventListener("mouseleave", () => {
+    navButtons.forEach(btn => {
+      btn.style.opacity = "0";
+      btn.style.pointerEvents = "none";
+    });
+  });
 
-  // Start with first video
-  loadVideo(0);
+  // Start with first video
+  loadVideo(0);
 })();
 
 // URL of your custom star SVG
