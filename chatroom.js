@@ -1880,7 +1880,7 @@ hostSettingsBtn.addEventListener("click", () => {
     });
   }
 });
-  const scrollArrow = document.getElementById('scrollArrow');
+const scrollArrow = document.getElementById('scrollArrow');
   const chatContainer = document.querySelector('#chatContainer'); // chat wrapper
   let fadeTimeout;
 
