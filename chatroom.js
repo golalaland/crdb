@@ -1632,6 +1632,7 @@ fetchFeaturedHosts();
 
 
 document.addEventListener("DOMContentLoaded", () => {
+
 // ========== 🟣 HOST SETTINGS LOGIC ==========
 const isHost = true; // <-- later dynamic
 const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
@@ -1645,29 +1646,28 @@ if (hostSettingsBtn && hostModal && closeModal) {
   hostSettingsBtn.onclick = async () => {
     hostModal.style.display = "block";
 
-    // ✅ Populate fields from Firestore when modal opens
-    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
-    const userRef = doc(db, "users", currentUser.uid);
-    const snap = await getDoc(userRef);
-    if (!snap.exists()) return showStarPopup("⚠️ User data not found.");
+// ✅ Populate placeholders from Firestore when modal opens
+if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
+const userRef = doc(db, "users", currentUser.uid);
+const snap = await getDoc(userRef);
+if (!snap.exists()) return showStarPopup("⚠️ User data not found.");
 
-    const data = snap.data();
-    document.getElementById("city").value = data.city || "";
-    document.getElementById("location").value = data.location || "";
-    document.getElementById("bio").value = data.bioPick || "";
-    document.getElementById("bankAccountNumber").value = data.bankAccountNumber || "";
-    document.getElementById("bankName").value = data.bankName || "";
-    document.getElementById("telegram").value = data.telegram || "";
-    document.getElementById("tiktok").value = data.tiktok || "";
-    document.getElementById("whatsapp").value = data.whatsapp || "";
-    document.getElementById("instagram").value = data.instagram || "";
-  };
+const data = snap.data();
+document.getElementById("city").placeholder = data.city || "";
+document.getElementById("location").placeholder = data.location || "";
+document.getElementById("bio").placeholder = data.bioPick || "";
+document.getElementById("bankAccountNumber").placeholder = data.bankAccountNumber || "";
+document.getElementById("bankName").placeholder = data.bankName || "";
+document.getElementById("telegram").placeholder = data.telegram || "";
+document.getElementById("tiktok").placeholder = data.tiktok || "";
+document.getElementById("whatsapp").placeholder = data.whatsapp || "";
+document.getElementById("instagram").placeholder = data.instagram || "";
 
-  closeModal.onclick = () => (hostModal.style.display = "none");
-  window.onclick = (e) => {
-    if (e.target === hostModal) hostModal.style.display = "none";
-  };
-}
+// Close modal logic
+closeModal.onclick = () => (hostModal.style.display = "none");
+window.onclick = (e) => {
+  if (e.target === hostModal) hostModal.style.display = "none";
+};
 
 // 🟠 Tab Logic
 document.querySelectorAll(".tab-btn").forEach((btn) => {
@@ -1706,7 +1706,6 @@ if (saveInfoBtn) {
 
     // 🧩 Grab values
     const fullName = document.getElementById("fullName")?.value || "";
-    const chatId = document.getElementById("chatId")?.value.toLowerCase() || "";
     const city = document.getElementById("city")?.value || "";
     const location = document.getElementById("location")?.value || "";
     const bio = document.getElementById("bio")?.value || "";
@@ -1730,7 +1729,6 @@ if (saveInfoBtn) {
     try {
       await updateDoc(userRef, {
         fullName: fullName.replace(/\b\w/g, l => l.toUpperCase()), // capitalize initials
-        chatId,
         city,
         location,
         bioPick: bio,
