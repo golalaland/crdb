@@ -891,20 +891,23 @@ autoLogin();
 
   // ---------- Create hint overlay inside video ----------
   let hint = document.createElement("div");
-  hint.className = "video-hint";
-  hint.style.position = "absolute";
-  hint.style.top = "50%";
-  hint.style.left = "50%";
-  hint.style.transform = "translate(-50%, -50%)";
-  hint.style.padding = "8px 16px";
-  hint.style.background = "rgba(0,0,0,0.5)";
-  hint.style.color = "#fff";
-  hint.style.borderRadius = "6px";
-  hint.style.fontSize = "16px";
-  hint.style.opacity = "0";
-  hint.style.pointerEvents = "none";
-  hint.style.transition = "opacity 0.4s";
-  videoWrapper.appendChild(hint);
+hint = document.createElement("div");
+hint.className = "video-hint";
+hint.style.position = "absolute";
+hint.style.bottom = "10%";            // slightly above bottom
+hint.style.left = "50%";
+hint.style.transform = "translateX(-50%)"; // horizontal center
+hint.style.padding = "2px 8px";       // small pill
+hint.style.background = "rgba(0,0,0,0.5)";
+hint.style.color = "#fff";
+hint.style.borderRadius = "12px";     // pill shape
+hint.style.fontSize = "14px";         // readable small font
+hint.style.opacity = "0";
+hint.style.pointerEvents = "none";
+hint.style.transition = "opacity 0.4s";
+// ensure parent is positioned
+videoPlayer.parentElement.style.position = "relative";
+videoPlayer.parentElement.appendChild(hint);
 
   const showHint = (msg, timeout = 1500) => {
     hint.textContent = msg;
