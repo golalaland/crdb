@@ -977,35 +977,50 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   border: none;
   border-radius: 4px;
 }
+/* Tab Header */
 .tab-header {
   display: flex;
   gap: 6px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
+/* Tab Buttons */
 .tab-btn {
   flex: 1;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
   border: none;
-  padding: 8px;
+  padding: 6px 4px; /* slightly smaller padding */
   border-radius: 4px;
   cursor: pointer;
   font-weight: 500;
+  font-size: 13px; /* smaller text */
+  text-align: center;
 }
 
 .tab-btn.active {
   background: linear-gradient(90deg, #ff0099, #ff6600);
 }
 
+/* Tab Content Inputs */
 .tab-content input,
 .tab-content textarea {
-  width: 100%;
-  margin-bottom: 10px;
-  padding: 8px;
+  width: 100%;         /* full width of container */
+  max-width: 250px;    /* limits how wide they stretch */
+  margin-bottom: 8px;  /* tighter spacing */
+  padding: 6px;        /* smaller padding */
   border-radius: 4px;
   border: none;
+  font-size: 13px;     /* slightly smaller text */
 }
+
+/* Optional: divider spacing for clarity */
+.tab-content .divider {
+  margin: 12px 0;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 #postLoginLoader {
   transition: opacity 0.4s ease;
 }
