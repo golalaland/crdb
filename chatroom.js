@@ -1646,30 +1646,42 @@ if (hostSettingsBtn && hostModal && closeModal) {
   hostSettingsBtn.onclick = async () => {
     hostModal.style.display = "block";
 
-// ✅ Populate placeholders from Firestore when modal opens
-if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
-const userRef = doc(db, "users", currentUser.uid);
-const snap = await getDoc(userRef);
-if (!snap.exists()) return showStarPopup("⚠️ User data not found.");
+    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
 
-const data = snap.data();
-document.getElementById("city").placeholder = data.city || "";
-document.getElementById("location").placeholder = data.location || "";
-document.getElementById("bio").placeholder = data.bioPick || "";
-document.getElementById("bankAccountNumber").placeholder = data.bankAccountNumber || "";
-document.getElementById("bankName").placeholder = data.bankName || "";
-document.getElementById("telegram").placeholder = data.telegram || "";
-document.getElementById("tiktok").placeholder = data.tiktok || "";
-document.getElementById("whatsapp").placeholder = data.whatsapp || "";
-document.getElementById("instagram").placeholder = data.instagram || "";
+    // Populate fields from Firestore (kept blank until user edits)
+    const userRef = doc(db, "users", currentUser.uid);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) return showStarPopup("⚠️ User data not found.");
 
-// Close modal logic
-closeModal.onclick = () => (hostModal.style.display = "none");
-window.onclick = (e) => {
-  if (e.target === hostModal) hostModal.style.display = "none";
-};
+    const data = snap.data();
+    document.getElementById("fullName").value = data.fullName || "";
+    document.getElementById("city").value = data.city || "";
+    document.getElementById("location").value = data.location || "";
+    document.getElementById("bio").value = data.bioPick || "";
+    document.getElementById("bankAccountNumber").value = data.bankAccountNumber || "";
+    document.getElementById("bankName").value = data.bankName || "";
+    document.getElementById("telegram").value = data.telegram || "";
+    document.getElementById("tiktok").value = data.tiktok || "";
+    document.getElementById("whatsapp").value = data.whatsapp || "";
+    document.getElementById("instagram").value = data.instagram || "";
 
-// 🟠 Tab Logic
+    // Update photo preview if exists
+    if (data.popupPhoto) {
+      const photoPreview = document.getElementById("photoPreview");
+      const photoPlaceholder = document.getElementById("photoPlaceholder");
+      photoPreview.src = data.popupPhoto;
+      photoPreview.style.display = "block";
+      photoPlaceholder.style.display = "none";
+    }
+  };
+
+  closeModal.onclick = () => (hostModal.style.display = "none");
+  window.onclick = (e) => {
+    if (e.target === hostModal) hostModal.style.display = "none";
+  };
+}
+
+// ========== 🟠 TAB LOGIC ==========
 document.querySelectorAll(".tab-btn").forEach((btn) => {
   btn.onclick = () => {
     document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
@@ -1679,7 +1691,7 @@ document.querySelectorAll(".tab-btn").forEach((btn) => {
   };
 });
 
-// === 🖼️ Photo Upload Preview ===
+// ========== 🖼️ PHOTO PREVIEW ==========
 document.addEventListener("change", (e) => {
   if (e.target.id === "popupPhoto") {
     const file = e.target.files[0];
@@ -1698,13 +1710,13 @@ document.addEventListener("change", (e) => {
   }
 });
 
-// ========== 📝 SAVE INFO HANDLER (LINKED TO FIRESTORE) ==========
+// ========== 📝 SAVE INFO HANDLER ==========
 const saveInfoBtn = document.getElementById("saveInfo");
 if (saveInfoBtn) {
   saveInfoBtn.onclick = async () => {
+    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
     const userRef = doc(db, "users", currentUser.uid);
 
-    // 🧩 Grab values
     const fullName = document.getElementById("fullName")?.value || "";
     const city = document.getElementById("city")?.value || "";
     const location = document.getElementById("location")?.value || "";
@@ -1716,19 +1728,17 @@ if (saveInfoBtn) {
     const whatsapp = document.getElementById("whatsapp")?.value || "";
     const instagram = document.getElementById("instagram")?.value || "";
 
-    // ✳️ Validate numeric fields
+    // Validate numeric fields
     if (bankAccountNumber && !/^\d{1,11}$/.test(bankAccountNumber)) {
-      showStarPopup("⚠️ Bank account number must be digits only and up to 11.");
-      return;
+      return showStarPopup("⚠️ Bank account number must be digits only (max 11).");
     }
     if (whatsapp && !/^\d+$/.test(whatsapp)) {
-      showStarPopup("⚠️ WhatsApp number must be numbers only.");
-      return;
+      return showStarPopup("⚠️ WhatsApp number must be numbers only.");
     }
 
     try {
       await updateDoc(userRef, {
-        fullName: fullName.replace(/\b\w/g, l => l.toUpperCase()), // capitalize initials
+        fullName: fullName.replace(/\b\w/g, l => l.toUpperCase()),
         city,
         location,
         bioPick: bio,
@@ -1743,15 +1753,64 @@ if (saveInfoBtn) {
 
       showStarPopup("✅ Profile updated successfully!");
 
-      // Clear focus from all fields
-      document.querySelectorAll("#infoTab input, #infoTab textarea").forEach(input => input.blur());
-
+      // Clear focus (simulate “inactive typing”)
+      document.querySelectorAll("#infoTab input, #infoTab textarea").forEach((input) => input.blur());
     } catch (err) {
       console.error("❌ Error updating Firestore:", err);
       showStarPopup("⚠️ Failed to update info. Please try again.");
     }
   };
 }
+
+// ========== 🟣 MEDIA UPLOAD HANDLER ==========
+const saveMediaBtn = document.getElementById("saveMedia");
+if (saveMediaBtn) {
+  saveMediaBtn.onclick = async () => {
+    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
+
+    const popupPhotoFile = document.getElementById("popupPhoto")?.files[0];
+    const uploadVideoFile = document.getElementById("uploadVideo")?.files[0];
+
+    if (!popupPhotoFile && !uploadVideoFile) {
+      return showStarPopup("⚠️ Please select a photo or video to upload.");
+    }
+
+    try {
+      showStarPopup("⏳ Uploading media...");
+
+      const formData = new FormData();
+      if (popupPhotoFile) formData.append("photo", popupPhotoFile);
+      if (uploadVideoFile) formData.append("video", uploadVideoFile);
+
+      const res = await fetch("/api/uploadShopify", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed. Check your network.");
+
+      const data = await res.json(); // { photoUrl: "...", videoUrl: "..." }
+      const userRef = doc(db, "users", currentUser.uid);
+
+      await updateDoc(userRef, {
+        ...(data.photoUrl && { popupPhoto: data.photoUrl }),
+        ...(data.videoUrl && { videoUrl: data.videoUrl }),
+        lastUpdated: serverTimestamp(),
+      });
+
+      if (data.photoUrl) {
+        const photoPreview = document.getElementById("photoPreview");
+        const photoPlaceholder = document.getElementById("photoPlaceholder");
+        photoPreview.src = data.photoUrl;
+        photoPreview.style.display = "block";
+        photoPlaceholder.style.display = "none";
+      }
+
+      showStarPopup("✅ Media uploaded successfully!");
+      hostModal.style.display = "none";
+    } catch (err) {
+      console.error("❌ Media upload error:", err);
+      showStarPopup(`⚠️ Failed to upload media: ${err.message}`);
+    }
+  };
+}
+
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
   if (!str) return "";
