@@ -1,5 +1,3 @@
-See full JS: 
-
 /* ---------- Imports (Firebase v10) ---------- */
 import { 
   initializeApp 
