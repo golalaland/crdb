@@ -1358,7 +1358,7 @@ function showMeetModal(host) {
 
   cancelBtn.onclick = () => modal.remove();
 
-  confirmBtn.onclick = async () => {
+confirmBtn.onclick = async () => {
   const COST = 21;
   if (!currentUser?.uid) { alert("Please log in to meet ⭐"); modal.remove(); return; }
   if ((currentUser.stars || 0) < COST) { alert("Not enough stars ⭐"); modal.remove(); return; }
@@ -1373,9 +1373,9 @@ function showMeetModal(host) {
     if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
     updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
 
-    // --- Initialize spinner + stage message ---
+    // --- Modal content setup ---
     modalContent.innerHTML = `
-      <div style="margin-top:20px;text-align:center;">
+      <div style="text-align:center; margin-top:20px;">
         <div class="spinner" style="
           border: 4px solid rgba(255,255,255,0.1);
           border-top: 4px solid #ff0099;
@@ -1386,6 +1386,7 @@ function showMeetModal(host) {
           animation: spin 1s linear infinite;
         "></div>
         <p id="stageMsg" style="margin-top:12px;font-weight:500;">Preparing your meet…</p>
+        <div id="finalBtnContainer" style="margin-top:16px;"></div>
       </div>
     `;
 
@@ -1399,6 +1400,7 @@ function showMeetModal(host) {
     }
 
     const stageMsgEl = modalContent.querySelector("#stageMsg");
+    const finalBtnContainer = modalContent.querySelector("#finalBtnContainer");
 
     // --- Staged messages ---
     const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
@@ -1424,7 +1426,7 @@ function showMeetModal(host) {
 
     const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
 
-    // --- Schedule stages safely ---
+    // --- Sequentially update messages ---
     let accumulatedTime = 0;
     stages.forEach((stage, index) => {
       let duration;
@@ -1442,21 +1444,28 @@ function showMeetModal(host) {
           if (spinner) spinner.style.display = "none";
         }
 
-        // Last stage → final message + button
+        // Final stage → add button without overwriting container
         if (index === stages.length - 1) {
-          setTimeout(() => {
-            modalContent.innerHTML = `
-              <h3 style="margin-bottom:10px;font-weight:600;">Meet Request Sent!</h3>
-              <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is approved.</p>
-              <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send Message</button>
-            `;
-            const letsGoBtn = modalContent.querySelector("#letsGoBtn");
-            letsGoBtn.onclick = () => {
-              window.open(`https://t.me/drtantra?text=${encodeURIComponent(`Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`)}`, "_blank");
-              modal.remove();
-            };
-            setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
-          }, 500);
+          const btn = document.createElement("button");
+          btn.textContent = "Send Message";
+          Object.assign(btn.style, {
+            marginTop: "6px",
+            padding: "10px 18px",
+            border: "none",
+            borderRadius: "8px",
+            fontWeight: 600,
+            background: "linear-gradient(90deg,#ff0099,#ff6600)",
+            color: "#fff",
+            cursor: "pointer"
+          });
+          btn.onclick = () => {
+            window.open(`https://t.me/drtantra?text=${encodeURIComponent(`Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`)}`, "_blank");
+            modal.remove();
+          };
+          finalBtnContainer.appendChild(btn);
+
+          // Auto-close modal after 7–7.5s
+          setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
         }
       }, accumulatedTime);
     });
