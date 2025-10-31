@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>3D Dice Throw</title>
+<title>3D Dice Throw Vertical</title>
 <style>
   body {
     margin: 0;
@@ -26,7 +26,7 @@
   }
 
   .dice {
-    width: 60px;  /* smaller dice */
+    width: 60px;
     height: 60px;
     position: absolute;
     transform-style: preserve-3d;
@@ -161,12 +161,12 @@
   ];
 
   function rollDice(dice, index) {
-    // start off-screen
-    const startX = Math.random() < 0.5 ? -100 : window.innerWidth + 100;
-    const startY = Math.random() * 100 + 50;
+    // Start at the button base (bottom center)
+    const startX = window.innerWidth/2 - 30; // center
+    const startY = window.innerHeight - 160; // slightly above button
     dice.style.left = `${startX}px`;
     dice.style.top = `${startY}px`;
-    dice.style.opacity = 0;
+    dice.style.opacity = 1;
 
     setTimeout(() => {
       const random = Math.floor(Math.random() * 6);
@@ -174,32 +174,25 @@
       const xSpin = xRot + 720 * Math.random();
       const ySpin = yRot + 720 * Math.random();
 
-      // Landing position without overlap
-      const landingX = window.innerWidth/2 - 60 + (index === 0 ? -40 : 40);
-      const landingY = 50 + Math.random()*50;
+      // Random landing position vertically and small horizontal offset for independence
+      const landingX = startX + (index === 0 ? -60 : 60);
+      const landingY = 50 + Math.random() * 200;
 
       dice.style.left = `${landingX}px`;
       dice.style.top = `${landingY}px`;
       dice.style.transform = `rotateX(${xSpin}deg) rotateY(${ySpin}deg)`;
-      dice.style.opacity = 1;
 
       // Remove dice after 5 seconds
       setTimeout(() => {
         dice.style.opacity = 0;
       }, 5000);
 
-      return random + 1;
     }, 50);
   }
 
   rollBtn.addEventListener('click', () => {
-    const result1 = rollDice(dice1, 0);
-    const result2 = rollDice(dice2, 1);
-
-    // Display result after 5 seconds
-    setTimeout(() => {
-      alert(`Dice result: ${dice1} + ${dice2}`);
-    }, 5000);
+    rollDice(dice1, 0);
+    rollDice(dice2, 1);
   });
 </script>
 
