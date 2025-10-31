@@ -3,123 +3,127 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>3D Dice Roll</title>
+<title>Secure 3D Dice Roll</title>
 <style>
-  body {
-    margin: 0;
-    height: 100vh;
-    background: #222;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: center;
-    font-family: sans-serif;
-    touch-action: manipulation;
-    overflow: hidden;
-  }
+body {
+  margin: 0;
+  height: 100vh;
+  background: #222;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  font-family: sans-serif;
+  touch-action: manipulation;
+  overflow: hidden;
+}
 
-  .dice-container {
-    perspective: 1000px;
-    width: 100%;
-    height: 80%;
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 100px; /* spacing between dice */
-  }
+.dice-container {
+  perspective: 1000px;
+  width: 100%;
+  height: 80%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 100px;
+}
 
-  .dice {
-    width: 70px;
-    height: 70px;
-    position: relative;
-    transform-style: preserve-3d;
-    transform: rotateX(0deg) rotateY(0deg);
-    transition: transform 1s cubic-bezier(0.28, 1.5, 0.5, 1);
-  }
+.dice {
+  width: 70px;
+  height: 70px;
+  transform-style: preserve-3d;
+  transition: transform 1s;
+  position: relative;
+}
 
-  .face {
-    position: absolute;
-    width: 70px;
-    height: 70px;
-    background: #fff;
-    border-radius: 8px;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-    box-shadow: inset -3px -3px 6px rgba(0,0,0,0.2),
-                inset 3px 3px 6px rgba(0,0,0,0.2),
-                0 3px 10px rgba(0,0,0,0.3);
-  }
+.face {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  background: #fff;
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  box-shadow: inset -3px -3px 6px rgba(0,0,0,0.2),
+              inset 3px 3px 6px rgba(0,0,0,0.2),
+              0 3px 10px rgba(0,0,0,0.3);
+}
 
-  .pip {
-    width: 12px;
-    height: 12px;
-    background: #000;
-    border-radius: 50%;
-    margin: 2px;
-  }
+.pip {
+  width: 12px;
+  height: 12px;
+  background: #000;
+  border-radius: 50%;
+  margin: 2px;
+}
 
-  .front  { transform: rotateY(0deg) translateZ(35px); }
-  .back   { transform: rotateY(180deg) translateZ(35px); }
-  .right  { transform: rotateY(90deg) translateZ(35px); }
-  .left   { transform: rotateY(-90deg) translateZ(35px); }
-  .top    { transform: rotateX(90deg) translateZ(35px); }
-  .bottom { transform: rotateX(-90deg) translateZ(35px); }
+/* Face transforms */
+.front  { transform: rotateY(0deg) translateZ(35px); }
+.back   { transform: rotateY(180deg) translateZ(35px); }
+.right  { transform: rotateY(90deg) translateZ(35px); }
+.left   { transform: rotateY(-90deg) translateZ(35px); }
+.top    { transform: rotateX(90deg) translateZ(35px); }
+.bottom { transform: rotateX(-90deg) translateZ(35px); }
 
-  /* Pip layouts */
-  .face-1 .pip:nth-child(1) { order: 5; }
-  .face-2 .pip:nth-child(1) { order: 1; }
-  .face-2 .pip:nth-child(2) { order: 9; }
-  .face-3 .pip:nth-child(1) { order: 1; }
-  .face-3 .pip:nth-child(2) { order: 5; }
-  .face-3 .pip:nth-child(3) { order: 9; }
-  .face-4 .pip:nth-child(1) { order: 1; }
-  .face-4 .pip:nth-child(2) { order: 3; }
-  .face-4 .pip:nth-child(3) { order: 7; }
-  .face-4 .pip:nth-child(4) { order: 9; }
-  .face-5 .pip:nth-child(1) { order: 1; }
-  .face-5 .pip:nth-child(2) { order: 3; }
-  .face-5 .pip:nth-child(3) { order: 5; }
-  .face-5 .pip:nth-child(4) { order: 7; }
-  .face-5 .pip:nth-child(5) { order: 9; }
-  .face-6 .pip:nth-child(1) { order: 1; }
-  .face-6 .pip:nth-child(2) { order: 3; }
-  .face-6 .pip:nth-child(3) { order: 4; }
-  .face-6 .pip:nth-child(4) { order: 6; }
-  .face-6 .pip:nth-child(5) { order: 7; }
-  .face-6 .pip:nth-child(6) { order: 9; }
+/* Pip positions using order to match real dice faces */
+.face-1 .pip:nth-child(1) { order: 5; }
+.face-2 .pip:nth-child(1) { order: 1; }
+.face-2 .pip:nth-child(2) { order: 9; }
+.face-3 .pip:nth-child(1) { order: 1; }
+.face-3 .pip:nth-child(2) { order: 5; }
+.face-3 .pip:nth-child(3) { order: 9; }
+.face-4 .pip:nth-child(1) { order: 1; }
+.face-4 .pip:nth-child(2) { order: 3; }
+.face-4 .pip:nth-child(3) { order: 7; }
+.face-4 .pip:nth-child(4) { order: 9; }
+.face-5 .pip:nth-child(1) { order: 1; }
+.face-5 .pip:nth-child(2) { order: 3; }
+.face-5 .pip:nth-child(3) { order: 5; }
+.face-5 .pip:nth-child(4) { order: 7; }
+.face-5 .pip:nth-child(5) { order: 9; }
+.face-6 .pip:nth-child(1) { order: 1; }
+.face-6 .pip:nth-child(2) { order: 3; }
+.face-6 .pip:nth-child(3) { order: 4; }
+.face-6 .pip:nth-child(4) { order: 6; }
+.face-6 .pip:nth-child(5) { order: 7; }
+.face-6 .pip:nth-child(6) { order: 9; }
 
-  /* Circular roll button base */
-  .button-base {
-    width: 120px;
-    height: 120px;
-    background: #ff6f61;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 20px;
-  }
+/* Button base */
+.button-base {
+  width: 120px;
+  height: 120px;
+  background: #ff6f61;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+}
 
-  button {
-    padding: 12px 20px;
-    font-size: 16px;
-    border: none;
-    border-radius: 50%;
-    background: white;
-    cursor: pointer;
-    width: 80px;
-    height: 80px;
-    font-weight: bold;
-    color: #ff6f61;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-  }
+button {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: none;
+  background: white;
+  color: #ff6f61;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
 
-  button:active {
-    transform: scale(0.95);
-  }
+button:active {
+  transform: scale(0.95);
+}
+
+/* Keyframes for rolling */
+@keyframes roll {
+  0%   { transform: rotateX(0deg) rotateY(0deg); }
+  100% { transform: rotateX(1440deg) rotateY(1440deg); }
+}
 </style>
 </head>
 <body>
@@ -149,33 +153,41 @@
 </div>
 
 <script>
-  const dice1 = document.getElementById('dice1');
-  const dice2 = document.getElementById('dice2');
-  const rollBtn = document.getElementById('rollBtn');
+const dice1 = document.getElementById('dice1');
+const dice2 = document.getElementById('dice2');
+const rollBtn = document.getElementById('rollBtn');
 
-  const rotations = [
-    [0, 0],       // 1
-    [90, 0],      // 2
-    [0, -90],     // 3
-    [0, 90],      // 4
-    [-90, 0],     // 5
-    [180, 0]      // 6
-  ];
+// Dice rotation angles for faces
+const rotations = [
+  [0, 0],       // 1
+  [90, 0],      // 2
+  [0, -90],     // 3
+  [0, 90],      // 4
+  [-90, 0],     // 5
+  [180, 0]      // 6
+];
 
-  function rollDice(dice) {
-    const random = Math.floor(Math.random() * 6);
-    const [xRot, yRot] = rotations[random];
-    const xSpin = xRot + 720 * Math.random();
-    const ySpin = yRot + 720 * Math.random();
-    dice.style.transform = `rotateX(${xSpin}deg) rotateY(${ySpin}deg)`;
-    return random + 1;
-  }
+function rollDice(dice) {
+  // Add rolling animation for 5 seconds
+  dice.style.transition = 'transform 5s cubic-bezier(0.28, 1.5, 0.5, 1)';
+  const random = Math.floor(Math.random() * 6);
+  const [xRot, yRot] = rotations[random];
+  const xSpin = xRot + 1440 * Math.random(); // 4 spins
+  const ySpin = yRot + 1440 * Math.random();
+  dice.style.transform = `rotateX(${xSpin}deg) rotateY(${ySpin}deg)`;
+  return random + 1;
+}
 
-  rollBtn.addEventListener('click', () => {
-    const result1 = rollDice(dice1);
-    const result2 = rollDice(dice2);
-    console.log(`🎲 Dice rolled: ${result1} + ${result2} = ${result1 + result2}`);
-  });
+rollBtn.addEventListener('click', () => {
+  rollBtn.disabled = true; // prevent repeated clicks during roll
+  const result1 = rollDice(dice1);
+  const result2 = rollDice(dice2);
+
+  setTimeout(() => {
+    console.log(`🎲 Final Result: ${result1} + ${result2} = ${result1 + result2}`);
+    rollBtn.disabled = false; // enable button again
+  }, 5000); // 5-second roll
+});
 </script>
 
 </body>
