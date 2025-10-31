@@ -1948,13 +1948,14 @@ document.addEventListener("change", (e) => {
 const saveInfoBtn = document.getElementById("saveInfo");
 const saveMediaBtn = document.getElementById("saveMedia");
 
+
 // -------- Firestore update helper --------
 async function updateFirestoreDoc(userId, data) {
   const userRef = doc(db, "users", userId);
 
-  // Remove undefined or empty string fields so we don't overwrite existing values
+  // Only filter undefined (allow clearing fields to "")
   const filteredData = Object.fromEntries(
-    Object.entries(data).filter(([_, value]) => value !== undefined && value !== "")
+    Object.entries(data).filter(([_, value]) => value !== undefined)
   );
 
   await updateDoc(userRef, { ...filteredData, lastUpdated: serverTimestamp() });
@@ -1963,11 +1964,7 @@ async function updateFirestoreDoc(userId, data) {
   const hostRef = doc(db, "featuredHosts", userId);
   const hostSnap = await getDoc(hostRef);
   if (hostSnap.exists()) {
-    const hostData = {
-      ...filteredData,
-      lastUpdated: serverTimestamp(),
-    };
-    await updateDoc(hostRef, hostData);
+    await updateDoc(hostRef, { ...filteredData, lastUpdated: serverTimestamp() });
   }
 }
 
@@ -1986,8 +1983,8 @@ if (saveInfoBtn) {
     const tiktok = document.getElementById("tiktok")?.value || "";
     const whatsapp = document.getElementById("whatsapp")?.value || "";
     const instagram = document.getElementById("instagram")?.value || "";
-    const naturePick = document.getElementById("naturePick")?.value;
-    const fruitPick = document.getElementById("fruitPick")?.value;
+    const naturePick = document.getElementById("naturePick")?.value || "";
+    const fruitPick = document.getElementById("fruitPick")?.value || "";
 
     // Validate numeric fields
     if (bankAccountNumber && !/^\d{1,11}$/.test(bankAccountNumber)) {
@@ -1999,7 +1996,7 @@ if (saveInfoBtn) {
 
     // Build data object dynamically
     const dataToUpdate = {
-      fullName: fullName.replace(/\b\w/g, l => l.toUpperCase()),
+      fullName: fullName ? fullName.replace(/\b\w/g, l => l.toUpperCase()) : "",
       city,
       location,
       bioPick: bio,
@@ -2009,21 +2006,29 @@ if (saveInfoBtn) {
       tiktok,
       whatsapp,
       instagram,
-      ...(naturePick && { naturePick }),
-      ...(fruitPick && { fruitPick }),
+      naturePick,
+      fruitPick
     };
 
     try {
+      saveInfoBtn.textContent = "Saving...";
+      saveInfoBtn.disabled = true;
+
       await updateFirestoreDoc(currentUser.uid, dataToUpdate);
+      console.log("✅ Firestore updated:", dataToUpdate);
 
       showStarPopup("✅ Profile updated successfully!");
-
+      
       // Blur inputs to trigger fade
       document.querySelectorAll("#mediaTab input, #mediaTab textarea, #mediaTab select")
               .forEach(input => input.blur());
+
     } catch (err) {
       console.error("❌ Error updating Firestore:", err);
       showStarPopup("⚠️ Failed to update info. Please try again.");
+    } finally {
+      saveInfoBtn.textContent = "Save Info";
+      saveInfoBtn.disabled = false;
     }
   };
 }
