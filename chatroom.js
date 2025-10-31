@@ -1298,19 +1298,39 @@ async function loadHost(idx) {
     videoEl.play().catch(() => {});
   });
 
-  /* ---------- Host Info ---------- */
-  usernameEl.textContent = (host.chatId || "Unknown Host")
+ /* ---------- Host Info ---------- */
+usernameEl.textContent = (host.chatId || "Unknown Host")
   .toLowerCase()
   .replace(/\b\w/g, char => char.toUpperCase());
-  const gender = (host.gender || "person").toLowerCase();
-  const pronoun = gender === "male" ? "his" : "her";
-  const ageGroup = !host.age ? "20s" : host.age >= 30 ? "30s" : "20s";
-  const flair = gender === "male" ? "😎" : "💋";
-  const fruit = host.fruitPick || "🍇";
-  const nature = host.naturePick || "cool";
-  const city = host.location || "Lagos";
-  const country = host.country || "Nigeria";
-  detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
+
+const gender = (host.gender || "person").toLowerCase();
+const pronoun = gender === "male" ? "his" : "her";
+const ageGroup = !host.age ? "20s" : host.age >= 30 ? "30s" : "20s";
+const flair = gender === "male" ? "😎" : "💋";
+const fruit = host.fruitPick || "🍇";
+const nature = host.naturePick || "cool";
+const city = host.location || "Lagos";
+const country = host.country || "Nigeria";
+
+detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
+
+// Add styled bio underneath
+if (host.bioPick) {
+  const bioText = host.bioPick.length > 160 ? host.bioPick.slice(0, 160) + "…" : host.bioPick;
+  detailsEl.innerHTML += `
+    <div style="
+      margin-top:6px; 
+      font-style:italic; 
+      font-size:0.95em; 
+      color:#ccc; 
+      background: rgba(255,255,255,0.05); 
+      padding:6px 10px; 
+      border-radius:8px;
+    ">
+      “${bioText}”
+    </div>
+  `;
+}
 
 /* ---------- Social Media Icons ---------- */
 const socialContainerId = "featuredHostSocials";
