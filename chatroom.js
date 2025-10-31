@@ -1339,33 +1339,33 @@ if (host.bioPick) {
   }
   typeWriter();
 }
-  /* ---------- Meet Button ---------- */
-  let meetBtn = document.getElementById("meetBtn");
-  if (!meetBtn) {
-    meetBtn = document.createElement("button");
-    meetBtn.id = "meetBtn";
-    meetBtn.textContent = "Meet";
-    Object.assign(meetBtn.style, {
-      marginTop: "6px",
-      padding: "8px 16px",
-      borderRadius: "6px",
-      background: "linear-gradient(90deg,#ff0099,#ff6600)",
-      color: "#fff",
-      border: "none",
-      fontWeight: "bold",
-      cursor: "pointer"
-    });
-    detailsEl.insertAdjacentElement("afterend", meetBtn);
-  }
-  meetBtn.onclick = () => showMeetModal(host);
-
-  /* ---------- Avatar Highlight ---------- */
-  hostListEl.querySelectorAll("img").forEach((img, i) => {
-    img.classList.toggle("active", i === idx);
+/* ---------- Meet Button ---------- */
+let meetBtn = document.getElementById("meetBtn");
+if (!meetBtn) {
+  meetBtn = document.createElement("button");
+  meetBtn.id = "meetBtn";
+  meetBtn.textContent = "Meet";
+  Object.assign(meetBtn.style, {
+    marginTop: "6px",
+    padding: "8px 16px",
+    borderRadius: "6px",
+    background: "linear-gradient(90deg,#ff0099,#ff6600)",
+    color: "#fff",
+    border: "none",
+    fontWeight: "bold",
+    cursor: "pointer"
   });
+  detailsEl.insertAdjacentElement("afterend", meetBtn);
+}
+meetBtn.onclick = () => showMeetModal(host);
 
-  giftSlider.value = 1;
-  giftAmountEl.textContent = "1";
+/* ---------- Avatar Highlight ---------- */
+hostListEl.querySelectorAll("img").forEach((img, i) => {
+  img.classList.toggle("active", i === idx);
+});
+
+giftSlider.value = 1;
+giftAmountEl.textContent = "1";
 }
 
 /* ---------- Meet Modal with Randomized Stage Timings (~18s) ---------- */
@@ -1408,80 +1408,82 @@ function showMeetModal(host) {
   const modalContent = modal.querySelector("#meetModalContent");
 
   cancelBtn.onclick = () => modal.remove();
-  confirmBtn.onclick = async () => {
-    const COST = 21;
-    if (!currentUser?.uid) { alert("Please log in to request meets"); modal.remove(); return; }
-    if ((currentUser.stars || 0) < COST) { alert("Uh oh, not enough stars ⭐"); modal.remove(); return; }
 
-    confirmBtn.disabled = true;
-    confirmBtn.style.opacity = 0.6;
-    confirmBtn.style.cursor = "not-allowed";
+  confirmBtn.onclick = async () => {
+    const COST = 21;
+    if (!currentUser?.uid) { alert("Please log in to request meets"); modal.remove(); return; }
+    if ((currentUser.stars || 0) < COST) { alert("Uh oh, not enough stars ⭐"); modal.remove(); return; }
 
-    try {
-      currentUser.stars -= COST;
-      if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-      updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
+    confirmBtn.disabled = true;
+    confirmBtn.style.opacity = 0.6;
+    confirmBtn.style.cursor = "not-allowed";
 
-      const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
-      const playfulMessages = [
-        "Oh, she’s hella cute…💋", "Careful, she may be naughty..😏",
-        "Be generous with her, she’ll like you..", "Ohh, she’s a real star.. 🤩",
-        "Be a real gentleman, when she texts u..", "She’s ready to dazzle you tonight.. ✨",
-        "Watch out, she might steal your heart.. ❤️", "Look sharp, she’s got a sparkle.. ✨",
-        "Don’t blink, or you’ll miss her charm.. 😉", "Get ready for some fun surprises.. 😏",
-        "She knows how to keep it exciting.. 🎉", "Better behave, she’s watching.. 👀",
-        "She might just blow your mind.. 💥", "Keep calm, she’s worth it.. 😘",
-        "She’s got a twinkle in her eyes.. ✨", "Brace yourself for some charm.. 😎",
-        "She’s not just cute, she’s 🔥", "Careful, her smile is contagious.. 😁",
-        "She might make you blush.. 😳", "She’s a star in every way.. 🌟",
-        "Don’t miss this chance.. ⏳"
-      ];
+    try {
+      currentUser.stars -= COST;
+      if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+      updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
 
-      const randomPlayful = [];
-      while (randomPlayful.length < 3) {
-        const choice = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
-        if (!randomPlayful.includes(choice)) randomPlayful.push(choice);
-      }
+      const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
+      const playfulMessages = [
+        "Oh, she’s hella cute…💋", "Careful, she may be naughty..😏",
+        "Be generous with her, she’ll like you..", "Ohh, she’s a real star.. 🤩",
+        "Be a real gentleman, when she texts u..", "She’s ready to dazzle you tonight.. ✨",
+        "Watch out, she might steal your heart.. ❤️", "Look sharp, she’s got a sparkle.. ✨",
+        "Don’t blink, or you’ll miss her charm.. 😉", "Get ready for some fun surprises.. 😏",
+        "She knows how to keep it exciting.. 🎉", "Better behave, she’s watching.. 👀",
+        "She might just blow your mind.. 💥", "Keep calm, she’s worth it.. 😘",
+        "She’s got a twinkle in her eyes.. ✨", "Brace yourself for some charm.. 😎",
+        "She’s not just cute, she’s 🔥", "Careful, her smile is contagious.. 😁",
+        "She might make you blush.. 😳", "She’s a star in every way.. 🌟",
+        "Don’t miss this chance.. ⏳"
+      ];
 
-      const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
-      modalContent.innerHTML = `<p id="stageMsg" style="margin-top:20px;font-weight:500;"></p>`;
-      const stageMsgEl = modalContent.querySelector("#stageMsg");
+      const randomPlayful = [];
+      while (randomPlayful.length < 3) {
+        const choice = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
+        if (!randomPlayful.includes(choice)) randomPlayful.push(choice);
+      }
 
-      let totalTime = 0;
-      stages.forEach((stage, index) => {
-        // Random duration per stage: 1.5–2.5s for first two, 1.7–2.3s for playful, last stage 2–2.5s
-        let duration;
-        if (index < 2) duration = 1500 + Math.random() * 1000;
-        else if (index < stages.length - 1) duration = 1700 + Math.random() * 600;
-        else duration = 2000 + Math.random() * 500;
-        totalTime += duration;
+      const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
+      modalContent.innerHTML = `<p id="stageMsg" style="margin-top:20px;font-weight:500;"></p>`;
+      const stageMsgEl = modalContent.querySelector("#stageMsg");
 
-        setTimeout(() => {
-          stageMsgEl.textContent = stage;
-          if (index === stages.length - 1) {
-            setTimeout(() => {
-              modalContent.innerHTML = `
-                <h3 style="margin-bottom:10px;font-weight:600;">Meet Request Sent!</h3>
-                <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is approved.</p>
-                <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send Message</button>
-              `;
-              const letsGoBtn = modalContent.querySelector("#letsGoBtn");
-              letsGoBtn.onclick = () => {
-                window.open(`https://t.me/drtantra?text=${encodeURIComponent(`Hi! I want to meet ${host.chatId} (userID: ${currentUser.uid})`)}`, "_blank");
-                modal.remove();
-              };
-              // Auto-close after 7–7.5s
-              setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
-            }, 500);
-          }
-        }, totalTime);
-      });
-    } catch (err) {
-      console.error("Meet deduction failed:", err);
-      alert("Something went wrong. Please try again later.");
-      modal.remove();
-    }
-  };
+      let totalTime = 0;
+      stages.forEach((stage, index) => {
+        let duration;
+        if (index < 2) duration = 1500 + Math.random() * 1000;
+        else if (index < stages.length - 1) duration = 1700 + Math.random() * 600;
+        else duration = 2000 + Math.random() * 500;
+        totalTime += duration;
+
+        setTimeout(() => {
+          stageMsgEl.textContent = stage;
+
+          if (index === stages.length - 1) {
+            setTimeout(() => {
+              const firstName = currentUser.fullName.split(" ")[0];
+              modalContent.innerHTML = `
+                <h3 style="margin-bottom:10px;font-weight:600;">Meet Request Sent!</h3>
+                <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is approved.</p>
+                <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send WhatsApp</button>
+              `;
+              const letsGoBtn = modalContent.querySelector("#letsGoBtn");
+              letsGoBtn.onclick = () => {
+                const message = `Hey! ${host.chatId}, my name’s ${firstName} (VIP on xixi live) & I’d like to meet you.`;
+                window.open(`https://wa.me/${host.whatsapp}?text=${encodeURIComponent(message)}`, "_blank");
+                modal.remove();
+              };
+              setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
+            }, 500);
+          }
+        }, totalTime);
+      });
+    } catch (err) {
+      console.error("Meet deduction failed:", err);
+      alert("Something went wrong. Please try again later.");
+      modal.remove();
+    }
+  };
 }
 
 /* ---------- Gift Slider ---------- */
@@ -1654,7 +1656,7 @@ function showConfirmModal(number, cost) {
 
   modal.innerHTML = `
     <div style="background:#111;padding:16px 18px;border-radius:10px;text-align:center;color:#fff;max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
-      <h3 style="margin-bottom:10px;font-weight:600;">Scan this number?</h3>
+      <h3 style="margin-bottom:10px;font-weight:600;">Verification</h3>
       <p>Scan phone number <b>${number}</b> for <b>${cost} stars ⭐</b>?</p>
       <div style="display:flex;justify-content:center;gap:10px;margin-top:12px;">
         <button id="cancelVerify" style="padding:6px 12px;border:none;border-radius:6px;background:#333;color:#fff;font-weight:600;cursor:pointer;">Cancel</button>
@@ -1761,9 +1763,8 @@ function showVerificationModal(user, number) {
       if (index === stages.length - 1) {
         setTimeout(() => {
           modalContent.innerHTML = user
-            ? `<h3>Number Verified ✅</h3>
+            ? `<h3>Phone Number Verified ✅</h3>
                <p>This number belongs to <b>${user.fullName}</b>.</p>
-               <p>Status: <b>${user.isHost ? "Host" : "VIP"}</b></p>
                <p style="margin-top:8px; font-size:13px; color:#ccc;">
                  You’re free to chat with the user who owns this phone number, they’re legit! 😌
                </p>
@@ -1772,8 +1773,8 @@ function showVerificationModal(user, number) {
                               background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">
                  Close
                </button>`
-            : `<h3>Number Not Verified ❌</h3>
-               <p>This number is not registered in our system.</p>
+            : `<h3>Phone Number Not Verified ❌</h3>
+               <p>This phone number & user is not known, be careful!</p>
                <button id="closeVerifyModal" 
                        style="margin-top:12px;padding:6px 14px;border:none;border-radius:8px;
                               background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">
