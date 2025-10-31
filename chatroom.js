@@ -1703,7 +1703,53 @@ async function runNumberVerification(number, cost) {
   }
 
   // Show staged verification modal
+function handleNumberVerification(inputNumber, verifiedUser) {
+  // Remove any spaces or unwanted characters
+  const number = inputNumber.trim();
+
+  // ✅ Allow only digits
+  if (!/^\d+$/.test(number)) {
+    showCustomModal("Invalid Number ⚠️", "Please enter digits only (0–9).");
+    return;
+  }
+
+  // ✅ Optional: length check (e.g., must be at least 10 digits)
+  if (number.length < 10) {
+    showCustomModal("Incomplete Number ⚠️", "Phone number must be at least 10 digits.");
+    return;
+  }
+
+  // Proceed to verification modal
   showVerificationModal(verifiedUser, number);
+}
+
+function showCustomModal(title, message) {
+  let modal = document.getElementById("alertModal");
+  if (modal) modal.remove();
+
+  modal = document.createElement("div");
+  modal.id = "alertModal";
+  Object.assign(modal.style, {
+    position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
+    background: "rgba(0,0,0,0.75)", display: "flex",
+    alignItems: "center", justifyContent: "center", zIndex: "999999",
+    backdropFilter: "blur(2px)"
+  });
+
+  modal.innerHTML = `
+    <div style="background:#111;padding:18px 20px;border-radius:10px;text-align:center;color:#fff;
+                max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
+      <h3 style="margin:0 0 6px;">${title}</h3>
+      <p style="font-size:14px;line-height:1.4;color:#ccc;">${message}</p>
+      <button id="closeAlertModal"
+              style="margin-top:14px;padding:6px 14px;border:none;border-radius:8px;
+                     background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;
+                     font-weight:600;cursor:pointer;">OK</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.querySelector("#closeAlertModal").onclick = () => modal.remove();
 }
 
 function showVerificationModal(user, number) {
@@ -1720,8 +1766,9 @@ function showVerificationModal(user, number) {
   });
 
   modal.innerHTML = `
-    <div id="verifyModalContent" 
-         style="background:#111;padding:14px 16px;border-radius:10px;text-align:center;color:#fff;max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
+    <div id="verifyModalContent"
+         style="background:#111;padding:14px 16px;border-radius:10px;text-align:center;
+                color:#fff;max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
       <p id="stageMsg" style="margin-top:12px;font-weight:500;"></p>
     </div>
   `;
@@ -1779,24 +1826,25 @@ function showVerificationModal(user, number) {
             ? `<h3>Phone Number Verified ✅</h3>
                <p>This number belongs to <b>${user.fullName}</b>.</p>
                <p style="margin-top:8px; font-size:13px; color:#ccc;">
-                 You’re free to chat with the user who owns this phone number, they’re legit! 😌
+                 You’re free to chat with this verified user! 😌
                </p>
-               <button id="closeVerifyModal" 
+               <button id="closeVerifyModal"
                        style="margin-top:12px;padding:6px 14px;border:none;border-radius:8px;
-                              background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">
+                              background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;
+                              font-weight:600;cursor:pointer;">
                  Close
                </button>`
             : `<h3>Phone Number Not Verified ❌</h3>
-               <p>This phone number & user is not known, be careful!</p>
-               <button id="closeVerifyModal" 
+               <p>This phone number is not recognized, be cautious!</p>
+               <button id="closeVerifyModal"
                        style="margin-top:12px;padding:6px 14px;border:none;border-radius:8px;
-                              background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">
+                              background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;
+                              font-weight:600;cursor:pointer;">
                  Close
                </button>`;
 
           modal.querySelector("#closeVerifyModal").onclick = () => modal.remove();
 
-          // Auto-close after 8–9s for verified users
           if (user) setTimeout(() => modal.remove(), 8000 + Math.random() * 1000);
         }, 500);
       }
@@ -2008,22 +2056,21 @@ if (saveInfoBtn) {
       fruitPick
     };
 
-    // ---------- spinner setup ----------
-    const originalHTML = saveInfoBtn.innerHTML;
-    saveInfoBtn.innerHTML = `
-      <div class="spinner" style="
-        display:inline-block;
-        width:14px;
-        height:14px;
-        border:2px solid #fff;
-        border-top-color:transparent;
-        border-radius:50%;
-        animation: spin 0.7s linear infinite;
-        vertical-align:middle;
-        margin-right:6px;">
-      </div> Saving...
-    `;
-    saveInfoBtn.disabled = true;
+// ---------- spinner setup ----------
+const originalHTML = saveInfoBtn.innerHTML;
+saveInfoBtn.innerHTML = `
+  <div class="spinner" style="
+    display:inline-block;
+    width:16px;
+    height:16px;
+    border:2px solid #fff;
+    border-top-color:transparent;
+    border-radius:50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align:middle;">
+  </div>
+`;
+saveInfoBtn.disabled = true;
 
     try {
       await updateFirestoreDoc(currentUser.uid, dataToUpdate);
