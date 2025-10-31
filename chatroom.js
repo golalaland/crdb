@@ -1643,78 +1643,16 @@ fetchFeaturedHosts();
 
 
 /* ---------- Number Verification Modal (~18s) ---------- */
-document.addEventListener("DOMContentLoaded", () => {
-  const verifyBtn = document.getElementById("verifyNumberBtn");
-  if (!verifyBtn) return console.warn("⚠️ verifyNumberBtn not found in DOM.");
+document.getElementById("verifyNumberBtn")?.addEventListener("click", () => {
+  const number = document.getElementById("verifyNumberInput")?.value.trim();
+  if (!number) return alert("⚠️ Please enter a phone number.");
 
-  verifyBtn.addEventListener("click", async (e) => {
-    e.preventDefault(); // stop form reload
-    const numberInput = document.getElementById("verifyNumberInput");
-    const number = numberInput?.value.trim();
+  const COST = 21;
+  if (!currentUser?.uid) return alert("⚠️ Please log in first.");
+  if ((currentUser.stars || 0) < COST) return alert("⚠️ Not enough stars ⭐");
 
-    // ✅ Empty input
-    if (!number)
-      return showAlertModal("⚠️ Missing Number", "Please enter a phone number.");
-
-    // ✅ Digits only (no +, no spaces)
-    if (!/^\d+$/.test(number))
-      return showAlertModal(
-        "⚠️ Invalid Format",
-        "Phone number must contain digits only (0–9)."
-      );
-
-    const COST = 21;
-
-    // ✅ Auth check
-    if (!currentUser?.uid)
-      return showAlertModal("⚠️ Login Required", "Please log in first.");
-
-    // ✅ Balance check
-    if ((currentUser.stars || 0) < COST)
-      return showAlertModal(
-        "⚠️ Not Enough Stars",
-        "You need at least 21 stars ⭐ to verify a number."
-      );
-
-    // Proceed to confirmation
-    showConfirmModal(number, COST);
-  });
+  showConfirmModal(number, COST);
 });
-
-function showAlertModal(title, message) {
-  let modal = document.getElementById("alertModal");
-  if (modal) modal.remove();
-
-  modal = document.createElement("div");
-  modal.id = "alertModal";
-  Object.assign(modal.style, {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100vw",
-    height: "100vh",
-    background: "rgba(0,0,0,0.7)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: "999999",
-    backdropFilter: "blur(2px)",
-  });
-
-  modal.innerHTML = `
-    <div style="background:#111;padding:16px 18px;border-radius:10px;text-align:center;
-                color:#fff;max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
-      <h3 style="margin-bottom:6px;font-weight:600;">${title}</h3>
-      <p style="font-size:14px;color:#ccc;">${message}</p>
-      <button id="closeAlertModal"
-              style="margin-top:12px;padding:6px 14px;border:none;border-radius:8px;
-                     background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;
-                     font-weight:600;cursor:pointer;">OK</button>
-    </div>
-  `;
-  document.body.appendChild(modal);
-  modal.querySelector("#closeAlertModal").onclick = () => modal.remove();
-}
 
 function showConfirmModal(number, cost) {
   let modal = document.getElementById("verifyConfirmModal");
@@ -1723,32 +1661,19 @@ function showConfirmModal(number, cost) {
   modal = document.createElement("div");
   modal.id = "verifyConfirmModal";
   Object.assign(modal.style, {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100vw",
-    height: "100vh",
-    background: "rgba(0,0,0,0.7)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: "999999",
-    backdropFilter: "blur(2px)",
+    position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
+    background: "rgba(0,0,0,0.7)", display: "flex",
+    alignItems: "center", justifyContent: "center", zIndex: "999999",
+    backdropFilter: "blur(2px)"
   });
 
   modal.innerHTML = `
-    <div style="background:#111;padding:16px 18px;border-radius:10px;text-align:center;
-                color:#fff;max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
+    <div style="background:#111;padding:16px 18px;border-radius:10px;text-align:center;color:#fff;max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
       <h3 style="margin-bottom:10px;font-weight:600;">Scan this number?</h3>
       <p>Scan phone number <b>${number}</b> for <b>${cost} stars ⭐</b>?</p>
       <div style="display:flex;justify-content:center;gap:10px;margin-top:12px;">
-        <button id="cancelVerify"
-                style="padding:6px 12px;border:none;border-radius:6px;
-                       background:#333;color:#fff;font-weight:600;cursor:pointer;">Cancel</button>
-        <button id="confirmVerify"
-                style="padding:6px 12px;border:none;border-radius:6px;
-                       background:linear-gradient(90deg,#ff0099,#ff6600);
-                       color:#fff;font-weight:600;cursor:pointer;">Yes</button>
+        <button id="cancelVerify" style="padding:6px 12px;border:none;border-radius:6px;background:#333;color:#fff;font-weight:600;cursor:pointer;">Cancel</button>
+        <button id="confirmVerify" style="padding:6px 12px;border:none;border-radius:6px;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">Yes</button>
       </div>
     </div>
   `;
@@ -1764,8 +1689,7 @@ function showConfirmModal(number, cost) {
 async function runNumberVerification(number, cost) {
   // Deduct stars
   currentUser.stars -= cost;
-  if (refs?.starCountEl)
-    refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+  if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
   updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-cost) }).catch(console.error);
 
   // Lookup number in Firestore
@@ -1778,7 +1702,7 @@ async function runNumberVerification(number, cost) {
     console.error("Error verifying number:", err);
   }
 
-  // Show verification progress modal
+  // Show staged verification modal
   showVerificationModal(verifiedUser, number);
 }
 
@@ -1789,23 +1713,15 @@ function showVerificationModal(user, number) {
   modal = document.createElement("div");
   modal.id = "verifyModal";
   Object.assign(modal.style, {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100vw",
-    height: "100vh",
-    background: "rgba(0,0,0,0.75)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: "999999",
-    backdropFilter: "blur(2px)",
+    position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
+    background: "rgba(0,0,0,0.75)", display: "flex",
+    alignItems: "center", justifyContent: "center", zIndex: "999999",
+    backdropFilter: "blur(2px)"
   });
 
   modal.innerHTML = `
-    <div id="verifyModalContent"
-         style="background:#111;padding:14px 16px;border-radius:10px;text-align:center;
-                color:#fff;max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
+    <div id="verifyModalContent" 
+         style="background:#111;padding:14px 16px;border-radius:10px;text-align:center;color:#fff;max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
       <p id="stageMsg" style="margin-top:12px;font-weight:500;"></p>
     </div>
   `;
@@ -1814,6 +1730,7 @@ function showVerificationModal(user, number) {
   const modalContent = modal.querySelector("#verifyModalContent");
   const stageMsgEl = modalContent.querySelector("#stageMsg");
 
+  // Fixed stages + playful tips
   const fixedStages = ["Gathering information…", "Checking phone number validity…"];
   const playfulMessages = [
     "Always meet in public spaces for the first time..",
@@ -1865,18 +1782,22 @@ function showVerificationModal(user, number) {
                <p style="margin-top:8px; font-size:13px; color:#ccc;">
                  You’re free to chat with the user who owns this phone number, they’re legit! 😌
                </p>
-               <button id="closeVerifyModal"
+               <button id="closeVerifyModal" 
                        style="margin-top:12px;padding:6px 14px;border:none;border-radius:8px;
-                              background:linear-gradient(90deg,#ff0099,#ff6600);
-                              color:#fff;font-weight:600;cursor:pointer;">Close</button>`
+                              background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">
+                 Close
+               </button>`
             : `<h3>Number Not Verified ❌</h3>
                <p>This number is not registered in our system.</p>
-               <button id="closeVerifyModal"
+               <button id="closeVerifyModal" 
                        style="margin-top:12px;padding:6px 14px;border:none;border-radius:8px;
-                              background:linear-gradient(90deg,#ff0099,#ff6600);
-                              color:#fff;font-weight:600;cursor:pointer;">Close</button>`;
+                              background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">
+                 Close
+               </button>`;
 
           modal.querySelector("#closeVerifyModal").onclick = () => modal.remove();
+
+          // Auto-close after 8–9s for verified users
           if (user) setTimeout(() => modal.remove(), 8000 + Math.random() * 1000);
         }, 500);
       }
