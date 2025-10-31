@@ -1360,25 +1360,41 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 #mediaTab input,
 #mediaTab textarea,
 #mediaTab select {
-  width: 95%;             /* slightly smaller to prevent overflow */
-  max-width: 95%;
-  padding: 6px;
-  margin-bottom: 10px;
+  width: 100%;             /* fill container */
+  max-width: 100%;
+  padding: 6px 10px;
+  margin-bottom: 12px;
   border-radius: 4px;
   border: none;
   box-sizing: border-box;
-  font-size: 13px;        /* slightly smaller for one-liner labels */
+  font-size: 13px;
+  color: #fff;
+  background: rgba(255,255,255,0.05);
+}
+
+/* Fade placeholder style */
+#mediaTab input::placeholder,
+#mediaTab textarea::placeholder,
+#mediaTab select option[disabled] {
+  color: rgba(255,255,255,0.5);
+  opacity: 1; /* ensure visible in Firefox */
+}
+
+/* When typing, placeholder fades slightly */
+#mediaTab input:focus::placeholder,
+#mediaTab textarea:focus::placeholder {
+  color: rgba(255,255,255,0.3);
+  transition: color 0.3s ease;
 }
 
 /* ---------- Labels ---------- */
 #mediaTab label {
   font-weight: bold;
-  font-size: 13px;        /* smaller font to fit one line */
-  display: block;         /* start on new line */
+  font-size: 13px;        /* smaller to fit nicely */
+  display: block;
   margin-bottom: 4px;
-  white-space: nowrap;    /* force one line */
-  overflow: hidden;       /* hide overflow */
-  text-overflow: ellipsis;/* only if it overflows */
+  white-space: normal;     /* allow wrapping instead of truncation */
+  line-height: 1.2;
 }
 
 /* ---------- Section Headers ---------- */
@@ -1386,6 +1402,8 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   text-align: center;
   font-weight: bold;
   margin-bottom: 10px;
+  font-size: 15px;
+  color: #fff;
 }
 
 /* ---------- Custom Selects ---------- */
@@ -1400,8 +1418,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   border: none;
   cursor: pointer;
   transition: color 0.3s ease;
-
-  /* custom arrow */
   background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><polygon points="0,0 10,0 5,5" fill="white"/></svg>');
   background-repeat: no-repeat;
   background-position: right 6px center;
@@ -1412,6 +1428,25 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   color: #fff;
   outline: none;
   background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><polygon points="0,5 10,5 5,0" fill="white"/></svg>');
+}
+
+/* ---------- Photo Preview ---------- */
+#mediaTab .photo-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+#mediaTab .photo-preview img {
+  max-width: 100%;
+  max-height: 150px;
+  border-radius: 4px;
+}
+
+#mediaTab .photo-preview span {
+  font-size: 40px;
+  color: rgba(255,255,255,0.3);
 }
 </style>
 </head>
