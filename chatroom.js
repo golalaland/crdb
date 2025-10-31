@@ -1370,152 +1370,184 @@ giftAmountEl.textContent = "1";
 
 /* ---------- Meet Modal with Randomized Stage Timings (~18s) ---------- */
 function showMeetModal(host) {
-  let modal = document.getElementById("meetModal");
-  if (modal) modal.remove();
+  let modal = document.getElementById("meetModal");
+  if (modal) modal.remove();
 
-  modal = document.createElement("div");
-  modal.id = "meetModal";
-  Object.assign(modal.style, {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100vw",
-    height: "100vh",
-    background: "rgba(0,0,0,0.75)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: "999999",
-    backdropFilter: "blur(3px)",
-    WebkitBackdropFilter: "blur(3px)"
-  });
+  modal = document.createElement("div");
+  modal.id = "meetModal";
+  Object.assign(modal.style, {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    background: "rgba(0,0,0,0.75)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: "999999",
+    backdropFilter: "blur(3px)",
+    WebkitBackdropFilter: "blur(3px)"
+  });
 
-  modal.innerHTML = `
-    <div id="meetModalContent" style="background:#111;padding:20px 22px;border-radius:12px;text-align:center;color:#fff;max-width:340px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
-      <h3 style="margin-bottom:10px;font-weight:600;">Meet ${host.chatId || "this host"}?</h3>
-      <p style="margin-bottom:16px;">Request meet with <b>21 stars ⭐</b>?</p>
-      <div style="display:flex;gap:10px;justify-content:center;">
-        <button id="cancelMeet" style="padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">Cancel</button>
-        <button id="confirmMeet" style="padding:8px 16px;background:linear-gradient(90deg,#ff0099,#ff6600);border:none;color:#fff;border-radius:8px;font-weight:600;">Yes</button>
-      </div>
-    </div>
-  `;
+  modal.innerHTML = `
+    <div id="meetModalContent" style="
+      background:#111;
+      padding:20px 22px;
+      border-radius:12px;
+      text-align:center;
+      color:#fff;
+      max-width:340px;
+      box-shadow:0 0 20px rgba(0,0,0,0.5);
+    ">
+      <h3 style="margin-bottom:10px;font-weight:600;">Meet ${host.chatId || "this host"}?</h3>
+      <p style="margin-bottom:16px;">Request meet with <b>21 stars ⭐</b>?</p>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button id="cancelMeet" style="
+          padding:8px 16px;
+          background:#333;
+          border:none;
+          color:#fff;
+          border-radius:8px;
+          font-weight:500;
+        ">Cancel</button>
+        <button id="confirmMeet" style="
+          padding:8px 16px;
+          background:linear-gradient(90deg,#ff0099,#ff6600);
+          border:none;
+          color:#fff;
+          border-radius:8px;
+          font-weight:600;
+        ">Yes</button>
+      </div>
+      <!-- Spinner placeholder -->
+      <div id="spinnerWrapper" style="
+        height:60px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        margin-top:16px;
+      ">
+        <div class="spinner" style="
+          border:4px solid #333;
+          border-top:4px solid #ff0099;
+          border-radius:50%;
+          width:36px;
+          height:36px;
+          animation:spin 1s linear infinite;
+        "></div>
+      </div>
+      <p id="stageMsg" style="margin-top:20px;font-weight:500;display:none;"></p>
+    </div>
+  `;
 
-  document.body.appendChild(modal);
+  document.body.appendChild(modal);
 
-  const cancelBtn = modal.querySelector("#cancelMeet");
-  const confirmBtn = modal.querySelector("#confirmMeet");
-  const modalContent = modal.querySelector("#meetModalContent");
+  const cancelBtn = modal.querySelector("#cancelMeet");
+  const confirmBtn = modal.querySelector("#confirmMeet");
+  const modalContent = modal.querySelector("#meetModalContent");
+  const spinnerWrapper = modal.querySelector("#spinnerWrapper");
+  const stageMsgEl = modal.querySelector("#stageMsg");
 
-  cancelBtn.onclick = () => modal.remove();
+  cancelBtn.onclick = () => modal.remove();
 
-  confirmBtn.onclick = async () => {
-    const COST = 21;
-    if (!currentUser?.uid) { alert("Please log in to request meets"); modal.remove(); return; }
-    if ((currentUser.stars || 0) < COST) { alert("Uh oh, not enough stars ⭐"); modal.remove(); return; }
+  confirmBtn.onclick = async () => {
+    const COST = 21;
+    if (!currentUser?.uid) { alert("Please log in to request meets"); modal.remove(); return; }
+    if ((currentUser.stars || 0) < COST) { alert("Uh oh, not enough stars ⭐"); modal.remove(); return; }
 
-    try {
-      // Deduct stars first
-      currentUser.stars -= COST;
-      if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-      await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) });
+    confirmBtn.disabled = true;
+    confirmBtn.style.opacity = 0.6;
+    confirmBtn.style.cursor = "not-allowed";
 
-      confirmBtn.disabled = true;
-      confirmBtn.style.opacity = 0.6;
-      confirmBtn.style.cursor = "not-allowed";
+    try {
+      // Deduct stars
+      currentUser.stars -= COST;
+      if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+      updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
 
-      // Small spinner placeholder
-      modalContent.innerHTML = `
-        <div id="spinnerWrapper" style="height:60px; display:flex;align-items:center;justify-content:center;">
-          <div class="spinner" style="border:4px solid #333;border-top:4px solid #ff0099;border-radius:50%;width:36px;height:36px;animation:spin 1s linear infinite;"></div>
-        </div>
-      `;
+      const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
+      const playfulMessages = [
+        "Oh, she’s hella cute…💋", "Careful, she may be naughty..😏",
+        "Be generous with her, she’ll like you..", "Ohh, she’s a real star.. 🤩",
+        "Be a real gentleman, when she texts u..", "She’s ready to dazzle you tonight.. ✨",
+        "Watch out, she might steal your heart.. ❤️", "Look sharp, she’s got a sparkle.. ✨",
+        "Don’t blink, or you’ll miss her charm.. 😉", "Get ready for some fun surprises.. 😏",
+        "She knows how to keep it exciting.. 🎉", "Better behave, she’s watching.. 👀",
+        "She might just blow your mind.. 💥", "Keep calm, she’s worth it.. 😘",
+        "She’s got a twinkle in her eyes.. ✨", "Brace yourself for some charm.. 😎",
+        "She’s not just cute, she’s 🔥", "Careful, her smile is contagious.. 😁",
+        "She might make you blush.. 😳", "She’s a star in every way.. 🌟",
+        "Don’t miss this chance.. ⏳"
+      ];
 
-      const stageMsgEl = document.createElement("p");
-      stageMsgEl.style.marginTop = "16px";
-      stageMsgEl.style.fontWeight = "500";
+      const randomPlayful = [];
+      while (randomPlayful.length < 3) {
+        const choice = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
+        if (!randomPlayful.includes(choice)) randomPlayful.push(choice);
+      }
 
-      // Stages setup
-      const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
-      const playfulMessages = [
-        "Oh, she’s hella cute…💋", "Careful, she may be naughty..😏",
-        "Be generous with her, she’ll like you..", "Ohh, she’s a real star.. 🤩",
-        "Be a real gentleman, when she texts u..", "She’s ready to dazzle you tonight.. ✨",
-        "Watch out, she might steal your heart.. ❤️", "Look sharp, she’s got a sparkle.. ✨",
-        "Don’t blink, or you’ll miss her charm.. 😉", "Get ready for some fun surprises.. 😏",
-        "She knows how to keep it exciting.. 🎉", "Better behave, she’s watching.. 👀",
-        "She might just blow your mind.. 💥", "Keep calm, she’s worth it.. 😘",
-        "She’s got a twinkle in her eyes.. ✨", "Brace yourself for some charm.. 😎",
-        "She’s not just cute, she’s 🔥", "Careful, her smile is contagious.. 😁",
-        "She might make you blush.. 😳", "She’s a star in every way.. 🌟",
-        "Don’t miss this chance.. ⏳"
-      ];
+      const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
+      
+      // Hide spinner and show stageMsg only when first stage loads
+      let totalTime = 0;
+      stages.forEach((stage, index) => {
+        let duration;
+        if (index < 2) duration = 1500 + Math.random() * 1000;
+        else if (index < stages.length - 1) duration = 1700 + Math.random() * 600;
+        else duration = 2000 + Math.random() * 500;
+        totalTime += duration;
 
-      const randomPlayful = [];
-      while (randomPlayful.length < 3) {
-        const choice = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
-        if (!randomPlayful.includes(choice)) randomPlayful.push(choice);
-      }
+        setTimeout(() => {
+          // On first stage, hide spinner
+          if (index === 0) {
+            spinnerWrapper.style.display = "none";
+            stageMsgEl.style.display = "block";
+          }
+          stageMsgEl.textContent = stage;
 
-      const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
-
-      // Replace spinner with stage messages
-      let totalTime = 0;
-      stages.forEach((stage, index) => {
-        let duration;
-        if (index < 2) duration = 1500 + Math.random() * 1000;
-        else if (index < stages.length - 1) duration = 1700 + Math.random() * 600;
-        else duration = 2000 + Math.random() * 500;
-        totalTime += duration;
-
-        setTimeout(() => {
-          if (index === 0) {
-            // Remove spinner when the first stage starts
-            const spinnerWrapper = modalContent.querySelector("#spinnerWrapper");
-            if (spinnerWrapper) modalContent.removeChild(spinnerWrapper);
-            modalContent.appendChild(stageMsgEl);
-          }
-          stageMsgEl.textContent = stage;
-
-          if (index === stages.length - 1) {
-            setTimeout(() => {
-              // Country code handling
-              const countryCodes = {
-                Nigeria: "234",
-                Ghana: "233",
-                "United States": "1",
-                "United Kingdom": "44",
-                "South Africa": "27"
-              };
-              const countryCode = countryCodes[host.country] || "234";
-              let waNumber = host.whatsapp.replace(/^0/, "");
-              waNumber = `+${countryCode}${waNumber}`;
-              const firstName = currentUser.fullName.split(" ")[0];
-
-              modalContent.innerHTML = `
-                <h3 style="margin-bottom:10px;font-weight:600;">Meet Request Sent!</h3>
-                <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> has been approved.</p>
-                <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send WhatsApp Message</button>
-              `;
-              const letsGoBtn = modalContent.querySelector("#letsGoBtn");
-              letsGoBtn.onclick = () => {
-                const msg = `Hey! ${host.chatId}, my name’s ${firstName}. I’m a VIP on xixi live & I’d like to meet you.`;
-                window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, "_blank");
-                modal.remove();
-              };
-
-              setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
-            }, 500);
-          }
-        }, totalTime);
-      });
-    } catch (err) {
-      console.error("Meet deduction failed:", err);
-      alert("Something went wrong. Please try again later.");
-      modal.remove();
-    }
-  };
+          if (index === stages.length - 1) {
+            setTimeout(() => {
+              modalContent.innerHTML = `
+                <h3 style="margin-bottom:10px;font-weight:600;">Meet Request Sent!</h3>
+                <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is approved.</p>
+                <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send Message</button>
+              `;
+              const letsGoBtn = modalContent.querySelector("#letsGoBtn");
+              letsGoBtn.onclick = () => {
+                // Open WhatsApp link based on host country code
+                const countryCodes = {
+                  Nigeria: "+234",
+                  Ghana: "+233",
+                  "United States": "+1",
+                  "United Kingdom": "+44",
+                  "South Africa": "+27"
+                };
+                const hostCountry = host.country || "Nigeria"; 
+                const waNumber = countryCodes[hostCountry] + host.whatsapp.slice(1); // remove leading 0
+                const msg = `Hey! ${host.chatId}, my name’s ${currentUser.fullName.split(" ")[0]} (VIP on xixi live) & I’d like to meet you.`;
+                window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, "_blank");
+                modal.remove();
+              };
+              setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
+            }, 500);
+          }
+        }, totalTime);
+      });
+    } catch (err) {
+      console.error("Meet deduction failed:", err);
+      alert("Something went wrong. Please try again later.");
+      modal.remove();
+    }
+  };
 }
+
+/* ---------- Spinner CSS ---------- */
+const style = document.createElement("style");
+style.innerHTML = `
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+`;
+document.head.appendChild(style);
 
 /* ---------- Gift Slider ---------- */
 const fieryColors = [
