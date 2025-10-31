@@ -1114,9 +1114,9 @@ function replaceStarsInline(root = document.body) {
         const inlineStar = document.createElement("img");
         inlineStar.src = customStarURL;
         inlineStar.alt = "⭐";
-        inlineStar.style.height = "1em";       // same height as text
-        inlineStar.style.width = "auto";       // preserves aspect ratio
-        inlineStar.style.verticalAlign = "middle"; // center-align with text
+        inlineStar.style.height = "calc(1em + 1px)"; // 1px bigger
+        inlineStar.style.width = "auto";
+        inlineStar.style.verticalAlign = "middle";
         inlineStar.style.display = "inline-block";
 
         span.appendChild(inlineStar);
@@ -1295,7 +1295,7 @@ async function loadHost(idx) {
     videoEl.play().catch(() => {});
   });
 
- /* ---------- Host Info ---------- */
+/* ---------- Host Info ---------- */
 usernameEl.textContent = (host.chatId || "Unknown Host")
   .toLowerCase()
   .replace(/\b\w/g, char => char.toUpperCase());
@@ -1311,22 +1311,33 @@ const country = host.country || "Nigeria";
 
 detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
 
-// Add styled bio underneath
+// Typewriter bio
 if (host.bioPick) {
   const bioText = host.bioPick.length > 160 ? host.bioPick.slice(0, 160) + "…" : host.bioPick;
-  detailsEl.innerHTML += `
-    <div style="
-      margin-top:6px; 
-      font-style:italic; 
-      font-size:0.95em; 
-      color:#ccc; 
-      background: rgba(255,255,255,0.05); 
-      padding:6px 10px; 
-      border-radius:8px;
-    ">
-      “${bioText}”
-    </div>
-  `;
+
+  // Create a container for bio
+  const bioEl = document.createElement("div");
+  bioEl.style.marginTop = "6px";
+  bioEl.style.fontWeight = "600";  // little bold
+  bioEl.style.fontSize = "0.95em";
+  bioEl.style.whiteSpace = "pre-wrap"; // keep formatting
+
+  // Pick a random bright color
+  const brightColors = ["#FF3B3B", "#FF9500", "#FFEA00", "#00FFAB", "#00D1FF", "#FF00FF", "#FF69B4"];
+  bioEl.style.color = brightColors[Math.floor(Math.random() * brightColors.length)];
+
+  detailsEl.appendChild(bioEl);
+
+  // Typewriter effect
+  let index = 0;
+  function typeWriter() {
+    if (index < bioText.length) {
+      bioEl.textContent += bioText[index];
+      index++;
+      setTimeout(typeWriter, 40); // typing speed (ms)
+    }
+  }
+  typeWriter();
 }
 
 /* ---------- Social Media Icons ---------- */
