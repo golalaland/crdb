@@ -308,9 +308,6 @@ function renderMessagesFromArray(messages) {
   }
 }
 
-h
-
-
 /* ---------- 🔔 Messages Listener ---------- */
 function attachMessagesListener() {
   const q = query(collection(db, CHAT_COLLECTION), orderBy("timestamp", "asc"));
@@ -368,8 +365,6 @@ if (msg.highlight && msg.content?.includes("gifted")) {
     });
   });
 }
-  
-  
   
 
 /* ---------- 🆔 ChatID Modal ---------- */
