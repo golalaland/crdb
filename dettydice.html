@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Solid Dice</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>3D Dice Roller</title>
 <style>
   body {
     display: flex;
@@ -14,11 +14,15 @@
     background: #222;
     color: white;
     font-family: sans-serif;
+    touch-action: manipulation; /* Prevent zoom on tap */
+    margin: 0;
   }
 
   .dice-container {
     perspective: 800px;
-    margin-bottom: 20px;
+    display: flex;
+    gap: 30px;
+    margin-bottom: 30px;
   }
 
   .dice {
@@ -26,7 +30,7 @@
     height: 100px;
     position: relative;
     transform-style: preserve-3d;
-    transition: transform 1s ease-out;
+    transition: transform 1s cubic-bezier(0.28, 1.5, 0.5, 1);
   }
 
   .face {
@@ -34,23 +38,24 @@
     width: 100px;
     height: 100px;
     background: #fff;
-    border: 2px solid #000;
     border-radius: 12px;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
+    box-shadow: inset -4px -4px 10px rgba(0,0,0,0.2),
+                inset 4px 4px 10px rgba(0,0,0,0.2),
+                0 5px 15px rgba(0,0,0,0.3);
   }
 
   .pip {
     width: 20px;
     height: 20px;
-    background: black;
+    background: #000;
     border-radius: 50%;
     margin: 5px;
   }
 
-  /* Positioning faces in 3D */
   .front  { transform: rotateY(0deg) translateZ(50px); }
   .back   { transform: rotateY(180deg) translateZ(50px); }
   .right  { transform: rotateY(90deg) translateZ(50px); }
@@ -59,7 +64,7 @@
   .bottom { transform: rotateX(-90deg) translateZ(50px); }
 
   button {
-    padding: 10px 20px;
+    padding: 12px 25px;
     font-size: 18px;
     cursor: pointer;
     background: #ff6f61;
@@ -73,7 +78,7 @@
     background: #ff3b2f;
   }
 
-  /* Pip layouts */
+  /* Pip layouts for each face */
   .face-1 .pip:nth-child(1) { order: 5; }
   .face-2 .pip:nth-child(1) { order: 1; }
   .face-2 .pip:nth-child(2) { order: 9; }
@@ -95,43 +100,37 @@
   .face-6 .pip:nth-child(4) { order: 6; }
   .face-6 .pip:nth-child(5) { order: 7; }
   .face-6 .pip:nth-child(6) { order: 9; }
-
 </style>
 </head>
 <body>
 
 <div class="dice-container">
-  <div class="dice" id="dice">
-    <div class="face front face-1">
-      <div class="pip"></div>
-    </div>
-    <div class="face back face-6">
-      <div class="pip"></div><div class="pip"></div><div class="pip"></div>
-      <div class="pip"></div><div class="pip"></div><div class="pip"></div>
-    </div>
-    <div class="face right face-3">
-      <div class="pip"></div><div class="pip"></div><div class="pip"></div>
-    </div>
-    <div class="face left face-4">
-      <div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div>
-    </div>
-    <div class="face top face-5">
-      <div class="pip"></div><div class="pip"></div><div class="pip"></div>
-      <div class="pip"></div><div class="pip"></div>
-    </div>
-    <div class="face bottom face-2">
-      <div class="pip"></div><div class="pip"></div>
-    </div>
+  <div class="dice" id="dice1">
+    <div class="face front face-1"><div class="pip"></div></div>
+    <div class="face back face-6"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+    <div class="face right face-3"><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+    <div class="face left face-4"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+    <div class="face top face-5"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+    <div class="face bottom face-2"><div class="pip"></div><div class="pip"></div></div>
+  </div>
+
+  <div class="dice" id="dice2">
+    <div class="face front face-1"><div class="pip"></div></div>
+    <div class="face back face-6"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+    <div class="face right face-3"><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+    <div class="face left face-4"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+    <div class="face top face-5"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+    <div class="face bottom face-2"><div class="pip"></div><div class="pip"></div></div>
   </div>
 </div>
 
 <button id="rollBtn">Roll Dice</button>
 
 <script>
-  const dice = document.getElementById('dice');
+  const dice1 = document.getElementById('dice1');
+  const dice2 = document.getElementById('dice2');
   const rollBtn = document.getElementById('rollBtn');
 
-  // [rotateX, rotateY] for faces 1-6
   const rotations = [
     [0,0],       // 1
     [90,0],      // 2
@@ -141,12 +140,19 @@
     [180,0]      // 6
   ];
 
-  rollBtn.addEventListener('click', () => {
+  function rollDice(dice) {
     const random = Math.floor(Math.random() * 6);
     const [xRot, yRot] = rotations[random];
-    const xSpin = xRot + 360 * Math.floor(Math.random()*3);
-    const ySpin = yRot + 360 * Math.floor(Math.random()*3);
+    const xSpin = xRot + 720 * Math.random(); // extra spins
+    const ySpin = yRot + 720 * Math.random();
     dice.style.transform = `rotateX(${xSpin}deg) rotateY(${ySpin}deg)`;
+    return random + 1;
+  }
+
+  rollBtn.addEventListener('click', () => {
+    const result1 = rollDice(dice1);
+    const result2 = rollDice(dice2);
+    console.log(`Dice rolled: ${result1} + ${result2} = ${result1 + result2}`);
   });
 </script>
 
