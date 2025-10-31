@@ -1424,16 +1424,18 @@ function showMeetModal(host) {
       confirmBtn.style.opacity = 0.6;
       confirmBtn.style.cursor = "not-allowed";
 
-      // Spinner + stage area
+      // Small spinner placeholder
       modalContent.innerHTML = `
-        <div style="display:flex;flex-direction:column;align-items:center;">
+        <div id="spinnerWrapper" style="height:60px; display:flex;align-items:center;justify-content:center;">
           <div class="spinner" style="border:4px solid #333;border-top:4px solid #ff0099;border-radius:50%;width:36px;height:36px;animation:spin 1s linear infinite;"></div>
-          <p id="stageMsg" style="margin-top:16px;font-weight:500;">Preparing your meet request…</p>
         </div>
       `;
 
-      const stageMsgEl = modalContent.querySelector("#stageMsg");
+      const stageMsgEl = document.createElement("p");
+      stageMsgEl.style.marginTop = "16px";
+      stageMsgEl.style.fontWeight = "500";
 
+      // Stages setup
       const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
       const playfulMessages = [
         "Oh, she’s hella cute…💋", "Careful, she may be naughty..😏",
@@ -1456,8 +1458,9 @@ function showMeetModal(host) {
       }
 
       const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
-      let totalTime = 0;
 
+      // Replace spinner with stage messages
+      let totalTime = 0;
       stages.forEach((stage, index) => {
         let duration;
         if (index < 2) duration = 1500 + Math.random() * 1000;
@@ -1466,11 +1469,17 @@ function showMeetModal(host) {
         totalTime += duration;
 
         setTimeout(() => {
+          if (index === 0) {
+            // Remove spinner when the first stage starts
+            const spinnerWrapper = modalContent.querySelector("#spinnerWrapper");
+            if (spinnerWrapper) modalContent.removeChild(spinnerWrapper);
+            modalContent.appendChild(stageMsgEl);
+          }
           stageMsgEl.textContent = stage;
 
           if (index === stages.length - 1) {
             setTimeout(() => {
-              // Determine country code
+              // Country code handling
               const countryCodes = {
                 Nigeria: "234",
                 Ghana: "233",
@@ -1478,12 +1487,9 @@ function showMeetModal(host) {
                 "United Kingdom": "44",
                 "South Africa": "27"
               };
-              const countryCode = countryCodes[host.country] || "234"; // default Nigeria
-
-              // Format number for WhatsApp
-              let waNumber = host.whatsapp.replace(/^0/, ""); // remove leading 0
+              const countryCode = countryCodes[host.country] || "234";
+              let waNumber = host.whatsapp.replace(/^0/, "");
               waNumber = `+${countryCode}${waNumber}`;
-
               const firstName = currentUser.fullName.split(" ")[0];
 
               modalContent.innerHTML = `
