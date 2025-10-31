@@ -1368,7 +1368,7 @@ giftSlider.value = 1;
 giftAmountEl.textContent = "1";
 }
 
-/* ---------- Meet Modal with Randomized Stage Timings (~18s) ---------- */
+/* ---------- Meet Modal with WhatsApp / Social / No-Meet Flow ---------- */
 function showMeetModal(host) {
   let modal = document.getElementById("meetModal");
   if (modal) modal.remove();
@@ -1393,7 +1393,7 @@ function showMeetModal(host) {
   modal.innerHTML = `
     <div id="meetModalContent" style="background:#111;padding:20px 22px;border-radius:12px;text-align:center;color:#fff;max-width:340px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
       <h3 style="margin-bottom:10px;font-weight:600;">Meet ${host.chatId || "this host"}?</h3>
-      <p style="margin-bottom:16px;">Request meet with <b>21 stars ⭐ ?</b>
+      <p style="margin-bottom:16px;">Request meet with <b>21 stars ⭐</b>?</p>
       <div style="display:flex;gap:10px;justify-content:center;">
         <button id="cancelMeet" style="padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">Cancel</button>
         <button id="confirmMeet" style="padding:8px 16px;background:linear-gradient(90deg,#ff0099,#ff6600);border:none;color:#fff;border-radius:8px;font-weight:600;">Yes</button>
@@ -1408,8 +1408,10 @@ function showMeetModal(host) {
   const modalContent = modal.querySelector("#meetModalContent");
 
   cancelBtn.onclick = () => modal.remove();
+
   confirmBtn.onclick = async () => {
     const COST = 21;
+
     if (!currentUser?.uid) { alert("Please log in to request meets"); modal.remove(); return; }
     if ((currentUser.stars || 0) < COST) { alert("Uh oh, not enough stars ⭐"); modal.remove(); return; }
 
@@ -1422,81 +1424,102 @@ function showMeetModal(host) {
       if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
       updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
 
-      const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
-      const playfulMessages = [
-        "Oh, she’s hella cute…💋", "Careful, she may be naughty..😏",
-        "Be generous with her, she’ll like you..", "Ohh, she’s a real star.. 🤩",
-        "Be a real gentleman, when she texts u..", "She’s ready to dazzle you tonight.. ✨",
-        "Watch out, she might steal your heart.. ❤️", "Look sharp, she’s got a sparkle.. ✨",
-        "Don’t blink, or you’ll miss her charm.. 😉", "Get ready for some fun surprises.. 😏",
-        "She knows how to keep it exciting.. 🎉", "Better behave, she’s watching.. 👀",
-        "She might just blow your mind.. 💥", "Keep calm, she’s worth it.. 😘",
-        "She’s got a twinkle in her eyes.. ✨", "Brace yourself for some charm.. 😎",
-        "She’s not just cute, she’s 🔥", "Careful, her smile is contagious.. 😁",
-        "She might make you blush.. 😳", "She’s a star in every way.. 🌟",
-        "Don’t miss this chance.. ⏳"
-      ];
+      if (host.whatsapp) {
+        // WhatsApp meet flow with staged messages
+        const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
+        const playfulMessages = [
+          "Oh, she’s hella cute…💋", "Careful, she may be naughty..😏",
+          "Be generous with her, she’ll like you..", "Ohh, she’s a real star.. 🤩",
+          "Be a real gentleman, when she texts u..", "She’s ready to dazzle you tonight.. ✨",
+          "Watch out, she might steal your heart.. ❤️", "Look sharp, she’s got a sparkle.. ✨",
+          "Don’t blink, or you’ll miss her charm.. 😉", "Get ready for some fun surprises.. 😏",
+          "She knows how to keep it exciting.. 🎉", "Better behave, she’s watching.. 👀",
+          "She might just blow your mind.. 💥", "Keep calm, she’s worth it.. 😘",
+          "She’s got a twinkle in her eyes.. ✨", "Brace yourself for some charm.. 😎",
+          "She’s not just cute, she’s 🔥", "Careful, her smile is contagious.. 😁",
+          "She might make you blush.. 😳", "She’s a star in every way.. 🌟",
+          "Don’t miss this chance.. ⏳"
+        ];
 
-      const randomPlayful = [];
-      while (randomPlayful.length < 3) {
-        const choice = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
-        if (!randomPlayful.includes(choice)) randomPlayful.push(choice);
+        const randomPlayful = [];
+        while (randomPlayful.length < 3) {
+          const choice = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
+          if (!randomPlayful.includes(choice)) randomPlayful.push(choice);
+        }
+
+        const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
+        modalContent.innerHTML = `<p id="stageMsg" style="margin-top:20px;font-weight:500;"></p>`;
+        const stageMsgEl = modalContent.querySelector("#stageMsg");
+
+        let totalTime = 0;
+        stages.forEach((stage, index) => {
+          let duration = (index < 2) ? 1500 + Math.random() * 1000
+                        : (index < stages.length - 1) ? 1700 + Math.random() * 600
+                        : 2000 + Math.random() * 500;
+          totalTime += duration;
+
+          setTimeout(() => {
+            stageMsgEl.textContent = stage;
+            if (index === stages.length - 1) {
+              setTimeout(() => {
+                modalContent.innerHTML = `
+                  <h3 style="margin-bottom:10px;font-weight:600;">Meet Request Sent!</h3>
+                  <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is approved.</p>
+                  <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send Message</button>
+                `;
+                const letsGoBtn = modalContent.querySelector("#letsGoBtn");
+                letsGoBtn.onclick = () => {
+                  const countryCodes = { Nigeria: "+234", Ghana: "+233", "United States": "+1", "United Kingdom": "+44", "South Africa": "+27" };
+                  const hostCountry = host.country || "Nigeria";
+                  let waNumber = host.whatsapp.trim();
+                  if (waNumber.startsWith("0")) waNumber = waNumber.slice(1);
+                  waNumber = countryCodes[hostCountry] + waNumber;
+                  const firstName = currentUser.fullName.split(" ")[0];
+                  const msg = `Hey! ${host.chatId}, my name’s ${firstName} (VIP on xixi live) & I’d like to meet you.`;
+                  window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, "_blank");
+                  modal.remove();
+                };
+                setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
+              }, 500);
+            }
+          }, totalTime);
+        });
+      } else {
+        // No WhatsApp → check social links or fallback
+        showSocialRedirectModal(modalContent, host);
       }
 
-      const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
-      modalContent.innerHTML = `<p id="stageMsg" style="margin-top:20px;font-weight:500;"></p>`;
-      const stageMsgEl = modalContent.querySelector("#stageMsg");
-
-      let totalTime = 0;
-      stages.forEach((stage, index) => {
-        let duration;
-        if (index < 2) duration = 1500 + Math.random() * 1000;
-        else if (index < stages.length - 1) duration = 1700 + Math.random() * 600;
-        else duration = 2000 + Math.random() * 500;
-        totalTime += duration;
-
-        setTimeout(() => {
-          stageMsgEl.textContent = stage;
-          if (index === stages.length - 1) {
-            setTimeout(() => {
-              modalContent.innerHTML = `
-                <h3 style="margin-bottom:10px;font-weight:600;">Meet Request Sent!</h3>
-                <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is approved.</p>
-                <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send Message</button>
-              `;
-              const letsGoBtn = modalContent.querySelector("#letsGoBtn");
-
-              // ----- WhatsApp link fix -----
-              letsGoBtn.onclick = () => {
-                const countryCodes = {
-                  Nigeria: "+234",
-                  Ghana: "+233",
-                  "United States": "+1",
-                  "United Kingdom": "+44",
-                  "South Africa": "+27"
-                };
-                const hostCountry = host.country || "Nigeria";
-                let waNumber = host.whatsapp.trim();
-                if (waNumber.startsWith("0")) waNumber = waNumber.slice(1);
-                waNumber = countryCodes[hostCountry] + waNumber;
-
-                const firstName = currentUser.fullName.split(" ")[0];
-                const msg = `Hey! ${host.chatId}, my name’s ${firstName} (VIP on xixi live) & I’d like to meet you.`;
-
-                window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, "_blank");
-                modal.remove();
-              };
-              setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
-            }, 500);
-          }
-        }, totalTime);
-      });
     } catch (err) {
       console.error("Meet deduction failed:", err);
       alert("Something went wrong. Please try again later.");
       modal.remove();
     }
   };
+}
+
+/* ---------- Social / No-Meet Fallback Modal ---------- */
+function showSocialRedirectModal(modalContent, host) {
+  const socialUrl = host.tiktok || host.instagram || "";
+  const socialName = host.tiktok ? "TikTok" : host.instagram ? "Instagram" : "";
+
+  if (socialUrl) {
+    modalContent.innerHTML = `
+      <h3 style="margin-bottom:10px;font-weight:600;">Meet ${host.chatId || "this host"}?</h3>
+      <p style="margin-bottom:16px;">This host isn’t meeting new people via WhatsApp yet.</p>
+      <p style="margin-bottom:16px;">Check them out on <b>${socialName}</b> instead!</p>
+      <button id="goSocialBtn" style="padding:8px 16px;background:linear-gradient(90deg,#ff0099,#ff6600);border:none;color:#fff;border-radius:8px;font-weight:600;">Go</button>
+      <button id="cancelMeet" style="margin-top:10px;padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">Close</button>
+    `;
+    modalContent.querySelector("#goSocialBtn").onclick = () => { window.open(socialUrl, "_blank"); modalContent.parentElement.remove(); };
+    modalContent.querySelector("#cancelMeet").onclick = () => modalContent.parentElement.remove();
+  } else {
+    modalContent.innerHTML = `
+      <h3 style="margin-bottom:10px;font-weight:600;">Meet ${host.chatId || "this host"}?</h3>
+      <p style="margin-bottom:16px;">This host isn’t meeting new people yet. Please check back later!</p>
+      <button id="cancelMeet" style="padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">Close</button>
+    `;
+    modalContent.querySelector("#cancelMeet").onclick = () => modalContent.parentElement.remove();
+  }
 }
 
 /* ---------- Gift Slider ---------- */
@@ -1704,7 +1727,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     modal.innerHTML = `
       <div style="background:#111;padding:16px 18px;border-radius:10px;text-align:center;color:#fff;max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
-        <h3 style="margin-bottom:10px;font-weight:600;">Scan this number?</h3>
+        <h3 style="margin-bottom:10px;font-weight:600;">Verification</h3>
         <p>Scan phone number <b>${number}</b> for <b>${cost} stars ⭐</b>?</p>
         <div style="display:flex;justify-content:center;gap:10px;margin-top:12px;">
           <button id="cancelVerify" style="padding:6px 12px;border:none;border-radius:6px;background:#333;color:#fff;font-weight:600;cursor:pointer;">Cancel</button>
@@ -1810,13 +1833,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (index === stages.length - 1) {
           setTimeout(() => {
             modalContent.innerHTML = user
-              ? `<h3>Number Verified ✅</h3>
-                 <p>This number belongs to <b>${user.fullName}</b>.</p>
-                 <p>Status: <b>${user.isHost ? "Host" : "VIP"}</b></p>
-                 <p style="margin-top:8px; font-size:13px; color:#ccc;">You’re free to chat with the user, they’re legit! 😌</p>
+              ? `<h3>Number Verified! ✅</h3>
+                 <p>This number belongs to <b>${user.fullName}</b>
+                 <p style="margin-top:8px; font-size:13px; color:#ccc;">You’re free to chat with the user, they’re legit!😌</p>
                  <button id="closeVerifyModal" style="margin-top:12px;padding:6px 14px;border:none;border-radius:8px;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">Close</button>`
-              : `<h3>Number Not Verified ❌</h3>
-                 <p>This number is not registered in our system.</p>
+              : `<h3>Number Not Verified! ❌</h3>
+                 <p>This number does not exist on verified records,be careful!</p>
                  <button id="closeVerifyModal" style="margin-top:12px;padding:6px 14px;border:none;border-radius:8px;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">Close</button>`;
 
             modal.querySelector("#closeVerifyModal").onclick = () => modal.remove();
