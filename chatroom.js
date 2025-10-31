@@ -98,6 +98,7 @@ onAuthStateChanged(auth, async (user) => {
       const notifRef = collection(db, "users", currentUser.uid, "notifications");
 
       onSnapshot(notifRef, (snapshot) => {
+        console.log("🔔 Notifications update:", snapshot.docs.map(d => d.data()));
         console.log("📡 Snapshot received:", snapshot.size, "docs");
 
         if (snapshot.empty) {
