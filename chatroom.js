@@ -1750,7 +1750,7 @@ if (saveInfoBtn) {
     if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
     const userRef = doc(db, "users", currentUser.uid);
 
-    // 🧩 Grab values
+    // 🧩 Grab values from inputs and selects
     const fullName = document.getElementById("fullName")?.value || "";
     const city = document.getElementById("city")?.value || "";
     const location = document.getElementById("location")?.value || "";
@@ -1773,35 +1773,63 @@ if (saveInfoBtn) {
     }
 
     try {
- await updateDoc(userRef, {
-  fullName: fullName.replace(/\b\w/g, l => l.toUpperCase()),
-  city,
-  location,
-  bioPick: bio,
-  naturePick: document.getElementById("naturePick")?.value || "",
-  fruitPick: document.getElementById("fruitPick")?.value || "",
-  bankAccountNumber,
-  bankName,
-  telegram,
-  tiktok,
-  whatsapp,
-  instagram,
-  lastUpdated: serverTimestamp(),
-});
+      await updateDoc(userRef, {
+        fullName: fullName.replace(/\b\w/g, l => l.toUpperCase()),
+        city,
+        location,
+        bioPick: bio,
+        naturePick,   // directly save selected value
+        fruitPick,    // directly save selected value
+        bankAccountNumber,
+        bankName,
+        telegram,
+        tiktok,
+        whatsapp,
+        instagram,
+        lastUpdated: serverTimestamp(),
+      });
 
       showStarPopup("✅ Profile updated successfully!");
 
       // Clear focus (simulate inactive typing / fade effect)
-      // After saving info
-document.querySelectorAll("#mediaTab input, #mediaTab textarea, #mediaTab select")
-        .forEach((input) => input.blur()); // remove focus to trigger fade
-
+      document.querySelectorAll("#mediaTab input, #mediaTab textarea, #mediaTab select")
+              .forEach(input => input.blur());
     } catch (err) {
       console.error("❌ Error updating Firestore:", err);
       showStarPopup("⚠️ Failed to update info. Please try again.");
     }
   };
 }
+
+// ========== 📝 POPULATE FORM WITH FIRESTORE DATA ==========
+async function populateUserInfo() {
+  if (!currentUser?.uid) return;
+
+  const userRef = doc(db, "users", currentUser.uid);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) return;
+
+  const data = userSnap.data();
+
+  // Populate inputs
+  document.getElementById("fullName").value = data.fullName || "";
+  document.getElementById("city").value = data.city || "";
+  document.getElementById("location").value = data.location || "";
+  document.getElementById("bio").value = data.bioPick || "";
+  document.getElementById("bankAccountNumber").value = data.bankAccountNumber || "";
+  document.getElementById("bankName").value = data.bankName || "";
+  document.getElementById("telegram").value = data.telegram || "";
+  document.getElementById("tiktok").value = data.tiktok || "";
+  document.getElementById("whatsapp").value = data.whatsapp || "";
+  document.getElementById("instagram").value = data.instagram || "";
+
+  // Populate selects — shows current selected value
+  if (data.naturePick) document.getElementById("naturePick").value = data.naturePick;
+  if (data.fruitPick) document.getElementById("fruitPick").value = data.fruitPick;
+}
+
+// Run on page load
+populateUserInfo();
 
 // ========== 🟣 MEDIA UPLOAD HANDLER ==========
 const saveMediaBtn = document.getElementById("saveMedia");
