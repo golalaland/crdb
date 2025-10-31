@@ -1703,53 +1703,67 @@ async function runNumberVerification(number, cost) {
   }
 
   // Show staged verification modal
-function handleNumberVerification(inputNumber, verifiedUser) {
-  // Remove any spaces or unwanted characters
-  const number = inputNumber.trim();
+document.getElementById("verifyNumberBtn")?.addEventListener("click", () => {
+  const number = document.getElementById("verifyNumberInput")?.value.trim();
+  if (!number) return alert("⚠️ Please enter a phone number.");
 
-  // ✅ Allow only digits
-  if (!/^\d+$/.test(number)) {
-    showCustomModal("Invalid Number ⚠️", "Please enter digits only (0–9).");
-    return;
-  }
+  const COST = 21;
+  if (!currentUser?.uid) return alert("⚠️ Please log in first.");
+  if ((currentUser.stars || 0) < COST) return alert("⚠️ Not enough stars ⭐");
 
-  // ✅ Optional: length check (e.g., must be at least 10 digits)
-  if (number.length < 10) {
-    showCustomModal("Incomplete Number ⚠️", "Phone number must be at least 10 digits.");
-    return;
-  }
+  showConfirmModal(number, COST);
+});
 
-  // Proceed to verification modal
-  showVerificationModal(verifiedUser, number);
-}
-
-function showCustomModal(title, message) {
-  let modal = document.getElementById("alertModal");
+function showConfirmModal(number, cost) {
+  let modal = document.getElementById("verifyConfirmModal");
   if (modal) modal.remove();
 
   modal = document.createElement("div");
-  modal.id = "alertModal";
+  modal.id = "verifyConfirmModal";
   Object.assign(modal.style, {
     position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
-    background: "rgba(0,0,0,0.75)", display: "flex",
+    background: "rgba(0,0,0,0.7)", display: "flex",
     alignItems: "center", justifyContent: "center", zIndex: "999999",
     backdropFilter: "blur(2px)"
   });
 
   modal.innerHTML = `
-    <div style="background:#111;padding:18px 20px;border-radius:10px;text-align:center;color:#fff;
-                max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
-      <h3 style="margin:0 0 6px;">${title}</h3>
-      <p style="font-size:14px;line-height:1.4;color:#ccc;">${message}</p>
-      <button id="closeAlertModal"
-              style="margin-top:14px;padding:6px 14px;border:none;border-radius:8px;
-                     background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;
-                     font-weight:600;cursor:pointer;">OK</button>
+    <div style="background:#111;padding:16px 18px;border-radius:10px;text-align:center;color:#fff;max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
+      <h3 style="margin-bottom:10px;font-weight:600;">Scan this number?</h3>
+      <p>Scan phone number <b>${number}</b> for <b>${cost} stars ⭐</b>?</p>
+      <div style="display:flex;justify-content:center;gap:10px;margin-top:12px;">
+        <button id="cancelVerify" style="padding:6px 12px;border:none;border-radius:6px;background:#333;color:#fff;font-weight:600;cursor:pointer;">Cancel</button>
+        <button id="confirmVerify" style="padding:6px 12px;border:none;border-radius:6px;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">Yes</button>
+      </div>
     </div>
   `;
-
   document.body.appendChild(modal);
-  modal.querySelector("#closeAlertModal").onclick = () => modal.remove();
+
+  modal.querySelector("#cancelVerify").onclick = () => modal.remove();
+  modal.querySelector("#confirmVerify").onclick = async () => {
+    modal.remove();
+    runNumberVerification(number, cost);
+  };
+}
+
+async function runNumberVerification(number, cost) {
+  // Deduct stars
+  currentUser.stars -= cost;
+  if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+  updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-cost) }).catch(console.error);
+
+  // Lookup number in Firestore
+  let verifiedUser = null;
+  try {
+    const usersRef = collection(db, "users");
+    const qSnap = await getDocs(query(usersRef, where("whatsapp", "==", number)));
+    if (qSnap.docs.length) verifiedUser = qSnap.docs[0].data();
+  } catch (err) {
+    console.error("Error verifying number:", err);
+  }
+
+  // Show staged verification modal
+  showVerificationModal(verifiedUser, number);
 }
 
 function showVerificationModal(user, number) {
@@ -1766,9 +1780,8 @@ function showVerificationModal(user, number) {
   });
 
   modal.innerHTML = `
-    <div id="verifyModalContent"
-         style="background:#111;padding:14px 16px;border-radius:10px;text-align:center;
-                color:#fff;max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
+    <div id="verifyModalContent" 
+         style="background:#111;padding:14px 16px;border-radius:10px;text-align:center;color:#fff;max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
       <p id="stageMsg" style="margin-top:12px;font-weight:500;"></p>
     </div>
   `;
@@ -1823,28 +1836,28 @@ function showVerificationModal(user, number) {
       if (index === stages.length - 1) {
         setTimeout(() => {
           modalContent.innerHTML = user
-            ? `<h3>Phone Number Verified ✅</h3>
+            ? `<h3>Number Verified ✅</h3>
                <p>This number belongs to <b>${user.fullName}</b>.</p>
+               <p>Status: <b>${user.isHost ? "Host" : "VIP"}</b></p>
                <p style="margin-top:8px; font-size:13px; color:#ccc;">
-                 You’re free to chat with this verified user! 😌
+                 You’re free to chat with the user who owns this phone number, they’re legit! 😌
                </p>
-               <button id="closeVerifyModal"
+               <button id="closeVerifyModal" 
                        style="margin-top:12px;padding:6px 14px;border:none;border-radius:8px;
-                              background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;
-                              font-weight:600;cursor:pointer;">
+                              background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">
                  Close
                </button>`
-            : `<h3>Phone Number Not Verified ❌</h3>
-               <p>This phone number is not recognized, be cautious!</p>
-               <button id="closeVerifyModal"
+            : `<h3>Number Not Verified ❌</h3>
+               <p>This number is not registered in our system.</p>
+               <button id="closeVerifyModal" 
                        style="margin-top:12px;padding:6px 14px;border:none;border-radius:8px;
-                              background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;
-                              font-weight:600;cursor:pointer;">
+                              background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">
                  Close
                </button>`;
 
           modal.querySelector("#closeVerifyModal").onclick = () => modal.remove();
 
+          // Auto-close after 8–9s for verified users
           if (user) setTimeout(() => modal.remove(), 8000 + Math.random() * 1000);
         }, 500);
       }
