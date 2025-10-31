@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>3D Dice Throw Vertical</title>
+<title>3D Dice Roll</title>
 <style>
   body {
     margin: 0;
@@ -23,21 +23,25 @@
     width: 100%;
     height: 80%;
     position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 100px; /* spacing between dice */
   }
 
   .dice {
-    width: 60px;
-    height: 60px;
-    position: absolute;
+    width: 70px;
+    height: 70px;
+    position: relative;
     transform-style: preserve-3d;
-    transition: transform 1s cubic-bezier(0.28, 1.5, 0.5, 1), top 1s ease, left 1s ease, opacity 0.5s ease;
-    opacity: 0;
+    transform: rotateX(0deg) rotateY(0deg);
+    transition: transform 1s cubic-bezier(0.28, 1.5, 0.5, 1);
   }
 
   .face {
     position: absolute;
-    width: 60px;
-    height: 60px;
+    width: 70px;
+    height: 70px;
     background: #fff;
     border-radius: 8px;
     display: flex;
@@ -57,12 +61,12 @@
     margin: 2px;
   }
 
-  .front  { transform: rotateY(0deg) translateZ(30px); }
-  .back   { transform: rotateY(180deg) translateZ(30px); }
-  .right  { transform: rotateY(90deg) translateZ(30px); }
-  .left   { transform: rotateY(-90deg) translateZ(30px); }
-  .top    { transform: rotateX(90deg) translateZ(30px); }
-  .bottom { transform: rotateX(-90deg) translateZ(30px); }
+  .front  { transform: rotateY(0deg) translateZ(35px); }
+  .back   { transform: rotateY(180deg) translateZ(35px); }
+  .right  { transform: rotateY(90deg) translateZ(35px); }
+  .left   { transform: rotateY(-90deg) translateZ(35px); }
+  .top    { transform: rotateX(90deg) translateZ(35px); }
+  .bottom { transform: rotateX(-90deg) translateZ(35px); }
 
   /* Pip layouts */
   .face-1 .pip:nth-child(1) { order: 5; }
@@ -116,12 +120,11 @@
   button:active {
     transform: scale(0.95);
   }
-
 </style>
 </head>
 <body>
 
-<div class="dice-container" id="diceContainer">
+<div class="dice-container">
   <div class="dice" id="dice1">
     <div class="face front face-1"><div class="pip"></div></div>
     <div class="face back face-6"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
@@ -149,50 +152,29 @@
   const dice1 = document.getElementById('dice1');
   const dice2 = document.getElementById('dice2');
   const rollBtn = document.getElementById('rollBtn');
-  const diceContainer = document.getElementById('diceContainer');
 
   const rotations = [
-    [0,0],       // 1
-    [90,0],      // 2
-    [0,-90],     // 3
-    [0,90],      // 4
-    [-90,0],     // 5
-    [180,0]      // 6
+    [0, 0],       // 1
+    [90, 0],      // 2
+    [0, -90],     // 3
+    [0, 90],      // 4
+    [-90, 0],     // 5
+    [180, 0]      // 6
   ];
 
-  function rollDice(dice, index) {
-    // Start at the button base (bottom center)
-    const startX = window.innerWidth/2 - 30; // center
-    const startY = window.innerHeight - 160; // slightly above button
-    dice.style.left = `${startX}px`;
-    dice.style.top = `${startY}px`;
-    dice.style.opacity = 1;
-
-    setTimeout(() => {
-      const random = Math.floor(Math.random() * 6);
-      const [xRot, yRot] = rotations[random];
-      const xSpin = xRot + 720 * Math.random();
-      const ySpin = yRot + 720 * Math.random();
-
-      // Random landing position vertically and small horizontal offset for independence
-      const landingX = startX + (index === 0 ? -60 : 60);
-      const landingY = 50 + Math.random() * 200;
-
-      dice.style.left = `${landingX}px`;
-      dice.style.top = `${landingY}px`;
-      dice.style.transform = `rotateX(${xSpin}deg) rotateY(${ySpin}deg)`;
-
-      // Remove dice after 5 seconds
-      setTimeout(() => {
-        dice.style.opacity = 0;
-      }, 5000);
-
-    }, 50);
+  function rollDice(dice) {
+    const random = Math.floor(Math.random() * 6);
+    const [xRot, yRot] = rotations[random];
+    const xSpin = xRot + 720 * Math.random();
+    const ySpin = yRot + 720 * Math.random();
+    dice.style.transform = `rotateX(${xSpin}deg) rotateY(${ySpin}deg)`;
+    return random + 1;
   }
 
   rollBtn.addEventListener('click', () => {
-    rollDice(dice1, 0);
-    rollDice(dice2, 1);
+    const result1 = rollDice(dice1);
+    const result2 = rollDice(dice2);
+    console.log(`🎲 Dice rolled: ${result1} + ${result2} = ${result1 + result2}`);
   });
 </script>
 
