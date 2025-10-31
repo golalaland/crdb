@@ -1448,6 +1448,19 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   font-size: 40px;
   color: rgba(255,255,255,0.3);
 }
+/* ---------- Soft Placeholder Effect ---------- */
+#mediaTab input,
+#mediaTab textarea,
+#mediaTab select {
+  color: rgba(255,255,255,0.7);   /* faded color for “inactive” state */
+  transition: color 0.3s ease;
+}
+
+#mediaTab input:focus,
+#mediaTab textarea:focus,
+#mediaTab select:focus {
+  color: #fff;  /* full color when typing */
+}
 </style>
 </head>
 <body>
@@ -1616,12 +1629,14 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   <textarea id="bio" rows="3" placeholder="What do you wanna say?..."></textarea>
 
   <!-- New Profile Fields -->
-  <label>What Describes You?</label>
+  <label>Nature Pick</label>
   <select id="naturePick">
-    <option value="" disabled selected>Select an option</option>
+    <option value="" disabled selected>What describes you?</option>
     <option value="Hot">Hot</option>
     <option value="Sexy">Sexy</option>
     <option value="Beautiful">Beautiful</option>
+     <option value="Charming">Charming</option>
+     <option value="Curvy">Curvy</option>
     <option value="Cool">Cool</option>
   </select>
 
