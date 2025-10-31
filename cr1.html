@@ -1356,69 +1356,60 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     transform: translate(-50%, -5px);
   }
   
- /* All labels inside mediaTab */
-#mediaTab label {
-  display: block;            /* ensures proper block formatting */
-  font-weight: bold;         /* bold text */
-  font-size: 14px;           /* adjust size as needed */
-  white-space: nowrap;       /* prevent wrapping */
-  overflow: hidden;          /* hide overflow if too long */
-  text-overflow: ellipsis;   /* show "..." if text is too long */
-  margin-bottom: 4px;        /* spacing under label */
-}
-
-/* Labels: bold, bigger, single line */
-#mediaTab label {
-  display: block;
-  font-weight: bold;
-  font-size: 14px;       /* adjust as needed */
-  white-space: nowrap;   /* prevent wrapping */
-  overflow: hidden;      /* hide overflow */
-  text-overflow: ellipsis;
-  margin-bottom: 4px;
-}
-
-/* Inputs, textareas, selects */
+/* ---------- Media Tab Inputs & Labels ---------- */
 #mediaTab input,
 #mediaTab textarea,
 #mediaTab select {
   width: 100%;
   max-width: 100%;
-  padding: 6px 8px;
+  padding: 8px;
   margin-bottom: 12px;
   border-radius: 4px;
   border: none;
   box-sizing: border-box;
-  color: #fff;           /* text visible */
-  background: #222;      /* dark background for inputs */
+  font-size: 14px;
 }
 
-/* Center headers above dividers */
+/* ---------- Labels ---------- */
+#mediaTab label {
+  font-weight: bold;
+  font-size: 15px;
+  display: block;        /* ensures it starts on a new line */
+  margin-bottom: 6px;
+  white-space: normal;   /* allows wrapping if too long */
+}
+
+/* ---------- Section Headers ---------- */
 #mediaTab h4 {
   text-align: center;
   font-weight: bold;
   margin-bottom: 10px;
 }
 
-/* Select dropdown styling */
+/* ---------- Custom Selects ---------- */
 #mediaTab select {
   appearance: none;
   -webkit-appearance: none;
-  background: linear-gradient(90deg, #ff0099, #ff6600);
-  color: rgba(255, 255, 255, 0.7); /* placeholder-style */
-  padding: 8px;
+  -moz-appearance: none;
+  background: linear-gradient(90deg, #ff0099, #ff6600); /* gradient like Save button */
+  color: rgba(255, 255, 255, 0.7);
+  padding: 8px 30px 8px 8px; /* right padding for arrow */
   border-radius: 4px;
   border: none;
-  width: 100%;
-  text-align: left;
   cursor: pointer;
   transition: color 0.3s ease;
+
+  /* custom arrow */
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><polygon points="0,0 12,0 6,6" fill="white"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
 }
 
-#mediaTab select:focus,
-#mediaTab select:not([value=""]) {
-  color: #fff; /* show text clearly when selected or focused */
+#mediaTab select:focus {
+  color: #fff;
   outline: none;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><polygon points="0,6 12,6 6,0" fill="white"/></svg>');
 }
 </style>
 </head>
