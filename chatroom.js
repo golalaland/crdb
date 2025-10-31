@@ -1959,3 +1959,4 @@ const scrollArrow = document.getElementById('scrollArrow');
   });
 
   checkScroll(); // initial check
+}); // ✅ closes DOMContentLoaded event listener
