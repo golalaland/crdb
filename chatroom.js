@@ -75,9 +75,6 @@ function pushNotificationTx(tx, userId, message) {
 }
 
 /* ---------- Auth State Watcher ---------- */
-/* ---------- Auth State Watcher ---------- */
-let currentUser = null;
-
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
@@ -144,7 +141,9 @@ onAuthStateChanged(auth, async (user) => {
     currentUser = null;
     localStorage.removeItem("userId");
   }
-});
+}); // ✅ make sure this line is present
+
+
 /* ---------- Helper: Get current user ID ---------- */
 export function getCurrentUserId() {
   return currentUser ? currentUser.uid : localStorage.getItem("userId");
