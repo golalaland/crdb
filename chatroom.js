@@ -1,4 +1,4 @@
-/* ---------- Imports (Firebase v10) ---------- */
+jj/* ---------- Imports (Firebase v10) ---------- */
 import { 
   initializeApp 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -1643,23 +1643,42 @@ fetchFeaturedHosts();
 
 
 /* ---------- Number Verification Modal (~18s) ---------- */
-document.getElementById("verifyNumberBtn")?.addEventListener("click", () => {
-  const number = document.getElementById("verifyNumberInput")?.value.trim();
+document.addEventListener("DOMContentLoaded", () => {
+  const verifyBtn = document.getElementById("verifyNumberBtn");
+  if (!verifyBtn) return console.warn("⚠️ verifyNumberBtn not found in DOM.");
 
-  // ✅ Check for empty input
-  if (!number) return showAlertModal("⚠️ Missing Number", "Please enter a phone number.");
+  verifyBtn.addEventListener("click", async (e) => {
+    e.preventDefault(); // stop form reload
+    const numberInput = document.getElementById("verifyNumberInput");
+    const number = numberInput?.value.trim();
 
-  // ✅ Digits only check
-  if (!/^\d+$/.test(number)) {
-    return showAlertModal("⚠️ Invalid Format", "Phone number must contain digits only (0–9).");
-  }
+    // ✅ Empty input
+    if (!number)
+      return showAlertModal("⚠️ Missing Number", "Please enter a phone number.");
 
-  const COST = 21;
+    // ✅ Digits only (no +, no spaces)
+    if (!/^\d+$/.test(number))
+      return showAlertModal(
+        "⚠️ Invalid Format",
+        "Phone number must contain digits only (0–9)."
+      );
 
-  if (!currentUser?.uid) return showAlertModal("⚠️ Login Required", "Please log in first.");
-  if ((currentUser.stars || 0) < COST) return showAlertModal("⚠️ Not Enough Stars", "You need at least 21 stars ⭐ to verify a number.");
+    const COST = 21;
 
-  showConfirmModal(number, COST);
+    // ✅ Auth check
+    if (!currentUser?.uid)
+      return showAlertModal("⚠️ Login Required", "Please log in first.");
+
+    // ✅ Balance check
+    if ((currentUser.stars || 0) < COST)
+      return showAlertModal(
+        "⚠️ Not Enough Stars",
+        "You need at least 21 stars ⭐ to verify a number."
+      );
+
+    // Proceed to confirmation
+    showConfirmModal(number, COST);
+  });
 });
 
 function showAlertModal(title, message) {
@@ -1669,10 +1688,17 @@ function showAlertModal(title, message) {
   modal = document.createElement("div");
   modal.id = "alertModal";
   Object.assign(modal.style, {
-    position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
-    background: "rgba(0,0,0,0.7)", display: "flex",
-    alignItems: "center", justifyContent: "center", zIndex: "999999",
-    backdropFilter: "blur(2px)"
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    background: "rgba(0,0,0,0.7)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: "999999",
+    backdropFilter: "blur(2px)",
   });
 
   modal.innerHTML = `
@@ -1697,10 +1723,17 @@ function showConfirmModal(number, cost) {
   modal = document.createElement("div");
   modal.id = "verifyConfirmModal";
   Object.assign(modal.style, {
-    position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
-    background: "rgba(0,0,0,0.7)", display: "flex",
-    alignItems: "center", justifyContent: "center", zIndex: "999999",
-    backdropFilter: "blur(2px)"
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    background: "rgba(0,0,0,0.7)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: "999999",
+    backdropFilter: "blur(2px)",
   });
 
   modal.innerHTML = `
@@ -1745,7 +1778,7 @@ async function runNumberVerification(number, cost) {
     console.error("Error verifying number:", err);
   }
 
-  // Show staged verification modal
+  // Show verification progress modal
   showVerificationModal(verifiedUser, number);
 }
 
@@ -1756,10 +1789,17 @@ function showVerificationModal(user, number) {
   modal = document.createElement("div");
   modal.id = "verifyModal";
   Object.assign(modal.style, {
-    position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
-    background: "rgba(0,0,0,0.75)", display: "flex",
-    alignItems: "center", justifyContent: "center", zIndex: "999999",
-    backdropFilter: "blur(2px)"
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    background: "rgba(0,0,0,0.75)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: "999999",
+    backdropFilter: "blur(2px)",
   });
 
   modal.innerHTML = `
@@ -1774,7 +1814,6 @@ function showVerificationModal(user, number) {
   const modalContent = modal.querySelector("#verifyModalContent");
   const stageMsgEl = modalContent.querySelector("#stageMsg");
 
-  // Fixed stages + random playful messages
   const fixedStages = ["Gathering information…", "Checking phone number validity…"];
   const playfulMessages = [
     "Always meet in public spaces for the first time..",
