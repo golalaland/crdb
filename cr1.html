@@ -1356,12 +1356,12 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     transform: translate(-50%, -5px);
   }
   
-/* ---------- Media Tab Inputs & Labels ---------- */
+/* ---------- Media Tab Inputs & Labels (Compact Width) ---------- */
 #mediaTab input,
 #mediaTab textarea,
 #mediaTab select {
-  width: 100%;             /* fill container */
-  max-width: 100%;
+  width: 60%;              /* reduced width */
+  max-width: 300px;        /* optional maximum width */
   padding: 6px 10px;
   margin-bottom: 12px;
   border-radius: 4px;
@@ -1371,7 +1371,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   color: #fff;
   background: rgba(255,255,255,0.05);
 }
-
 /* Fade placeholder style */
 #mediaTab input::placeholder,
 #mediaTab textarea::placeholder,
