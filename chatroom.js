@@ -1315,7 +1315,6 @@ async function loadHost(idx) {
   const country = host.country || "Nigeria";
   detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
 
-
 /* ---------- Social Media Icons ---------- */
 const socialContainerId = "featuredHostSocials";
 let socialContainer = document.getElementById(socialContainerId);
@@ -1329,24 +1328,34 @@ if (!socialContainer) {
   detailsEl.insertAdjacentElement("afterend", socialContainer);
 }
 
+// Clear old icons
 socialContainer.innerHTML = "";
 
 function createIcon(src, alt) {
   const img = document.createElement("img");
   img.src = src;
   img.alt = alt;
-  img.style.width = "18px";
-  img.style.height = "18px";
+  img.style.width = "20px";
+  img.style.height = "20px";
   img.style.borderRadius = "50%";
   img.style.objectFit = "cover";
+  img.style.cursor = "pointer";
+  img.title = alt;
   return img;
 }
 
-// Colorful SVG icons
-if (host.whatsapp) socialContainer.appendChild(createIcon("https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/whatsapp.svg", "WhatsApp"));
-if (host.telegram) socialContainer.appendChild(createIcon("https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/telegram.svg", "Telegram"));
-if (host.instagram) socialContainer.appendChild(createIcon("https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg", "Instagram"));
-if (host.tiktok) socialContainer.appendChild(createIcon("https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/tiktok.svg", "TikTok"));
+// Use colorful PNG icons from a CDN
+const iconMap = {
+  whatsapp: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/whatsapp.png",
+  telegram: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/telegram.png",
+  instagram: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.png",
+  tiktok: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/tiktok.png",
+};
+
+if (host.whatsapp) socialContainer.appendChild(createIcon(iconMap.whatsapp, "WhatsApp"));
+if (host.telegram) socialContainer.appendChild(createIcon(iconMap.telegram, "Telegram"));
+if (host.instagram) socialContainer.appendChild(createIcon(iconMap.instagram, "Instagram"));
+if (host.tiktok) socialContainer.appendChild(createIcon(iconMap.tiktok, "TikTok"));
   /* ---------- Meet Button ---------- */
   let meetBtn = document.getElementById("meetBtn");
   if (!meetBtn) {
