@@ -309,6 +309,8 @@ function renderMessagesFromArray(messages) {
   }
 }
 
+h
+
 
 /* ---------- 🔔 Messages Listener ---------- */
 function attachMessagesListener() {
@@ -368,6 +370,8 @@ if (msg.highlight && msg.content?.includes("gifted")) {
   });
 }
   
+  
+  
 
 /* ---------- 🆔 ChatID Modal ---------- */
 async function promptForChatID(userRef, userData) {
@@ -411,6 +415,29 @@ async function promptForChatID(userRef, userData) {
         alert("Failed to save Chat ID");
       }
     };
+  });
+}
+
+/* ===============================
+   🔔 Notification Setup 
+================================= */
+
+async function pushNotification(userId, message) {
+  if (!userId) return;
+  const notifRef = doc(collection(db, "users", userId, "notifications"));
+  await setDoc(notifRef, {
+    message,
+    timestamp: serverTimestamp(),
+    read: false,
+  });
+}
+
+function pushNotificationTx(tx, userId, message) {
+  const notifRef = doc(collection(db, "users", userId, "notifications"));
+  tx.set(notifRef, {
+    message,
+    timestamp: serverTimestamp(),
+    read: false,
   });
 }
 
