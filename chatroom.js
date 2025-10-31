@@ -1339,48 +1339,6 @@ if (host.bioPick) {
   }
   typeWriter();
 }
-
-/* ---------- Social Media Icons ---------- */
-const socialContainerId = "featuredHostSocials";
-let socialContainer = document.getElementById(socialContainerId);
-
-if (!socialContainer) {
-  socialContainer = document.createElement("div");
-  socialContainer.id = socialContainerId;
-  socialContainer.style.marginTop = "6px";
-  socialContainer.style.display = "flex";
-  socialContainer.style.gap = "6px";
-  detailsEl.insertAdjacentElement("afterend", socialContainer);
-}
-
-// Clear old icons
-socialContainer.innerHTML = "";
-
-function createIcon(src, alt) {
-  const img = document.createElement("img");
-  img.src = src;
-  img.alt = alt;
-  img.style.width = "20px";
-  img.style.height = "20px";
-  img.style.borderRadius = "50%";
-  img.style.objectFit = "cover";
-  img.style.cursor = "pointer";
-  img.title = alt;
-  return img;
-}
-
-// Use colorful PNG icons from a CDN
-const iconMap = {
-  whatsapp: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/whatsapp.png",
-  telegram: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/telegram.png",
-  instagram: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.png",
-  tiktok: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/tiktok.png",
-};
-
-if (host.whatsapp) socialContainer.appendChild(createIcon(iconMap.whatsapp, "WhatsApp"));
-if (host.telegram) socialContainer.appendChild(createIcon(iconMap.telegram, "Telegram"));
-if (host.instagram) socialContainer.appendChild(createIcon(iconMap.instagram, "Instagram"));
-if (host.tiktok) socialContainer.appendChild(createIcon(iconMap.tiktok, "TikTok"));
   /* ---------- Meet Button ---------- */
   let meetBtn = document.getElementById("meetBtn");
   if (!meetBtn) {
