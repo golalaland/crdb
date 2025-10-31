@@ -2069,21 +2069,22 @@ if (saveInfoBtn) {
       fruitPick
     };
 
-// ---------- spinner setup ----------
-const originalHTML = saveInfoBtn.innerHTML;
-saveInfoBtn.innerHTML = `
-  <div class="spinner" style="
-    display:inline-block;
-    width:16px;
-    height:16px;
-    border:2px solid #fff;
-    border-top-color:transparent;
-    border-radius:50%;
-    animation: spin 0.7s linear infinite;
-    vertical-align:middle;">
-  </div>
-`;
-saveInfoBtn.disabled = true;
+    // ---------- spinner setup ----------
+    const originalHTML = saveInfoBtn.innerHTML;
+    saveInfoBtn.innerHTML = `
+      <div class="spinner" style="
+        display:inline-block;
+        width:14px;
+        height:14px;
+        border:2px solid #fff;
+        border-top-color:transparent;
+        border-radius:50%;
+        animation: spin 0.7s linear infinite;
+        vertical-align:middle;
+        margin-right:6px;">
+      </div> Saving...
+    `;
+    saveInfoBtn.disabled = true;
 
     try {
       await updateFirestoreDoc(currentUser.uid, dataToUpdate);
