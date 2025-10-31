@@ -1082,7 +1082,7 @@ videoPlayer.parentElement.appendChild(hint);
 // URL of your Shopify-hosted star SVG
 const customStarURL = "https://cdn.shopify.com/s/files/1/0962/6648/6067/files/starssvg.svg?v=1761770774";
 
-// Replace ⭐ in text nodes with inline SVG (static, no floating stars)
+// Replace ⭐ in text nodes with inline SVG (static, perfectly aligned)
 function replaceStarsInline(root = document.body) {
   if (!root) return;
 
@@ -1090,12 +1090,9 @@ function replaceStarsInline(root = document.body) {
     root,
     NodeFilter.SHOW_TEXT,
     {
-      acceptNode: node => {
-        if (node.nodeValue.includes("⭐") || node.nodeValue.includes("⭐️")) {
-          return NodeFilter.FILTER_ACCEPT;
-        }
-        return NodeFilter.FILTER_REJECT;
-      }
+      acceptNode: node => (node.nodeValue.includes("⭐") || node.nodeValue.includes("⭐️"))
+        ? NodeFilter.FILTER_ACCEPT
+        : NodeFilter.FILTER_REJECT
     }
   );
 
@@ -1112,18 +1109,18 @@ function replaceStarsInline(root = document.body) {
       if (frag) parent.insertBefore(document.createTextNode(frag), textNode);
 
       if (i < fragments.length - 1) {
-        // Inline static star
+        // Inline star wrapper
         const span = document.createElement("span");
-        span.style.display = "inline-flex";
-        span.style.alignItems = "center";
+        span.style.display = "inline-block";  // simpler than inline-flex
+        span.style.lineHeight = "1";          // prevents extra spacing
 
         const inlineStar = document.createElement("img");
         inlineStar.src = customStarURL;
         inlineStar.alt = "⭐";
-        inlineStar.style.width = "1.2em";
-        inlineStar.style.height = "1.2em";
+        inlineStar.style.height = "1em";       // matches text size
+        inlineStar.style.width = "auto";       // keeps proportions
+        inlineStar.style.verticalAlign = "text-bottom"; // perfectly aligned
         inlineStar.style.display = "inline-block";
-        inlineStar.style.verticalAlign = "text-bottom";
 
         span.appendChild(inlineStar);
         parent.insertBefore(span, textNode);
