@@ -52,6 +52,9 @@ const db = getFirestore(app);
 const rtdb = getDatabase(app);
 const auth = getAuth(app);
 
+/* ---------- Globals ---------- */
+let currentUser = null;
+
 /* ===============================
    🔔 Notification Helpers
 ================================= */
@@ -133,16 +136,17 @@ onAuthStateChanged(auth, async (user) => {
           alert("✅ All notifications marked as read.");
         });
       }
+
     } catch (err) {
       console.error("❌ Notification listener error:", err);
     }
+
   } else {
     console.warn("⚠️ No logged-in user found");
     currentUser = null;
     localStorage.removeItem("userId");
   }
-}); // ✅ make sure this line is present
-
+}); // ✅ properly closed
 
 /* ---------- Helper: Get current user ID ---------- */
 export function getCurrentUserId() {
