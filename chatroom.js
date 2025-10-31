@@ -1549,7 +1549,10 @@ openBtn.addEventListener("click", () => {
   console.log("📺 Modal opened");
 });
 
-/* ---------- Send Gift Function (Dynamic Receiver) ---------- */
+/* ===============================
+   🎁 Send Gift + Notification
+================================= */
+
 async function sendGift() {
   const receiver = hosts[currentIndex]; // dynamically pick current host
   if (!receiver?.id) return showGiftAlert("⚠️ No host selected.");
@@ -1564,7 +1567,7 @@ async function sendGift() {
   const buttonWidth = giftBtn.offsetWidth + "px";
   giftBtn.style.width = buttonWidth;
   giftBtn.disabled = true;
-  giftBtn.innerHTML = `<span class="gift-spinner"></span>`; // Make sure CSS spins it
+  giftBtn.innerHTML = `<span class="gift-spinner"></span>`;
 
   try {
     const senderRef = doc(db, "users", currentUser.uid);
@@ -1576,7 +1579,7 @@ async function sendGift() {
       const receiverSnap = await tx.get(receiverRef);
 
       if (!senderSnap.exists()) throw new Error("Your user record not found.");
-      if (!receiverSnap.exists()) 
+      if (!receiverSnap.exists())
         tx.set(receiverRef, { stars: 0, starsGifted: 0, lastGiftSeen: {} }, { merge: true });
 
       const senderData = senderSnap.data();
@@ -1588,21 +1591,27 @@ async function sendGift() {
       tx.update(receiverRef, { stars: increment(giftStars) });
       tx.set(featuredReceiverRef, { stars: increment(giftStars) }, { merge: true });
 
-      // Push a one-time notification to receiver
+      // Log last gift for quick reference
       tx.update(receiverRef, {
         [`lastGiftSeen.${currentUser.username || "Someone"}`]: giftStars
       });
     });
 
+    // 🪄 Push real-time gift notification
+    await pushNotification(
+      receiver.id,
+      `🎁 ${currentUser.username || "Someone"} sent you ${giftStars} Stars ⭐`
+    );
+
     // Sender alert
     showGiftAlert(`✅ You sent ${giftStars} stars ⭐ to ${receiver.chatId}!`);
 
-    // Receiver alert only if this session is the actual receiver
-if (currentUser.uid === receiver.id) {
-  setTimeout(() => {
-    showGiftAlert(`🎁 ${lastSenderName} sent you ${giftStars} stars ⭐`);
-  }, 1000);
-}
+    // Receiver alert only if same user (for local session)
+    if (currentUser.uid === receiver.id) {
+      setTimeout(() => {
+        showGiftAlert(`🎁 ${currentUser.username || "Someone"} sent you ${giftStars} stars ⭐`);
+      }, 1000);
+    }
 
     console.log(`✅ Sent ${giftStars} stars ⭐ to ${receiver.chatId}`);
   } catch (err) {
