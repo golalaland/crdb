@@ -1986,7 +1986,6 @@ if (saveInfoBtn) {
     const naturePick = document.getElementById("naturePick")?.value || "";
     const fruitPick = document.getElementById("fruitPick")?.value || "";
 
-    // Validate numeric fields
     if (bankAccountNumber && !/^\d{1,11}$/.test(bankAccountNumber)) {
       return showStarPopup("⚠️ Bank account number must be digits only (max 11).");
     }
@@ -1994,7 +1993,6 @@ if (saveInfoBtn) {
       return showStarPopup("⚠️ WhatsApp number must be numbers only.");
     }
 
-    // Build data object dynamically
     const dataToUpdate = {
       fullName: fullName ? fullName.replace(/\b\w/g, l => l.toUpperCase()) : "",
       city,
@@ -2010,24 +2008,33 @@ if (saveInfoBtn) {
       fruitPick
     };
 
+    // ---------- spinner setup ----------
+    const originalHTML = saveInfoBtn.innerHTML;
+    saveInfoBtn.innerHTML = `
+      <div class="spinner" style="
+        display:inline-block;
+        width:14px;
+        height:14px;
+        border:2px solid #fff;
+        border-top-color:transparent;
+        border-radius:50%;
+        animation: spin 0.7s linear infinite;
+        vertical-align:middle;
+        margin-right:6px;">
+      </div> Saving...
+    `;
+    saveInfoBtn.disabled = true;
+
     try {
-      saveInfoBtn.textContent = "Saving...";
-      saveInfoBtn.disabled = true;
-
       await updateFirestoreDoc(currentUser.uid, dataToUpdate);
-      console.log("✅ Firestore updated:", dataToUpdate);
-
       showStarPopup("✅ Profile updated successfully!");
-      
-      // Blur inputs to trigger fade
       document.querySelectorAll("#mediaTab input, #mediaTab textarea, #mediaTab select")
               .forEach(input => input.blur());
-
     } catch (err) {
       console.error("❌ Error updating Firestore:", err);
       showStarPopup("⚠️ Failed to update info. Please try again.");
     } finally {
-      saveInfoBtn.textContent = "Save Info";
+      saveInfoBtn.innerHTML = originalHTML;
       saveInfoBtn.disabled = false;
     }
   };
