@@ -1775,14 +1775,39 @@ document.addEventListener("change", (e) => {
   }
 });
 
-// ========== 📝 SAVE INFO HANDLER ==========
+// ========== 📝 SAVE INFO & MEDIA HANDLER ==========
 const saveInfoBtn = document.getElementById("saveInfo");
+const saveMediaBtn = document.getElementById("saveMedia");
+
+async function updateFirestoreDoc(userId, data) {
+  const userRef = doc(db, "users", userId);
+  await updateDoc(userRef, { ...data, lastUpdated: serverTimestamp() });
+
+  // Sync to featuredHosts if doc exists
+  const hostRef = doc(db, "featuredHosts", userId);
+  const hostSnap = await getDoc(hostRef);
+  if (hostSnap.exists()) {
+    // Only update fields that appear in featuredHosts
+    const hostData = {
+      fullName: data.fullName,
+      city: data.city,
+      location: data.location,
+      bioPick: data.bioPick,
+      naturePick: data.naturePick,
+      fruitPick: data.fruitPick,
+      ...(data.popupPhoto && { popupPhoto: data.popupPhoto }),
+      ...(data.videoUrl && { videoUrl: data.videoUrl }),
+      lastUpdated: serverTimestamp(),
+    };
+    await updateDoc(hostRef, hostData);
+  }
+}
+
+// -------- Save Info --------
 if (saveInfoBtn) {
   saveInfoBtn.onclick = async () => {
     if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
-    const userRef = doc(db, "users", currentUser.uid);
 
-    // 🧩 Grab values from inputs and selects
     const fullName = document.getElementById("fullName")?.value || "";
     const city = document.getElementById("city")?.value || "";
     const location = document.getElementById("location")?.value || "";
@@ -1796,7 +1821,7 @@ if (saveInfoBtn) {
     const naturePick = document.getElementById("naturePick")?.value || "";
     const fruitPick = document.getElementById("fruitPick")?.value || "";
 
-    // ✳️ Validate numeric fields
+    // Validate numeric fields
     if (bankAccountNumber && !/^\d{1,11}$/.test(bankAccountNumber)) {
       return showStarPopup("⚠️ Bank account number must be digits only (max 11).");
     }
@@ -1805,25 +1830,24 @@ if (saveInfoBtn) {
     }
 
     try {
-      await updateDoc(userRef, {
+      await updateFirestoreDoc(currentUser.uid, {
         fullName: fullName.replace(/\b\w/g, l => l.toUpperCase()),
         city,
         location,
         bioPick: bio,
-        naturePick,   // directly save selected value
-        fruitPick,    // directly save selected value
+        naturePick,
+        fruitPick,
         bankAccountNumber,
         bankName,
         telegram,
         tiktok,
         whatsapp,
         instagram,
-        lastUpdated: serverTimestamp(),
       });
 
       showStarPopup("✅ Profile updated successfully!");
 
-      // Clear focus (simulate inactive typing / fade effect)
+      // Blur inputs to trigger fade
       document.querySelectorAll("#mediaTab input, #mediaTab textarea, #mediaTab select")
               .forEach(input => input.blur());
     } catch (err) {
@@ -1833,38 +1857,7 @@ if (saveInfoBtn) {
   };
 }
 
-// ========== 📝 POPULATE FORM WITH FIRESTORE DATA ==========
-async function populateUserInfo() {
-  if (!currentUser?.uid) return;
-
-  const userRef = doc(db, "users", currentUser.uid);
-  const userSnap = await getDoc(userRef);
-  if (!userSnap.exists()) return;
-
-  const data = userSnap.data();
-
-  // Populate inputs
-  document.getElementById("fullName").value = data.fullName || "";
-  document.getElementById("city").value = data.city || "";
-  document.getElementById("location").value = data.location || "";
-  document.getElementById("bio").value = data.bioPick || "";
-  document.getElementById("bankAccountNumber").value = data.bankAccountNumber || "";
-  document.getElementById("bankName").value = data.bankName || "";
-  document.getElementById("telegram").value = data.telegram || "";
-  document.getElementById("tiktok").value = data.tiktok || "";
-  document.getElementById("whatsapp").value = data.whatsapp || "";
-  document.getElementById("instagram").value = data.instagram || "";
-
-  // Populate selects — shows current selected value
-  if (data.naturePick) document.getElementById("naturePick").value = data.naturePick;
-  if (data.fruitPick) document.getElementById("fruitPick").value = data.fruitPick;
-}
-
-// Run on page load
-populateUserInfo();
-
-// ========== 🟣 MEDIA UPLOAD HANDLER ==========
-const saveMediaBtn = document.getElementById("saveMedia");
+// -------- Save Media --------
 if (saveMediaBtn) {
   saveMediaBtn.onclick = async () => {
     if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
@@ -1887,14 +1880,13 @@ if (saveMediaBtn) {
       if (!res.ok) throw new Error("Upload failed. Check your network.");
 
       const data = await res.json(); // { photoUrl: "...", videoUrl: "..." }
-      const userRef = doc(db, "users", currentUser.uid);
 
-      await updateDoc(userRef, {
+      await updateFirestoreDoc(currentUser.uid, {
         ...(data.photoUrl && { popupPhoto: data.photoUrl }),
         ...(data.videoUrl && { videoUrl: data.videoUrl }),
-        lastUpdated: serverTimestamp(),
       });
 
+      // Update preview if photo exists
       if (data.photoUrl) {
         const photoPreview = document.getElementById("photoPreview");
         const photoPlaceholder = document.getElementById("photoPlaceholder");
@@ -1905,6 +1897,7 @@ if (saveMediaBtn) {
 
       showStarPopup("✅ Media uploaded successfully!");
       hostModal.style.display = "none";
+
     } catch (err) {
       console.error("❌ Media upload error:", err);
       showStarPopup(`⚠️ Failed to upload media: ${err.message}`);
