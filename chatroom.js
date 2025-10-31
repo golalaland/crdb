@@ -190,7 +190,7 @@ function showStarPopup(text) {
 
 
 /* ----------------------------
-   ⭐ GIFT / BALLER ALERT Glow
+   ⭐ GIFT MODAL / CHAT BANNER ALERT
 ----------------------------- */
 async function showGiftModal(targetUid, targetData) {
   const modal = document.getElementById("giftModal");
@@ -201,7 +201,8 @@ async function showGiftModal(targetUid, targetData) {
 
   if (!modal || !titleEl || !amountInput || !confirmBtn) return;
 
-  titleEl.textContent = `Gift ${targetData.chatId} stars ⭐️`;
+  // Show modal title
+  titleEl.textContent = `Gift ⭐️`; 
   amountInput.value = "";
   modal.style.display = "flex";
 
@@ -209,26 +210,9 @@ async function showGiftModal(targetUid, targetData) {
   closeBtn.onclick = close;
   modal.onclick = (e) => { if (e.target === modal) close(); };
 
-  // Replace old confirm button with fresh one
+  // Replace old confirm button to prevent duplicate events
   const newConfirmBtn = confirmBtn.cloneNode(true);
   confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-
-  // Floating stars helper
-  const spawnFloatingStars = (msgEl, count = 6) => {
-    const rect = msgEl.getBoundingClientRect();
-    for (let i = 0; i < count; i++) {
-      const star = document.createElement("div");
-      star.className = "floating-star";
-      const x = (Math.random() - 0.5) * rect.width;
-      const y = -Math.random() * 60;
-      star.style.setProperty("--x", x + "px");
-      star.style.setProperty("--y", y + "px");
-      star.style.left = rect.width / 2 + "px";
-      star.style.top = rect.height / 2 + "px";
-      msgEl.appendChild(star);
-      setTimeout(() => star.remove(), 2000 + Math.random() * 500);
-    }
-  };
 
   newConfirmBtn.addEventListener("click", async () => {
     const amt = parseInt(amountInput.value);
@@ -239,16 +223,18 @@ async function showGiftModal(targetUid, targetData) {
     const toRef = doc(db, "users", targetUid);
     const glowColor = randomColor();
 
+    // Normal chat message, not BallerAlert
     const messageData = {
-      content: `${currentUser.chatId} gifted ${targetData.chatId} ${amt} ⭐️`,
-      uid: "balleralert",
-      chatId: "BallerAlert🤩",
+      content: `${currentUser.chatId} gifted ${targetData.chatId} ${amt} ⭐️`, // shows names
+      uid: currentUser.uid,           // normal sender uid
+      chatId: targetUid,              // normal chat id for recipient
       timestamp: serverTimestamp(),
       highlight: true,
       buzzColor: glowColor
     };
 
     const docRef = await addDoc(collection(db, CHAT_COLLECTION), messageData);
+
     await Promise.all([
       updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
       updateDoc(toRef, { stars: increment(amt) })
@@ -258,50 +244,33 @@ async function showGiftModal(targetUid, targetData) {
     close();
     renderMessagesFromArray([{ id: docRef.id, data: messageData }]);
 
+    // Apply banner glow in chat
     const msgEl = document.getElementById(docRef.id);
     if (!msgEl) return;
     const contentEl = msgEl.querySelector(".content") || msgEl;
 
-    // Apply BallerAlert glow
     contentEl.style.setProperty("--pulse-color", glowColor);
-    contentEl.classList.add("baller-highlight");
+    contentEl.classList.add("baller-highlight"); // glowing banner effect
+
     setTimeout(() => {
       contentEl.classList.remove("baller-highlight");
       contentEl.style.boxShadow = "none";
     }, 21000);
 
-    // Floating stars burst
-    let starsInterval = setInterval(() => spawnFloatingStars(contentEl, 5), 300);
-    setTimeout(() => clearInterval(starsInterval), 2000);
+    // ✅ Floating stars removed
   });
 }
 
-/* ---------- Gift Alert (Floating Popup) ---------- */
+/* ---------- Gift Alert (Optional Popup) ---------- */
 function showGiftAlert(text) {
   const alertEl = document.getElementById("giftAlert");
   if (!alertEl) return;
 
-  alertEl.textContent = text;
-  alertEl.classList.add("show", "glow");
+  alertEl.textContent = text; // just text
+  alertEl.classList.add("show", "glow"); // banner glow
 
-  createFloatingStars();
-
+  // ✅ Floating stars removed
   setTimeout(() => alertEl.classList.remove("show", "glow"), 4000);
-}
-
-function createFloatingStars() {
-  for (let i = 0; i < 6; i++) {
-    const star = document.createElement("div");
-    star.textContent = "⭐️";
-    star.className = "floating-star";
-    document.body.appendChild(star);
-
-    star.style.left = `${50 + (Math.random() * 100 - 50)}%`;
-    star.style.top = "45%";
-    star.style.fontSize = `${16 + Math.random() * 16}px`;
-
-    setTimeout(() => star.remove(), 2000);
-  }
 }
 
 /* ---------- Redeem Link ---------- */
