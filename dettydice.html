@@ -6,84 +6,65 @@
 <title>3D Dice Throw</title>
 <style>
   body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    margin: 0;
     height: 100vh;
     background: #222;
-    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
     font-family: sans-serif;
     touch-action: manipulation;
-    margin: 0;
     overflow: hidden;
   }
 
   .dice-container {
     perspective: 1000px;
-    display: flex;
-    gap: 50px;
-    margin-bottom: 30px;
-    position: relative;
     width: 100%;
-    height: 150px;
+    height: 80%;
+    position: relative;
   }
 
   .dice {
-    width: 100px;
-    height: 100px;
+    width: 60px;  /* smaller dice */
+    height: 60px;
     position: absolute;
     transform-style: preserve-3d;
-    transition: transform 1s cubic-bezier(0.28, 1.5, 0.5, 1), top 1s ease, left 1s ease;
+    transition: transform 1s cubic-bezier(0.28, 1.5, 0.5, 1), top 1s ease, left 1s ease, opacity 0.5s ease;
     opacity: 0;
   }
 
   .face {
     position: absolute;
-    width: 100px;
-    height: 100px;
+    width: 60px;
+    height: 60px;
     background: #fff;
-    border-radius: 12px;
+    border-radius: 8px;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    box-shadow: inset -4px -4px 10px rgba(0,0,0,0.2),
-                inset 4px 4px 10px rgba(0,0,0,0.2),
-                0 5px 15px rgba(0,0,0,0.3);
+    box-shadow: inset -3px -3px 6px rgba(0,0,0,0.2),
+                inset 3px 3px 6px rgba(0,0,0,0.2),
+                0 3px 10px rgba(0,0,0,0.3);
   }
 
   .pip {
-    width: 20px;
-    height: 20px;
+    width: 12px;
+    height: 12px;
     background: #000;
     border-radius: 50%;
-    margin: 5px;
+    margin: 2px;
   }
 
-  .front  { transform: rotateY(0deg) translateZ(50px); }
-  .back   { transform: rotateY(180deg) translateZ(50px); }
-  .right  { transform: rotateY(90deg) translateZ(50px); }
-  .left   { transform: rotateY(-90deg) translateZ(50px); }
-  .top    { transform: rotateX(90deg) translateZ(50px); }
-  .bottom { transform: rotateX(-90deg) translateZ(50px); }
+  .front  { transform: rotateY(0deg) translateZ(30px); }
+  .back   { transform: rotateY(180deg) translateZ(30px); }
+  .right  { transform: rotateY(90deg) translateZ(30px); }
+  .left   { transform: rotateY(-90deg) translateZ(30px); }
+  .top    { transform: rotateX(90deg) translateZ(30px); }
+  .bottom { transform: rotateX(-90deg) translateZ(30px); }
 
-  button {
-    padding: 12px 25px;
-    font-size: 18px;
-    cursor: pointer;
-    background: #ff6f61;
-    border: none;
-    border-radius: 5px;
-    color: white;
-    transition: background 0.3s;
-  }
-
-  button:hover {
-    background: #ff3b2f;
-  }
-
-  /* Pip layouts for each face */
+  /* Pip layouts */
   .face-1 .pip:nth-child(1) { order: 5; }
   .face-2 .pip:nth-child(1) { order: 1; }
   .face-2 .pip:nth-child(2) { order: 9; }
@@ -106,11 +87,41 @@
   .face-6 .pip:nth-child(5) { order: 7; }
   .face-6 .pip:nth-child(6) { order: 9; }
 
+  /* Circular roll button base */
+  .button-base {
+    width: 120px;
+    height: 120px;
+    background: #ff6f61;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  button {
+    padding: 12px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    width: 80px;
+    height: 80px;
+    font-weight: bold;
+    color: #ff6f61;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  }
+
+  button:active {
+    transform: scale(0.95);
+  }
+
 </style>
 </head>
 <body>
 
-<div class="dice-container">
+<div class="dice-container" id="diceContainer">
   <div class="dice" id="dice1">
     <div class="face front face-1"><div class="pip"></div></div>
     <div class="face back face-6"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
@@ -130,12 +141,15 @@
   </div>
 </div>
 
-<button id="rollBtn">Roll Dice</button>
+<div class="button-base">
+  <button id="rollBtn">Roll</button>
+</div>
 
 <script>
   const dice1 = document.getElementById('dice1');
   const dice2 = document.getElementById('dice2');
   const rollBtn = document.getElementById('rollBtn');
+  const diceContainer = document.getElementById('diceContainer');
 
   const rotations = [
     [0,0],       // 1
@@ -146,34 +160,46 @@
     [180,0]      // 6
   ];
 
-  function rollDice(dice, delay = 0) {
-    // Start off-screen
-    const startX = Math.random() < 0.5 ? -150 : window.innerWidth + 150;
-    const startY = Math.random() * 50 + 50;
+  function rollDice(dice, index) {
+    // start off-screen
+    const startX = Math.random() < 0.5 ? -100 : window.innerWidth + 100;
+    const startY = Math.random() * 100 + 50;
     dice.style.left = `${startX}px`;
     dice.style.top = `${startY}px`;
     dice.style.opacity = 0;
-    
+
     setTimeout(() => {
       const random = Math.floor(Math.random() * 6);
       const [xRot, yRot] = rotations[random];
       const xSpin = xRot + 720 * Math.random();
       const ySpin = yRot + 720 * Math.random();
 
-      // Random landing position
-      const landingX = window.innerWidth/2 - 50 + (Math.random()*80-40);
+      // Landing position without overlap
+      const landingX = window.innerWidth/2 - 60 + (index === 0 ? -40 : 40);
       const landingY = 50 + Math.random()*50;
 
       dice.style.left = `${landingX}px`;
       dice.style.top = `${landingY}px`;
       dice.style.transform = `rotateX(${xSpin}deg) rotateY(${ySpin}deg)`;
       dice.style.opacity = 1;
-    }, delay);
+
+      // Remove dice after 5 seconds
+      setTimeout(() => {
+        dice.style.opacity = 0;
+      }, 5000);
+
+      return random + 1;
+    }, 50);
   }
 
   rollBtn.addEventListener('click', () => {
-    rollDice(dice1, 0);
-    rollDice(dice2, 200);
+    const result1 = rollDice(dice1, 0);
+    const result2 = rollDice(dice2, 1);
+
+    // Display result after 5 seconds
+    setTimeout(() => {
+      alert(`Dice result: ${dice1} + ${dice2}`);
+    }, 5000);
   });
 </script>
 
