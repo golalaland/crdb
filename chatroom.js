@@ -1718,6 +1718,7 @@ if (saveInfoBtn) {
     if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
     const userRef = doc(db, "users", currentUser.uid);
 
+    // 🧩 Grab values
     const fullName = document.getElementById("fullName")?.value || "";
     const city = document.getElementById("city")?.value || "";
     const location = document.getElementById("location")?.value || "";
@@ -1728,8 +1729,10 @@ if (saveInfoBtn) {
     const tiktok = document.getElementById("tiktok")?.value || "";
     const whatsapp = document.getElementById("whatsapp")?.value || "";
     const instagram = document.getElementById("instagram")?.value || "";
+    const naturePick = document.getElementById("naturePick")?.value || "";
+    const fruitPick = document.getElementById("fruitPick")?.value || "";
 
-    // Validate numeric fields
+    // ✳️ Validate numeric fields
     if (bankAccountNumber && !/^\d{1,11}$/.test(bankAccountNumber)) {
       return showStarPopup("⚠️ Bank account number must be digits only (max 11).");
     }
@@ -1739,7 +1742,7 @@ if (saveInfoBtn) {
 
     try {
       await updateDoc(userRef, {
-        fullName: fullName.replace(/\b\w/g, l => l.toUpperCase()),
+        fullName: fullName.replace(/\b\w/g, l => l.toUpperCase()), // Capitalize initials
         city,
         location,
         bioPick: bio,
@@ -1749,13 +1752,16 @@ if (saveInfoBtn) {
         tiktok,
         whatsapp,
         instagram,
+        naturePick,
+        fruitPick,
         lastUpdated: serverTimestamp(),
       });
 
       showStarPopup("✅ Profile updated successfully!");
 
-      // Clear focus (simulate “inactive typing”)
-      document.querySelectorAll("#infoTab input, #infoTab textarea").forEach((input) => input.blur());
+      // Clear focus (simulate inactive typing / fade effect)
+      document.querySelectorAll("#infoTab input, #infoTab textarea, #infoTab select").forEach((input) => input.blur());
+
     } catch (err) {
       console.error("❌ Error updating Firestore:", err);
       showStarPopup("⚠️ Failed to update info. Please try again.");
