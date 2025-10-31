@@ -1315,6 +1315,38 @@ async function loadHost(idx) {
   const country = host.country || "Nigeria";
   detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
 
+
+/* ---------- Social Media Icons ---------- */
+const socialContainerId = "featuredHostSocials";
+let socialContainer = document.getElementById(socialContainerId);
+
+if (!socialContainer) {
+  socialContainer = document.createElement("div");
+  socialContainer.id = socialContainerId;
+  socialContainer.style.marginTop = "6px";
+  socialContainer.style.display = "flex";
+  socialContainer.style.gap = "6px";
+  detailsEl.insertAdjacentElement("afterend", socialContainer);
+}
+
+socialContainer.innerHTML = "";
+
+function createIcon(src, alt) {
+  const img = document.createElement("img");
+  img.src = src;
+  img.alt = alt;
+  img.style.width = "18px";
+  img.style.height = "18px";
+  img.style.borderRadius = "50%";
+  img.style.objectFit = "cover";
+  return img;
+}
+
+// Colorful SVG icons
+if (host.whatsapp) socialContainer.appendChild(createIcon("https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/whatsapp.svg", "WhatsApp"));
+if (host.telegram) socialContainer.appendChild(createIcon("https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/telegram.svg", "Telegram"));
+if (host.instagram) socialContainer.appendChild(createIcon("https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg", "Instagram"));
+if (host.tiktok) socialContainer.appendChild(createIcon("https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/tiktok.svg", "TikTok"));
   /* ---------- Meet Button ---------- */
   let meetBtn = document.getElementById("meetBtn");
   if (!meetBtn) {
