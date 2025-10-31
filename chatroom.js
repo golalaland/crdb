@@ -1741,26 +1741,28 @@ if (saveInfoBtn) {
     }
 
     try {
-      await updateDoc(userRef, {
-        fullName: fullName.replace(/\b\w/g, l => l.toUpperCase()), // Capitalize initials
-        city,
-        location,
-        bioPick: bio,
-        bankAccountNumber,
-        bankName,
-        telegram,
-        tiktok,
-        whatsapp,
-        instagram,
-        naturePick,
-        fruitPick,
-        lastUpdated: serverTimestamp(),
-      });
+ await updateDoc(userRef, {
+  fullName: fullName.replace(/\b\w/g, l => l.toUpperCase()),
+  city,
+  location,
+  bioPick: bio,
+  naturePick: document.getElementById("naturePick")?.value || "",
+  fruitPick: document.getElementById("fruitPick")?.value || "",
+  bankAccountNumber,
+  bankName,
+  telegram,
+  tiktok,
+  whatsapp,
+  instagram,
+  lastUpdated: serverTimestamp(),
+});
 
       showStarPopup("✅ Profile updated successfully!");
 
       // Clear focus (simulate inactive typing / fade effect)
-      document.querySelectorAll("#infoTab input, #infoTab textarea, #infoTab select").forEach((input) => input.blur());
+      // After saving info
+document.querySelectorAll("#mediaTab input, #mediaTab textarea, #mediaTab select")
+        .forEach((input) => input.blur()); // remove focus to trigger fade
 
     } catch (err) {
       console.error("❌ Error updating Firestore:", err);
