@@ -1082,7 +1082,6 @@ videoPlayer.parentElement.appendChild(hint);
 // URL of your Shopify-hosted star SVG
 const customStarURL = "https://cdn.shopify.com/s/files/1/0962/6648/6067/files/starssvg.svg?v=1761770774";
 
-// Replace ⭐ in text nodes with inline SVG (static, perfectly aligned)
 function replaceStarsInline(root = document.body) {
   if (!root) return;
 
@@ -1109,17 +1108,15 @@ function replaceStarsInline(root = document.body) {
       if (frag) parent.insertBefore(document.createTextNode(frag), textNode);
 
       if (i < fragments.length - 1) {
-        // Inline star wrapper
         const span = document.createElement("span");
-        span.style.display = "inline-block";  // simpler than inline-flex
-        span.style.lineHeight = "1";          // prevents extra spacing
+        span.style.display = "inline-block";
 
         const inlineStar = document.createElement("img");
         inlineStar.src = customStarURL;
         inlineStar.alt = "⭐";
-        inlineStar.style.height = "1em";       // matches text size
-        inlineStar.style.width = "auto";       // keeps proportions
-        inlineStar.style.verticalAlign = "text-bottom"; // perfectly aligned
+        inlineStar.style.height = "1em";       // same height as text
+        inlineStar.style.width = "auto";       // preserves aspect ratio
+        inlineStar.style.verticalAlign = "middle"; // center-align with text
         inlineStar.style.display = "inline-block";
 
         span.appendChild(inlineStar);
