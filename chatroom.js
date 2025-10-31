@@ -1369,6 +1369,7 @@ giftAmountEl.textContent = "1";
 }
 
 /* ---------- Meet Modal with Randomized Stage Timings (~18s) ---------- */
+/* ---------- Meet Modal with Randomized Stage Timings (~18s) ---------- */
 function showMeetModal(host) {
   let modal = document.getElementById("meetModal");
   if (modal) modal.remove();
@@ -1400,6 +1401,7 @@ function showMeetModal(host) {
       </div>
     </div>
   `;
+
   document.body.appendChild(modal);
 
   const cancelBtn = modal.querySelector("#cancelMeet");
@@ -1418,22 +1420,40 @@ function showMeetModal(host) {
     confirmBtn.style.cursor = "not-allowed";
 
     try {
+      // Deduct stars
       currentUser.stars -= COST;
       if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
       updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-COST) }).catch(console.error);
 
+      // Show spinner while loading stages
+      modalContent.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="spinner" style="border:4px solid #333;border-top:4px solid #ff0099;border-radius:50%;width:36px;height:36px;animation:spin 1s linear infinite;"></div>
+          <p id="stageMsg" style="margin-top:16px;font-weight:500;">Preparing your meet request…</p>
+        </div>
+      `;
+
+      // Spinner animation
+      const styleSheet = document.styleSheets[0];
+      if (!styleSheet.cssRules.namedItem("spin")) {
+        styleSheet.insertRule(`@keyframes spin { from {transform:rotate(0deg);} to {transform:rotate(360deg);} }`, styleSheet.cssRules.length);
+      }
+
+      const stageMsgEl = modalContent.querySelector("#stageMsg");
+
+      // Stages + playful messages
       const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
       const playfulMessages = [
-        "Oh, she’s hella cute…💋","Careful, she may be naughty..😏",
-        "Be generous with her, she’ll like you..","Ohh, she’s a real star.. 🤩",
-        "Be a real gentleman, when she texts u..","She’s ready to dazzle you tonight.. ✨",
-        "Watch out, she might steal your heart.. ❤️","Look sharp, she’s got a sparkle.. ✨",
-        "Don’t blink, or you’ll miss her charm.. 😉","Get ready for some fun surprises.. 😏",
-        "She knows how to keep it exciting.. 🎉","Better behave, she’s watching.. 👀",
-        "She might just blow your mind.. 💥","Keep calm, she’s worth it.. 😘",
-        "She’s got a twinkle in her eyes.. ✨","Brace yourself for some charm.. 😎",
-        "She’s not just cute, she’s 🔥","Careful, her smile is contagious.. 😁",
-        "She might make you blush.. 😳","She’s a star in every way.. 🌟",
+        "Oh, she’s hella cute…💋", "Careful, she may be naughty..😏",
+        "Be generous with her, she’ll like you..", "Ohh, she’s a real star.. 🤩",
+        "Be a real gentleman, when she texts u..", "She’s ready to dazzle you tonight.. ✨",
+        "Watch out, she might steal your heart.. ❤️", "Look sharp, she’s got a sparkle.. ✨",
+        "Don’t blink, or you’ll miss her charm.. 😉", "Get ready for some fun surprises.. 😏",
+        "She knows how to keep it exciting.. 🎉", "Better behave, she’s watching.. 👀",
+        "She might just blow your mind.. 💥", "Keep calm, she’s worth it.. 😘",
+        "She’s got a twinkle in her eyes.. ✨", "Brace yourself for some charm.. 😎",
+        "She’s not just cute, she’s 🔥", "Careful, her smile is contagious.. 😁",
+        "She might make you blush.. 😳", "She’s a star in every way.. 🌟",
         "Don’t miss this chance.. ⏳"
       ];
 
@@ -1444,8 +1464,6 @@ function showMeetModal(host) {
       }
 
       const stages = [...fixedStages, ...randomPlayful, "Generating secure token…"];
-      modalContent.innerHTML = `<p id="stageMsg" style="margin-top:20px;font-weight:500;"></p>`;
-      const stageMsgEl = modalContent.querySelector("#stageMsg");
 
       let totalTime = 0;
       stages.forEach((stage, index) => {
@@ -1460,23 +1478,27 @@ function showMeetModal(host) {
 
           if (index === stages.length - 1) {
             setTimeout(() => {
-              // Format number with country code
-              const waNumber = host.countryCode + host.whatsapp.replace(/^0/, '');
+              // Prepare WhatsApp link
+              const countryCodeMap = { "Nigeria":"234","Ghana":"233","United States":"1","United Kingdom":"44","South Africa":"27" };
+              const code = countryCodeMap[host.country] || "234";
+              const localNumber = host.whatsapp.replace(/^0/, '');
+              const waNumber = code + localNumber;
               const firstName = currentUser.fullName.split(" ")[0];
               const msg = `Hey! ${host.chatId}, my name’s ${firstName} (VIP) & I’d like to meet you.`;
 
+              // Final modal
               modalContent.innerHTML = `
-                <h3 style="margin-bottom:10px;font-weight:600;">Meet Request Sent!</h3>
-                <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is approved.</p>
-                <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send WhatsApp</button>
+                <h3 style="margin-bottom:10px;font-weight:600;">Meet Request Ready!</h3>
+                <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is prepared.</p>
+                <button id="letsGoBtn" style="margin-top:6px;padding:10px 18px;border:none;border-radius:8px;font-weight:600;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;cursor:pointer;">Send WhatsApp Message</button>
               `;
+
               const letsGoBtn = modalContent.querySelector("#letsGoBtn");
               letsGoBtn.onclick = () => {
                 window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, "_blank");
                 modal.remove();
               };
 
-              // Auto-close after 7–7.5s
               setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
             }, 500);
           }
