@@ -1582,105 +1582,124 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   <button id="hostSettingsBtn" class="smalla-btn">Settings ⚙️</button>
 </div>
 
-<!<!-- 🟣 HOST MODAL -->
+<!-- 🟣 HOST MODAL -->
 <div id="hostModal" class="modal">
   <div class="modal-body">
     <span class="close">&times;</span>
     <h3 id="hostPanelTitle">Loading...</h3>
 
-<!-- 🧭 TAB HEADER -->
-<div class="tab-header">
-  <button class="tab-btn active" data-tab="mediaTab">Profile</button>
-  <button class="tab-btn" data-tab="infoTab">Messages</button> <!-- visually renamed -->
-  <button class="tab-btn" data-tab="notificationsTab">Notifications</button>
-</div>
+    <!-- 🧭 TAB HEADER -->
+    <div class="tab-header">
+      <button class="tab-btn active" data-tab="mediaTab">Profile</button>
+      <button class="tab-btn" data-tab="infoTab">Messages</button>
+      <button class="tab-btn" data-tab="notificationsTab">Notifications</button>
+    </div>
 
-<!-- 🎥 MEDIA TAB -->
-<div id="mediaTab" class="tab-content active" style="max-height:500px; overflow-y:auto; padding-right:8px;">
+    <!-- 🎥 MEDIA TAB -->
+    <div id="mediaTab" class="tab-content active" style="max-height:500px; overflow-y:auto; padding-right:8px;">
 
-  <!-- Media Uploads -->
-  <label class="upload-label">Popup Photo</label>
-  <input type="file" id="popupPhoto" accept="image/*" class="smalla-btn">
+      <!-- Media Uploads -->
+      <label class="upload-label">Popup Photo</label>
+      <input type="file" id="popupPhoto" accept="image/*" class="smalla-btn">
 
-  <div class="photo-preview">
-    <img id="photoPreview" src="" alt="Preview" style="display:none;">
-    <span id="photoPlaceholder">📸</span>
+      <div class="photo-preview">
+        <img id="photoPreview" src="" alt="Preview" style="display:none;">
+        <span id="photoPlaceholder">📸</span>
+      </div>
+
+      <label class="upload-label" style="margin-top:15px;">Upload Video</label>
+      <input type="file" id="uploadVideo" accept="video/*" class="smalla-btn">
+
+      <hr class="divider" style="margin:20px 0;">
+
+      <!-- Profile Section -->
+      <h4 style="text-align:center; margin-bottom:10px;">Profile 👤</h4>
+
+      <label>Name</label>
+      <input type="text" id="fullName" placeholder="Enter your full name">
+
+      <label>Location</label>
+      <input type="text" id="location" placeholder="Enter your location">
+
+      <label>City</label>
+      <input type="text" id="city" placeholder="Enter your city">
+
+      <label>Short Bio</label>
+      <textarea id="bio" rows="3" placeholder="What do you wanna say?..."></textarea>
+
+      <!-- New Profile Fields -->
+      <label>Nature Pick</label>
+      <select id="naturePick">
+        <option value="" disabled selected>What describes you?</option>
+        <option value="Hot">Hot</option>
+        <option value="Sexy">Sexy</option>
+        <option value="Beautiful">Beautiful</option>
+        <option value="Charming">Charming</option>
+        <option value="Curvy">Curvy</option>
+        <option value="Cool">Cool</option>
+      </select>
+
+      <label>Fruit Pick</label>
+      <select id="fruitPick">
+        <option value="" disabled selected>Choose your vibe</option>
+        <option value="🍇">🍇 Casual Hangout & Friendships</option>
+        <option value="🍑">🍑 Thrills & Paid Meetups</option>
+        <option value="🍒">🍒 Passionate Romance & Dates</option>
+        <option value="🍓">🍓 Love Adventures</option>
+      </select>
+
+      <hr class="divider" style="margin:20px 0;">
+
+      <!-- Payments Section -->
+      <h4 style="text-align:center; margin-bottom:10px;">Payments 🏦</h4>
+
+      <label>Bank Name</label>
+      <input type="text" id="bankName" placeholder="Enter your bank name">
+
+      <label>Bank Number</label>
+      <input type="number" id="bankAccountNumber" maxlength="11" placeholder="Enter your bank account number"
+        oninput="if(this.value.length>11)this.value=this.value.slice(0,11);">
+
+      <hr class="divider" style="margin:20px 0;">
+
+      <!-- Socials Section -->
+      <h4 style="text-align:center; margin-bottom:10px;">Socials</h4>
+
+      <label>WhatsApp</label>
+      <input type="text" id="whatsapp" placeholder="Enter WhatsApp number">
+
+      <label>Telegram</label>
+      <input type="text" id="telegram" placeholder="@username">
+
+      <label>TikTok</label>
+      <input type="text" id="tiktok" placeholder="@username">
+
+      <label>Instagram</label>
+      <input type="text" id="instagram" placeholder="@username">
+
+      <button id="saveInfo" class="small-btn" style="margin-top:10px;">Save</button>
+    </div>
+
+    <!-- 📝 INFO TAB -->
+    <div id="infoTab" class="tab-content" style="max-height:500px; overflow-y:auto; padding-right:8px; display:none;">
+
+      <!-- ⚡ Number Verification Bar -->
+      <div id="verifyNumberBar" style="display:flex; gap:6px; align-items:center; margin-bottom:12px;">
+        <input type="text" id="verifyNumberInput" placeholder="Enter number to verify"
+               style="flex:1; padding:6px 8px; border-radius:4px; border:none; background:#1c1c1c; color:#fff;">
+        <button id="verifyNumberBtn" class="small-btn" style="padding:6px 12px;">Check</button>
+        <span id="verifyNumberStatus" style="font-size:13px; font-weight:bold;"></span>
+      </div>
+
+      <hr class="divider" style="margin:12px 0;">
+
+      <!-- Messages / Additional Info -->
+      <div id="hostMessagesContainer" style="padding:6px 0;">
+        <!-- Messages or host-specific info will be dynamically loaded here -->
+      </div>
+    </div>
   </div>
-
-  <label class="upload-label" style="margin-top:15px;">Upload Video</label>
-  <input type="file" id="uploadVideo" accept="video/*" class="smalla-btn">
-
-  <hr class="divider" style="margin:20px 0;">
-
-  <!-- Profile Section -->
-  <h4 style="text-align:center; margin-bottom:10px;">Profile 👤</h4>
-
-  <label>Name</label>
-  <input type="text" id="fullName" placeholder="Enter your full name">
-
-  <label>Location</label>
-  <input type="text" id="location" placeholder="Enter your location">
-
-  <label>City</label>
-  <input type="text" id="city" placeholder="Enter your city">
-
-  <label>Short Bio</label>
-  <textarea id="bio" rows="3" placeholder="What do you wanna say?..."></textarea>
-
-  <!-- New Profile Fields -->
-  <label>Nature Pick</label>
-  <select id="naturePick">
-    <option value="" disabled selected>What describes you?</option>
-    <option value="Hot">Hot</option>
-    <option value="Sexy">Sexy</option>
-    <option value="Beautiful">Beautiful</option>
-     <option value="Charming">Charming</option>
-     <option value="Curvy">Curvy</option>
-    <option value="Cool">Cool</option>
-  </select>
-
-  <label>Fruit Pick </label>
-  <select id="fruitPick">
-    <option value="" disabled selected>Choose your vibe</option>
-    <option value="🍇">🍇 Casual Hangout & Friendships</option>
-    <option value="🍑">🍑 Thrills & Paid Meetups</option>
-    <option value="🍒">🍒 Passionate Romance & Dates</option>
-    <option value="🍓">🍓 Love Adventures</option>
-  </select>
-
-  <hr class="divider" style="margin:20px 0;">
-
-  <!-- Payments Section -->
-  <h4 style="text-align:center; margin-bottom:10px;">Payments 🏦</h4>
-
-  <label>Bank Name</label>
-  <input type="text" id="bankName" placeholder="Enter your bank name">
-
-  <label>Bank Number</label>
-  <input type="number" id="bankAccountNumber" maxlength="11" placeholder="Enter your bank account number"
-    oninput="if(this.value.length>11)this.value=this.value.slice(0,11);">
-
-  <label>WhatsApp</label>
-  <input type="number" id="whatsapp" placeholder="Enter WhatsApp number"
-    oninput="if(this.value.length>15)this.value=this.value.slice(0,15);">
-
-  <hr class="divider" style="margin:20px 0;">
-
-  <!-- Socials Section -->
-  <h4 style="text-align:center; margin-bottom:10px;">Socials</h4>
-
-  <label>Telegram</label>
-  <input type="text" id="telegram" placeholder="@username">
-
-  <label>TikTok</label>
-  <input type="text" id="tiktok" placeholder="@username">
-
-  <label>Instagram</label>
-  <input type="text" id="instagram" placeholder="@username">
-
-  <button id="saveInfo" class="small-btn" style="margin-top:10px;">Save</button>
 </div>
-
     <!-- 🔔 NOTIFICATIONS TAB -->
     <div id="notificationsTab" class="tab-content" style="display:none; max-height:400px; overflow-y:auto;">
       <div class="notifications-header">
