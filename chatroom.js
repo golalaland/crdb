@@ -1813,24 +1813,23 @@ document.addEventListener("change", (e) => {
 const saveInfoBtn = document.getElementById("saveInfo");
 const saveMediaBtn = document.getElementById("saveMedia");
 
+// -------- Firestore update helper --------
 async function updateFirestoreDoc(userId, data) {
   const userRef = doc(db, "users", userId);
-  await updateDoc(userRef, { ...data, lastUpdated: serverTimestamp() });
+
+  // Remove undefined or empty string fields so we don't overwrite existing values
+  const filteredData = Object.fromEntries(
+    Object.entries(data).filter(([_, value]) => value !== undefined && value !== "")
+  );
+
+  await updateDoc(userRef, { ...filteredData, lastUpdated: serverTimestamp() });
 
   // Sync to featuredHosts if doc exists
   const hostRef = doc(db, "featuredHosts", userId);
   const hostSnap = await getDoc(hostRef);
   if (hostSnap.exists()) {
-    // Only update fields that appear in featuredHosts
     const hostData = {
-      fullName: data.fullName,
-      city: data.city,
-      location: data.location,
-      bioPick: data.bioPick,
-      naturePick: data.naturePick,
-      fruitPick: data.fruitPick,
-      ...(data.popupPhoto && { popupPhoto: data.popupPhoto }),
-      ...(data.videoUrl && { videoUrl: data.videoUrl }),
+      ...filteredData,
       lastUpdated: serverTimestamp(),
     };
     await updateDoc(hostRef, hostData);
@@ -1852,8 +1851,8 @@ if (saveInfoBtn) {
     const tiktok = document.getElementById("tiktok")?.value || "";
     const whatsapp = document.getElementById("whatsapp")?.value || "";
     const instagram = document.getElementById("instagram")?.value || "";
-    const naturePick = document.getElementById("naturePick")?.value || "";
-    const fruitPick = document.getElementById("fruitPick")?.value || "";
+    const naturePick = document.getElementById("naturePick")?.value;
+    const fruitPick = document.getElementById("fruitPick")?.value;
 
     // Validate numeric fields
     if (bankAccountNumber && !/^\d{1,11}$/.test(bankAccountNumber)) {
@@ -1863,21 +1862,24 @@ if (saveInfoBtn) {
       return showStarPopup("⚠️ WhatsApp number must be numbers only.");
     }
 
+    // Build data object dynamically
+    const dataToUpdate = {
+      fullName: fullName.replace(/\b\w/g, l => l.toUpperCase()),
+      city,
+      location,
+      bioPick: bio,
+      bankAccountNumber,
+      bankName,
+      telegram,
+      tiktok,
+      whatsapp,
+      instagram,
+      ...(naturePick && { naturePick }),
+      ...(fruitPick && { fruitPick }),
+    };
+
     try {
-      await updateFirestoreDoc(currentUser.uid, {
-        fullName: fullName.replace(/\b\w/g, l => l.toUpperCase()),
-        city,
-        location,
-        bioPick: bio,
-        naturePick,
-        fruitPick,
-        bankAccountNumber,
-        bankName,
-        telegram,
-        tiktok,
-        whatsapp,
-        instagram,
-      });
+      await updateFirestoreDoc(currentUser.uid, dataToUpdate);
 
       showStarPopup("✅ Profile updated successfully!");
 
