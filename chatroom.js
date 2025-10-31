@@ -1393,14 +1393,13 @@ function showMeetModal(host) {
   modal.innerHTML = `
     <div id="meetModalContent" style="background:#111;padding:20px 22px;border-radius:12px;text-align:center;color:#fff;max-width:340px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
       <h3 style="margin-bottom:10px;font-weight:600;">Meet ${host.chatId || "this host"}?</h3>
-      <p style="margin-bottom:16px;">Request meet with <b>21 stars ⭐ ?</b>
+      <p style="margin-bottom:16px;">Request meet with <b>21 stars ⭐ ?</b></p>
       <div style="display:flex;gap:10px;justify-content:center;">
         <button id="cancelMeet" style="padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">Cancel</button>
         <button id="confirmMeet" style="padding:8px 16px;background:linear-gradient(90deg,#ff0099,#ff6600);border:none;color:#fff;border-radius:8px;font-weight:600;">Yes</button>
       </div>
     </div>
   `;
-
   document.body.appendChild(modal);
 
   const cancelBtn = modal.querySelector("#cancelMeet");
@@ -1425,16 +1424,16 @@ function showMeetModal(host) {
 
       const fixedStages = ["Handling your meet request…", "Collecting host’s identity…"];
       const playfulMessages = [
-        "Oh, she’s hella cute…💋", "Careful, she may be naughty..😏",
-        "Be generous with her, she’ll like you..", "Ohh, she’s a real star.. 🤩",
-        "Be a real gentleman, when she texts u..", "She’s ready to dazzle you tonight.. ✨",
-        "Watch out, she might steal your heart.. ❤️", "Look sharp, she’s got a sparkle.. ✨",
-        "Don’t blink, or you’ll miss her charm.. 😉", "Get ready for some fun surprises.. 😏",
-        "She knows how to keep it exciting.. 🎉", "Better behave, she’s watching.. 👀",
-        "She might just blow your mind.. 💥", "Keep calm, she’s worth it.. 😘",
-        "She’s got a twinkle in her eyes.. ✨", "Brace yourself for some charm.. 😎",
-        "She’s not just cute, she’s 🔥", "Careful, her smile is contagious.. 😁",
-        "She might make you blush.. 😳", "She’s a star in every way.. 🌟",
+        "Oh, she’s hella cute…💋","Careful, she may be naughty..😏",
+        "Be generous with her, she’ll like you..","Ohh, she’s a real star.. 🤩",
+        "Be a real gentleman, when she texts u..","She’s ready to dazzle you tonight.. ✨",
+        "Watch out, she might steal your heart.. ❤️","Look sharp, she’s got a sparkle.. ✨",
+        "Don’t blink, or you’ll miss her charm.. 😉","Get ready for some fun surprises.. 😏",
+        "She knows how to keep it exciting.. 🎉","Better behave, she’s watching.. 👀",
+        "She might just blow your mind.. 💥","Keep calm, she’s worth it.. 😘",
+        "She’s got a twinkle in her eyes.. ✨","Brace yourself for some charm.. 😎",
+        "She’s not just cute, she’s 🔥","Careful, her smile is contagious.. 😁",
+        "She might make you blush.. 😳","She’s a star in every way.. 🌟",
         "Don’t miss this chance.. ⏳"
       ];
 
@@ -1461,7 +1460,11 @@ function showMeetModal(host) {
 
           if (index === stages.length - 1) {
             setTimeout(() => {
+              // Format number with country code
+              const waNumber = host.countryCode + host.whatsapp.replace(/^0/, '');
               const firstName = currentUser.fullName.split(" ")[0];
+              const msg = `Hey! ${host.chatId}, my name’s ${firstName} (VIP) & I’d like to meet you.`;
+
               modalContent.innerHTML = `
                 <h3 style="margin-bottom:10px;font-weight:600;">Meet Request Sent!</h3>
                 <p style="margin-bottom:16px;">Your request to meet <b>${host.chatId}</b> is approved.</p>
@@ -1469,10 +1472,11 @@ function showMeetModal(host) {
               `;
               const letsGoBtn = modalContent.querySelector("#letsGoBtn");
               letsGoBtn.onclick = () => {
-                const message = `Hey! ${host.chatId}, my name’s ${firstName} (VIP on xixi live) & I’d like to meet you.`;
-                window.open(`https://wa.me/${host.whatsapp}?text=${encodeURIComponent(message)}`, "_blank");
+                window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, "_blank");
                 modal.remove();
               };
+
+              // Auto-close after 7–7.5s
               setTimeout(() => modal.remove(), 7000 + Math.random() * 500);
             }, 500);
           }
