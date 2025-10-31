@@ -46,11 +46,65 @@ const firebaseConfig = {
   databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
 };
 
-/* ---------- Initialize Firebase ---------- */
+/* ---------- Firebase Setup (already in your file) ---------- */
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const rtdb = getDatabase(app);
 const auth = getAuth(app);
+
+/* ===============================
+   🔔 Notification Helpers
+================================= */
+async function pushNotification(userId, message) {
+  if (!userId) return;
+  const notifRef = doc(collection(db, "users", userId, "notifications"));
+  await setDoc(notifRef, {
+    message,
+    timestamp: serverTimestamp(),
+    read: false,
+  });
+}
+
+function pushNotificationTx(tx, userId, message) {
+  const notifRef = doc(collection(db, "users", userId, "notifications"));
+  tx.set(notifRef, {
+    message,
+    timestamp: serverTimestamp(),
+    read: false,
+  });
+}
+
+/* ===============================
+   🔔 Live Notification Listener
+================================= */
+const notificationsList = document.getElementById("notificationsList");
+const markAllBtn = document.getElementById("markAllRead");
+const userId = currentUser?.uid || "guest0000";
+
+const notifRef = collection(db, "users", userId, "notifications");
+
+onSnapshot(notifRef, (snapshot) => {
+  if (snapshot.empty) {
+    notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+    return;
+  }
+
+  const items = snapshot.docs.map((doc) => {
+    const n = doc.data();
+    const time = new Date(n.timestamp?.seconds * 1000).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return `
+      <div class="notification-item ${n.read ? "" : "unread"}" data-id="${doc.id}">
+        <span>${n.message}</span>
+        <span class="notification-time">${time}</span>
+      </div>
+    `;
+  });
+
+  notificationsList.innerHTML = items.join("");
+});
 
 /* ---------- Auth State Watcher ---------- */
 let currentUser = null;
@@ -418,28 +472,6 @@ async function promptForChatID(userRef, userData) {
   });
 }
 
-/* ===============================
-   🔔 Notification Setup 
-================================= */
-
-async function pushNotification(userId, message) {
-  if (!userId) return;
-  const notifRef = doc(collection(db, "users", userId, "notifications"));
-  await setDoc(notifRef, {
-    message,
-    timestamp: serverTimestamp(),
-    read: false,
-  });
-}
-
-function pushNotificationTx(tx, userId, message) {
-  const notifRef = doc(collection(db, "users", userId, "notifications"));
-  tx.set(notifRef, {
-    message,
-    timestamp: serverTimestamp(),
-    read: false,
-  });
-}
 
 /* ===============================
    🔐 VIP Login (Whitelist Check)
@@ -1875,47 +1907,6 @@ hostSettingsBtn.addEventListener("click", () => {
   setGreeting();
 });
 
-  // ========== 🔔 FIRESTORE LIVE NOTIFICATIONS ==========
-  const notificationsList = document.getElementById("notificationsList");
-  const markAllBtn = document.getElementById("markAllRead");
-  const userId = currentUser?.uid || "guest0000"; // temp fallback
-
-  const notifRef = collection(db, "users", userId, "notifications");
-
-  onSnapshot(notifRef, (snapshot) => {
-    if (snapshot.empty) {
-      notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-      return;
-    }
-
-    const items = snapshot.docs.map((doc) => {
-      const n = doc.data();
-      const time = new Date(n.timestamp?.seconds * 1000).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      return `
-        <div class="notification-item ${n.read ? "" : "unread"}" data-id="${doc.id}">
-          <span>${n.message}</span>
-          <span class="notification-time">${time}</span>
-        </div>
-      `;
-    });
-
-    notificationsList.innerHTML = items.join("");
-  });
-
-  if (markAllBtn) {
-    markAllBtn.addEventListener("click", async () => {
-      const snapshot = await getDocs(notifRef);
-      snapshot.forEach(async (docSnap) => {
-        const ref = doc(db, "users", userId, "notifications", docSnap.id);
-        await updateDoc(ref, { read: true });
-      });
-      alert("✅ All notifications marked as read.");
-    });
-  }
-});
 const scrollArrow = document.getElementById('scrollArrow');
   const chatContainer = document.querySelector('#chatContainer'); // your chat wrapper
   let fadeTimeout;
