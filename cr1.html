@@ -1591,7 +1591,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     <!-- 🧭 TAB HEADER -->
     <div class="tab-header">
       <button class="tab-btn active" data-tab="mediaTab">Profile</button>
-      <button class="tab-btn" data-tab="infoTab">Messages</button>
+      <button class="tab-btn" data-tab="infoTab">Tools</button>
       <button class="tab-btn" data-tab="notificationsTab">Notifications</button>
     </div>
 
@@ -1683,14 +1683,23 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 <!-- 📝 INFO TAB -->
 <div id="infoTab" class="tab-content" style="max-height:500px; overflow-y:auto; padding-right:8px; display:none;">
 
-  <!-- 📱 Number Verification Bar -->
-  <div id="verifyNumberBar" style="margin-bottom:15px;">
-    <h4 style="text-align:center; margin-bottom:10px;">Verify Number 🔎</h4>
-    <div style="display:flex; gap:6px; justify-content:center;">
-      <input type="text" id="verifyNumberInput" placeholder="Enter phone number" style="flex:1; padding:6px; border-radius:6px; border:none; font-size:14px;">
-      <button id="verifyNumberBtn" style="padding:6px 12px; border-radius:6px; border:none; background:linear-gradient(90deg,#ff0099,#ff6600); color:#fff; cursor:pointer; font-weight:600;">Check</button>
-    </div>
+<!-- 📱 Number Verification Bar -->
+<div id="verifyNumberBar" style="margin-bottom:15px;">
+  <h4 style="text-align:center; margin-bottom:10px;">Verify Number 🔎</h4>
+  
+  <div style="display:flex; gap:6px; justify-content:center; align-items:center;">
+    <input type="text" id="verifyNumberInput" placeholder="Enter phone number" 
+           style="flex:1; padding:6px; border-radius:6px; border:none; font-size:14px;">
+    <button id="verifyNumberBtn" 
+            style="padding:4px 10px; border-radius:6px; border:none; background:linear-gradient(90deg,#ff0099,#ff6600); color:#fff; cursor:pointer; font-weight:600; font-size:13px;">
+      Check
+    </button>
   </div>
+
+  <p style="margin-top:6px; font-size:12px; color:#ccc; text-align:center;">
+    Your safety is our priority. This helps you verify that numbers here belong to real, verified users.
+  </p>
+</div>
 
   <!-- Future messages / content can go here -->
 
