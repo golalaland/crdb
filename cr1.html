@@ -1492,6 +1492,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
 <!-- 🎥 MEDIA TAB -->
 <div id="mediaTab" class="tab-content active" style="max-height:500px; overflow-y:auto; padding-right:8px;">
+
   <!-- Media Uploads -->
   <label class="upload-label">Popup Photo</label>
   <input type="file" id="popupPhoto" accept="image/*" class="upload-input">
@@ -1506,9 +1507,11 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
   <button id="saveMedia" class="small-btn" style="margin-top:15px;">Save</button>
 
-  <hr class="divider" style="margin:15px 0;">
+  <hr class="divider" style="margin:20px 0;">
 
-  <!-- Profile Info (formerly infoTab) -->
+  <!-- Profile Section -->
+  <h4 style="text-align:center; margin-bottom:10px;">Profile</h4>
+
   <label>Name</label>
   <input type="text" id="fullName" placeholder="Enter your full name">
 
@@ -1521,7 +1524,29 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   <label>Short Bio</label>
   <textarea id="bio" rows="3" placeholder="What do you wanna say?..."></textarea>
 
-  <hr class="divider">
+  <!-- New Profile Fields -->
+  <label>How would you describe yourself?</label>
+  <select id="naturePick">
+    <option value="" disabled selected>Select an option</option>
+    <option value="Hot">Hot</option>
+    <option value="Sexy">Sexy</option>
+    <option value="Beautiful">Beautiful</option>
+    <option value="Cool">Cool</option>
+  </select>
+
+  <label>What are you interested in?</label>
+  <select id="fruitPick">
+    <option value="" disabled selected>Select an option</option>
+    <option value="🍇">🍇 Casual Hangout & Friendships</option>
+    <option value="🍑">🍑 Thrills & Paid Meetups</option>
+    <option value="🍒">🍒 Passionate Romance & Dates</option>
+    <option value="🍓">🍓 Love Adventures</option>
+  </select>
+
+  <hr class="divider" style="margin:20px 0;">
+
+  <!-- Payments Section -->
+  <h4 style="text-align:center; margin-bottom:10px;">Payments</h4>
 
   <label>Bank Account Name</label>
   <input type="text" id="bankName" placeholder="Enter your bank name">
@@ -1530,11 +1555,14 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   <input type="number" id="bankAccountNumber" maxlength="11" placeholder="Enter 11-digit account number"
     oninput="if(this.value.length>11)this.value=this.value.slice(0,11);">
 
-  <hr class="divider">
-
   <label>WhatsApp</label>
   <input type="number" id="whatsapp" placeholder="Enter WhatsApp number"
     oninput="if(this.value.length>15)this.value=this.value.slice(0,15);">
+
+  <hr class="divider" style="margin:20px 0;">
+
+  <!-- Socials Section -->
+  <h4 style="text-align:center; margin-bottom:10px;">Socials</h4>
 
   <label>Telegram</label>
   <input type="text" id="telegram" placeholder="@username">
