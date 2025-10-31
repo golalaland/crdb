@@ -1,40 +1,26 @@
-/* ---------- Imports (Firebase v10) ---------- */
-import { 
-  initializeApp 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+/* ============================================================
+   🔥 Firebase Imports (v10)
+============================================================ */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
 import { 
-  getFirestore, 
-  doc, 
-  setDoc, 
-  getDoc, 
-  updateDoc, 
-  collection, 
-  addDoc, 
-  serverTimestamp, 
-  onSnapshot, 
-  query, 
-  orderBy, 
-  increment, 
-  getDocs, 
-  where,
-  runTransaction
+  getFirestore, doc, setDoc, getDoc, updateDoc, 
+  collection, serverTimestamp, onSnapshot, query, 
+  orderBy, increment, getDocs, runTransaction 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { 
-  getDatabase, 
-  ref as rtdbRef, 
-  set as rtdbSet, 
-  onDisconnect, 
-  onValue 
+  getDatabase, ref as rtdbRef, set as rtdbSet, 
+  onDisconnect, onValue 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 import { 
-  getAuth, 
-  onAuthStateChanged 
+  getAuth, onAuthStateChanged 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-/* ---------- Firebase Config ---------- */
+/* ============================================================
+   ⚙️ Firebase Config
+============================================================ */
 const firebaseConfig = {
   apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
@@ -46,18 +32,22 @@ const firebaseConfig = {
   databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
 };
 
-/* ---------- Firebase Setup ---------- */
+/* ============================================================
+   🚀 Firebase Initialization
+============================================================ */
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const rtdb = getDatabase(app);
 const auth = getAuth(app);
 
-/* ---------- Globals ---------- */
+/* ============================================================
+   🌍 Global User Variable
+============================================================ */
 let currentUser = null;
 
-/* ===============================
+/* ============================================================
    🔔 Notification Helpers
-================================= */
+============================================================ */
 async function pushNotification(userId, message) {
   if (!userId) return;
   const notifRef = doc(collection(db, "users", userId, "notifications"));
@@ -77,77 +67,98 @@ function pushNotificationTx(tx, userId, message) {
   });
 }
 
-/* ---------- Auth State Watcher ---------- */
+/* ============================================================
+   🎁 Gift Notification Helper
+============================================================ */
+async function pushGiftNotification(senderName, receiverId, giftName, amount) {
+  try {
+    if (!receiverId) return;
+    const message = `🎁 ${senderName} sent you ${amount} ${giftName}!`;
+    await pushNotification(receiverId, message);
+    console.log("✅ Gift notification sent to:", receiverId);
+  } catch (err) {
+    console.error("❌ Failed to send gift notification:", err);
+  }
+}
+
+/* ============================================================
+   👁️ Live Notification Listener Setup
+============================================================ */
+function initNotificationListener(userId) {
+  const notificationsList = document.getElementById("notificationsList");
+  if (!notificationsList) {
+    console.warn("⚠️ notificationsList element not found in DOM");
+    return;
+  }
+
+  const notifQuery = query(
+    collection(db, "users", userId, "notifications"),
+    orderBy("timestamp", "desc")
+  );
+
+  onSnapshot(notifQuery, (snapshot) => {
+    if (snapshot.empty) {
+      notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+      return;
+    }
+
+    const items = snapshot.docs.map((docSnap) => {
+      const n = docSnap.data();
+      const time = n.timestamp?.seconds
+        ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "--:--";
+      return `
+        <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
+          <span>${n.message || "(no message)"}</span>
+          <span class="notification-time">${time}</span>
+        </div>
+      `;
+    });
+
+    notificationsList.innerHTML = items.join("");
+  });
+}
+
+/* ============================================================
+   🟡 Mark All Notifications as Read
+============================================================ */
+async function markAllNotificationsAsRead() {
+  if (!currentUser) return;
+  const notifsRef = collection(db, "users", currentUser.uid, "notifications");
+  const snapshot = await getDocs(notifsRef);
+  for (const docSnap of snapshot.docs) {
+    const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
+    await updateDoc(ref, { read: true });
+  }
+  alert("✅ All notifications marked as read.");
+}
+
+/* ============================================================
+   👤 Auth State Listener
+============================================================ */
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
     console.log("✅ Logged in as:", user.uid);
     localStorage.setItem("userId", user.uid);
 
-    // Wait for DOM elements
-    const notificationsList = document.getElementById("notificationsList");
+    // Initialize notifications
+    initNotificationListener(user.uid);
+
+    // Setup "mark all read" button
     const markAllBtn = document.getElementById("markAllRead");
-
-    if (!notificationsList) {
-      console.warn("⚠️ notificationsList element not found in DOM");
-      return;
+    if (markAllBtn) {
+      markAllBtn.addEventListener("click", markAllNotificationsAsRead);
     }
-
-    try {
-      console.log("🔔 Setting up live notification listener...");
-      const notifRef = collection(db, "users", currentUser.uid, "notifications");
-
-      onSnapshot(notifRef, (snapshot) => {
-        console.log("📡 Snapshot received:", snapshot.size, "docs");
-
-        if (snapshot.empty) {
-          notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-          return;
-        }
-
-        const items = snapshot.docs.map((docSnap) => {
-          const n = docSnap.data();
-          const time = n.timestamp?.seconds
-            ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "--:--";
-          return `
-            <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
-              <span>${n.message || "(no message)"}</span>
-              <span class="notification-time">${time}</span>
-            </div>
-          `;
-        });
-
-        notificationsList.innerHTML = items.join("");
-      });
-
-      // ✅ Mark all as read
-      if (markAllBtn) {
-        markAllBtn.addEventListener("click", async () => {
-          console.log("🟡 Marking all notifications as read...");
-          const snapshot = await getDocs(notifRef);
-          for (const docSnap of snapshot.docs) {
-            const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
-            await updateDoc(ref, { read: true });
-          }
-          alert("✅ All notifications marked as read.");
-        });
-      }
-
-    } catch (err) {
-      console.error("❌ Notification listener error:", err);
-    }
-
   } else {
     console.warn("⚠️ No logged-in user found");
     currentUser = null;
     localStorage.removeItem("userId");
   }
-}); // ✅ properly closed
-
+});
 /* ---------- Helper: Get current user ID ---------- */
 export function getCurrentUserId() {
   return currentUser ? currentUser.uid : localStorage.getItem("userId");
