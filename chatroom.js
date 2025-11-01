@@ -276,7 +276,7 @@ function showGiftAlert(text) {
 /* ---------- Redeem Link ---------- */
 function updateRedeemLink() {
   if (!refs.redeemBtn || !currentUser) return;
-  refs.redeemBtn.href = `https://golalaland.github.io/chat/nushop.html?uid=${encodeURIComponent(currentUser.uid)}`;
+  refs.redeemBtn.href = `https://golalaland.github.io/crdb/shop.html?uid=${encodeURIComponent(currentUser.uid)}`;
   refs.redeemBtn.style.display = "inline-block";
 }
 
