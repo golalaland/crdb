@@ -1741,7 +1741,6 @@ if (!window.verifyHandlersInitialized) {
     document.body.appendChild(alertEl);
     setTimeout(() => alertEl.remove(), duration);
   };
-}
 
   // ---------- 🌍 PHONE NORMALIZER (for backend only) ----------
   function normalizePhoneForSearch(number) {
