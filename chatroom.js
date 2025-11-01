@@ -1701,7 +1701,7 @@ fetchFeaturedHosts();
 if (!window.verifyHandlersInitialized) {
   window.verifyHandlersInitialized = true;
 
-  // ---------- ✨ SIMPLE GOLD MODAL ALERT (One-liner across all screens) ----------
+  // ---------- ✨ SIMPLE GOLD MODAL ALERT ----------
   window.showGoldAlert = function (message, duration = 3000) {
     const existing = document.getElementById("goldAlert");
     if (existing) existing.remove();
@@ -1721,14 +1721,8 @@ if (!window.verifyHandlersInitialized) {
       zIndex: "999999",
       boxShadow: "0 0 12px rgba(255, 215, 0, 0.5)",
       animation: "slideFade 0.4s ease-out",
-      whiteSpace: "nowrap",       // ✅ Keep it one line
-      overflow: "hidden",         // ✅ Hide overflow
-      textOverflow: "ellipsis",   // ✅ Show "..." if too long
-      maxWidth: "95vw",           // ✅ Prevent off-screen stretch
-      textAlign: "center",
     });
-
-    alertEl.textContent = message;
+    alertEl.innerHTML = message;
 
     const style = document.createElement("style");
     style.textContent = `
@@ -1738,11 +1732,10 @@ if (!window.verifyHandlersInitialized) {
       }
     `;
     document.head.appendChild(style);
-
     document.body.appendChild(alertEl);
     setTimeout(() => alertEl.remove(), duration);
   };
-}
+
   // ---------- 🌍 PHONE NORMALIZER (for backend only) ----------
   function normalizePhoneForSearch(number) {
     number = number.replace(/\D/g, "");
