@@ -1701,17 +1701,62 @@ fetchFeaturedHosts();
 if (!window.verifyHandlersInitialized) {
   window.verifyHandlersInitialized = true;
 
+  // ---------- SIMPLE GOLD MODAL ALERT ----------
+  window.showGoldAlert = function (message, duration = 3000) {
+    const existing = document.getElementById("goldAlert");
+    if (existing) existing.remove();
+
+    const alertEl = document.createElement("div");
+    alertEl.id = "goldAlert";
+    Object.assign(alertEl.style, {
+      position: "fixed",
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      background: "linear-gradient(90deg, #ffcc00, #ff9900)",
+      color: "#111",
+      padding: "12px 20px",
+      borderRadius: "10px",
+      fontWeight: "600",
+      zIndex: "999999",
+      boxShadow: "0 0 12px rgba(255, 215, 0, 0.5)",
+      animation: "slideFade 0.4s ease-out",
+    });
+    alertEl.innerHTML = message;
+
+    const style = document.createElement("style");
+    style.textContent = `
+      @keyframes slideFade {
+        from {opacity: 0; transform: translate(-50%, -60%);}
+        to {opacity: 1; transform: translate(-50%, -50%);}
+      }
+    `;
+    document.head.appendChild(style);
+    document.body.appendChild(alertEl);
+    setTimeout(() => alertEl.remove(), duration);
+  };
+
+  // ---------- PHONE FORMAT NORMALIZER ----------
+  function normalizePhone(number) {
+    number = number.replace(/\D/g, ""); // remove non-digits
+    if (number.startsWith("0")) number = "234" + number.slice(1);
+    if (number.startsWith("2340")) number = "234" + number.slice(4);
+    if (!number.startsWith("234")) number = "234" + number;
+    return number;
+  }
+
   // ---------- CLICK HANDLER ----------
   document.addEventListener("click", (e) => {
     if (e.target.id === "verifyNumberBtn") {
       const numberInput = document.getElementById("verifyNumberInput");
-      const number = numberInput?.value.trim();
+      const numberRaw = numberInput?.value.trim();
       const COST = 21;
 
-      if (!currentUser?.uid) return alert("⚠️ Please log in first.");
-      if (!number) return alert("⚠️ Please enter a phone number.");
+      if (!currentUser?.uid) return showGoldAlert("⚠️ Please log in first.");
+      if (!numberRaw) return showGoldAlert("⚠️ Please enter a phone number.");
 
-      showConfirmModal(number, COST);
+      const normalized = normalizePhone(numberRaw);
+      showConfirmModal(normalized, COST);
     }
   });
 
@@ -1758,7 +1803,6 @@ if (!window.verifyHandlersInitialized) {
   // ---------- RUN VERIFICATION ----------
   async function runNumberVerification(number, cost) {
     try {
-      // Deduct stars visually & in Firestore
       currentUser.stars -= cost;
       if (refs?.starCountEl)
         refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
@@ -1766,7 +1810,6 @@ if (!window.verifyHandlersInitialized) {
         stars: increment(-cost),
       }).catch(console.error);
 
-      // Lookup number in Firestore
       const usersRef = collection(db, "users");
       const qSnap = await getDocs(query(usersRef, where("whatsapp", "==", number)));
       const verifiedUser = qSnap.docs.length ? qSnap.docs[0].data() : null;
@@ -1774,6 +1817,7 @@ if (!window.verifyHandlersInitialized) {
       showVerificationModal(verifiedUser, number);
     } catch (err) {
       console.error("Error verifying number:", err);
+      showGoldAlert("❌ Verification failed, please retry!");
     }
   }
 
@@ -1808,75 +1852,37 @@ if (!window.verifyHandlersInitialized) {
     const modalContent = modal.querySelector("#verifyModalContent");
     const stageMsgEl = modalContent.querySelector("#stageMsg");
 
-    const fixedStages = [
+    const stages = [
       "Gathering information…",
       "Checking phone number validity…",
-    ];
-    const playfulMessages = [
-      "Always meet in public spaces for the first time..",
+      "Always meet in public spaces first!",
       "Known hotels are safer for meetups 😉",
-      "Condoms should be in the conversation always..",
-      "Trust your instincts, always..",
       "Keep things fun and safe 😎",
-      "Be polite and confident when messaging..",
-      "Avoid sharing sensitive info too soon..",
-      "Remember, first impressions last ✨",
-      "Don’t rush, enjoy the conversation..",
-      "Check for verified accounts before proceeding..",
-      "Safety first, fun second 😏",
-      "Listen carefully to their plans..",
-      "Pick neutral locations for first meets..",
-      "Be respectful and courteous..",
-      "Share your location with a friend..",
-      "Always verify identity before meeting..",
-      "Plan ahead, stay alert 👀",
-      "Keep communication clear and honest..",
-      "Bring a friend if unsure..",
-      "Set boundaries clearly..",
-      "Have fun, but stay safe!",
+      "Finalizing check…",
     ];
-
-    const randomPlayful = [];
-    while (randomPlayful.length < 5) {
-      const choice =
-        playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
-      if (!randomPlayful.includes(choice)) randomPlayful.push(choice);
-    }
-
-    const stages = [...fixedStages, ...randomPlayful, "Finalizing check…"];
 
     let totalTime = 0;
     stages.forEach((stage, index) => {
-      let duration = 1500 + Math.random() * 800;
-      if (index === stages.length - 1)
-        duration = 1800 + Math.random() * 500;
+      let duration = 1400 + Math.random() * 600;
       totalTime += duration;
 
       setTimeout(() => {
         stageMsgEl.textContent = stage;
-
         if (index === stages.length - 1) {
           setTimeout(() => {
             modalContent.innerHTML = user
               ? `<h3>Number Verified! ✅</h3>
                  <p>This number belongs to <b>${user.fullName}</b></p>
-                 <p style="margin-top:8px; font-size:13px; color:#ccc;">
-                   You’re free to chat with the user, they’re legit! 😌
-                 </p>
                  <button id="closeVerifyModal" 
                    style="margin-top:12px;padding:6px 14px;border:none;
                    border-radius:8px;background:linear-gradient(90deg,#ff0099,#ff6600);
-                   color:#fff;font-weight:600;cursor:pointer;">
-                   Close
-                 </button>`
+                   color:#fff;font-weight:600;cursor:pointer;">Close</button>`
               : `<h3>Number Not Verified! ❌</h3>
-                 <p>This number does not exist on verified records — be careful!</p>
+                 <p>This number doesn’t exist on verified records — be careful!</p>
                  <button id="closeVerifyModal" 
                    style="margin-top:12px;padding:6px 14px;border:none;
                    border-radius:8px;background:linear-gradient(90deg,#ff0099,#ff6600);
-                   color:#fff;font-weight:600;cursor:pointer;">
-                   Close
-                 </button>`;
+                   color:#fff;font-weight:600;cursor:pointer;">Close</button>`;
 
             modal
               .querySelector("#closeVerifyModal")
