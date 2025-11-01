@@ -2410,17 +2410,24 @@ function makeDraggable(el) {
 }
 
 /* ==========================
-💬 Chat Name Click Listener
+💬 Chat Name Click Listener (Dynamic / Delegated)
 ========================== */
-function initSocialCards(allUsers) {
-  document.querySelectorAll('.chatName').forEach(nameEl => {
-    nameEl.addEventListener('click', () => {
-      const chatId = nameEl.textContent.trim();
-      const user = allUsers.find(
-        u => u.chatIdLower === chatId.toLowerCase()
-      );
-      if (user) showSocialCard(user);
-    });
+function initSocialCardDelegation(allUsers) {
+  // Replace 'chatContainer' with the actual parent element that wraps all chat messages
+  const chatContainer = document.getElementById('chatContainer');
+  if (!chatContainer) {
+    console.warn('Chat container not found for social card delegation');
+    return;
+  }
+
+  chatContainer.addEventListener('click', (e) => {
+    const nameEl = e.target.closest('.chatName'); // detect clicked chat name
+    if (!nameEl) return;
+
+    const chatId = nameEl.textContent.trim();
+    const user = allUsers.find(u => u.chatIdLower === chatId.toLowerCase());
+    if (user) showSocialCard(user);
+    else console.log(`No user found for chatId: ${chatId}`);
   });
 }
 // 🌤️ Dynamic Host Panel Greeting
