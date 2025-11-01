@@ -1116,7 +1116,7 @@ function replaceStarsInline(root = document.body) {
         inlineStar.alt = "⭐";
 
         // Increase size so it visually matches number height
-        inlineStar.style.height = `1.7em`;
+        inlineStar.style.height = `1.5em`;
         inlineStar.style.width = "auto";
         inlineStar.style.display = "inline-block";
         inlineStar.style.transform = "translateY(0px)";
