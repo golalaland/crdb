@@ -1701,7 +1701,7 @@ fetchFeaturedHosts();
 if (!window.verifyHandlersInitialized) {
   window.verifyHandlersInitialized = true;
 
-  // ---------- ✨ SIMPLE GOLD MODAL ALERT ----------
+  // ---------- SIMPLE GOLD MODAL ALERT (Single-line on all screens) ----------
   window.showGoldAlert = function (message, duration = 3000) {
     const existing = document.getElementById("goldAlert");
     if (existing) existing.remove();
@@ -1715,26 +1715,46 @@ if (!window.verifyHandlersInitialized) {
       transform: "translate(-50%, -50%)",
       background: "linear-gradient(90deg, #ffcc00, #ff9900)",
       color: "#111",
-      padding: "12px 20px",
+      padding: "10px 22px",
       borderRadius: "10px",
       fontWeight: "600",
       zIndex: "999999",
       boxShadow: "0 0 12px rgba(255, 215, 0, 0.5)",
       animation: "slideFade 0.4s ease-out",
+      textAlign: "center",
+      fontSize: "15px",
+      whiteSpace: "nowrap", // ✅ Keeps message on one line
+      overflow: "hidden",
+      textOverflow: "ellipsis", // ✅ Prevents overflow if too long
+      maxWidth: "95vw", // ✅ Still fits nicely on mobile
     });
-    alertEl.innerHTML = message;
+    alertEl.textContent = message;
 
     const style = document.createElement("style");
     style.textContent = `
       @keyframes slideFade {
-        from {opacity: 0; transform: translate(-50%, -60%);}
-        to {opacity: 1; transform: translate(-50%, -50%);}
+        from { opacity: 0; transform: translate(-50%, -60%); }
+        to { opacity: 1; transform: translate(-50%, -50%); }
+      }
+
+      /* Maintain single-line look even on small devices */
+      @media (max-width: 600px) {
+        #goldAlert {
+          font-size: 14px !important;
+          padding: 8px 16px !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          max-width: 95vw !important;
+        }
       }
     `;
     document.head.appendChild(style);
     document.body.appendChild(alertEl);
+
     setTimeout(() => alertEl.remove(), duration);
   };
+}
 
   // ---------- 🌍 PHONE NORMALIZER (for backend only) ----------
   function normalizePhoneForSearch(number) {
