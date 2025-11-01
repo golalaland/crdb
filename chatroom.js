@@ -1108,21 +1108,37 @@ function replaceStarsInline(root = document.body) {
       if (frag) parent.insertBefore(document.createTextNode(frag), textNode);
 
       if (i < fragments.length - 1) {
-        // Inline star wrapper
         const span = document.createElement("span");
-        span.style.display = "inline-block";  // simple inline wrapper
+        span.style.display = "inline-block";
 
         const inlineStar = document.createElement("img");
         inlineStar.src = customStarURL;
         inlineStar.alt = "⭐";
-        inlineStar.style.height = "1.2em";            // slightly bigger than text
+        inlineStar.style.height = "1em";       // scale with text
         inlineStar.style.width = "auto";
-        inlineStar.style.verticalAlign = "text-bottom"; // aligns baseline with numbers
-        inlineStar.style.transform = "translateY(0.1em)"; // small nudge for perfect alignment
         inlineStar.style.display = "inline-block";
+        inlineStar.style.transform = "translateY(0px)"; // reset
 
         span.appendChild(inlineStar);
         parent.insertBefore(span, textNode);
+
+        // --- Dynamic vertical alignment ---
+        // Insert temporary reference "0" for baseline measurement
+        const tempRef = document.createElement("span");
+        tempRef.textContent = "0"; 
+        tempRef.style.visibility = "hidden"; // invisible but measurable
+        tempRef.style.display = "inline-block";
+        span.appendChild(tempRef);
+
+        const starRect = inlineStar.getBoundingClientRect();
+        const refRect = tempRef.getBoundingClientRect();
+
+        // Compute vertical shift to align star center with text center
+        const delta = (refRect.top + refRect.height/2) - (starRect.top + starRect.height/2);
+
+        inlineStar.style.transform = `translateY(${delta}px)`;
+
+        tempRef.remove();
       }
     });
 
