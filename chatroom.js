@@ -1108,7 +1108,6 @@ function replaceStarsInline(root = document.body) {
       if (frag) parent.insertBefore(document.createTextNode(frag), textNode);
 
       if (i < fragments.length - 1) {
-        // Inline star wrapper
         const span = document.createElement("span");
         span.style.display = "inline-flex";
         span.style.alignItems = "center";
@@ -1116,8 +1115,6 @@ function replaceStarsInline(root = document.body) {
         const inlineStar = document.createElement("img");
         inlineStar.src = customStarURL;
         inlineStar.alt = "⭐";
-
-        // Adjust size and alignment for perfect numeric line alignment
         inlineStar.style.height = "1.2em";
         inlineStar.style.width = "auto";
         inlineStar.style.display = "inline-block";
@@ -1146,21 +1143,6 @@ observer.observe(document.body, { childList: true, subtree: true });
 
 // Initial run
 replaceStarsInline();
-
-// Observe dynamic content including BallerAlert
-const observer = new MutationObserver(mutations => {
-  mutations.forEach(m => {
-    m.addedNodes.forEach(node => {
-      if (node.nodeType === Node.TEXT_NODE) replaceStarsWithSVG(node.parentNode);
-      else if (node.nodeType === Node.ELEMENT_NODE) replaceStarsWithSVG(node);
-    });
-  });
-});
-observer.observe(document.body, { childList: true, subtree: true });
-
-// Initial run
-replaceStarsWithSVG();
-
 
 
 /* ---------- DOM Elements ---------- */
