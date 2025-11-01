@@ -1891,9 +1891,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 
-
   // --- Initial random values for first load ---
-function() {
+(function() {
   const onlineCountEl = document.getElementById('onlineCount');
   const storageKey = 'lastOnlineCount';
   
@@ -1951,6 +1950,7 @@ function() {
     }
   }, 30000);
 })();
+
 
 
 document.addEventListener("DOMContentLoaded", () => {
