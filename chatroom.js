@@ -2232,7 +2232,7 @@ if (saveMediaBtn) {
     }
   };
 }
-//* ======================================================
+/* ======================================================
   Social Card system — Firestore fetch + username tap trigger
   Paste this AFTER your Firebase/Firestore is initialized
   and AFTER your showMeetModal() exists.
@@ -2486,6 +2486,7 @@ if (saveMediaBtn) {
   });
 
 })(); // end IIFE
+
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
   if (!str) return "";
