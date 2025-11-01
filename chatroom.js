@@ -1800,26 +1800,40 @@ if (!window.verifyHandlersInitialized) {
     };
   };
 
-  // ---------- RUN VERIFICATION ----------
-  async function runNumberVerification(number, cost) {
-    try {
-      currentUser.stars -= cost;
-      if (refs?.starCountEl)
-        refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-      updateDoc(doc(db, "users", currentUser.uid), {
-        stars: increment(-cost),
-      }).catch(console.error);
+// ---------- RUN VERIFICATION (Universal Country Code Compatible) ----------
+async function runNumberVerification(number, cost) {
+  try {
+    // Deduct stars
+    currentUser.stars -= cost;
+    if (refs?.starCountEl)
+      refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+    await updateDoc(doc(db, "users", currentUser.uid), {
+      stars: increment(-cost),
+    }).catch(console.error);
 
-      const usersRef = collection(db, "users");
-      const qSnap = await getDocs(query(usersRef, where("whatsapp", "==", number)));
-      const verifiedUser = qSnap.docs.length ? qSnap.docs[0].data() : null;
+    // 🔍 Normalize input (remove all non-digits)
+    const cleanInput = number.replace(/\D/g, "");
+    const lastDigits = cleanInput.slice(-10); // Compare last 10 digits globally
 
-      showVerificationModal(verifiedUser, number);
-    } catch (err) {
-      console.error("Error verifying number:", err);
-      showGoldAlert("❌ Verification failed, please retry!");
-    }
+    // 🔎 Lookup all users and compare last digits
+    const usersRef = collection(db, "users");
+    const qSnap = await getDocs(usersRef);
+
+    let verifiedUser = null;
+    qSnap.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data.whatsapp) {
+        const storedDigits = data.whatsapp.replace(/\D/g, "").slice(-10);
+        if (storedDigits === lastDigits) verifiedUser = data;
+      }
+    });
+
+    showVerificationModal(verifiedUser, number);
+  } catch (err) {
+    console.error("Error verifying number:", err);
+    showGoldAlert("❌ Verification failed, please retry!");
   }
+}
 
   // ---------- VERIFICATION MODAL ----------
   function showVerificationModal(user, number) {
