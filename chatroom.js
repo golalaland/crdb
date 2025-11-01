@@ -1079,19 +1079,23 @@ videoPlayer.parentElement.appendChild(hint);
   showHint("Tap to unmute", 1500);
 })();
 
-// URL of your Shopify-hosted star SVG
-const customStarURL = "https://cdn.shopify.com/s/files/1/0962/6648/6067/files/starssvg.svg?v=1761770774";
+// URL of your custom star SVG
+const customStarURL = "https://res.cloudinary.com/dekxhwh6l/image/upload/v1760596116/starssvg_k3hmsu.svg";
 
-function replaceStarsInline(root = document.body) {
+// Replace stars in text nodes with SVG + floating stars
+function replaceStarsWithSVG(root = document.body) {
   if (!root) return;
 
   const walker = document.createTreeWalker(
     root,
     NodeFilter.SHOW_TEXT,
     {
-      acceptNode: node => (node.nodeValue && (node.nodeValue.includes("⭐") || node.nodeValue.includes("⭐️")))
-        ? NodeFilter.FILTER_ACCEPT
-        : NodeFilter.FILTER_REJECT
+      acceptNode: node => {
+        if (node.nodeValue.includes("⭐") || node.nodeValue.includes("⭐️")) {
+          return NodeFilter.FILTER_ACCEPT;
+        }
+        return NodeFilter.FILTER_REJECT;
+      }
     }
   );
 
@@ -1108,41 +1112,55 @@ function replaceStarsInline(root = document.body) {
       if (frag) parent.insertBefore(document.createTextNode(frag), textNode);
 
       if (i < fragments.length - 1) {
+        // Inline star
         const span = document.createElement("span");
         span.style.display = "inline-flex";
         span.style.alignItems = "center";
+        span.style.position = "relative";
 
         const inlineStar = document.createElement("img");
         inlineStar.src = customStarURL;
         inlineStar.alt = "⭐";
+        inlineStar.style.width = "1.2em";
         inlineStar.style.height = "1.2em";
-        inlineStar.style.width = "auto";
         inlineStar.style.display = "inline-block";
         inlineStar.style.verticalAlign = "text-bottom";
         inlineStar.style.transform = "translateY(0.15em) scale(1.2)";
 
         span.appendChild(inlineStar);
         parent.insertBefore(span, textNode);
+
+        // Floating star (same for BallerAlert)
+        const floatingStar = document.createElement("img");
+        floatingStar.src = customStarURL;
+        floatingStar.alt = "⭐";
+        floatingStar.style.width = "40px";
+        floatingStar.style.height = "40px";
+        floatingStar.style.position = "absolute";
+        floatingStar.style.pointerEvents = "none";
+        floatingStar.style.zIndex = "9999";
+
+        // Get bounding rect relative to viewport + scroll
+        const rect = inlineStar.getBoundingClientRect();
+        floatingStar.style.top = `${rect.top + rect.height / 2 + window.scrollY}px`;
+        floatingStar.style.left = `${rect.left + rect.width / 2 + window.scrollX}px`;
+        floatingStar.style.transform = "translate(-50%, -50%) scale(0)";
+
+        document.body.appendChild(floatingStar);
+
+        floatingStar.animate([
+          { transform: "translate(-50%, -50%) scale(0)", opacity: 0 },
+          { transform: "translate(-50%, -50%) scale(1.2)", opacity: 1 },
+          { transform: "translate(-50%, -50%) scale(1)", opacity: 1 }
+        ], { duration: 600, easing: "ease-out" });
+
+        setTimeout(() => floatingStar.remove(), 1500);
       }
     });
 
     parent.removeChild(textNode);
   });
 }
-
-// Observe dynamic content
-const observer = new MutationObserver(mutations => {
-  mutations.forEach(m => {
-    m.addedNodes.forEach(node => {
-      if (node.nodeType === Node.TEXT_NODE) replaceStarsInline(node.parentNode);
-      else if (node.nodeType === Node.ELEMENT_NODE) replaceStarsInline(node);
-    });
-  });
-});
-observer.observe(document.body, { childList: true, subtree: true });
-
-// Initial run
-replaceStarsInline();
 
 
 /* ---------- DOM Elements ---------- */
