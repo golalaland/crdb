@@ -2232,211 +2232,260 @@ if (saveMediaBtn) {
     }
   };
 }
-/* ======================================================
+//* ======================================================
   Social Card system — Firestore fetch + username tap trigger
   Paste this AFTER your Firebase/Firestore is initialized
   and AFTER your showMeetModal() exists.
   ====================================================== */
-(async function initSocialCardSystem() {
-  const usersByChatId = {};
-  const allUsers = [];
 
-  // -------- Load users from Firestore --------
+(async function initSocialCardSystem() {
+  // --- 1) Fetch all users once and build a lookup map ---
+  const allUsers = []; // optional array storage
+  const usersByChatId = {}; // fast lookup: chatIdLower -> user object
+
   try {
     const usersRef = collection(db, "users");
     const snaps = await getDocs(usersRef);
     snaps.forEach(docSnap => {
       const data = docSnap.data();
-      const chatIdLower = (data.chatIdLower || data.chatId || "").toString().toLowerCase();
+      // ensure chatIdLower exists for reliable matching
+      const chatIdLower = (data.chatIdLower || (data.chatId || "")).toString().toLowerCase();
+      data._docId = docSnap.id; // keep doc id if needed
       data.chatIdLower = chatIdLower;
-      data._docId = docSnap.id;
       allUsers.push(data);
       usersByChatId[chatIdLower] = data;
     });
-    console.log("✅ Loaded", allUsers.length, "users for popups");
+    console.log('Social card: loaded', allUsers.length, 'users');
   } catch (err) {
-    console.error("❌ Error loading users:", err);
+    console.error("Failed to fetch users for social card:", err);
   }
 
-  // -------- Social Card Popup --------
- function showSocialCard(user) {
-  if (!user) return;
-
-  document.getElementById('socialCard')?.remove();
-
-  const card = document.createElement('div');
-  card.id = 'socialCard';
-  Object.assign(card.style, {
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%) scale(0.95)',
-    background: '#0f0f10',
-    borderRadius: '14px',
-    padding: '16px',
-    width: '240px',
-    maxWidth: '90%',
-    zIndex: '999999',
-    textAlign: 'center',
-    boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-    color: '#fff',
-    fontFamily: 'Poppins, sans-serif',
-    opacity: '0',
-    transition: 'opacity .18s ease, transform .18s ease'
-  });
-
-  // Header
-  const nameHeader = document.createElement('h3');
-  nameHeader.textContent = user.chatId ? user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1) : 'Unknown';
-  Object.assign(nameHeader.style, {
-    margin: '0 0 6px',
-    fontSize: '18px',
-    fontWeight: '700',
-    background: `linear-gradient(90deg, ${user.isHost ? '#ff6600' : user.isVIP ? '#ff0099' : '#bbb'}, #ff33cc)`,
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent'
-  });
-  card.appendChild(nameHeader);
-
-  // Description
-  const desc = document.createElement('p');
-  desc.style.fontSize = '13px';
-  desc.style.lineHeight = '1.4';
-  desc.style.margin = '0 0 10px';
-  const pron = user.pronoun || 'their';
-  const ageGroup = user.ageGroup || 'young';
-  if (user.isHost) {
-    desc.textContent = `A ${user.fruitPick || '🍒'} ${user.naturePick || 'vibe'} ${user.gender || 'User'} in ${pron} ${ageGroup}, currently in ${user.city || 'somewhere'}, ${user.location || ''}. ${user.flair || ''}`;
-  } else if (user.isVIP) {
-    desc.textContent = `A ${user.gender || 'User'} in ${pron} ${ageGroup}, currently in ${user.city || 'somewhere'}, ${user.location || ''}. ${user.flair || ''}`;
-  } else {
-    desc.textContent = `A ${user.gender || 'User'} from ${user.city || 'somewhere'}, ${user.location || ''}. ${user.flair || ''}`;
-  }
-  card.appendChild(desc);
-
-  // Bio
-  const bio = document.createElement('div');
-  bio.style.fontSize = '12px';
-  bio.style.fontStyle = 'italic';
-  bio.style.marginBottom = '10px';
-  card.appendChild(bio);
-  typeWriterEffect(bio, user.bioPick || '✨ Nothing shared yet...');
-
-  // Meet button for hosts
-  if (user.isHost) {
-    const meetBtn = document.createElement('button');
-    meetBtn.textContent = 'Meet';
-    Object.assign(meetBtn.style, {
-      padding: '6px 14px',
-      borderRadius: '6px',
-      border: 'none',
-      fontWeight: '600',
-      background: 'linear-gradient(90deg,#ff6600,#ff0099)',
-      color: '#fff',
-      cursor: 'pointer',
-      marginBottom: '8px'
-    });
-    meetBtn.onclick = () => typeof showMeetModal === 'function' && showMeetModal(user);
-    card.appendChild(meetBtn);
-  }
-
-  // Gift slider with stars counter
-  const sliderWrapper = document.createElement('div');
-  sliderWrapper.style.display = 'flex';
-  sliderWrapper.style.alignItems = 'center';
-  sliderWrapper.style.justifyContent = 'space-between';
-  sliderWrapper.style.marginBottom = '8px';
-
-  const slider = document.createElement('input');
-  slider.type = 'range';
-  slider.min = 0;
-  slider.max = 999;
-  slider.value = 0;
-  slider.style.flex = '1';
-  slider.style.accentColor = '#ff33cc';
-  sliderWrapper.appendChild(slider);
-
-  const starCount = document.createElement('span');
-  starCount.textContent = '0 ⭐️';
-  starCount.style.fontSize = '12px';
-  starCount.style.width = '40px';
-  starCount.style.textAlign = 'right';
-  sliderWrapper.appendChild(starCount);
-
-  slider.oninput = () => {
-    starCount.textContent = `${slider.value} ⭐️`;
-  };
-  card.appendChild(sliderWrapper);
-
-  // Gift button (unique ID)
-  const giftButton = document.createElement('button');
-  giftButton.textContent = 'Gift Stars';
-  Object.assign(giftButton.style, {
-    padding: '6px 12px',
-    borderRadius: '6px',
-    border: 'none',
-    background: 'linear-gradient(90deg,#ff33cc,#ff0099)',
-    color: '#fff',
-    cursor: 'pointer',
-    fontWeight: '600'
-  });
-  giftButton.onclick = () => typeof showGiftModal === 'function' && showGiftModal(user._docId, user);
-  card.appendChild(giftButton);
-
-  // Append & animate
-  document.body.appendChild(card);
-  requestAnimationFrame(() => {
-    card.style.opacity = '1';
-    card.style.transform = 'translate(-50%, -50%) scale(1.02)';
-    setTimeout(() => card.style.transform = 'translate(-50%, -50%) scale(1)', 120);
-  });
-
-  // Click outside closes
-  const closeHandler = e => {
-    if (!card.contains(e.target)) {
-      card.remove();
-      document.removeEventListener('click', closeHandler);
-    }
-  };
-  setTimeout(() => document.addEventListener('click', closeHandler), 10);
-}
-
-// Typewriter helper
-function typeWriterEffect(el, text, speed = 35) {
-  el.textContent = '';
-  let i = 0;
-  const iv = setInterval(() => {
-    el.textContent += text.charAt(i) || '';
-    i++;
-    if (i >= text.length) clearInterval(iv);
-  }, speed);
-}
-
-  // ---------- Detect username tap ----------
-  document.addEventListener("click", (e) => {
-    let el = e.target;
-
-    while (el && el !== document.body && !el.textContent.includes(":")) {
-      el = el.parentElement;
-    }
-    if (!el || !el.textContent) return;
-
-    const text = el.textContent.trim();
-    if (!text.includes(":")) return;
-
-    const chatId = text.split(":")[0].trim().toLowerCase();
-    const user = usersByChatId[chatId] || allUsers.find(u => (u.chatId || "").toLowerCase() === chatId);
+  // --- 2) showSocialCard(user) — creates the popup card.
+  // If you already pasted a showSocialCard earlier, you can skip this definition.
+  function showSocialCard(user) {
     if (!user) return;
 
-    // temporarily fade to indicate tap
-    el.style.transition = "opacity .1s";
-    el.style.opacity = "0.4";
-    setTimeout(() => (el.style.opacity = ""), 120);
+    // remove existing
+    document.getElementById('socialCard')?.remove();
 
+    const card = document.createElement('div');
+    card.id = 'socialCard';
+    Object.assign(card.style, {
+      position: 'fixed',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%) scale(1)',
+      background: 'linear-gradient(135deg,#0f0f10,#19191b)',
+      borderRadius: '14px',
+      padding: '18px 20px',
+      color: '#fff',
+      width: '90%',
+      maxWidth: '340px',
+      zIndex: '999999',
+      textAlign: 'center',
+      boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
+      fontFamily: 'Poppins, sans-serif',
+      opacity: '0',
+      transition: 'opacity .18s ease, transform .18s ease'
+    });
+
+    // Header with gradient text
+    const chatIdDisplay = user.chatId ? (user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1)) : 'Unknown';
+    const color = user.isHost ? '#ff6600' : user.isVIP ? '#ff0099' : '#cccccc';
+
+    const header = document.createElement('h3');
+    header.textContent = chatIdDisplay;
+    Object.assign(header.style, {
+      margin: '0 0 8px',
+      fontSize: '18px',
+      fontWeight: '700',
+      background: `linear-gradient(90deg, ${color}, #ff33cc)`,
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent'
+    });
+    card.appendChild(header);
+
+    // Details line
+    const detailsEl = document.createElement('p');
+    detailsEl.style.margin = '0 0 12px';
+    detailsEl.style.fontSize = '14px';
+    detailsEl.style.lineHeight = '1.4';
+
+    const flairText = user.flair || '';
+    const pronoun = user.pronoun || 'their';
+    const ageGroup = user.ageGroup || (user.age ? `${user.age} yrs` : 'young');
+    const gender = user.gender || 'User';
+    const country = user.country || '';
+    const city = user.city || '';
+
+    if (user.isHost) {
+      const fruit = user.fruitPick || '🍒';
+      const nature = user.naturePick || 'vibe';
+      detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
+    } else if (user.isVIP) {
+      detailsEl.innerHTML = `A ${gender} in ${pronoun} ${ageGroup}, currently in ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
+    } else {
+      detailsEl.innerHTML = `A ${gender} from ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
+    }
+    card.appendChild(detailsEl);
+
+    // Bio area (typewriter)
+    const bioEl = document.createElement('div');
+    bioEl.style.margin = '8px 0 14px';
+    bioEl.style.fontStyle = 'italic';
+    bioEl.style.fontSize = '13px';
+    card.appendChild(bioEl);
+    typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
+
+    // Buttons wrapper (NO gift button here)
+    const btnWrap = document.createElement('div');
+    Object.assign(btnWrap.style, { display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '6px' });
+
+    // Meet button for hosts only (links to your existing showMeetModal)
+    if (user.isHost) {
+      const meetBtn = document.createElement('button');
+      meetBtn.textContent = 'Meet';
+      Object.assign(meetBtn.style, {
+        padding: '8px 16px',
+        borderRadius: '6px',
+        border: 'none',
+        fontWeight: '600',
+        background: 'linear-gradient(90deg,#ff6600,#ff0099)',
+        color: '#fff',
+        cursor: 'pointer'
+      });
+      meetBtn.onclick = () => {
+        try {
+          // call your existing meet modal function
+          if (typeof showMeetModal === 'function') showMeetModal(user);
+          else console.warn('showMeetModal not defined yet');
+        } catch (err) {
+          console.error('Error launching meet modal:', err);
+        }
+      };
+      btnWrap.appendChild(meetBtn);
+    }
+
+    // Optionally: small socials shortcut (if any social exists)
+    const socialsPresent = user.whatsapp || user.instagram || user.tiktok || user.telegram;
+    if (socialsPresent) {
+      const socialBtn = document.createElement('button');
+      socialBtn.textContent = 'Socials';
+      Object.assign(socialBtn.style, {
+        padding: '8px 12px',
+        borderRadius: '6px',
+        border: '1px solid rgba(255,255,255,0.06)',
+        background: 'transparent',
+        color: '#fff',
+        cursor: 'pointer',
+        fontWeight: '600'
+      });
+      socialBtn.onclick = () => {
+        // opens first available social (fallback to instagram/tiktok/whatsapp/telegram)
+        const url = user.instagram || user.tiktok || user.whatsapp || user.telegram;
+        if (url) window.open(url.startsWith('http') ? url : `https://${url}`, '_blank');
+      };
+      btnWrap.appendChild(socialBtn);
+    }
+
+    card.appendChild(btnWrap);
+
+    // Append & animate in
+    document.body.appendChild(card);
+    // force reflow then animate
+    requestAnimationFrame(() => {
+      card.style.opacity = '1';
+      card.style.transform = 'translate(-50%, -50%) scale(1.02)';
+      setTimeout(() => (card.style.transform = 'translate(-50%, -50%) scale(1)'), 120);
+    });
+
+    // Click outside to close
+    const closeHandler = (ev) => {
+      if (!card.contains(ev.target)) {
+        card.remove();
+        document.removeEventListener('click', closeHandler);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', closeHandler), 10);
+
+    // Make draggable (mouse only; harmless if unused)
+    makeDraggable(card);
+  }
+
+  // --- Small helpers used above ---
+  function typeWriterEffect(el, text, speed = 35) {
+    el.textContent = '';
+    let i = 0;
+    const iv = setInterval(() => {
+      el.textContent += text.charAt(i) || '';
+      i++;
+      if (i >= text.length) clearInterval(iv);
+    }, speed);
+  }
+
+  function makeDraggable(el) {
+    let isDown = false;
+    let offset = [0, 0];
+
+    el.addEventListener('mousedown', (e) => {
+      isDown = true;
+      offset = [el.offsetLeft - e.clientX, el.offsetTop - e.clientY];
+      el.style.cursor = 'grabbing';
+    });
+    document.addEventListener('mouseup', () => {
+      isDown = false;
+      el.style.cursor = 'grab';
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      el.style.left = (e.clientX + offset[0]) + 'px';
+      el.style.top = (e.clientY + offset[1]) + 'px';
+      el.style.transform = 'translate(0,0)';
+    });
+  }
+
+  // --- 3) Detector: tap/click on username in message like "mansamanzi: YO!!!" ---
+  // This listens at document-level and extracts the username as text before the first ":".
+  document.addEventListener('pointerdown', (e) => {
+    const target = e.target;
+    if (!target || !target.textContent) return;
+
+    // Quick guard — only text nodes with ":" in them are interesting
+    const txt = target.textContent;
+    if (!txt.includes(':')) return;
+
+    // Extract the username (first token before the colon)
+    const chatId = txt.split(':')[0].trim();
+    if (!chatId) return;
+
+    // Find the user — try fast map then fallback to array search
+    const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || '').toLowerCase() === chatId.toLowerCase());
+    if (!user) {
+      // sometimes messages show a display name not in users collection — ignore
+      // console.log('No user record for chatId:', chatId);
+      return;
+    }
+
+    // Prevent popping for clicks on your own name unless you want to see your card
+    if (user._docId === currentUser?.uid) {
+      // If you want to allow self-popup: remove this if-block
+      // showSocialCard(user);
+      return;
+    }
+
+    // small tap effect
+    try {
+      target.style.transition = 'opacity 0.12s';
+      target.style.opacity = '0.5';
+      setTimeout(() => (target.style.opacity = ''), 140);
+    } catch (err) { /* ignore styling errors */ }
+
+    // show card
     showSocialCard(user);
   });
-})();
 
+})(); // end IIFE
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
   if (!str) return "";
