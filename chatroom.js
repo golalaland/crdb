@@ -1114,26 +1114,25 @@ function replaceStarsInline(root = document.body) {
         const inlineStar = document.createElement("img");
         inlineStar.src = customStarURL;
         inlineStar.alt = "⭐";
-        inlineStar.style.height = "1em";       // scale with text
+
+        // Slightly bigger than text for visual alignment
+        inlineStar.style.height = `calc(1em + 1px)`;
         inlineStar.style.width = "auto";
         inlineStar.style.display = "inline-block";
-        inlineStar.style.transform = "translateY(0px)"; // reset
+        inlineStar.style.transform = "translateY(0px)";
 
         span.appendChild(inlineStar);
         parent.insertBefore(span, textNode);
 
-        // --- Dynamic vertical alignment ---
-        // Insert temporary reference "0" for baseline measurement
+        // Dynamic vertical alignment using a temporary "0"
         const tempRef = document.createElement("span");
-        tempRef.textContent = "0"; 
-        tempRef.style.visibility = "hidden"; // invisible but measurable
+        tempRef.textContent = "0";
+        tempRef.style.visibility = "hidden";
         tempRef.style.display = "inline-block";
         span.appendChild(tempRef);
 
         const starRect = inlineStar.getBoundingClientRect();
         const refRect = tempRef.getBoundingClientRect();
-
-        // Compute vertical shift to align star center with text center
         const delta = (refRect.top + refRect.height/2) - (starRect.top + starRect.height/2);
 
         inlineStar.style.transform = `translateY(${delta}px)`;
