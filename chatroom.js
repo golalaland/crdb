@@ -1701,7 +1701,7 @@ fetchFeaturedHosts();
 if (!window.verifyHandlersInitialized) {
   window.verifyHandlersInitialized = true;
 
-  // ---------- SIMPLE GOLD MODAL ALERT (Single-line on all screens) ----------
+  // ---------- ✨ SIMPLE GOLD MODAL ALERT (Now stays one line everywhere) ----------
   window.showGoldAlert = function (message, duration = 3000) {
     const existing = document.getElementById("goldAlert");
     if (existing) existing.remove();
@@ -1723,21 +1723,21 @@ if (!window.verifyHandlersInitialized) {
       animation: "slideFade 0.4s ease-out",
       textAlign: "center",
       fontSize: "15px",
-      whiteSpace: "nowrap", // ✅ Keeps message on one line
+      whiteSpace: "nowrap", // ✅ Force single line
       overflow: "hidden",
-      textOverflow: "ellipsis", // ✅ Prevents overflow if too long
-      maxWidth: "95vw", // ✅ Still fits nicely on mobile
+      textOverflow: "ellipsis", // ✅ Prevents wrapping
+      maxWidth: "95vw", // ✅ Fits all screens safely
     });
     alertEl.textContent = message;
 
     const style = document.createElement("style");
     style.textContent = `
       @keyframes slideFade {
-        from { opacity: 0; transform: translate(-50%, -60%); }
-        to { opacity: 1; transform: translate(-50%, -50%); }
+        from {opacity: 0; transform: translate(-50%, -60%);}
+        to {opacity: 1; transform: translate(-50%, -50%);}
       }
 
-      /* Maintain single-line look even on small devices */
+      /* ✅ Ensures same one-line behavior even on mobile */
       @media (max-width: 600px) {
         #goldAlert {
           font-size: 14px !important;
@@ -1751,11 +1751,9 @@ if (!window.verifyHandlersInitialized) {
     `;
     document.head.appendChild(style);
     document.body.appendChild(alertEl);
-
     setTimeout(() => alertEl.remove(), duration);
   };
 }
-
   // ---------- 🌍 PHONE NORMALIZER (for backend only) ----------
   function normalizePhoneForSearch(number) {
     number = number.replace(/\D/g, "");
