@@ -2237,255 +2237,185 @@ if (saveMediaBtn) {
   Paste this AFTER your Firebase/Firestore is initialized
   and AFTER your showMeetModal() exists.
   ====================================================== */
-
 (async function initSocialCardSystem() {
-  // --- 1) Fetch all users once and build a lookup map ---
-  const allUsers = []; // optional array storage
-  const usersByChatId = {}; // fast lookup: chatIdLower -> user object
+  const usersByChatId = {};
+  const allUsers = [];
 
   try {
     const usersRef = collection(db, "users");
     const snaps = await getDocs(usersRef);
     snaps.forEach(docSnap => {
       const data = docSnap.data();
-      // ensure chatIdLower exists for reliable matching
-      const chatIdLower = (data.chatIdLower || (data.chatId || "")).toString().toLowerCase();
-      data._docId = docSnap.id; // keep doc id if needed
+      const chatIdLower = (data.chatIdLower || data.chatId || "").toString().toLowerCase();
       data.chatIdLower = chatIdLower;
+      data._docId = docSnap.id;
       allUsers.push(data);
       usersByChatId[chatIdLower] = data;
     });
-    console.log('Social card: loaded', allUsers.length, 'users');
+    console.log("✅ Loaded", allUsers.length, "users for popups");
   } catch (err) {
-    console.error("Failed to fetch users for social card:", err);
+    console.error("❌ Error loading users:", err);
   }
 
-  // --- 2) showSocialCard(user) — creates the popup card.
-  // If you already pasted a showSocialCard earlier, you can skip this definition.
+  // ---------- Create Popup ----------
   function showSocialCard(user) {
     if (!user) return;
 
-    // remove existing
-    document.getElementById('socialCard')?.remove();
+    document.getElementById("socialCard")?.remove();
 
-    const card = document.createElement('div');
-    card.id = 'socialCard';
+    const card = document.createElement("div");
+    card.id = "socialCard";
     Object.assign(card.style, {
-      position: 'fixed',
-      top: '50%',
-      left: '50%',
-      transform: 'translate(-50%, -50%) scale(1)',
-      background: 'linear-gradient(135deg,#0f0f10,#19191b)',
-      borderRadius: '14px',
-      padding: '18px 20px',
-      color: '#fff',
-      width: '90%',
-      maxWidth: '340px',
-      zIndex: '999999',
-      textAlign: 'center',
-      boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
-      fontFamily: 'Poppins, sans-serif',
-      opacity: '0',
-      transition: 'opacity .18s ease, transform .18s ease'
+      position: "fixed",
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%) scale(0.95)",
+      background: "#0f0f10",
+      borderRadius: "14px",
+      padding: "20px",
+      color: "#fff",
+      width: "88%",
+      maxWidth: "340px",
+      zIndex: "99999",
+      textAlign: "center",
+      boxShadow: "0 10px 40px rgba(0,0,0,0.6)",
+      fontFamily: "Poppins, sans-serif",
+      opacity: "0",
+      transition: "opacity .18s ease, transform .18s ease",
+      border: "1px solid rgba(255,255,255,0.08)"
     });
 
-    // Header with gradient text
-    const chatIdDisplay = user.chatId ? (user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1)) : 'Unknown';
-    const color = user.isHost ? '#ff6600' : user.isVIP ? '#ff0099' : '#cccccc';
+    const color = user.isHost ? "#ff6600" : user.isVIP ? "#ff0099" : "#bbb";
 
-    const header = document.createElement('h3');
-    header.textContent = chatIdDisplay;
+    const header = document.createElement("h3");
+    header.textContent = user.chatId || "Unknown";
     Object.assign(header.style, {
-      margin: '0 0 8px',
-      fontSize: '18px',
-      fontWeight: '700',
+      margin: "0 0 8px",
+      fontSize: "18px",
+      fontWeight: "700",
       background: `linear-gradient(90deg, ${color}, #ff33cc)`,
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent'
+      WebkitBackgroundClip: "text",
+      WebkitTextFillColor: "transparent"
     });
     card.appendChild(header);
 
-    // Details line
-    const detailsEl = document.createElement('p');
-    detailsEl.style.margin = '0 0 12px';
-    detailsEl.style.fontSize = '14px';
-    detailsEl.style.lineHeight = '1.4';
+    const desc = document.createElement("p");
+    desc.style.margin = "0 0 12px";
+    desc.style.fontSize = "14px";
+    desc.style.lineHeight = "1.5";
 
-    const flairText = user.flair || '';
-    const pronoun = user.pronoun || 'their';
-    const ageGroup = user.ageGroup || (user.age ? `${user.age} yrs` : 'young');
-    const gender = user.gender || 'User';
-    const country = user.country || '';
-    const city = user.city || '';
+    const { flair, gender, city, country, fruitPick, naturePick, ageGroup, pronoun } = user;
+    const pron = pronoun || "their";
 
     if (user.isHost) {
-      const fruit = user.fruitPick || '🍒';
-      const nature = user.naturePick || 'vibe';
-      detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
-    } else if (user.isVIP) {
-      detailsEl.innerHTML = `A ${gender} in ${pronoun} ${ageGroup}, currently in ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
+      desc.innerHTML = `A ${fruitPick || "🍹"} ${naturePick || "vibe"} ${gender || "soul"} in ${pron} ${ageGroup || "prime"}, based in ${city || "somewhere"}, ${country || ""}. ${flair || ""}`;
     } else {
-      detailsEl.innerHTML = `A ${gender} from ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
+      desc.innerHTML = `${gender || "Someone"} in ${city || "somewhere"}, ${country || ""}. ${flair || ""}`;
     }
-    card.appendChild(detailsEl);
+    card.appendChild(desc);
 
-    // Bio area (typewriter)
-    const bioEl = document.createElement('div');
-    bioEl.style.margin = '8px 0 14px';
-    bioEl.style.fontStyle = 'italic';
-    bioEl.style.fontSize = '13px';
-    card.appendChild(bioEl);
-    typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
+    const bio = document.createElement("div");
+    bio.style.fontStyle = "italic";
+    bio.style.fontSize = "13px";
+    bio.style.marginBottom = "14px";
+    card.appendChild(bio);
+    typeWriter(bio, user.bioPick || "✨ Nothing shared yet...");
 
-    // Buttons wrapper (NO gift button here)
-    const btnWrap = document.createElement('div');
-    Object.assign(btnWrap.style, { display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '6px' });
+    const btns = document.createElement("div");
+    btns.style.display = "flex";
+    btns.style.justifyContent = "center";
+    btns.style.gap = "10px";
 
-    // Meet button for hosts only (links to your existing showMeetModal)
     if (user.isHost) {
-      const meetBtn = document.createElement('button');
-      meetBtn.textContent = 'Meet';
+      const meetBtn = document.createElement("button");
+      meetBtn.textContent = "Meet";
       Object.assign(meetBtn.style, {
-        padding: '8px 16px',
-        borderRadius: '6px',
-        border: 'none',
-        fontWeight: '600',
-        background: 'linear-gradient(90deg,#ff6600,#ff0099)',
-        color: '#fff',
-        cursor: 'pointer'
+        padding: "8px 16px",
+        borderRadius: "6px",
+        border: "none",
+        background: "linear-gradient(90deg,#ff6600,#ff0099)",
+        color: "#fff",
+        cursor: "pointer",
+        fontWeight: "600"
       });
       meetBtn.onclick = () => {
-        try {
-          // call your existing meet modal function
-          if (typeof showMeetModal === 'function') showMeetModal(user);
-          else console.warn('showMeetModal not defined yet');
-        } catch (err) {
-          console.error('Error launching meet modal:', err);
-        }
+        if (typeof showMeetModal === "function") showMeetModal(user);
+        else console.warn("showMeetModal not found");
       };
-      btnWrap.appendChild(meetBtn);
+      btns.appendChild(meetBtn);
     }
 
-    // Optionally: small socials shortcut (if any social exists)
-    const socialsPresent = user.whatsapp || user.instagram || user.tiktok || user.telegram;
-    if (socialsPresent) {
-      const socialBtn = document.createElement('button');
-      socialBtn.textContent = 'Socials';
+    const socials = user.instagram || user.tiktok || user.whatsapp || user.telegram;
+    if (socials) {
+      const socialBtn = document.createElement("button");
+      socialBtn.textContent = "Socials";
       Object.assign(socialBtn.style, {
-        padding: '8px 12px',
-        borderRadius: '6px',
-        border: '1px solid rgba(255,255,255,0.06)',
-        background: 'transparent',
-        color: '#fff',
-        cursor: 'pointer',
-        fontWeight: '600'
+        padding: "8px 12px",
+        borderRadius: "6px",
+        border: "1px solid rgba(255,255,255,0.08)",
+        background: "transparent",
+        color: "#fff",
+        cursor: "pointer",
+        fontWeight: "600"
       });
       socialBtn.onclick = () => {
-        // opens first available social (fallback to instagram/tiktok/whatsapp/telegram)
         const url = user.instagram || user.tiktok || user.whatsapp || user.telegram;
-        if (url) window.open(url.startsWith('http') ? url : `https://${url}`, '_blank');
+        window.open(url.startsWith("http") ? url : `https://${url}`, "_blank");
       };
-      btnWrap.appendChild(socialBtn);
+      btns.appendChild(socialBtn);
     }
 
-    card.appendChild(btnWrap);
+    card.appendChild(btns);
 
-    // Append & animate in
     document.body.appendChild(card);
-    // force reflow then animate
     requestAnimationFrame(() => {
-      card.style.opacity = '1';
-      card.style.transform = 'translate(-50%, -50%) scale(1.02)';
-      setTimeout(() => (card.style.transform = 'translate(-50%, -50%) scale(1)'), 120);
+      card.style.opacity = "1";
+      card.style.transform = "translate(-50%, -50%) scale(1)";
     });
 
-    // Click outside to close
-    const closeHandler = (ev) => {
-      if (!card.contains(ev.target)) {
+    const close = (e) => {
+      if (!card.contains(e.target)) {
         card.remove();
-        document.removeEventListener('click', closeHandler);
+        document.removeEventListener("click", close);
       }
     };
-    setTimeout(() => document.addEventListener('click', closeHandler), 10);
-
-    // Make draggable (mouse only; harmless if unused)
-    makeDraggable(card);
+    setTimeout(() => document.addEventListener("click", close), 10);
   }
 
-  // --- Small helpers used above ---
-  function typeWriterEffect(el, text, speed = 35) {
-    el.textContent = '';
+  function typeWriter(el, text, speed = 35) {
+    el.textContent = "";
     let i = 0;
     const iv = setInterval(() => {
-      el.textContent += text.charAt(i) || '';
+      el.textContent += text.charAt(i) || "";
       i++;
       if (i >= text.length) clearInterval(iv);
     }, speed);
   }
 
-  function makeDraggable(el) {
-    let isDown = false;
-    let offset = [0, 0];
+  // ---------- Detect username tap ----------
+  document.addEventListener("click", (e) => {
+    let el = e.target;
 
-    el.addEventListener('mousedown', (e) => {
-      isDown = true;
-      offset = [el.offsetLeft - e.clientX, el.offsetTop - e.clientY];
-      el.style.cursor = 'grabbing';
-    });
-    document.addEventListener('mouseup', () => {
-      isDown = false;
-      el.style.cursor = 'grab';
-    });
-    document.addEventListener('mousemove', (e) => {
-      if (!isDown) return;
-      e.preventDefault();
-      el.style.left = (e.clientX + offset[0]) + 'px';
-      el.style.top = (e.clientY + offset[1]) + 'px';
-      el.style.transform = 'translate(0,0)';
-    });
-  }
-
-  // --- 3) Detector: tap/click on username in message like "mansamanzi: YO!!!" ---
-  // This listens at document-level and extracts the username as text before the first ":".
-  document.addEventListener('pointerdown', (e) => {
-    const target = e.target;
-    if (!target || !target.textContent) return;
-
-    // Quick guard — only text nodes with ":" in them are interesting
-    const txt = target.textContent;
-    if (!txt.includes(':')) return;
-
-    // Extract the username (first token before the colon)
-    const chatId = txt.split(':')[0].trim();
-    if (!chatId) return;
-
-    // Find the user — try fast map then fallback to array search
-    const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || '').toLowerCase() === chatId.toLowerCase());
-    if (!user) {
-      // sometimes messages show a display name not in users collection — ignore
-      // console.log('No user record for chatId:', chatId);
-      return;
+    // climb up the DOM tree to find element containing text with ':'
+    while (el && el !== document.body && !el.textContent.includes(":")) {
+      el = el.parentElement;
     }
+    if (!el || !el.textContent) return;
 
-    // Prevent popping for clicks on your own name unless you want to see your card
-    if (user._docId === currentUser?.uid) {
-      // If you want to allow self-popup: remove this if-block
-      // showSocialCard(user);
-      return;
-    }
+    const text = el.textContent.trim();
+    if (!text.includes(":")) return;
 
-    // small tap effect
-    try {
-      target.style.transition = 'opacity 0.12s';
-      target.style.opacity = '0.5';
-      setTimeout(() => (target.style.opacity = ''), 140);
-    } catch (err) { /* ignore styling errors */ }
+    const chatId = text.split(":")[0].trim().toLowerCase();
+    const user = usersByChatId[chatId] || allUsers.find(u => (u.chatId || "").toLowerCase() === chatId);
+    if (!user) return;
 
-    // show card
+    el.style.transition = "opacity .1s";
+    el.style.opacity = "0.6";
+    setTimeout(() => (el.style.opacity = ""), 120);
+
     showSocialCard(user);
   });
-
-})(); // end IIFE
+})();
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
   if (!str) return "";
