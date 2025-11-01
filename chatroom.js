@@ -2232,7 +2232,197 @@ if (saveMediaBtn) {
     }
   };
 }
+/* ==============================
+✨ Social Card System (Host + VIP)
+============================== */
+function showSocialCard(user) {
+  // Remove any existing card
+  const existing = document.getElementById('socialCard');
+  if (existing) existing.remove();
 
+  // Wrapper
+  const card = document.createElement('div');
+  card.id = 'socialCard';
+  Object.assign(card.style, {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    background: 'linear-gradient(135deg, #1a1a1a, #222)',
+    borderRadius: '16px',
+    padding: '20px 22px',
+    textAlign: 'center',
+    color: '#fff',
+    width: '90%',
+    maxWidth: '340px',
+    zIndex: '999999',
+    fontFamily: 'Poppins, sans-serif',
+    boxShadow: '0 0 25px rgba(255,255,255,0.08)',
+    cursor: 'grab',
+    transition: 'all 0.25s ease'
+  });
+
+  // Header (chatId with gradient)
+  const chatIdDisplay = user.chatId
+    ? user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1)
+    : "Unknown";
+
+  const color = user.isHost ? '#ff6600' : user.isVIP ? '#ff0099' : '#ccc';
+  const header = document.createElement('h3');
+  header.textContent = chatIdDisplay;
+  Object.assign(header.style, {
+    background: `linear-gradient(90deg,${color},#ff33cc)`,
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    fontWeight: '700',
+    marginBottom: '10px',
+    fontSize: '18px',
+  });
+  card.appendChild(header);
+
+  // Details section
+  const detailsEl = document.createElement('p');
+  detailsEl.style.margin = '0 0 12px';
+  detailsEl.style.fontSize = '14px';
+  detailsEl.style.lineHeight = '1.45';
+
+  const flairText = user.flair || '';
+  const pronoun = user.pronoun || 'their';
+  const ageGroup = user.ageGroup || (user.age ? `${user.age} yrs` : 'young');
+  const gender = user.gender || 'User';
+  const country = user.country || '🌍';
+  const city = user.city || 'somewhere';
+
+  if (user.isHost) {
+    const fruit = user.fruitPick || '🍒';
+    const nature = user.naturePick || 'breeze';
+    detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flairText}`;
+  } else if (user.isVIP) {
+    detailsEl.innerHTML = `A ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flairText}`;
+  } else {
+    detailsEl.innerHTML = `A ${gender} from ${city}, ${country}. ${flairText}`;
+  }
+  card.appendChild(detailsEl);
+
+  // BioPick with typewriter animation
+  const bioEl = document.createElement('div');
+  bioEl.style.margin = '10px 0 18px';
+  bioEl.style.fontStyle = 'italic';
+  card.appendChild(bioEl);
+  typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
+
+  // Buttons area
+  const btnWrap = document.createElement('div');
+  btnWrap.style.display = 'flex';
+  btnWrap.style.justifyContent = 'center';
+  btnWrap.style.gap = '10px';
+  btnWrap.style.marginTop = '8px';
+
+  // Gift Button (hook later)
+  const giftBtn = document.createElement('button');
+  giftBtn.textContent = 'Gift';
+  Object.assign(giftBtn.style, {
+    padding: '8px 16px',
+    borderRadius: '6px',
+    border: 'none',
+    fontWeight: '600',
+    background: 'linear-gradient(90deg,#ff0099,#ff6600)',
+    color: '#fff',
+    cursor: 'pointer',
+  });
+  btnWrap.appendChild(giftBtn);
+
+  // Meet Button (hosts only)
+  if (user.isHost) {
+    const meetBtn = document.createElement('button');
+    meetBtn.textContent = 'Meet';
+    Object.assign(meetBtn.style, {
+      padding: '8px 16px',
+      borderRadius: '6px',
+      border: 'none',
+      fontWeight: '600',
+      background: 'linear-gradient(90deg,#ff6600,#ff0099)',
+      color: '#fff',
+      cursor: 'pointer',
+    });
+    meetBtn.onclick = () => showMeetModal(user); // 🔗 Linked to existing meet modal
+    btnWrap.appendChild(meetBtn);
+  }
+
+  card.appendChild(btnWrap);
+  document.body.appendChild(card);
+
+  // ✨ Click outside to close
+  const closeOnOutside = (e) => {
+    if (!card.contains(e.target)) {
+      card.remove();
+      document.removeEventListener('click', closeOnOutside);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeOnOutside), 10);
+
+  // 🖐️ Make draggable (simple UX)
+  makeDraggable(card);
+}
+
+/* ==========================
+✨ Typewriter Text Animation
+========================== */
+function typeWriterEffect(el, text, speed = 35) {
+  el.textContent = '';
+  let i = 0;
+  const interval = setInterval(() => {
+    el.textContent += text.charAt(i);
+    i++;
+    if (i >= text.length) clearInterval(interval);
+  }, speed);
+}
+
+/* ==========================
+🖐️ Draggable Card Function
+========================== */
+function makeDraggable(el) {
+  let isDown = false;
+  let offset = [0, 0];
+
+  el.addEventListener('mousedown', (e) => {
+    isDown = true;
+    offset = [
+      el.offsetLeft - e.clientX,
+      el.offsetTop - e.clientY
+    ];
+    el.style.cursor = 'grabbing';
+  });
+
+  document.addEventListener('mouseup', () => {
+    isDown = false;
+    el.style.cursor = 'grab';
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    e.preventDefault();
+    if (isDown) {
+      el.style.left = (e.clientX + offset[0]) + 'px';
+      el.style.top = (e.clientY + offset[1]) + 'px';
+      el.style.transform = 'translate(0,0)';
+    }
+  });
+}
+
+/* ==========================
+💬 Chat Name Click Listener
+========================== */
+function initSocialCards(allUsers) {
+  document.querySelectorAll('.chatName').forEach(nameEl => {
+    nameEl.addEventListener('click', () => {
+      const chatId = nameEl.textContent.trim();
+      const user = allUsers.find(
+        u => u.chatIdLower === chatId.toLowerCase()
+      );
+      if (user) showSocialCard(user);
+    });
+  });
+}
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
   if (!str) return "";
