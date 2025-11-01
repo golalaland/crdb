@@ -1697,7 +1697,6 @@ window.addEventListener("click", e => {
 /* ---------- Init ---------- */
 fetchFeaturedHosts();
 
-code that works: 
 
 // --- ✅ Prevent redeclaration across reloads ---
 if (!window.verifyHandlersInitialized) {
@@ -1737,7 +1736,6 @@ if (!window.verifyHandlersInitialized) {
     document.body.appendChild(alertEl);
     setTimeout(() => alertEl.remove(), duration);
   };
-
 
   // ---------- 🌍 PHONE NORMALIZER (for backend only) ----------
   function normalizePhoneForSearch(number) {
