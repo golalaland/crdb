@@ -1082,7 +1082,7 @@ videoPlayer.parentElement.appendChild(hint);
 // URL of your custom star SVG
 const customStarURL = "https://res.cloudinary.com/dekxhwh6l/image/upload/v1760596116/starssvg_k3hmsu.svg";
 
-// Replace stars in text nodes with SVG + floating stars
+// Replace stars in text nodes with SVG + floating stars (invisible)
 function replaceStarsWithSVG(root = document.body) {
   if (!root) return;
 
@@ -1130,7 +1130,7 @@ function replaceStarsWithSVG(root = document.body) {
         span.appendChild(inlineStar);
         parent.insertBefore(span, textNode);
 
-        // Floating star (same for BallerAlert)
+        // Floating star (fully invisible)
         const floatingStar = document.createElement("img");
         floatingStar.src = customStarURL;
         floatingStar.alt = "⭐";
@@ -1139,28 +1139,37 @@ function replaceStarsWithSVG(root = document.body) {
         floatingStar.style.position = "absolute";
         floatingStar.style.pointerEvents = "none";
         floatingStar.style.zIndex = "9999";
+        floatingStar.style.opacity = "0"; // invisible
+        floatingStar.style.transform = "translate(-50%, -50%)";
 
-        // Get bounding rect relative to viewport + scroll
         const rect = inlineStar.getBoundingClientRect();
         floatingStar.style.top = `${rect.top + rect.height / 2 + window.scrollY}px`;
         floatingStar.style.left = `${rect.left + rect.width / 2 + window.scrollX}px`;
-        floatingStar.style.transform = "translate(-50%, -50%) scale(0)";
 
         document.body.appendChild(floatingStar);
 
-        floatingStar.animate([
-          { transform: "translate(-50%, -50%) scale(0)", opacity: 0 },
-          { transform: "translate(-50%, -50%) scale(1.2)", opacity: 1 },
-          { transform: "translate(-50%, -50%) scale(1)", opacity: 1 }
-        ], { duration: 600, easing: "ease-out" });
-
-        setTimeout(() => floatingStar.remove(), 1500);
+        // Remove immediately (optional, keeps DOM cleaner)
+        setTimeout(() => floatingStar.remove(), 1);
       }
     });
 
     parent.removeChild(textNode);
   });
 }
+
+// Observe dynamic content including BallerAlert
+const observer = new MutationObserver(mutations => {
+  mutations.forEach(m => {
+    m.addedNodes.forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE) replaceStarsWithSVG(node.parentNode);
+      else if (node.nodeType === Node.ELEMENT_NODE) replaceStarsWithSVG(node);
+    });
+  });
+});
+observer.observe(document.body, { childList: true, subtree: true });
+
+// Initial run
+replaceStarsWithSVG();
 
 
 /* ---------- DOM Elements ---------- */
