@@ -569,7 +569,7 @@ async function endTrain(success, ticketNumber = null) {
 
     const dest = trainDestinationEl?.textContent || 'your destination';
     const tnum = ticketNumber || '---';
-    showGoldAlert(`🎫 You’ve secured your ${dest} train ticket #${tnum} — welcome aboard! You earned ₦${REWARD_TO_USER.toLocaleString()}!`, 4500);
+    showGoldAlert(`You’ve secured your ${dest} train ticket #${tnum} — welcome aboard! You earned ₦${REWARD_TO_USER.toLocaleString()}!`, 4500);
     playAudio(SOUND_PATHS.ding);
     maybeShowHalfwayAlert();
 
@@ -699,7 +699,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// --- Gold Gradient Centered Alert with Sparkles ---
+// --- Gold Centered Sliding Alert with Header & Confetti ---
 function showGoldAlert(message, duration = 4500) {
   // Remove existing alert
   const existing = document.getElementById('goldAlert');
@@ -709,10 +709,9 @@ function showGoldAlert(message, duration = 4500) {
   const alertEl = document.createElement('div');
   alertEl.id = 'goldAlert';
   alertEl.innerHTML = `
-    <span class="sparkle">*</span>
-    <span class="sparkle">*</span>
-    <span class="sparkle">*</span>
-    <span class="alert-text">${message}</span>
+    <div style="font-size:20px;font-weight:bold;margin-bottom:8px;">🎉 Congratulations! 🎫</div>
+    <div style="font-size:16px;">${message}</div>
+    <canvas id="confettiCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas>
   `;
 
   // Style the alert
@@ -720,63 +719,78 @@ function showGoldAlert(message, duration = 4500) {
     position: 'fixed',
     top: '50%',
     left: '50%',
-    transform: 'translate(-50%, -50%)',
-    background: 'linear-gradient(90deg, #FFD700, #FFC200)',
+    transform: 'translate(-50%, -50%) translateY(20px)', // start slightly below center
+    background: 'linear-gradient(90deg, #FFD700, #FFC200)', // gold gradient
     color: '#000',
     fontWeight: 'bold',
-    fontSize: '18px',
-    padding: '15px 40px',        // landscape shape
+    padding: '20px 40px', // landscape
     borderRadius: '16px',
     boxShadow: '0 6px 16px rgba(0,0,0,0.4)',
     textAlign: 'center',
     zIndex: 9999,
     opacity: 0,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '10px',
-    position: 'fixed',
-    whiteSpace: 'nowrap'
+    overflow: 'hidden',
   });
-
-  // Sparkle animation
-  const style = document.createElement('style');
-  style.textContent = `
-    #goldAlert .sparkle {
-      color: white;
-      font-size: 24px;
-      animation: sparkle 1s infinite alternate;
-      opacity: 0.8;
-    }
-    #goldAlert .sparkle:nth-child(1) { animation-delay: 0s; }
-    #goldAlert .sparkle:nth-child(2) { animation-delay: 0.3s; }
-    #goldAlert .sparkle:nth-child(3) { animation-delay: 0.6s; }
-
-    @keyframes sparkle {
-      0% { transform: scale(1); opacity: 0.8; }
-      50% { transform: scale(1.4); opacity: 1; }
-      100% { transform: scale(1); opacity: 0.8; }
-    }
-    #goldAlert .alert-text {
-      display: inline-block;
-    }
-  `;
-  document.head.appendChild(style);
 
   document.body.appendChild(alertEl);
 
-  // Fade in
+  // Fade in & slide up
   requestAnimationFrame(() => {
     alertEl.style.opacity = 1;
+    alertEl.style.transform = 'translate(-50%, -50%) translateY(0)';
   });
 
-  // Fade out after duration
+  // --- Confetti effect ---
+  const canvas = document.getElementById('confettiCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = alertEl.offsetWidth;
+  canvas.height = alertEl.offsetHeight;
+
+  const confettiCount = 50;
+  const confetti = [];
+  for (let i = 0; i < confettiCount; i++) {
+    confetti.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 6 + 2,
+      d: Math.random() * 20 + 10,
+      color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+      tilt: Math.random() * 10 - 10,
+      tiltAngleIncremental: Math.random() * 0.07 + 0.05,
+      tiltAngle: 0,
+    });
+  }
+
+  function drawConfetti() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    confetti.forEach((c) => {
+      ctx.beginPath();
+      ctx.lineWidth = c.r;
+      ctx.strokeStyle = c.color;
+      ctx.moveTo(c.x + c.tilt + c.r / 2, c.y);
+      ctx.lineTo(c.x + c.tilt, c.y + c.tilt + c.r / 2);
+      ctx.stroke();
+
+      c.tiltAngle += c.tiltAngleIncremental;
+      c.y += (Math.cos(c.d) + 3 + c.r / 2) / 2;
+      c.x += Math.sin(c.tiltAngle) * 2;
+      c.tilt = Math.sin(c.tiltAngle) * 15;
+
+      if (c.y > canvas.height) {
+        c.y = -10;
+        c.x = Math.random() * canvas.width;
+      }
+    });
+  }
+
+  const confettiInterval = setInterval(drawConfetti, 20);
+
+  // Fade out & remove
   setTimeout(() => {
     alertEl.style.opacity = 0;
-    setTimeout(() => {
-      alertEl.remove();
-      style.remove();
-    }, 400);
+    alertEl.style.transform = 'translate(-50%, -50%) translateY(-20px)';
+    clearInterval(confettiInterval);
+    setTimeout(() => alertEl.remove(), 400);
   }, duration);
 }
 
