@@ -1691,17 +1691,66 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 <div id="infoTab" class="tab-content" style="max-height:500px; overflow-y:auto; padding-right:8px; display:none;">
 
 <!-- 📱 Number Verification Bar -->
-<div id="verifyNumberBar" style="margin-bottom:15px;">
-  <h4 style="text-align:center; margin-bottom:10px;">Verify Number 🔎</h4>
-  
-  <div style="display:flex; gap:6px; justify-content:center; align-items:center;">
-    <input type="text" id="verifyNumberInput" placeholder="Enter phone number" 
-           style="flex:1; padding:6px; border-radius:6px; border:none; font-size:14px;">
-    <button id="verifyNumberBtn" 
-            style="padding:7px 13px; border-radius:8px; border:none; background:linear-gradient(90deg,#ff0099,#ff6600); color:#fff; cursor:pointer; font-weight:600; font-size:13px;">
+<div id="verifyNumberBar" style="
+  margin-bottom: 15px;
+  font-family: system-ui, sans-serif;
+">
+  <h4 style="
+    text-align: center;
+    margin-bottom: 10px;
+    font-weight: 600;
+  ">
+    Verify Number 🔎
+  </h4>
+
+  <div style="
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    max-width: 320px;
+    margin: 0 auto;
+  ">
+    <input
+      type="text"
+      id="verifyNumberInput"
+      placeholder="Enter phone number"
+      style="
+        flex: 1;
+        height: 38px;
+        padding: 0 10px;
+        font-size: 14px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        outline: none;
+        box-sizing: border-box;
+      "
+    />
+
+    <button
+      id="verifyNumberBtn"
+      style="
+        height: 38px;
+        padding: 0 16px;
+        border: none;
+        border-radius: 8px;
+        background: linear-gradient(90deg, #ff0099, #ff6600);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.2s ease;
+      "
+      onmouseover="this.style.opacity='0.9'"
+      onmouseout="this.style.opacity='1'"
+    >
       Check
     </button>
   </div>
+</div>
 
   <p style="margin-top:6px; font-size:12px; color:#ccc; text-align:center;">
     Your safety is our priority. This helps you verify that numbers here belong to real, verified users.
