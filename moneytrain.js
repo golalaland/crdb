@@ -569,8 +569,7 @@ async function endTrain(success, ticketNumber = null) {
 
     const dest = trainDestinationEl?.textContent || 'your destination';
     const tnum = ticketNumber || '---';
-    showPopup(`🎫 You’ve secured your ${dest} train ticket #${tnum} — welcome aboard! You earned ₦${REWARD_TO_USER.toLocaleString()}!`, 4500);
-
+    showGoldAlert(`🎫 You’ve secured your ${dest} train ticket #${tnum} — welcome aboard! You earned ₦${REWARD_TO_USER.toLocaleString()}!`, 4500);
     playAudio(SOUND_PATHS.ding);
     maybeShowHalfwayAlert();
 
@@ -698,6 +697,53 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+
+// --- Gold Centered Sliding Alert ---
+function showGoldAlert(message, duration = 4000) {
+  // Remove any existing alert
+  const existing = document.getElementById('goldAlert');
+  if (existing) existing.remove();
+
+  // Create alert element
+  const alertEl = document.createElement('div');
+  alertEl.id = 'goldAlert';
+  alertEl.textContent = message;
+
+  // Style the alert
+  Object.assign(alertEl.style, {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%) translateY(20px)', // start slightly below center
+    background: 'gold',
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: '18px',
+    padding: '15px 25px',
+    borderRadius: '12px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+    textAlign: 'center',
+    zIndex: 9999,
+    opacity: 0,
+    transition: 'opacity 0.4s ease, transform 0.4s ease',
+  });
+
+  document.body.appendChild(alertEl);
+
+  // Fade in & slide up
+  requestAnimationFrame(() => {
+    alertEl.style.opacity = 1;
+    alertEl.style.transform = 'translate(-50%, -50%) translateY(0)'; // slide to center
+  });
+
+  // Auto remove after duration
+  setTimeout(() => {
+    alertEl.style.opacity = 0;
+    alertEl.style.transform = 'translate(-50%, -50%) translateY(-20px)'; // slide up while fading
+    setTimeout(() => alertEl.remove(), 400); // match transition time
+  }, duration);
+}
 
 /* ---------------- Leaderboard---------------- */
 document.addEventListener('DOMContentLoaded', () => {
