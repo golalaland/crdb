@@ -1760,7 +1760,6 @@ function showConfirmModal(number, cost) {
 
 
 // ==================== 📱 NUMBER VERIFICATION FLOW ====================
-Do a rewrite then: 
 
   function showConfirmModal(number, cost) {
     let modal = document.getElementById("verifyConfirmModal");
