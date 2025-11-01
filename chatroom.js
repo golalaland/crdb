@@ -1701,6 +1701,20 @@ fetchFeaturedHosts();
 if (!window.verifyHandlersInitialized) {
   window.verifyHandlersInitialized = true;
 
+  // ---------- CLICK HANDLER ----------
+  document.addEventListener("click", (e) => {
+    if (e.target.id === "verifyNumberBtn") {
+      const numberInput = document.getElementById("verifyNumberInput");
+      const number = numberInput?.value.trim();
+      const COST = 21;
+
+      if (!currentUser?.uid) return alert("⚠️ Please log in first.");
+      if (!number) return alert("⚠️ Please enter a phone number.");
+
+      showConfirmModal(number, COST);
+    }
+  });
+
   // ---------- CONFIRM MODAL ----------
   window.showConfirmModal = function (number, cost) {
     let modal = document.getElementById("verifyConfirmModal");
@@ -1822,7 +1836,6 @@ if (!window.verifyHandlersInitialized) {
       "Have fun, but stay safe!",
     ];
 
-    // Random playful stages
     const randomPlayful = [];
     while (randomPlayful.length < 5) {
       const choice =
