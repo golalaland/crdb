@@ -2410,21 +2410,21 @@ function makeDraggable(el) {
 }
 
 /* ==========================
-💬 Chat Name Click Listener (Dynamic / Delegated)
+💬 Social Card Trigger on Username Click
 ========================== */
-function initSocialCardDelegation(allUsers) {
-  // Replace 'chatContainer' with the actual parent element that wraps all chat messages
-  const chatContainer = document.getElementById('chatContainer');
-  if (!chatContainer) {
-    console.warn('Chat container not found for social card delegation');
-    return;
-  }
+function initSocialCardClicks(allUsers) {
+  document.addEventListener('click', (e) => {
+    const target = e.target;
 
-  chatContainer.addEventListener('click', (e) => {
-    const nameEl = e.target.closest('.chatName'); // detect clicked chat name
-    if (!nameEl) return;
+    // Only proceed if clicked text looks like a chat username
+    // Here we assume usernames are the first word before ":"
+    if (!target || !target.textContent.includes(':')) return;
 
-    const chatId = nameEl.textContent.trim();
+    // Get the username (everything before ":")
+    const chatId = target.textContent.split(':')[0].trim();
+    if (!chatId) return;
+
+    // Find the user from allUsers
     const user = allUsers.find(u => u.chatIdLower === chatId.toLowerCase());
     if (user) showSocialCard(user);
     else console.log(`No user found for chatId: ${chatId}`);
