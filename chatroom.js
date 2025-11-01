@@ -2036,8 +2036,10 @@ if (saveInfoBtn) {
     const tiktok = document.getElementById("tiktok")?.value || "";
     const whatsapp = document.getElementById("whatsapp")?.value || "";
     const instagram = document.getElementById("instagram")?.value || "";
-    const naturePick = document.getElementById("naturePick")?.value || "";
-    const fruitPick = document.getElementById("fruitPick")?.value || "";
+    const naturePickEl = document.getElementById("naturePick");
+    const fruitPickEl = document.getElementById("fruitPick");
+    const naturePick = naturePickEl?.value || "";
+    const fruitPick = fruitPickEl?.value || "";
 
     if (bankAccountNumber && !/^\d{1,11}$/.test(bankAccountNumber)) {
       return showStarPopup("⚠️ Bank account number must be digits only (max 11).");
@@ -2061,26 +2063,32 @@ if (saveInfoBtn) {
       fruitPick
     };
 
-    // ---------- spinner setup ----------
+    // ---------- Tiny centered spinner ----------
     const originalHTML = saveInfoBtn.innerHTML;
     saveInfoBtn.innerHTML = `
       <div class="spinner" style="
-        display:inline-block;
-        width:14px;
-        height:14px;
+        width:12px;
+        height:12px;
         border:2px solid #fff;
         border-top-color:transparent;
         border-radius:50%;
-        animation: spin 0.7s linear infinite;
-        vertical-align:middle;
-        margin-right:6px;">
-      </div> Saving...
+        animation: spin 0.6s linear infinite;
+        margin:auto;
+      "></div>
     `;
     saveInfoBtn.disabled = true;
+    saveInfoBtn.style.display = "flex";
+    saveInfoBtn.style.alignItems = "center";
+    saveInfoBtn.style.justifyContent = "center";
 
     try {
       await updateFirestoreDoc(currentUser.uid, dataToUpdate);
       showStarPopup("✅ Profile updated successfully!");
+
+      // Keep dropdown selections visible
+      if (naturePickEl) naturePickEl.value = naturePick;
+      if (fruitPickEl) fruitPickEl.value = fruitPick;
+
       document.querySelectorAll("#mediaTab input, #mediaTab textarea, #mediaTab select")
               .forEach(input => input.blur());
     } catch (err) {
@@ -2089,6 +2097,9 @@ if (saveInfoBtn) {
     } finally {
       saveInfoBtn.innerHTML = originalHTML;
       saveInfoBtn.disabled = false;
+      saveInfoBtn.style.display = "";
+      saveInfoBtn.style.alignItems = "";
+      saveInfoBtn.style.justifyContent = "";
     }
   };
 }
