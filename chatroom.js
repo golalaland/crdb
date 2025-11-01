@@ -1079,7 +1079,7 @@ videoPlayer.parentElement.appendChild(hint);
   showHint("Tap to unmute", 1500);
 })();
 
-// URL of your Shopify-hosted star SVG
+// Shopify-hosted star SVG
 const customStarURL = "https://cdn.shopify.com/s/files/1/0962/6648/6067/files/starssvg.svg?v=1761770774";
 
 function replaceStarsInline(root = document.body) {
@@ -1108,77 +1108,27 @@ function replaceStarsInline(root = document.body) {
       if (frag) parent.insertBefore(document.createTextNode(frag), textNode);
 
       if (i < fragments.length - 1) {
-        // wrapper to keep the star inline
+        // Inline star wrapper
         const span = document.createElement("span");
-        span.style.display = "inline-block"; // keep inline flow
-        span.style.lineHeight = "1";         // reduce extra spacing
+        span.style.display = "inline-block";  // simple inline wrapper
 
         const inlineStar = document.createElement("img");
         inlineStar.src = customStarURL;
         inlineStar.alt = "⭐";
-        inlineStar.style.height = "1em";     // scale with text
+        inlineStar.style.height = "1.2em";            // slightly bigger than text
         inlineStar.style.width = "auto";
+        inlineStar.style.verticalAlign = "text-bottom"; // aligns baseline with numbers
+        inlineStar.style.transform = "translateY(0.1em)"; // small nudge for perfect alignment
         inlineStar.style.display = "inline-block";
-        inlineStar.style.verticalAlign = "middle";
-        inlineStar.style.transform = "translateY(0px)"; // reset
 
-        // append star first
         span.appendChild(inlineStar);
         parent.insertBefore(span, textNode);
-
-        // --- measure and adjust: insert a temporary "0" to compare vertical centers ---
-        const tempZero = document.createElement("span");
-        tempZero.textContent = "0";
-        tempZero.style.display = "inline-block";
-        tempZero.style.opacity = "0";          // invisible
-        tempZero.style.width = "0.6ch";        // keep it small
-        tempZero.style.height = "auto";
-        tempZero.style.lineHeight = "1";
-        // Insert tempZero right after the star (so both are on same text baseline)
-        parent.insertBefore(tempZero, textNode);
-
-        // Force layout so getBoundingClientRect returns correct values
-        const starRect = inlineStar.getBoundingClientRect();
-        const zeroRect = tempZero.getBoundingClientRect();
-
-        // Calculate vertical center difference (zero center - star center).
-        // Positive delta means the zero is lower (so star must move down by delta),
-        // but visually we want star center to match zero center, so translateY = delta
-        const starCenter = starRect.top + starRect.height / 2;
-        const zeroCenter = zeroRect.top + zeroRect.height / 2;
-        const delta = zeroCenter - starCenter;
-
-        // Apply a small smoothing factor (optional) to avoid overshoot on tiny fonts:
-        // You can adjust smoothingFactor between 0.9 and 1.0 if you want slightly less shift.
-        const smoothingFactor = 1.0;
-        const applyPx = Math.round(delta * smoothingFactor); // integer px feels crisp
-
-        // Apply transform to shift star vertically by applyPx pixels
-        // note: use translateY with px for predictable results across fonts
-        inlineStar.style.transform = `translateY(${applyPx}px)`;
-
-        // cleanup tempZero
-        tempZero.remove();
       }
     });
 
     parent.removeChild(textNode);
   });
 }
-
-// Observe dynamic content
-const observer = new MutationObserver(mutations => {
-  mutations.forEach(m => {
-    m.addedNodes.forEach(node => {
-      if (node.nodeType === Node.TEXT_NODE) replaceStarsInline(node.parentNode);
-      else if (node.nodeType === Node.ELEMENT_NODE) replaceStarsInline(node);
-    });
-  });
-});
-observer.observe(document.body, { childList: true, subtree: true });
-
-// Initial run
-replaceStarsInline();
 
 // Observe dynamic content
 const observer = new MutationObserver(mutations => {
