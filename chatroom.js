@@ -1,4 +1,4 @@
-/* ---------- Imports (Firebase v10) ---------- */
+  /* ---------- Imports (Firebase v10) ---------- */
 import { 
   initializeApp 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -2257,7 +2257,7 @@ if (saveMediaBtn) {
     console.error("❌ Error loading users:", err);
   }
 
-  // ---------- Create Popup ----------
+  // ---------- Popup UI ----------
   function showSocialCard(user) {
     if (!user) return;
 
@@ -2271,24 +2271,27 @@ if (saveMediaBtn) {
       left: "50%",
       transform: "translate(-50%, -50%) scale(0.95)",
       background: "#0f0f10",
-      borderRadius: "14px",
-      padding: "20px",
+      borderRadius: "16px",
+      padding: "18px 22px",
       color: "#fff",
-      width: "88%",
-      maxWidth: "340px",
+      width: "90%",
+      maxWidth: "320px",
       zIndex: "99999",
       textAlign: "center",
       boxShadow: "0 10px 40px rgba(0,0,0,0.6)",
       fontFamily: "Poppins, sans-serif",
       opacity: "0",
       transition: "opacity .18s ease, transform .18s ease",
-      border: "1px solid rgba(255,255,255,0.08)"
+      border: "1px solid rgba(255,255,255,0.08)",
+      backdropFilter: "blur(10px)"
     });
 
     const color = user.isHost ? "#ff6600" : user.isVIP ? "#ff0099" : "#bbb";
 
     const header = document.createElement("h3");
-    header.textContent = user.chatId || "Unknown";
+    header.textContent = user.chatId
+      ? user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1)
+      : "Unknown";
     Object.assign(header.style, {
       margin: "0 0 8px",
       fontSize: "18px",
@@ -2300,7 +2303,7 @@ if (saveMediaBtn) {
     card.appendChild(header);
 
     const desc = document.createElement("p");
-    desc.style.margin = "0 0 12px";
+    desc.style.margin = "0 0 14px";
     desc.style.fontSize = "14px";
     desc.style.lineHeight = "1.5";
 
@@ -2308,7 +2311,7 @@ if (saveMediaBtn) {
     const pron = pronoun || "their";
 
     if (user.isHost) {
-      desc.innerHTML = `A ${fruitPick || "🍹"} ${naturePick || "vibe"} ${gender || "soul"} in ${pron} ${ageGroup || "prime"}, based in ${city || "somewhere"}, ${country || ""}. ${flair || ""}`;
+      desc.innerHTML = `A ${fruitPick || "🍹"} ${naturePick || "vibe"} ${gender || "soul"} in ${pron} ${ageGroup || "prime"}, currently in ${city || "somewhere"}, ${country || ""}. ${flair || ""}`;
     } else {
       desc.innerHTML = `${gender || "Someone"} in ${city || "somewhere"}, ${country || ""}. ${flair || ""}`;
     }
@@ -2317,7 +2320,7 @@ if (saveMediaBtn) {
     const bio = document.createElement("div");
     bio.style.fontStyle = "italic";
     bio.style.fontSize = "13px";
-    bio.style.marginBottom = "14px";
+    bio.style.marginBottom = "16px";
     card.appendChild(bio);
     typeWriter(bio, user.bioPick || "✨ Nothing shared yet...");
 
@@ -2325,6 +2328,7 @@ if (saveMediaBtn) {
     btns.style.display = "flex";
     btns.style.justifyContent = "center";
     btns.style.gap = "10px";
+    btns.style.marginBottom = "12px";
 
     if (user.isHost) {
       const meetBtn = document.createElement("button");
@@ -2336,7 +2340,7 @@ if (saveMediaBtn) {
         background: "linear-gradient(90deg,#ff6600,#ff0099)",
         color: "#fff",
         cursor: "pointer",
-        fontWeight: "600"
+        fontWeight: "600",
       });
       meetBtn.onclick = () => {
         if (typeof showMeetModal === "function") showMeetModal(user);
@@ -2345,27 +2349,43 @@ if (saveMediaBtn) {
       btns.appendChild(meetBtn);
     }
 
-    const socials = user.instagram || user.tiktok || user.whatsapp || user.telegram;
-    if (socials) {
-      const socialBtn = document.createElement("button");
-      socialBtn.textContent = "Socials";
-      Object.assign(socialBtn.style, {
-        padding: "8px 12px",
-        borderRadius: "6px",
-        border: "1px solid rgba(255,255,255,0.08)",
-        background: "transparent",
-        color: "#fff",
-        cursor: "pointer",
-        fontWeight: "600"
-      });
-      socialBtn.onclick = () => {
-        const url = user.instagram || user.tiktok || user.whatsapp || user.telegram;
-        window.open(url.startsWith("http") ? url : `https://${url}`, "_blank");
-      };
-      btns.appendChild(socialBtn);
-    }
-
     card.appendChild(btns);
+
+    // ---------- Gift Slider ----------
+    const giftWrapper = document.createElement("div");
+    giftWrapper.style.display = "flex";
+    giftWrapper.style.flexDirection = "column";
+    giftWrapper.style.alignItems = "center";
+    giftWrapper.style.marginTop = "8px";
+
+    const giftLabel = document.createElement("div");
+    giftLabel.textContent = "0⭐️";
+    giftLabel.style.marginBottom = "6px";
+    giftLabel.style.fontWeight = "600";
+    giftWrapper.appendChild(giftLabel);
+
+    const giftSlider = document.createElement("input");
+    giftSlider.type = "range";
+    giftSlider.min = "0";
+    giftSlider.max = "999";
+    giftSlider.value = "0";
+    giftSlider.id = "giftbutton";
+    giftSlider.style.width = "100%";
+    giftSlider.style.appearance = "none";
+    giftSlider.style.height = "6px";
+    giftSlider.style.borderRadius = "5px";
+    giftSlider.style.background = "linear-gradient(90deg, #ff33cc, #ff0099)";
+    giftSlider.style.outline = "none";
+    giftSlider.style.cursor = "pointer";
+
+    giftSlider.oninput = function () {
+      giftLabel.textContent = `${this.value}⭐️`;
+      const percentage = (this.value / this.max) * 100;
+      giftSlider.style.background = `linear-gradient(90deg, #ff33cc ${percentage}%, rgba(255,255,255,0.15) ${percentage}%)`;
+    };
+
+    giftWrapper.appendChild(giftSlider);
+    card.appendChild(giftWrapper);
 
     document.body.appendChild(card);
     requestAnimationFrame(() => {
@@ -2396,7 +2416,6 @@ if (saveMediaBtn) {
   document.addEventListener("click", (e) => {
     let el = e.target;
 
-    // climb up the DOM tree to find element containing text with ':'
     while (el && el !== document.body && !el.textContent.includes(":")) {
       el = el.parentElement;
     }
@@ -2409,13 +2428,15 @@ if (saveMediaBtn) {
     const user = usersByChatId[chatId] || allUsers.find(u => (u.chatId || "").toLowerCase() === chatId);
     if (!user) return;
 
+    // temporarily fade to indicate tap
     el.style.transition = "opacity .1s";
-    el.style.opacity = "0.6";
+    el.style.opacity = "0.4";
     setTimeout(() => (el.style.opacity = ""), 120);
 
     showSocialCard(user);
   });
 })();
+
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
   if (!str) return "";
