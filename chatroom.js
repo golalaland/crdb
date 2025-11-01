@@ -2412,20 +2412,25 @@ function typeWriterEffect(el, text, speed = 35) {
   }, speed);
 }
 
-  // -------- Detect username taps --------
+  // ---------- Detect username tap ----------
   document.addEventListener("click", (e) => {
-    const el = e.target.closest(".chatName");
-    if (!el) return;
+    let el = e.target;
 
-    const chatId = el.dataset.username || el.textContent.trim();
-    if (!chatId) return;
+    while (el && el !== document.body && !el.textContent.includes(":")) {
+      el = el.parentElement;
+    }
+    if (!el || !el.textContent) return;
 
-    const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || "").toLowerCase() === chatId.toLowerCase());
+    const text = el.textContent.trim();
+    if (!text.includes(":")) return;
+
+    const chatId = text.split(":")[0].trim().toLowerCase();
+    const user = usersByChatId[chatId] || allUsers.find(u => (u.chatId || "").toLowerCase() === chatId);
     if (!user) return;
 
-    // Blink effect
+    // temporarily fade to indicate tap
     el.style.transition = "opacity .1s";
-    el.style.opacity = "0.6";
+    el.style.opacity = "0.4";
     setTimeout(() => (el.style.opacity = ""), 120);
 
     showSocialCard(user);
