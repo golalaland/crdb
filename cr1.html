@@ -1705,11 +1705,16 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
   <div style="
     display: flex;
-    justify-content: center;
     align-items: center;
-    gap: 8px;
-    max-width: 320px;
+    justify-content: center;
+    max-width: 340px;
     margin: 0 auto;
+    height: 42px;
+    border-radius: 999px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    border: 1px solid #ddd;
+    background: #fff;
   ">
     <input
       type="text"
@@ -1717,11 +1722,10 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
       placeholder="Enter phone number"
       style="
         flex: 1;
-        height: 38px;
-        padding: 0 10px;
+        height: 100%;
+        padding: 0 14px;
         font-size: 14px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
+        border: none;
         outline: none;
         box-sizing: border-box;
       "
@@ -1730,10 +1734,9 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     <button
       id="verifyNumberBtn"
       style="
-        height: 38px;
-        padding: 0 16px;
+        height: 100%;
+        padding: 0 18px;
         border: none;
-        border-radius: 8px;
         background: linear-gradient(90deg, #ff0099, #ff6600);
         color: #fff;
         font-size: 13px;
