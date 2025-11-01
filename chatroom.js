@@ -1701,7 +1701,7 @@ fetchFeaturedHosts();
 if (!window.verifyHandlersInitialized) {
   window.verifyHandlersInitialized = true;
 
-  // ---------- ✨ SIMPLE GOLD MODAL ALERT (Now stays one line everywhere) ----------
+  // ---------- ✨ SIMPLE GOLD MODAL ALERT (One-liner across all screens) ----------
   window.showGoldAlert = function (message, duration = 3000) {
     const existing = document.getElementById("goldAlert");
     if (existing) existing.remove();
@@ -1715,19 +1715,19 @@ if (!window.verifyHandlersInitialized) {
       transform: "translate(-50%, -50%)",
       background: "linear-gradient(90deg, #ffcc00, #ff9900)",
       color: "#111",
-      padding: "10px 22px",
+      padding: "12px 20px",
       borderRadius: "10px",
       fontWeight: "600",
       zIndex: "999999",
       boxShadow: "0 0 12px rgba(255, 215, 0, 0.5)",
       animation: "slideFade 0.4s ease-out",
+      whiteSpace: "nowrap",       // ✅ Keep it one line
+      overflow: "hidden",         // ✅ Hide overflow
+      textOverflow: "ellipsis",   // ✅ Show "..." if too long
+      maxWidth: "95vw",           // ✅ Prevent off-screen stretch
       textAlign: "center",
-      fontSize: "15px",
-      whiteSpace: "nowrap", // ✅ Force single line
-      overflow: "hidden",
-      textOverflow: "ellipsis", // ✅ Prevents wrapping
-      maxWidth: "95vw", // ✅ Fits all screens safely
     });
+
     alertEl.textContent = message;
 
     const style = document.createElement("style");
@@ -1736,20 +1736,9 @@ if (!window.verifyHandlersInitialized) {
         from {opacity: 0; transform: translate(-50%, -60%);}
         to {opacity: 1; transform: translate(-50%, -50%);}
       }
-
-      /* ✅ Ensures same one-line behavior even on mobile */
-      @media (max-width: 600px) {
-        #goldAlert {
-          font-size: 14px !important;
-          padding: 8px 16px !important;
-          white-space: nowrap !important;
-          overflow: hidden !important;
-          text-overflow: ellipsis !important;
-          max-width: 95vw !important;
-        }
-      }
     `;
     document.head.appendChild(style);
+
     document.body.appendChild(alertEl);
     setTimeout(() => alertEl.remove(), duration);
   };
