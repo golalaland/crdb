@@ -699,49 +699,84 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// --- Gold Centered Sliding Alert ---
-function showGoldAlert(message, duration = 4000) {
-  // Remove any existing alert
+// --- Gold Gradient Centered Alert with Sparkles ---
+function showGoldAlert(message, duration = 4500) {
+  // Remove existing alert
   const existing = document.getElementById('goldAlert');
   if (existing) existing.remove();
 
   // Create alert element
   const alertEl = document.createElement('div');
   alertEl.id = 'goldAlert';
-  alertEl.textContent = message;
+  alertEl.innerHTML = `
+    <span class="sparkle">*</span>
+    <span class="sparkle">*</span>
+    <span class="sparkle">*</span>
+    <span class="alert-text">${message}</span>
+  `;
 
   // Style the alert
   Object.assign(alertEl.style, {
     position: 'fixed',
     top: '50%',
     left: '50%',
-    transform: 'translate(-50%, -50%) translateY(20px)', // start slightly below center
-    background: 'gold',
+    transform: 'translate(-50%, -50%)',
+    background: 'linear-gradient(90deg, #FFD700, #FFC200)',
     color: '#000',
     fontWeight: 'bold',
     fontSize: '18px',
-    padding: '15px 25px',
-    borderRadius: '12px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+    padding: '15px 40px',        // landscape shape
+    borderRadius: '16px',
+    boxShadow: '0 6px 16px rgba(0,0,0,0.4)',
     textAlign: 'center',
     zIndex: 9999,
     opacity: 0,
-    transition: 'opacity 0.4s ease, transform 0.4s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '10px',
+    position: 'fixed',
+    whiteSpace: 'nowrap'
   });
+
+  // Sparkle animation
+  const style = document.createElement('style');
+  style.textContent = `
+    #goldAlert .sparkle {
+      color: white;
+      font-size: 24px;
+      animation: sparkle 1s infinite alternate;
+      opacity: 0.8;
+    }
+    #goldAlert .sparkle:nth-child(1) { animation-delay: 0s; }
+    #goldAlert .sparkle:nth-child(2) { animation-delay: 0.3s; }
+    #goldAlert .sparkle:nth-child(3) { animation-delay: 0.6s; }
+
+    @keyframes sparkle {
+      0% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.4); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.8; }
+    }
+    #goldAlert .alert-text {
+      display: inline-block;
+    }
+  `;
+  document.head.appendChild(style);
 
   document.body.appendChild(alertEl);
 
-  // Fade in & slide up
+  // Fade in
   requestAnimationFrame(() => {
     alertEl.style.opacity = 1;
-    alertEl.style.transform = 'translate(-50%, -50%) translateY(0)'; // slide to center
   });
 
-  // Auto remove after duration
+  // Fade out after duration
   setTimeout(() => {
     alertEl.style.opacity = 0;
-    alertEl.style.transform = 'translate(-50%, -50%) translateY(-20px)'; // slide up while fading
-    setTimeout(() => alertEl.remove(), 400); // match transition time
+    setTimeout(() => {
+      alertEl.remove();
+      style.remove();
+    }, 400);
   }, duration);
 }
 
