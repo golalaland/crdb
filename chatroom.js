@@ -2232,204 +2232,260 @@ if (saveMediaBtn) {
     }
   };
 }
-/* ==============================
-✨ Social Card System (Host + VIP)
-============================== */
-function showSocialCard(user) {
-  // Remove any existing card
-  const existing = document.getElementById('socialCard');
-  if (existing) existing.remove();
+/* ======================================================
+  Social Card system — Firestore fetch + username tap trigger
+  Paste this AFTER your Firebase/Firestore is initialized
+  and AFTER your showMeetModal() exists.
+  ====================================================== */
 
-  // Wrapper
-  const card = document.createElement('div');
-  card.id = 'socialCard';
-  Object.assign(card.style, {
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    background: 'linear-gradient(135deg, #1a1a1a, #222)',
-    borderRadius: '16px',
-    padding: '20px 22px',
-    textAlign: 'center',
-    color: '#fff',
-    width: '90%',
-    maxWidth: '340px',
-    zIndex: '999999',
-    fontFamily: 'Poppins, sans-serif',
-    boxShadow: '0 0 25px rgba(255,255,255,0.08)',
-    cursor: 'grab',
-    transition: 'all 0.25s ease'
-  });
+(async function initSocialCardSystem() {
+  // --- 1) Fetch all users once and build a lookup map ---
+  const allUsers = []; // optional array storage
+  const usersByChatId = {}; // fast lookup: chatIdLower -> user object
 
-  // Header (chatId with gradient)
-  const chatIdDisplay = user.chatId
-    ? user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1)
-    : "Unknown";
-
-  const color = user.isHost ? '#ff6600' : user.isVIP ? '#ff0099' : '#ccc';
-  const header = document.createElement('h3');
-  header.textContent = chatIdDisplay;
-  Object.assign(header.style, {
-    background: `linear-gradient(90deg,${color},#ff33cc)`,
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    fontWeight: '700',
-    marginBottom: '10px',
-    fontSize: '18px',
-  });
-  card.appendChild(header);
-
-  // Details section
-  const detailsEl = document.createElement('p');
-  detailsEl.style.margin = '0 0 12px';
-  detailsEl.style.fontSize = '14px';
-  detailsEl.style.lineHeight = '1.45';
-
-  const flairText = user.flair || '';
-  const pronoun = user.pronoun || 'their';
-  const ageGroup = user.ageGroup || (user.age ? `${user.age} yrs` : 'young');
-  const gender = user.gender || 'User';
-  const country = user.country || '🌍';
-  const city = user.city || 'somewhere';
-
-  if (user.isHost) {
-    const fruit = user.fruitPick || '🍒';
-    const nature = user.naturePick || 'breeze';
-    detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flairText}`;
-  } else if (user.isVIP) {
-    detailsEl.innerHTML = `A ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flairText}`;
-  } else {
-    detailsEl.innerHTML = `A ${gender} from ${city}, ${country}. ${flairText}`;
-  }
-  card.appendChild(detailsEl);
-
-  // BioPick with typewriter animation
-  const bioEl = document.createElement('div');
-  bioEl.style.margin = '10px 0 18px';
-  bioEl.style.fontStyle = 'italic';
-  card.appendChild(bioEl);
-  typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
-
-  // Buttons area
-  const btnWrap = document.createElement('div');
-  btnWrap.style.display = 'flex';
-  btnWrap.style.justifyContent = 'center';
-  btnWrap.style.gap = '10px';
-  btnWrap.style.marginTop = '8px';
-
-  // Gift Button (hook later)
-  const giftBtn = document.createElement('button');
-  giftBtn.textContent = 'Gift';
-  Object.assign(giftBtn.style, {
-    padding: '8px 16px',
-    borderRadius: '6px',
-    border: 'none',
-    fontWeight: '600',
-    background: 'linear-gradient(90deg,#ff0099,#ff6600)',
-    color: '#fff',
-    cursor: 'pointer',
-  });
-  btnWrap.appendChild(giftBtn);
-
-  // Meet Button (hosts only)
-  if (user.isHost) {
-    const meetBtn = document.createElement('button');
-    meetBtn.textContent = 'Meet';
-    Object.assign(meetBtn.style, {
-      padding: '8px 16px',
-      borderRadius: '6px',
-      border: 'none',
-      fontWeight: '600',
-      background: 'linear-gradient(90deg,#ff6600,#ff0099)',
-      color: '#fff',
-      cursor: 'pointer',
+  try {
+    const usersRef = collection(db, "users");
+    const snaps = await getDocs(usersRef);
+    snaps.forEach(docSnap => {
+      const data = docSnap.data();
+      // ensure chatIdLower exists for reliable matching
+      const chatIdLower = (data.chatIdLower || (data.chatId || "")).toString().toLowerCase();
+      data._docId = docSnap.id; // keep doc id if needed
+      data.chatIdLower = chatIdLower;
+      allUsers.push(data);
+      usersByChatId[chatIdLower] = data;
     });
-    meetBtn.onclick = () => showMeetModal(user); // 🔗 Linked to existing meet modal
-    btnWrap.appendChild(meetBtn);
+    console.log('Social card: loaded', allUsers.length, 'users');
+  } catch (err) {
+    console.error("Failed to fetch users for social card:", err);
   }
 
-  card.appendChild(btnWrap);
-  document.body.appendChild(card);
+  // --- 2) showSocialCard(user) — creates the popup card.
+  // If you already pasted a showSocialCard earlier, you can skip this definition.
+  function showSocialCard(user) {
+    if (!user) return;
 
-  // ✨ Click outside to close
-  const closeOnOutside = (e) => {
-    if (!card.contains(e.target)) {
-      card.remove();
-      document.removeEventListener('click', closeOnOutside);
+    // remove existing
+    document.getElementById('socialCard')?.remove();
+
+    const card = document.createElement('div');
+    card.id = 'socialCard';
+    Object.assign(card.style, {
+      position: 'fixed',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%) scale(1)',
+      background: 'linear-gradient(135deg,#0f0f10,#19191b)',
+      borderRadius: '14px',
+      padding: '18px 20px',
+      color: '#fff',
+      width: '90%',
+      maxWidth: '340px',
+      zIndex: '999999',
+      textAlign: 'center',
+      boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
+      fontFamily: 'Poppins, sans-serif',
+      opacity: '0',
+      transition: 'opacity .18s ease, transform .18s ease'
+    });
+
+    // Header with gradient text
+    const chatIdDisplay = user.chatId ? (user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1)) : 'Unknown';
+    const color = user.isHost ? '#ff6600' : user.isVIP ? '#ff0099' : '#cccccc';
+
+    const header = document.createElement('h3');
+    header.textContent = chatIdDisplay;
+    Object.assign(header.style, {
+      margin: '0 0 8px',
+      fontSize: '18px',
+      fontWeight: '700',
+      background: `linear-gradient(90deg, ${color}, #ff33cc)`,
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent'
+    });
+    card.appendChild(header);
+
+    // Details line
+    const detailsEl = document.createElement('p');
+    detailsEl.style.margin = '0 0 12px';
+    detailsEl.style.fontSize = '14px';
+    detailsEl.style.lineHeight = '1.4';
+
+    const flairText = user.flair || '';
+    const pronoun = user.pronoun || 'their';
+    const ageGroup = user.ageGroup || (user.age ? `${user.age} yrs` : 'young');
+    const gender = user.gender || 'User';
+    const country = user.country || '';
+    const city = user.city || '';
+
+    if (user.isHost) {
+      const fruit = user.fruitPick || '🍒';
+      const nature = user.naturePick || 'vibe';
+      detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
+    } else if (user.isVIP) {
+      detailsEl.innerHTML = `A ${gender} in ${pronoun} ${ageGroup}, currently in ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
+    } else {
+      detailsEl.innerHTML = `A ${gender} from ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
     }
-  };
-  setTimeout(() => document.addEventListener('click', closeOnOutside), 10);
+    card.appendChild(detailsEl);
 
-  // 🖐️ Make draggable (simple UX)
-  makeDraggable(card);
-}
+    // Bio area (typewriter)
+    const bioEl = document.createElement('div');
+    bioEl.style.margin = '8px 0 14px';
+    bioEl.style.fontStyle = 'italic';
+    bioEl.style.fontSize = '13px';
+    card.appendChild(bioEl);
+    typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
 
-/* ==========================
-✨ Typewriter Text Animation
-========================== */
-function typeWriterEffect(el, text, speed = 35) {
-  el.textContent = '';
-  let i = 0;
-  const interval = setInterval(() => {
-    el.textContent += text.charAt(i);
-    i++;
-    if (i >= text.length) clearInterval(interval);
-  }, speed);
-}
+    // Buttons wrapper (NO gift button here)
+    const btnWrap = document.createElement('div');
+    Object.assign(btnWrap.style, { display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '6px' });
 
-/* ==========================
-🖐️ Draggable Card Function
-========================== */
-function makeDraggable(el) {
-  let isDown = false;
-  let offset = [0, 0];
+    // Meet button for hosts only (links to your existing showMeetModal)
+    if (user.isHost) {
+      const meetBtn = document.createElement('button');
+      meetBtn.textContent = 'Meet';
+      Object.assign(meetBtn.style, {
+        padding: '8px 16px',
+        borderRadius: '6px',
+        border: 'none',
+        fontWeight: '600',
+        background: 'linear-gradient(90deg,#ff6600,#ff0099)',
+        color: '#fff',
+        cursor: 'pointer'
+      });
+      meetBtn.onclick = () => {
+        try {
+          // call your existing meet modal function
+          if (typeof showMeetModal === 'function') showMeetModal(user);
+          else console.warn('showMeetModal not defined yet');
+        } catch (err) {
+          console.error('Error launching meet modal:', err);
+        }
+      };
+      btnWrap.appendChild(meetBtn);
+    }
 
-  el.addEventListener('mousedown', (e) => {
-    isDown = true;
-    offset = [
-      el.offsetLeft - e.clientX,
-      el.offsetTop - e.clientY
-    ];
-    el.style.cursor = 'grabbing';
-  });
+    // Optionally: small socials shortcut (if any social exists)
+    const socialsPresent = user.whatsapp || user.instagram || user.tiktok || user.telegram;
+    if (socialsPresent) {
+      const socialBtn = document.createElement('button');
+      socialBtn.textContent = 'Socials';
+      Object.assign(socialBtn.style, {
+        padding: '8px 12px',
+        borderRadius: '6px',
+        border: '1px solid rgba(255,255,255,0.06)',
+        background: 'transparent',
+        color: '#fff',
+        cursor: 'pointer',
+        fontWeight: '600'
+      });
+      socialBtn.onclick = () => {
+        // opens first available social (fallback to instagram/tiktok/whatsapp/telegram)
+        const url = user.instagram || user.tiktok || user.whatsapp || user.telegram;
+        if (url) window.open(url.startsWith('http') ? url : `https://${url}`, '_blank');
+      };
+      btnWrap.appendChild(socialBtn);
+    }
 
-  document.addEventListener('mouseup', () => {
-    isDown = false;
-    el.style.cursor = 'grab';
-  });
+    card.appendChild(btnWrap);
 
-  document.addEventListener('mousemove', (e) => {
-    e.preventDefault();
-    if (isDown) {
+    // Append & animate in
+    document.body.appendChild(card);
+    // force reflow then animate
+    requestAnimationFrame(() => {
+      card.style.opacity = '1';
+      card.style.transform = 'translate(-50%, -50%) scale(1.02)';
+      setTimeout(() => (card.style.transform = 'translate(-50%, -50%) scale(1)'), 120);
+    });
+
+    // Click outside to close
+    const closeHandler = (ev) => {
+      if (!card.contains(ev.target)) {
+        card.remove();
+        document.removeEventListener('click', closeHandler);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', closeHandler), 10);
+
+    // Make draggable (mouse only; harmless if unused)
+    makeDraggable(card);
+  }
+
+  // --- Small helpers used above ---
+  function typeWriterEffect(el, text, speed = 35) {
+    el.textContent = '';
+    let i = 0;
+    const iv = setInterval(() => {
+      el.textContent += text.charAt(i) || '';
+      i++;
+      if (i >= text.length) clearInterval(iv);
+    }, speed);
+  }
+
+  function makeDraggable(el) {
+    let isDown = false;
+    let offset = [0, 0];
+
+    el.addEventListener('mousedown', (e) => {
+      isDown = true;
+      offset = [el.offsetLeft - e.clientX, el.offsetTop - e.clientY];
+      el.style.cursor = 'grabbing';
+    });
+    document.addEventListener('mouseup', () => {
+      isDown = false;
+      el.style.cursor = 'grab';
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
       el.style.left = (e.clientX + offset[0]) + 'px';
       el.style.top = (e.clientY + offset[1]) + 'px';
       el.style.transform = 'translate(0,0)';
-    }
-  });
-}
+    });
+  }
 
-/* ==========================
-💬 Social Card Trigger on Username Click
-========================== */
-function initSocialCardClicks(allUsers) {
-  document.addEventListener('click', (e) => {
+  // --- 3) Detector: tap/click on username in message like "mansamanzi: YO!!!" ---
+  // This listens at document-level and extracts the username as text before the first ":".
+  document.addEventListener('pointerdown', (e) => {
     const target = e.target;
+    if (!target || !target.textContent) return;
 
-    // Only proceed if clicked text looks like a chat username
-    // Here we assume usernames are the first word before ":"
-    if (!target || !target.textContent.includes(':')) return;
+    // Quick guard — only text nodes with ":" in them are interesting
+    const txt = target.textContent;
+    if (!txt.includes(':')) return;
 
-    // Get the username (everything before ":")
-    const chatId = target.textContent.split(':')[0].trim();
+    // Extract the username (first token before the colon)
+    const chatId = txt.split(':')[0].trim();
     if (!chatId) return;
 
-    // Find the user from allUsers
-    const user = allUsers.find(u => u.chatIdLower === chatId.toLowerCase());
-    if (user) showSocialCard(user);
-    else console.log(`No user found for chatId: ${chatId}`);
+    // Find the user — try fast map then fallback to array search
+    const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || '').toLowerCase() === chatId.toLowerCase());
+    if (!user) {
+      // sometimes messages show a display name not in users collection — ignore
+      // console.log('No user record for chatId:', chatId);
+      return;
+    }
+
+    // Prevent popping for clicks on your own name unless you want to see your card
+    if (user._docId === currentUser?.uid) {
+      // If you want to allow self-popup: remove this if-block
+      // showSocialCard(user);
+      return;
+    }
+
+    // small tap effect
+    try {
+      target.style.transition = 'opacity 0.12s';
+      target.style.opacity = '0.5';
+      setTimeout(() => (target.style.opacity = ''), 140);
+    } catch (err) { /* ignore styling errors */ }
+
+    // show card
+    showSocialCard(user);
   });
-}
+
+})(); // end IIFE
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
   if (!str) return "";
