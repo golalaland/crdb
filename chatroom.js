@@ -1701,7 +1701,7 @@ fetchFeaturedHosts();
 if (!window.verifyHandlersInitialized) {
   window.verifyHandlersInitialized = true;
 
-  // ---------- SIMPLE GOLD MODAL ALERT ----------
+  // ---------- ✨ SIMPLE GOLD MODAL ALERT ----------
   window.showGoldAlert = function (message, duration = 3000) {
     const existing = document.getElementById("goldAlert");
     if (existing) existing.remove();
@@ -1736,16 +1736,14 @@ if (!window.verifyHandlersInitialized) {
     setTimeout(() => alertEl.remove(), duration);
   };
 
-  // ---------- PHONE FORMAT NORMALIZER ----------
-  function normalizePhone(number) {
-    number = number.replace(/\D/g, ""); // remove non-digits
-    if (number.startsWith("0")) number = "234" + number.slice(1);
-    if (number.startsWith("2340")) number = "234" + number.slice(4);
-    if (!number.startsWith("234")) number = "234" + number;
+  // ---------- 🌍 PHONE NORMALIZER (for backend only) ----------
+  function normalizePhoneForSearch(number) {
+    number = number.replace(/\D/g, "");
+    if (number.startsWith("0")) number = number.slice(1);
     return number;
   }
 
-  // ---------- CLICK HANDLER ----------
+  // ---------- 🔘 CLICK HANDLER ----------
   document.addEventListener("click", (e) => {
     if (e.target.id === "verifyNumberBtn") {
       const numberInput = document.getElementById("verifyNumberInput");
@@ -1755,13 +1753,13 @@ if (!window.verifyHandlersInitialized) {
       if (!currentUser?.uid) return showGoldAlert("⚠️ Please log in first.");
       if (!numberRaw) return showGoldAlert("⚠️ Please enter a phone number.");
 
-      const normalized = normalizePhone(numberRaw);
-      showConfirmModal(normalized, COST);
+      const normalized = normalizePhoneForSearch(numberRaw);
+      showConfirmModal(numberRaw, normalized, COST);
     }
   });
 
-  // ---------- CONFIRM MODAL ----------
-  window.showConfirmModal = function (number, cost) {
+  // ---------- 🟡 CONFIRM MODAL ----------
+  window.showConfirmModal = function (displayNumber, normalizedNumber, cost) {
     let modal = document.getElementById("verifyConfirmModal");
     if (modal) modal.remove();
 
@@ -1784,7 +1782,7 @@ if (!window.verifyHandlersInitialized) {
     modal.innerHTML = `
       <div style="background:#111;padding:16px 18px;border-radius:10px;text-align:center;color:#fff;max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
         <h3 style="margin-bottom:10px;font-weight:600;">Verification</h3>
-        <p>Scan phone number <b>${number}</b> for <b>${cost} stars ⭐</b>?</p>
+        <p>Scan phone number <b>${displayNumber}</b> for <b>${cost} stars ⭐</b>?</p>
         <div style="display:flex;justify-content:center;gap:10px;margin-top:12px;">
           <button id="cancelVerify" style="padding:6px 12px;border:none;border-radius:6px;background:#333;color:#fff;font-weight:600;cursor:pointer;">Cancel</button>
           <button id="confirmVerify" style="padding:6px 12px;border:none;border-radius:6px;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">Yes</button>
@@ -1796,47 +1794,46 @@ if (!window.verifyHandlersInitialized) {
     modal.querySelector("#cancelVerify").onclick = () => modal.remove();
     modal.querySelector("#confirmVerify").onclick = async () => {
       modal.remove();
-      await runNumberVerification(number, cost);
+      await runNumberVerification(normalizedNumber, cost);
     };
   };
 
-// ---------- RUN VERIFICATION (Universal Country Code Compatible) ----------
-async function runNumberVerification(number, cost) {
-  try {
-    // Deduct stars
-    currentUser.stars -= cost;
-    if (refs?.starCountEl)
-      refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-    await updateDoc(doc(db, "users", currentUser.uid), {
-      stars: increment(-cost),
-    }).catch(console.error);
+  // ---------- 🔍 RUN VERIFICATION ----------
+  async function runNumberVerification(number, cost) {
+    try {
+      // Deduct stars
+      currentUser.stars -= cost;
+      if (refs?.starCountEl)
+        refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
 
-    // 🔍 Normalize input (remove all non-digits)
-    const cleanInput = number.replace(/\D/g, "");
-    const lastDigits = cleanInput.slice(-10); // Compare last 10 digits globally
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        stars: increment(-cost),
+      }).catch(console.error);
 
-    // 🔎 Lookup all users and compare last digits
-    const usersRef = collection(db, "users");
-    const qSnap = await getDocs(usersRef);
+      const cleanInput = number.replace(/\D/g, "");
+      const lastDigits = cleanInput.slice(-10);
 
-    let verifiedUser = null;
-    qSnap.forEach((docSnap) => {
-      const data = docSnap.data();
-      if (data.whatsapp) {
-        const storedDigits = data.whatsapp.replace(/\D/g, "").slice(-10);
-        if (storedDigits === lastDigits) verifiedUser = data;
-      }
-    });
+      const usersRef = collection(db, "users");
+      const qSnap = await getDocs(usersRef);
 
-    showVerificationModal(verifiedUser, number);
-  } catch (err) {
-    console.error("Error verifying number:", err);
-    showGoldAlert("❌ Verification failed, please retry!");
+      let verifiedUser = null;
+      qSnap.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.whatsapp) {
+          const storedDigits = data.whatsapp.replace(/\D/g, "").slice(-10);
+          if (storedDigits === lastDigits) verifiedUser = data;
+        }
+      });
+
+      showVerificationModal(verifiedUser);
+    } catch (err) {
+      console.error("Error verifying number:", err);
+      showGoldAlert("❌ Verification failed, please retry!");
+    }
   }
-}
 
-  // ---------- VERIFICATION MODAL ----------
-  function showVerificationModal(user, number) {
+  // ---------- 🧾 RESULT MODAL ----------
+  function showVerificationModal(user) {
     let modal = document.getElementById("verifyModal");
     if (modal) modal.remove();
 
@@ -1866,18 +1863,47 @@ async function runNumberVerification(number, cost) {
     const modalContent = modal.querySelector("#verifyModalContent");
     const stageMsgEl = modalContent.querySelector("#stageMsg");
 
-    const stages = [
+    // ---------- 🌟 Dynamic Stage Messages ----------
+    const fixedStages = [
       "Gathering information…",
-      "Checking phone number validity…",
-      "Always meet in public spaces first!",
-      "Known hotels are safer for meetups 😉",
-      "Keep things fun and safe 😎",
-      "Finalizing check…",
+      "Checking phone number validity…"
     ];
+
+    const playfulMessages = [
+      "Always meet in public spaces for the first time..",
+      "Known hotels are safer for meetups 😉",
+      "Condoms should be in the conversation always..",
+      "Trust your instincts, always..",
+      "Keep things fun and safe 😎",
+      "Be polite and confident when messaging..",
+      "Avoid sharing sensitive info too soon..",
+      "Remember, first impressions last ✨",
+      "Don’t rush, enjoy the conversation..",
+      "Check for verified accounts before proceeding..",
+      "Safety first, fun second 😏",
+      "Listen carefully to their plans..",
+      "Pick neutral locations for first meets..",
+      "Be respectful and courteous..",
+      "Share your location with a friend..",
+      "Always verify identity before meeting..",
+      "Plan ahead, stay alert 👀",
+      "Keep communication clear and honest..",
+      "Bring a friend if unsure..",
+      "Set boundaries clearly..",
+      "Have fun, but stay safe!"
+    ];
+
+    const randomPlayful = [];
+    while (randomPlayful.length < 5) {
+      const choice = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
+      if (!randomPlayful.includes(choice)) randomPlayful.push(choice);
+    }
+
+    const stages = [...fixedStages, ...randomPlayful, "Finalizing check…"];
 
     let totalTime = 0;
     stages.forEach((stage, index) => {
-      let duration = 1400 + Math.random() * 600;
+      const duration = 1400 + Math.random() * 600;
       totalTime += duration;
 
       setTimeout(() => {
@@ -1887,13 +1913,13 @@ async function runNumberVerification(number, cost) {
             modalContent.innerHTML = user
               ? `<h3>Number Verified! ✅</h3>
                  <p>This number belongs to <b>${user.fullName}</b></p>
-                 <button id="closeVerifyModal" 
+                 <button id="closeVerifyModal"
                    style="margin-top:12px;padding:6px 14px;border:none;
                    border-radius:8px;background:linear-gradient(90deg,#ff0099,#ff6600);
                    color:#fff;font-weight:600;cursor:pointer;">Close</button>`
               : `<h3>Number Not Verified! ❌</h3>
                  <p>This number doesn’t exist on verified records — be careful!</p>
-                 <button id="closeVerifyModal" 
+                 <button id="closeVerifyModal"
                    style="margin-top:12px;padding:6px 14px;border:none;
                    border-radius:8px;background:linear-gradient(90deg,#ff0099,#ff6600);
                    color:#fff;font-weight:600;cursor:pointer;">Close</button>`;
