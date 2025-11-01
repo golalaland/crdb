@@ -1501,21 +1501,25 @@ function showMeetModal(host) {
 function showSocialRedirectModal(modalContent, host) {
   const socialUrl = host.tiktok || host.instagram || "";
   const socialName = host.tiktok ? "TikTok" : host.instagram ? "Instagram" : "";
+  const hostName = host.chatId || "This host";
 
   if (socialUrl) {
     modalContent.innerHTML = `
-      <h3 style="margin-bottom:10px;font-weight:600;">Meet ${host.chatId || "this host"}?</h3>
-      <p style="margin-bottom:16px;">This host isn’t meeting new people via WhatsApp yet.</p>
-      <p style="margin-bottom:16px;">Check them out on <b>${socialName}</b> instead!</p>
+      <h3 style="margin-bottom:10px;font-weight:600;">Meet ${hostName}?</h3>
+      <p style="margin-bottom:16px;">${hostName} isn’t meeting new people via WhatsApp yet.</p>
+      <p style="margin-bottom:16px;">Check her out on <b>${socialName}</b> instead?</p>
       <button id="goSocialBtn" style="padding:8px 16px;background:linear-gradient(90deg,#ff0099,#ff6600);border:none;color:#fff;border-radius:8px;font-weight:600;">Go</button>
       <button id="cancelMeet" style="margin-top:10px;padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">Close</button>
     `;
-    modalContent.querySelector("#goSocialBtn").onclick = () => { window.open(socialUrl, "_blank"); modalContent.parentElement.remove(); };
+    modalContent.querySelector("#goSocialBtn").onclick = () => { 
+      window.open(socialUrl, "_blank"); 
+      modalContent.parentElement.remove(); 
+    };
     modalContent.querySelector("#cancelMeet").onclick = () => modalContent.parentElement.remove();
   } else {
     modalContent.innerHTML = `
-      <h3 style="margin-bottom:10px;font-weight:600;">Meet ${host.chatId || "this host"}?</h3>
-      <p style="margin-bottom:16px;">This host isn’t meeting new people yet. Please check back later!</p>
+      <h3 style="margin-bottom:10px;font-weight:600;">Meet ${hostName}?</h3>
+      <p style="margin-bottom:16px;">${hostName} isn’t meeting new people yet. Please check back later!</p>
       <button id="cancelMeet" style="padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">Close</button>
     `;
     modalContent.querySelector("#cancelMeet").onclick = () => modalContent.parentElement.remove();
