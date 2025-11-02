@@ -243,8 +243,8 @@ async function showGiftModal(targetUid, targetData) {
     close();
 
     // Render banner; confetti/glow handled only once in renderer
-// Old line in showGiftModal:
-renderMessagesFromArray([{ id: docRef.id, data: messageData }]);
+    renderMessagesFromArray([{ id: docRef.id, data: messageData }]);
+  });
 }
 /* ---------- Gift Alert (Optional Popup) ---------- */
 function showGiftAlert(text) {
@@ -316,7 +316,7 @@ function renderMessagesFromArray(messages) {
     if (m.systemBanner) {
       // --- 🎁 Full-width banner style ---
       wrapper.style.display = "block";
-      wrapper.style.width = "96%";
+      wrapper.style.width = "88%";
       wrapper.style.textAlign = "center";
       wrapper.style.padding = "4px 0";
       wrapper.style.margin = "3px 0";
@@ -2525,6 +2525,8 @@ if (saveMediaBtn) {
 }
 
 })();
+
+
 
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
