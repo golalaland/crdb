@@ -1,196 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Realistic Ground Dice Roll</title>
-<style>
-  body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    background: radial-gradient(circle at center, #333 0%, #111 100%);
-    color: white;
-    font-family: sans-serif;
-    overflow: hidden;
-  }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Dice Roll (GLB Model)</title>
+  <style>
+    body {
+      margin: 0;
+      background: radial-gradient(circle at center, #333 0%, #111 100%);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      height: 100vh;
+    }
 
-  .dice-container {
-    perspective: 1000px;
-    position: relative;
-    height: 200px;
-  }
+    canvas {
+      display: block;
+    }
 
-  .dice {
-    width: 100px;
-    height: 100px;
-    position: absolute;
-    bottom: 0;
-    transform-style: preserve-3d;
-    transform-origin: center bottom;
-    transition: transform 1s ease-out;
-  }
+    button {
+      position: absolute;
+      bottom: 40px;
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: none;
+      background: #ff6f61;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
 
-  /* Ground shadow effect */
-  .shadow {
-    position: absolute;
-    bottom: 10px;
-    width: 120px;
-    height: 30px;
-    background: radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, transparent 80%);
-    border-radius: 50%;
-    filter: blur(3px);
-    transition: all 0.4s ease;
-  }
-
-  .face {
-    position: absolute;
-    width: 100px;
-    height: 100px;
-    background: #fff;
-    border: 2px solid #000;
-    border-radius: 12px;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-  }
-
-  .pip {
-    width: 18px;
-    height: 18px;
-    background: black;
-    border-radius: 50%;
-    margin: 5px;
-  }
-
-  /* 3D cube face positions */
-  .front  { transform: rotateY(0deg) translateZ(50px); }
-  .back   { transform: rotateY(180deg) translateZ(50px); }
-  .right  { transform: rotateY(90deg) translateZ(50px); }
-  .left   { transform: rotateY(-90deg) translateZ(50px); }
-  .top    { transform: rotateX(90deg) translateZ(50px); }
-  .bottom { transform: rotateX(-90deg) translateZ(50px); }
-
-  /* Pip layouts */
-  .face-1 .pip:nth-child(1) { order: 5; }
-  .face-2 .pip:nth-child(1) { order: 1; }
-  .face-2 .pip:nth-child(2) { order: 9; }
-  .face-3 .pip:nth-child(1) { order: 1; }
-  .face-3 .pip:nth-child(2) { order: 5; }
-  .face-3 .pip:nth-child(3) { order: 9; }
-  .face-4 .pip:nth-child(1) { order: 1; }
-  .face-4 .pip:nth-child(2) { order: 3; }
-  .face-4 .pip:nth-child(3) { order: 7; }
-  .face-4 .pip:nth-child(4) { order: 9; }
-  .face-5 .pip:nth-child(1) { order: 1; }
-  .face-5 .pip:nth-child(2) { order: 3; }
-  .face-5 .pip:nth-child(3) { order: 5; }
-  .face-5 .pip:nth-child(4) { order: 7; }
-  .face-5 .pip:nth-child(5) { order: 9; }
-  .face-6 .pip:nth-child(1) { order: 1; }
-  .face-6 .pip:nth-child(2) { order: 3; }
-  .face-6 .pip:nth-child(3) { order: 4; }
-  .face-6 .pip:nth-child(4) { order: 6; }
-  .face-6 .pip:nth-child(5) { order: 7; }
-  .face-6 .pip:nth-child(6) { order: 9; }
-
-  button {
-    margin-top: 50px;
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    border: none;
-    background: #ff6f61;
-    color: white;
-    font-size: 18px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background 0.3s;
-  }
-
-  button:hover {
-    background: #ff3b2f;
-  }
-
-  #scores {
-    margin-top: 30px;
-    width: 200px;
-    text-align: center;
-  }
-</style>
+    button:hover {
+      background: #ff3b2f;
+    }
+  </style>
 </head>
 <body>
+  <button id="rollBtn">ROLL</button>
 
-<div class="dice-container">
-  <div class="shadow" id="shadow"></div>
-  <div class="dice" id="dice">
-    <div class="face front face-1"><div class="pip"></div></div>
-    <div class="face back face-6"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
-    <div class="face right face-3"><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
-    <div class="face left face-4"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
-    <div class="face top face-5"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
-    <div class="face bottom face-2"><div class="pip"></div><div class="pip"></div></div>
-  </div>
-</div>
+  <!-- Load Three.js -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
 
-<button id="rollBtn">ROLL</button>
+  <script>
+    let scene, camera, renderer, dice, mixer;
 
-<div id="scores">
-  <h3>Score Sheet</h3>
-  <ul id="scoreList"></ul>
-</div>
+    init();
+    animate();
 
-<script>
-const dice = document.getElementById('dice');
-const shadow = document.getElementById('shadow');
-const rollBtn = document.getElementById('rollBtn');
-const scoreList = document.getElementById('scoreList');
+    function init() {
+      // Scene
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x222222);
 
-const rotations = [
-  [0,0], [90,0], [0,-90], [0,90], [-90,0], [180,0]
-];
+      // Camera
+      camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 3, 6);
 
-rollBtn.addEventListener('click', () => {
-  rollBtn.disabled = true;
-  const random = Math.floor(Math.random() * 6);
-  const [xRot, yRot] = rotations[random];
-  const spinX = xRot + (720 + Math.random() * 1440);
-  const spinY = yRot + (720 + Math.random() * 1440);
-  const bounce = 60; // how high it lifts off ground
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
+      document.body.appendChild(renderer.domElement);
 
-  dice.style.transition = 'transform 3.5s cubic-bezier(0.19, 1, 0.22, 1)';
-  shadow.style.transition = 'all 0.3s ease-in-out';
+      // Lights
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
 
-  // Animate bounce illusion
-  dice.animate([
-    { transform: `translateY(0px) rotateX(0) rotateY(0)` },
-    { transform: `translateY(-${bounce}px) rotateX(${spinX/2}deg) rotateY(${spinY/2}deg)` },
-    { transform: `translateY(0px) rotateX(${spinX}deg) rotateY(${spinY}deg)` }
-  ], {
-    duration: 3500,
-    easing: 'cubic-bezier(0.19, 1, 0.22, 1)',
-    fill: 'forwards'
-  });
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+      dirLight.position.set(5, 10, 5);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 2048;
+      dirLight.shadow.mapSize.height = 2048;
+      scene.add(dirLight);
 
-  // Shadow compression
-  shadow.animate([
-    { transform: 'scale(1)', opacity: 0.4 },
-    { transform: 'scale(0.6)', opacity: 0.2 },
-    { transform: 'scale(1)', opacity: 0.4 }
-  ], {
-    duration: 3500,
-    easing: 'ease-in-out'
-  });
+      // Ground (table)
+      const groundGeo = new THREE.PlaneGeometry(20, 20);
+      const groundMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      scene.add(ground);
 
-  setTimeout(() => {
-    scoreList.innerHTML += `<li>Roll: ${random + 1}</li>`;
-    rollBtn.disabled = false;
-  }, 3500);
-});
-</script>
+      // Load Dice
+      const loader = new THREE.GLTFLoader();
+      loader.load(
+        "dicemodel.glb", // your uploaded file
+        (gltf) => {
+          dice = gltf.scene;
+          dice.scale.set(1.5, 1.5, 1.5);
+          dice.position.set(0, 1, 0);
+          dice.traverse((child) => {
+            if (child.isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+          });
+          scene.add(dice);
+        },
+        undefined,
+        (error) => console.error("Error loading dice:", error)
+      );
 
+      // Handle window resize
+      window.addEventListener("resize", () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      // Button
+      document.getElementById("rollBtn").addEventListener("click", rollDice);
+    }
+
+    function rollDice() {
+      if (!dice) return;
+
+      // random rotation
+      const randX = Math.random() * Math.PI * 8 + Math.PI * 2;
+      const randY = Math.random() * Math.PI * 8 + Math.PI * 2;
+      const randZ = Math.random() * Math.PI * 8 + Math.PI * 2;
+
+      // random bounce height
+      const bounce = 0.5 + Math.random() * 0.3;
+      const duration = 2.8;
+
+      const start = performance.now();
+
+      function animateRoll(time) {
+        const elapsed = (time - start) / 1000;
+        const t = Math.min(elapsed / duration, 1);
+
+        const ease = t < 1 ? 1 - Math.pow(1 - t, 3) : 1;
+        dice.rotation.x = randX * ease;
+        dice.rotation.y = randY * ease;
+        dice.rotation.z = randZ * ease;
+        dice.position.y = 1 + Math.sin(t * Math.PI) * bounce;
+
+        if (t < 1) requestAnimationFrame(animateRoll);
+      }
+
+      requestAnimationFrame(animateRoll);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+  </script>
 </body>
 </html>
