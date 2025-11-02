@@ -77,84 +77,84 @@ function pushNotificationTx(tx, userId, message) {
   });
 }
 
-/* ---------- Auth State Watcher ---------- */
-/* ---------- Auth State Watcher (Stable Notification Setup) ---------- */
+/* ---------- Auth State Watcher (Stable + Lazy Notifications) ---------- */
 onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    currentUser = user;
-    console.log("✅ Logged in as:", user.uid);
-    localStorage.setItem("userId", user.uid);
+  currentUser = user;
 
-    // Wait until notificationsList actually exists in DOM
-    const waitForElement = (selector) =>
-      new Promise((resolve) => {
-        const el = document.querySelector(selector);
-        if (el) return resolve(el);
-        const observer = new MutationObserver(() => {
-          const elNow = document.querySelector(selector);
-          if (elNow) {
-            observer.disconnect();
-            resolve(elNow);
-          }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-      });
+  if (!user) {
+    console.warn("⚠️ No logged-in user found");
+    localStorage.removeItem("userId");
+    return;
+  }
 
-    const notificationsList = await waitForElement("#notificationsList");
-    const markAllBtn = document.getElementById("markAllRead");
+  console.log("✅ Logged in as:", user.uid);
+  localStorage.setItem("userId", user.uid);
 
-    try {
-      console.log("🔔 Setting up live notification listener...");
-      const notifRef = collection(db, "users", currentUser.uid, "notifications");
-      const q = query(notifRef, orderBy("timestamp", "desc"));
+  // Utility: wait for element to appear in DOM
+  const waitForElement = (selector) =>
+    new Promise((resolve) => {
+      const el = document.querySelector(selector);
+      if (el) return resolve(el);
 
-      onSnapshot(q, (snapshot) => {
-        console.log("📡 Snapshot received:", snapshot.size, "docs");
-
-        if (snapshot.empty) {
-          notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-          return;
+      const observer = new MutationObserver(() => {
+        const elNow = document.querySelector(selector);
+        if (elNow) {
+          observer.disconnect();
+          resolve(elNow);
         }
-
-        const items = snapshot.docs.map((docSnap) => {
-          const n = docSnap.data();
-          const time = n.timestamp?.seconds
-            ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "--:--";
-          return `
-            <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
-              <span>${n.message || "(no message)"}</span>
-              <span class="notification-time">${time}</span>
-            </div>
-          `;
-        });
-
-        notificationsList.innerHTML = items.join("");
       });
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
 
-      // ✅ Mark all as read
-      if (markAllBtn) {
-        markAllBtn.addEventListener("click", async () => {
-          console.log("🟡 Marking all notifications as read...");
-          const snapshot = await getDocs(notifRef);
-          for (const docSnap of snapshot.docs) {
-            const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
-            await updateDoc(ref, { read: true });
-          }
-          alert("✅ All notifications marked as read.");
-        });
+  const notificationsList = await waitForElement("#notificationsList");
+  const markAllBtn = document.getElementById("markAllRead");
+
+  try {
+    console.log("🔔 Setting up live notification listener...");
+    const notifRef = collection(db, "users", currentUser.uid, "notifications");
+    const notifQuery = query(notifRef, orderBy("timestamp", "desc"));
+
+    // Live updates
+    onSnapshot(notifQuery, (snapshot) => {
+      if (snapshot.empty) {
+        notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+        return;
       }
 
-    } catch (err) {
-      console.error("❌ Notification listener error:", err);
+      const items = snapshot.docs.map((docSnap) => {
+        const n = docSnap.data();
+        const time = n.timestamp?.seconds
+          ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "--:--";
+
+        return `
+          <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
+            <span>${n.message || "(no message)"}</span>
+            <span class="notification-time">${time}</span>
+          </div>
+        `;
+      });
+
+      notificationsList.innerHTML = items.join("");
+    });
+
+    // Mark all notifications as read
+    if (markAllBtn) {
+      markAllBtn.addEventListener("click", async () => {
+        console.log("🟡 Marking all notifications as read...");
+        const snapshot = await getDocs(notifRef);
+        for (const docSnap of snapshot.docs) {
+          const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
+          await updateDoc(ref, { read: true });
+        }
+        alert("✅ All notifications marked as read.");
+      });
     }
-  } else {
-    console.warn("⚠️ No logged-in user found");
-    currentUser = null;
-    localStorage.removeItem("userId");
+  } catch (err) {
+    console.error("❌ Notification listener error:", err);
   }
 });
 
