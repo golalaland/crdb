@@ -159,6 +159,75 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 
+/* ===== Notifications Tab Lazy + Live Setup ===== */
+let notificationsListenerAttached = false;
+
+function attachNotificationsListener() {
+  const notificationsList = document.getElementById("notificationsList");
+  const markAllBtn = document.getElementById("markAllRead");
+  if (!notificationsList) return console.warn("⚠️ No notificationsList element found");
+
+  const notifRef = collection(db, "users", currentUser.uid, "notifications");
+  const q = query(notifRef, orderBy("timestamp", "desc"));
+
+  // Live snapshot listener
+  onSnapshot(q, (snapshot) => {
+    console.log("📡 Notifications snapshot:", snapshot.docs.map(d => d.data()));
+
+    if (snapshot.empty) {
+      notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+      return;
+    }
+
+    const items = snapshot.docs.map((docSnap) => {
+      const n = docSnap.data();
+      const time = n.timestamp?.seconds
+        ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : "--:--";
+      return `
+        <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
+          <span>${n.message || "(no message)"}</span>
+          <span class="notification-time">${time}</span>
+        </div>
+      `;
+    });
+
+    notificationsList.innerHTML = items.join("");
+  });
+
+  // Mark all as read
+  if (markAllBtn) {
+    markAllBtn.onclick = async () => {
+      const snapshot = await getDocs(notifRef);
+      for (const docSnap of snapshot.docs) {
+        const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
+        await updateDoc(ref, { read: true });
+      }
+      showStarPopup("✅ All notifications marked as read.");
+    };
+  }
+
+  notificationsListenerAttached = true;
+}
+
+/* ===== Tab Switching (Lazy attach for notifications) ===== */
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.onclick = () => {
+    // Switch tabs visually
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach((tab) => (tab.style.display = "none"));
+    btn.classList.add("active");
+
+    const tabContent = document.getElementById(btn.dataset.tab);
+    if (tabContent) tabContent.style.display = "block";
+
+    // Attach notifications listener lazily
+    if (btn.dataset.tab === "notificationsTab" && !notificationsListenerAttached && currentUser?.uid) {
+      attachNotificationsListener();
+    }
+  };
+});
+
 /* ---------- Helper: Get current user ID ---------- */
 export function getCurrentUserId() {
   return currentUser ? currentUser.uid : localStorage.getItem("userId");
