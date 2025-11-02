@@ -190,7 +190,7 @@ function showStarPopup(text) {
 
 
 /* ----------------------------
-   ⭐ GIFT MODAL / CHAT BANNER ALERT
+   ⭐ GIFT MODAL ALERT
 ----------------------------- */
 async function showGiftModal(targetUid, targetData) {
   const modal = document.getElementById("giftModal");
@@ -198,7 +198,6 @@ async function showGiftModal(targetUid, targetData) {
   const amountInput = document.getElementById("giftAmountInput");
   const confirmBtn = document.getElementById("giftConfirmBtn");
   const closeBtn = document.getElementById("giftModalClose");
-
   if (!modal || !titleEl || !amountInput || !confirmBtn) return;
 
   titleEl.textContent = `Gift ⭐️`;
@@ -209,7 +208,7 @@ async function showGiftModal(targetUid, targetData) {
   closeBtn.onclick = close;
   modal.onclick = (e) => { if (e.target === modal) close(); };
 
-  // Remove previous click listeners
+  // Remove previous click listeners safely
   const newConfirmBtn = confirmBtn.cloneNode(true);
   confirmBtn.replaceWith(newConfirmBtn);
 
@@ -218,32 +217,11 @@ async function showGiftModal(targetUid, targetData) {
     if (amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
     if ((currentUser?.stars || 0) < amt) return showStarPopup("Not enough stars 💫");
 
-    const fromRef = doc(db, "users", currentUser.uid);
-    const toRef = doc(db, "users", targetUid);
-    const glowColor = randomColor();
-
-    const messageData = {
-      content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetData.chatId}!`,
-      uid: currentUser.uid,
-      timestamp: serverTimestamp(),
-      highlight: true,
-      buzzColor: glowColor,
-      systemBanner: true,
-      _confettiPlayed: false
-    };
-
-    const docRef = await addDoc(collection(db, CHAT_COLLECTION), messageData);
-
-    await Promise.all([
-      updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
-      updateDoc(toRef, { stars: increment(amt) })
-    ]);
-
+    await sendStarsToUser(targetData, amt); // single source handles everything
     showStarPopup(`You sent ${amt} stars ⭐️ to ${targetData.chatId}!`);
     close();
-
-// Show floating gift popup for all online users
-showGiftPopup(messageData.content, { glowColor: messageData.buzzColor });
+  });
+}
 
 /* ---------- Gift Alert (Optional Popup) ---------- */
 function showGiftAlert(text) {
@@ -2574,50 +2552,47 @@ if (saveMediaBtn) {
     // Show popup
     showSocialCard(user);
   });
-
-// --- SEND STARS FUNCTION ---
+// --- SEND STARS FUNCTION (centralized) ---
 async function sendStarsToUser(targetUser, amt) {
-  if (!currentUser || !targetUser) return;
+  if (!currentUser) return showStarPopup("Sign in first.");
 
   const fromRef = doc(db, "users", currentUser.uid);
-  const toRef = doc(db, "users", targetUser._docId);
+  const toRef = doc(db, "users", targetUser._docId || targetUser.uid);
   const glowColor = randomColor();
 
-  // Deduct and add stars
+  // Update Firestore balances
   await Promise.all([
     updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
     updateDoc(toRef, { stars: increment(amt) })
   ]);
 
-  // --- Chat banner message ---
+  // Create Firestore system banner for admin-style display
   const bannerMsg = {
     content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
     timestamp: serverTimestamp(),
     highlight: true,
     buzzColor: glowColor,
-    systemBanner: true // flag for renderer to style as banner
+    systemBanner: true // for renderer to know it's an admin-style banner
   };
 
-  // Add to chat collection
   const docRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
 
-  // Render banner in chat
-  renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true); // 'true' indicates pure banner
+  // Render the banner in chat (admin/system style)
+  renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }]);
 
-  // --- Show floating gift popup for all online users ---
+  // Also show floating popup for all users
   showGiftPopup(bannerMsg.content, { glowColor: bannerMsg.buzzColor });
 
-  // --- Apply glow to chat banner ---
+  // Optional: add temporary glow effect in chat
   const msgEl = document.getElementById(docRef.id);
   if (!msgEl) return;
   const contentEl = msgEl.querySelector(".content") || msgEl;
   contentEl.style.setProperty("--pulse-color", glowColor);
   contentEl.classList.add("baller-highlight");
-
   setTimeout(() => {
     contentEl.classList.remove("baller-highlight");
     contentEl.style.boxShadow = "none";
-  }, 21000); // same duration as your pulse animation
+  }, 21000);
 }
 
 // 🌤️ Dynamic Host Panel Greeting
