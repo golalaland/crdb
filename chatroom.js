@@ -2233,21 +2233,22 @@ if (saveMediaBtn) {
   };
 }
 /* ======================================================
-  Social Card + Stars Gifting System
-  Paste AFTER Firebase/Firestore is initialized
-  and AFTER showMeetModal() exists.
-====================================================== */
+   Social Card System — Username tap + GiftStars + Slider
+   Paste this AFTER Firebase/Firestore is initialized
+   and AFTER your showMeetModal() exists.
+   ====================================================== */
+
 (async function initSocialCardSystem() {
-  // --- 1) Fetch all users once and build a lookup map ---
   const allUsers = [];
   const usersByChatId = {};
 
+  // 1) Fetch all users
   try {
     const usersRef = collection(db, "users");
     const snaps = await getDocs(usersRef);
     snaps.forEach(docSnap => {
       const data = docSnap.data();
-      const chatIdLower = (data.chatIdLower || (data.chatId || "")).toString().toLowerCase();
+      const chatIdLower = (data.chatIdLower || (data.chatId || "")).toLowerCase();
       data._docId = docSnap.id;
       data.chatIdLower = chatIdLower;
       allUsers.push(data);
@@ -2258,21 +2259,19 @@ if (saveMediaBtn) {
     console.error("Failed to fetch users for social card:", err);
   }
 
-  // --- 2) Show social card popup ---
+  // 2) Create Social Card popup
   function showSocialCard(user) {
     if (!user) return;
 
-    // Remove any existing card
     document.getElementById('socialCard')?.remove();
 
-    // Card container
     const card = document.createElement('div');
     card.id = 'socialCard';
     Object.assign(card.style, {
       position: 'fixed',
       top: '50%',
       left: '50%',
-      transform: 'translate(-50%, -50%)',
+      transform: 'translate(-50%, -50%) scale(1)',
       background: 'linear-gradient(135deg,#0f0f10,#19191b)',
       borderRadius: '14px',
       padding: '18px 20px',
@@ -2290,7 +2289,6 @@ if (saveMediaBtn) {
     // Header
     const chatIdDisplay = user.chatId ? user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1) : 'Unknown';
     const color = user.isHost ? '#ff6600' : user.isVIP ? '#ff0099' : '#cccccc';
-
     const header = document.createElement('h3');
     header.textContent = chatIdDisplay;
     Object.assign(header.style, {
@@ -2308,7 +2306,6 @@ if (saveMediaBtn) {
     detailsEl.style.margin = '0 0 12px';
     detailsEl.style.fontSize = '14px';
     detailsEl.style.lineHeight = '1.4';
-
     const flairText = user.flair || '';
     const pronoun = user.pronoun || 'their';
     const ageGroup = user.ageGroup || (user.age ? `${user.age} yrs` : 'young');
@@ -2335,58 +2332,59 @@ if (saveMediaBtn) {
     card.appendChild(bioEl);
     typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
 
-    // Buttons wrapper
-const btnWrap = document.createElement('div');
-Object.assign(btnWrap.style, { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginTop: '10px' });
+    // Buttons + Slider
+    const btnWrap = document.createElement('div');
+    Object.assign(btnWrap.style, { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginTop: '10px' });
 
-// --- Meet button for hosts ---
-if (user.isHost) {
-  const meetBtn = document.createElement('button');
-  meetBtn.textContent = 'Meet';
-  Object.assign(meetBtn.style, {
-    padding: '8px 16px',
-    borderRadius: '6px',
-    border: 'none',
-    fontWeight: '600',
-    background: 'linear-gradient(90deg,#ff6600,#ff0099)',
-    color: '#fff',
-    cursor: 'pointer'
-  });
-  meetBtn.onclick = () => {
-    if (typeof showMeetModal === 'function') showMeetModal(user);
-  };
-  btnWrap.appendChild(meetBtn);
-}
+    // Meet button
+    if (user.isHost) {
+      const meetBtn = document.createElement('button');
+      meetBtn.textContent = 'Meet';
+      Object.assign(meetBtn.style, {
+        padding: '8px 16px',
+        borderRadius: '6px',
+        border: 'none',
+        fontWeight: '600',
+        background: 'linear-gradient(90deg,#ff6600,#ff0099)',
+        color: '#fff',
+        cursor: 'pointer'
+      });
+      meetBtn.onclick = () => {
+        if (typeof showMeetModal === 'function') showMeetModal(user);
+      };
+      btnWrap.appendChild(meetBtn);
+    }
 
-// --- Slider for gift amount ---
-const slider = document.createElement('input');
-slider.type = 'range';
-slider.min = 1;
-slider.max = 999;
-slider.value = 100;
-slider.style.width = '90%';
-slider.style.margin = '6px 0';
-btnWrap.appendChild(slider);
+    // Slider for gift amount
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = 1;
+    slider.max = 999;
+    slider.value = 100;
+    slider.style.width = '90%';
+    slider.style.margin = '6px 0';
+    btnWrap.appendChild(slider);
 
-// --- GiftStars button ---
-const giftBtn = document.createElement('button');
-giftBtn.className = 'popup-gift-btn'; // unique
-giftBtn.textContent = 'Gift Stars ⭐️';
-Object.assign(giftBtn.style, {
-  padding: '8px 16px',
-  borderRadius: '6px',
-  border: 'none',
-  fontWeight: '600',
-  background: 'linear-gradient(90deg,#ffcc00,#ff6600)',
-  color: '#000',
-  cursor: 'pointer'
-});
-giftBtn.onclick = () => showGiftModal(user._docId, user, parseInt(slider.value));
-btnWrap.appendChild(giftBtn);
+    // GiftStars button
+    const giftBtn = document.createElement('button');
+    giftBtn.className = 'popup-giftstars-btn'; // unique class
+    giftBtn.textContent = 'Gift Stars ⭐️';
+    Object.assign(giftBtn.style, {
+      padding: '8px 16px',
+      borderRadius: '6px',
+      border: 'none',
+      fontWeight: '600',
+      background: 'linear-gradient(90deg,#ffcc00,#ff6600)',
+      color: '#000',
+      cursor: 'pointer'
+    });
+    giftBtn.onclick = () => showGiftModal(user._docId, user, parseInt(slider.value));
+    btnWrap.appendChild(giftBtn);
 
-card.appendChild(btnWrap);
+    card.appendChild(btnWrap);
 
-    // Animate in
+    // Append & animate in
+    document.body.appendChild(card);
     requestAnimationFrame(() => {
       card.style.opacity = '1';
       card.style.transform = 'translate(-50%, -50%) scale(1.02)';
@@ -2394,33 +2392,45 @@ card.appendChild(btnWrap);
     });
 
     // Click outside to close
-    const closeHandler = (ev) => { if (!card.contains(ev.target)) { card.remove(); document.removeEventListener('click', closeHandler); } };
+    const closeHandler = e => {
+      if (!card.contains(e.target)) {
+        card.remove();
+        document.removeEventListener('click', closeHandler);
+      }
+    };
     setTimeout(() => document.addEventListener('click', closeHandler), 10);
   }
 
-  // --- Small helpers ---
   function typeWriterEffect(el, text, speed = 35) {
     el.textContent = '';
     let i = 0;
-    const iv = setInterval(() => { el.textContent += text.charAt(i) || ''; i++; if (i >= text.length) clearInterval(iv); }, speed);
+    const iv = setInterval(() => {
+      el.textContent += text.charAt(i) || '';
+      i++;
+      if (i >= text.length) clearInterval(iv);
+    }, speed);
   }
 
-  // --- 3) Username tap only (with blink) ---
-  document.addEventListener('pointerdown', (e) => {
+  // 3) Username tap detector
+  document.addEventListener('pointerdown', e => {
     const target = e.target;
-    if (!target || !target.classList.contains('chat-username')) return;
+    if (!target || !target.textContent) return;
 
-    // Blink feedback
-    target.classList.add('username-blink');
-    setTimeout(() => target.classList.remove('username-blink'), 400);
+    const txt = target.textContent;
+    if (!txt.includes(':')) return;
 
-    const chatId = target.textContent.trim();
+    const chatId = txt.split(':')[0].trim();
     if (!chatId) return;
 
     const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || '').toLowerCase() === chatId.toLowerCase());
-    if (!user) return;
-    if (user._docId === currentUser?.uid) return;
+    if (!user || user._docId === currentUser?.uid) return;
 
+    // ✨ Username blink effect
+    target.style.transition = 'opacity 0.12s';
+    target.style.opacity = '0.3';
+    setTimeout(() => target.style.opacity = '', 200);
+
+    // Show popup
     showSocialCard(user);
   });
 
