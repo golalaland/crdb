@@ -2233,13 +2233,12 @@ if (saveMediaBtn) {
   };
 }
 /* ======================================================
-  Enhanced Social Card System — Firestore fetch + username tap trigger
-  Includes: username blink, unique gift button, typewriter bio, meet/socials buttons
-  Paste this AFTER Firebase/Firestore is initialized and AFTER showMeetModal() exists
+  Social Card + Stars Gifting System
+  Paste AFTER Firebase/Firestore is initialized
+  and AFTER showMeetModal() exists.
 ====================================================== */
 
 (async function initSocialCardSystem() {
-  // --- 1) Fetch all users once and build a lookup map ---
   const allUsers = [];
   const usersByChatId = {};
 
@@ -2248,7 +2247,7 @@ if (saveMediaBtn) {
     const snaps = await getDocs(usersRef);
     snaps.forEach(docSnap => {
       const data = docSnap.data();
-      const chatIdLower = (data.chatIdLower || (data.chatId || "")).toString().toLowerCase();
+      const chatIdLower = (data.chatIdLower || (data.chatId || "")).toLowerCase();
       data._docId = docSnap.id;
       data.chatIdLower = chatIdLower;
       allUsers.push(data);
@@ -2259,14 +2258,11 @@ if (saveMediaBtn) {
     console.error("Failed to fetch users for social card:", err);
   }
 
-  // --- 2) showSocialCard(user) — creates the popup card ---
+  // --- Show Social Card Popup ---
   function showSocialCard(user) {
     if (!user) return;
-
-    // remove existing
     document.getElementById('socialCard')?.remove();
 
-    // Container card
     const card = document.createElement('div');
     card.id = 'socialCard';
     Object.assign(card.style, {
@@ -2276,10 +2272,10 @@ if (saveMediaBtn) {
       transform: 'translate(-50%, -50%) scale(1)',
       background: 'linear-gradient(135deg,#0f0f10,#19191b)',
       borderRadius: '14px',
-      padding: '16px 20px',
+      padding: '18px 20px',
       color: '#fff',
       width: '90%',
-      maxWidth: '320px',
+      maxWidth: '340px',
       zIndex: '999999',
       textAlign: 'center',
       boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
@@ -2288,7 +2284,7 @@ if (saveMediaBtn) {
       transition: 'opacity .18s ease, transform .18s ease'
     });
 
-    // Header with gradient text
+    // --- Header ---
     const chatIdDisplay = user.chatId ? user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1) : 'Unknown';
     const color = user.isHost ? '#ff6600' : user.isVIP ? '#ff0099' : '#cccccc';
 
@@ -2304,7 +2300,7 @@ if (saveMediaBtn) {
     });
     card.appendChild(header);
 
-    // Details line
+    // --- Details ---
     const detailsEl = document.createElement('p');
     detailsEl.style.margin = '0 0 12px';
     detailsEl.style.fontSize = '14px';
@@ -2328,7 +2324,7 @@ if (saveMediaBtn) {
     }
     card.appendChild(detailsEl);
 
-    // Bio area (typewriter)
+    // --- Bio (typewriter) ---
     const bioEl = document.createElement('div');
     bioEl.style.margin = '8px 0 14px';
     bioEl.style.fontStyle = 'italic';
@@ -2336,16 +2332,16 @@ if (saveMediaBtn) {
     card.appendChild(bioEl);
     typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
 
-    // Buttons wrapper
+    // --- Buttons & Slider Wrapper ---
     const btnWrap = document.createElement('div');
-    Object.assign(btnWrap.style, { display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '8px', flexWrap: 'wrap' });
+    Object.assign(btnWrap.style, { display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px', alignItems: 'center' });
 
-    // --- Meet button for hosts ---
+    // Meet Button
     if (user.isHost) {
       const meetBtn = document.createElement('button');
       meetBtn.textContent = 'Meet';
       Object.assign(meetBtn.style, {
-        padding: '6px 14px',
+        padding: '8px 16px',
         borderRadius: '6px',
         border: 'none',
         fontWeight: '600',
@@ -2357,46 +2353,51 @@ if (saveMediaBtn) {
       btnWrap.appendChild(meetBtn);
     }
 
-    // --- Socials button ---
-    const socialsPresent = user.whatsapp || user.instagram || user.tiktok || user.telegram;
-    if (socialsPresent) {
-      const socialBtn = document.createElement('button');
-      socialBtn.textContent = 'Socials';
-      Object.assign(socialBtn.style, {
-        padding: '6px 10px',
-        borderRadius: '6px',
-        border: '1px solid rgba(255,255,255,0.06)',
-        background: 'transparent',
-        color: '#fff',
-        cursor: 'pointer',
-        fontWeight: '600'
-      });
-      socialBtn.onclick = () => {
-        const url = user.instagram || user.tiktok || user.whatsapp || user.telegram;
-        if (url) window.open(url.startsWith('http') ? url : `https://${url}`, '_blank');
-      };
-      btnWrap.appendChild(socialBtn);
-    }
+    // Slider
+    const sliderWrapper = document.createElement('div');
+    sliderWrapper.style.display = 'flex';
+    sliderWrapper.style.alignItems = 'center';
+    sliderWrapper.style.gap = '6px';
 
-    // --- ⭐ Unique Gift Stars button ---
+    const sliderValue = document.createElement('span');
+    sliderValue.textContent = '0 ⭐️';
+
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = '0';
+    slider.max = '999';
+    slider.value = '0';
+    slider.style.width = '160px';
+    slider.addEventListener('input', () => { sliderValue.textContent = `${slider.value} ⭐️`; });
+
+    sliderWrapper.appendChild(sliderValue);
+    sliderWrapper.appendChild(slider);
+    btnWrap.appendChild(sliderWrapper);
+
+    // Gift Stars Button (unique class)
     const giftBtn = document.createElement('button');
-    giftBtn.className = 'popupGiftBtn'; // UNIQUE class to prevent clash
+    giftBtn.className = 'popupStarsBtn';
     giftBtn.textContent = 'Gift Stars ⭐️';
     Object.assign(giftBtn.style, {
-      padding: '6px 12px',
+      padding: '8px 16px',
       borderRadius: '6px',
       border: 'none',
-      background: 'linear-gradient(90deg,#ffd700,#ff9900)',
-      color: '#000',
       fontWeight: '600',
+      background: 'linear-gradient(90deg,#ffcc00,#ff33cc)',
+      color: '#000',
       cursor: 'pointer'
     });
-    giftBtn.onclick = () => showGiftModal(user._docId, user);
-    btnWrap.appendChild(giftBtn);
 
+    giftBtn.onclick = () => {
+      const amt = parseInt(slider.value);
+      if (amt < 1) return showStarPopup('🔥 Select at least 1 ⭐️');
+      showGiftModal(user._docId, user, amt);
+    };
+
+    btnWrap.appendChild(giftBtn);
     card.appendChild(btnWrap);
 
-    // Append & animate in
+    // Append & animate
     document.body.appendChild(card);
     requestAnimationFrame(() => {
       card.style.opacity = '1';
@@ -2412,12 +2413,9 @@ if (saveMediaBtn) {
       }
     };
     setTimeout(() => document.addEventListener('click', closeHandler), 10);
-
-    // Make draggable
-    makeDraggable(card);
   }
 
-  // --- Small helpers ---
+  // --- Typewriter Helper ---
   function typeWriterEffect(el, text, speed = 35) {
     el.textContent = '';
     let i = 0;
@@ -2428,45 +2426,21 @@ if (saveMediaBtn) {
     }, speed);
   }
 
-  function makeDraggable(el) {
-    let isDown = false, offset = [0, 0];
-    el.addEventListener('mousedown', e => {
-      isDown = true;
-      offset = [el.offsetLeft - e.clientX, el.offsetTop - e.clientY];
-      el.style.cursor = 'grabbing';
-    });
-    document.addEventListener('mouseup', () => { isDown = false; el.style.cursor = 'grab'; });
-    document.addEventListener('mousemove', e => {
-      if (!isDown) return;
-      e.preventDefault();
-      el.style.left = (e.clientX + offset[0]) + 'px';
-      el.style.top = (e.clientY + offset[1]) + 'px';
-      el.style.transform = 'translate(0,0)';
-    });
-  }
-
-  // --- 3) Username tap detector ---
+  // --- Username Tap Detector (no chatline) ---
   document.addEventListener('pointerdown', (e) => {
     const target = e.target;
-    if (!target || !target.textContent) return;
+    if (!target || !target.textContent || !target.classList.contains('username')) return;
 
-    // Ensure exact username is tapped (optional: add a specific class to username spans)
-    const txt = target.textContent;
-    if (!txt.includes(':')) return;
-    const chatId = txt.split(':')[0].trim();
-    if (!chatId) return;
-
+    const chatId = target.textContent.trim();
     const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || '').toLowerCase() === chatId.toLowerCase());
     if (!user) return;
-
-    if (user._docId === currentUser?.uid) return; // prevent self-popup
+    if (user._docId === currentUser?.uid) return;
 
     // Blink effect
     target.style.transition = 'opacity 0.12s';
     target.style.opacity = '0.3';
-    setTimeout(() => target.style.opacity = '', 150);
+    setTimeout(() => target.style.opacity = '', 140);
 
-    // Show popup
     showSocialCard(user);
   });
 
