@@ -243,7 +243,8 @@ async function showGiftModal(targetUid, targetData) {
     close();
 
     // Render banner; confetti/glow handled only once in renderer
- showGiftPopup(messageData.content, { glowColor: messageData.buzzColor });
+// Old line in showGiftModal:
+renderMessagesFromArray([{ id: docRef.id, data: messageData }]);
 }
 /* ---------- Gift Alert (Optional Popup) ---------- */
 function showGiftAlert(text) {
