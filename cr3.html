@@ -203,26 +203,25 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
 .msg {
   margin-bottom: 6px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
-  background: var(--glass);
-  padding: 8px 10px;
-  border-radius: 8px;
+  text-align: left;
+  word-wrap: break-word;
 }
 
-/* USERNAME */
 .msg .meta {
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
+  display: inline;
 }
 
-/* Colon auto */
 .msg .meta::after {
   content: ": ";
 }
 
-/* MESSAGE TEXT */
 .msg .content {
+  display: inline;
+  white-space: normal;
   word-break: break-word;
 }
 
@@ -1558,20 +1557,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
  <div id="guestMsg"></div>
 <div id="authBox">
 
-  <div class="msg">
-  <span class="meta">christy</span>
-  <span class="content">this is a long message that wraps to the next line like normal</span>
-</div>
-
-<div class="msg">
-  <span class="meta">ben</span>
-  <span class="content">yo</span>
-</div>
-
-<div class="msg">
-  <span class="meta">alex</span>
-  <span class="content">hi</span>
-</div>
 
   <!-- VIP Access Login Wrapper -->
   <div id="emailAuthWrapper">
