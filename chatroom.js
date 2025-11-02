@@ -2350,7 +2350,6 @@ if (saveMediaBtn) {
 
   function showSocialCard(user) {
     if (!user) return;
-
     document.getElementById('socialCard')?.remove();
 
     const card = document.createElement('div');
@@ -2374,6 +2373,7 @@ if (saveMediaBtn) {
       transition: 'opacity .18s ease, transform .18s ease'
     });
 
+    // --- Header ---
     const chatIdDisplay = user.chatId ? user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1) : 'Unknown';
     const color = user.isHost ? '#ff6600' : user.isVIP ? '#ff0099' : '#cccccc';
     const header = document.createElement('h3');
@@ -2388,6 +2388,7 @@ if (saveMediaBtn) {
     });
     card.appendChild(header);
 
+    // --- Details ---
     const detailsEl = document.createElement('p');
     detailsEl.style.margin = '0 0 12px';
     detailsEl.style.fontSize = '14px';
@@ -2409,6 +2410,7 @@ if (saveMediaBtn) {
     }
     card.appendChild(detailsEl);
 
+    // --- Bio ---
     const bioEl = document.createElement('div');
     bioEl.style.margin = '8px 0 14px';
     bioEl.style.fontStyle = 'italic';
@@ -2416,9 +2418,11 @@ if (saveMediaBtn) {
     card.appendChild(bioEl);
     typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
 
+    // --- Buttons wrapper ---
     const btnWrap = document.createElement('div');
     Object.assign(btnWrap.style, { display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', marginTop: '6px' });
 
+    // Meet button (hosts only)
     if (user.isHost) {
       const meetBtn = document.createElement('button');
       meetBtn.textContent = 'Meet';
@@ -2435,6 +2439,7 @@ if (saveMediaBtn) {
       btnWrap.appendChild(meetBtn);
     }
 
+    // --- Slider to choose stars ---
     const sliderWrapper = document.createElement('div');
     sliderWrapper.style.display = 'flex';
     sliderWrapper.style.alignItems = 'center';
@@ -2457,6 +2462,7 @@ if (saveMediaBtn) {
     slider.oninput = () => sliderLabel.textContent = `${slider.value} ⭐️`;
     btnWrap.appendChild(sliderWrapper);
 
+    // --- Gift button ---
     const giftBtnLocal = document.createElement('button');
     giftBtnLocal.textContent = 'Gift Stars ⭐️';
     Object.assign(giftBtnLocal.style, {
@@ -2479,14 +2485,16 @@ if (saveMediaBtn) {
     btnWrap.appendChild(giftBtnLocal);
 
     card.appendChild(btnWrap);
-    document.body.appendChild(card);
 
+    // Append & animate
+    document.body.appendChild(card);
     requestAnimationFrame(() => {
       card.style.opacity = '1';
       card.style.transform = 'translate(-50%, -50%) scale(1.02)';
       setTimeout(() => card.style.transform = 'translate(-50%, -50%) scale(1)', 120);
     });
 
+    // Click outside to close
     const closeHandler = (ev) => { if (!card.contains(ev.target)) { card.remove(); document.removeEventListener('click', closeHandler); } };
     setTimeout(() => document.addEventListener('click', closeHandler), 10);
   }
@@ -2507,19 +2515,15 @@ if (saveMediaBtn) {
     document.addEventListener('pointerdown', (e) => {
       const target = e.target;
       if (!target || !target.textContent) return;
-
       const txt = target.textContent.trim();
       if (!txt || txt.includes(':')) return;
       const chatId = txt.split(' ')[0].trim();
       if (!chatId) return;
-
       const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || '').toLowerCase() === chatId.toLowerCase());
       if (!user || user._docId === currentUser?.uid) return;
-
       const originalColor = target.style.backgroundColor;
       target.style.backgroundColor = '#ffcc00';
       setTimeout(() => target.style.backgroundColor = originalColor, 180);
-
       showSocialCard(user);
     });
 
@@ -2569,16 +2573,14 @@ if (saveMediaBtn) {
       const chatId = currentUser?.chatId || "Guest";
       const name = capitalizeFirstLetter(chatId);
       const hour = new Date().getHours();
-
       let greeting;
       if (hour < 12) greeting = `Good Morning, ${name}! ☀️`;
       else if (hour < 18) greeting = `Good Afternoon, ${name}! ⛅️`;
       else greeting = `Good Evening, ${name}! 🌙`;
-
       document.getElementById("hostPanelTitle").textContent = greeting;
     }
 
-    hostSettingsBtn?.addEventListener("click", setGreeting);
+    hostSettingsBtn.addEventListener("click", setGreeting);
 
     // --- SCROLL ARROW LOGIC ---
     const scrollArrow = document.getElementById('scrollArrow');
@@ -2588,9 +2590,7 @@ if (saveMediaBtn) {
     function showArrow() {
       scrollArrow?.classList.add('show');
       if (fadeTimeoutArrow) clearTimeout(fadeTimeoutArrow);
-      fadeTimeoutArrow = setTimeout(() => {
-        scrollArrow?.classList.remove('show');
-      }, 2000);
+      fadeTimeoutArrow = setTimeout(() => scrollArrow?.classList.remove('show'), 2000);
     }
 
     function checkScroll() {
@@ -2600,11 +2600,10 @@ if (saveMediaBtn) {
 
     chatContainer?.addEventListener('scroll', checkScroll);
     scrollArrow?.addEventListener('click', () => {
-      chatContainer.scrollTo({
-        top: chatContainer.scrollHeight,
-        behavior: 'smooth'
-      });
+      chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
     });
 
     checkScroll(); // initial check
   }); // ✅ closes DOMContentLoaded
+
+})(); // ✅ closes initSocialCardSystem IIFE
