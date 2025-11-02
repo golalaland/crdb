@@ -2803,37 +2803,3 @@ const scrollArrow = document.getElementById('scrollArrow');
 
   checkScroll(); // initial check
 }); // ✅ closes DOMContentLoaded event listener
-
-setInterval(async () => {
-  if (!currentUser) return;
-  const notificationsList = document.getElementById("notificationsList");
-  if (!notificationsList) return;
-
-  const notifRef = collection(db, "users", currentUser.uid, "notifications");
-  const snapshot = await getDocs(notifRef);
-
-  console.log("🧠 Manual fetch check:", snapshot.size, "notifications found");
-
-  if (snapshot.empty) {
-    notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-    return;
-  }
-
-  const items = snapshot.docs.map((docSnap) => {
-    const n = docSnap.data();
-    const time = n.timestamp?.seconds
-      ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : "--:--";
-    return `
-      <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
-        <span>${n.message || "(no message)"}</span>
-        <span class="notification-time">${time}</span>
-      </div>
-    `;
-  });
-
-  notificationsList.innerHTML = items.join("");
-}, 4000); // refresh every 4 seconds
