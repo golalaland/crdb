@@ -2504,14 +2504,16 @@ if (saveMediaBtn) {
     const iv = setInterval(() => { el.textContent += text.charAt(i) || ''; i++; if (i >= text.length) clearInterval(iv); }, speed);
   }
 
+document.addEventListener("DOMContentLoaded", () => {
+
   // --- USERNAME TAP DETECTOR ---
   document.addEventListener('pointerdown', (e) => {
     const target = e.target;
     if (!target || !target.textContent) return;
 
     const txt = target.textContent.trim();
-    if (!txt || txt.includes(':')) return; // avoid chat line clicks
-    const chatId = txt.split(' ')[0].trim(); // exact username
+    if (!txt || txt.includes(':')) return;
+    const chatId = txt.split(' ')[0].trim();
     if (!chatId) return;
 
     const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || '').toLowerCase() === chatId.toLowerCase());
@@ -2525,80 +2527,67 @@ if (saveMediaBtn) {
     // Show popup
     showSocialCard(user);
   });
-// --- SEND STARS FUNCTION (centralized) ---
-async function sendStarsToUser(targetUser, amt) {
-  if (!currentUser) return showStarPopup("Sign in first.");
 
-  const fromRef = doc(db, "users", currentUser.uid);
-  const toRef = doc(db, "users", targetUser._docId || targetUser.uid);
-  const glowColor = randomColor();
+  // --- SEND STARS FUNCTION ---
+  async function sendStarsToUser(targetUser, amt) {
+    if (!currentUser) return showStarPopup("Sign in first.");
 
-  // Update Firestore balances
-  await Promise.all([
-    updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
-    updateDoc(toRef, { stars: increment(amt) })
-  ]);
+    const fromRef = doc(db, "users", currentUser.uid);
+    const toRef = doc(db, "users", targetUser._docId || targetUser.uid);
+    const glowColor = randomColor();
 
-  // Create Firestore system banner for admin-style display
-  const bannerMsg = {
-    content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
-    timestamp: serverTimestamp(),
-    highlight: true,
-    buzzColor: glowColor,
-    systemBanner: true // for renderer to know it's an admin-style banner
-  };
+    await Promise.all([
+      updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
+      updateDoc(toRef, { stars: increment(amt) })
+    ]);
 
-  const docRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
+    const bannerMsg = {
+      content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
+      timestamp: serverTimestamp(),
+      highlight: true,
+      buzzColor: glowColor,
+      systemBanner: true
+    };
 
-  // Render the banner in chat (admin/system style)
-  renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }]);
+    const docRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
+    renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }]);
+    showGiftPopup(bannerMsg.content, { glowColor: bannerMsg.buzzColor });
 
-  // Also show floating popup for all users
-  showGiftPopup(bannerMsg.content, { glowColor: bannerMsg.buzzColor });
-
-  // Optional: add temporary glow effect in chat
-  const msgEl = document.getElementById(docRef.id);
-  if (!msgEl) return;
-  const contentEl = msgEl.querySelector(".content") || msgEl;
-  contentEl.style.setProperty("--pulse-color", glowColor);
-  contentEl.classList.add("baller-highlight");
-  setTimeout(() => {
-    contentEl.classList.remove("baller-highlight");
-    contentEl.style.boxShadow = "none";
-  }, 21000);
-}
-
-// 🌤️ Dynamic Host Panel Greeting
-function capitalizeFirstLetter(str) {
-  if (!str) return "";
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-function setGreeting() {
-  const chatId = currentUser?.chatId || "Guest";
-  const name = capitalizeFirstLetter(chatId);
-  const hour = new Date().getHours();
-
-  let greeting, emoji;
-  if (hour < 12) {
-    greeting = `Good Morning, ${name}! ☀️`;
-  } else if (hour < 18) {
-    greeting = `Good Afternoon, ${name}! ⛅️`;
-  } else {
-    greeting = `Good Evening, ${name}! 🌙`;
+    const msgEl = document.getElementById(docRef.id);
+    if (!msgEl) return;
+    const contentEl = msgEl.querySelector(".content") || msgEl;
+    contentEl.style.setProperty("--pulse-color", glowColor);
+    contentEl.classList.add("baller-highlight");
+    setTimeout(() => {
+      contentEl.classList.remove("baller-highlight");
+      contentEl.style.boxShadow = "none";
+    }, 21000);
   }
 
-  document.getElementById("hostPanelTitle").textContent = greeting;
-}
+  // --- HOST GREETING ---
+  function capitalizeFirstLetter(str) {
+    if (!str) return "";
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
 
-// Run whenever the modal opens
-hostSettingsBtn.addEventListener("click", () => {
-  setGreeting();
-});
+  function setGreeting() {
+    const chatId = currentUser?.chatId || "Guest";
+    const name = capitalizeFirstLetter(chatId);
+    const hour = new Date().getHours();
 
+    let greeting;
+    if (hour < 12) greeting = `Good Morning, ${name}! ☀️`;
+    else if (hour < 18) greeting = `Good Afternoon, ${name}! ⛅️`;
+    else greeting = `Good Evening, ${name}! 🌙`;
 
-const scrollArrow = document.getElementById('scrollArrow');
-  const chatContainer = document.querySelector('#chatContainer'); // your chat wrapper
+    document.getElementById("hostPanelTitle").textContent = greeting;
+  }
+
+  hostSettingsBtn.addEventListener("click", setGreeting);
+
+  // --- SCROLL ARROW LOGIC ---
+  const scrollArrow = document.getElementById('scrollArrow');
+  const chatContainer = document.querySelector('#chatContainer');
   let fadeTimeout;
 
   function showArrow() {
@@ -2606,18 +2595,15 @@ const scrollArrow = document.getElementById('scrollArrow');
     if (fadeTimeout) clearTimeout(fadeTimeout);
     fadeTimeout = setTimeout(() => {
       scrollArrow.classList.remove('show');
-    }, 2000); // disappears after 2 seconds
+    }, 2000);
   }
 
   function checkScroll() {
     const distanceFromBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight;
-    if (distanceFromBottom > 200) { // threshold for showing arrow
-      showArrow();
-    }
+    if (distanceFromBottom > 200) showArrow();
   }
 
   chatContainer.addEventListener('scroll', checkScroll);
-
   scrollArrow.addEventListener('click', () => {
     chatContainer.scrollTo({
       top: chatContainer.scrollHeight,
@@ -2626,4 +2612,5 @@ const scrollArrow = document.getElementById('scrollArrow');
   });
 
   checkScroll(); // initial check
-}); // ✅ closes DOMContentLoaded event listener
+
+}); // ✅ closes DOMContentLoaded
