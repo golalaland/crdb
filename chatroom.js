@@ -2571,45 +2571,36 @@ if (typeof hostSettingsBtn !== "undefined") {
   hostSettingsBtn.addEventListener("click", () => setGreeting());
 }
 
-
-/* --------------------------------------------------
-   SCROLL ARROW HANDLER
--------------------------------------------------- */
+// ✅ SCROLL-ARROW CONTROL
 const scrollArrow = document.getElementById("scrollArrow");
-const chatContainer = document.querySelector("#chatContainer");
+const chatContainer = document.getElementById("chatContainer");
 let fadeTimeout;
 
-if (scrollArrow && chatContainer) {
-  function showArrow() {
-    scrollArrow.classList.add("show");
-    if (fadeTimeout) clearTimeout(fadeTimeout);
-    fadeTimeout = setTimeout(() => {
-      scrollArrow.classList.remove("show");
-    }, 2000);
-  }
-
-  function checkScroll() {
-    const distanceFromBottom =
-      chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight;
-
-    if (distanceFromBottom > 200) {
-      showArrow();
-    }
-  }
-
-  chatContainer.addEventListener("scroll", checkScroll);
-
-  scrollArrow.addEventListener("click", () => {
-    chatContainer.scrollTo({
-      top: chatContainer.scrollHeight,
-      behavior: "smooth"
-    });
-  });
-
-  // First check
-  checkScroll();
+function showArrow() {
+  scrollArrow.classList.add("show");
+  if (fadeTimeout) clearTimeout(fadeTimeout);
+  fadeTimeout = setTimeout(() => {
+    scrollArrow.classList.remove("show");
+  }, 2000);
 }
 
+function checkScroll() {
+  const distanceFromBottom =
+    chatContainer.scrollHeight -
+    chatContainer.scrollTop -
+    chatContainer.clientHeight;
 
-// ✅ ✅ ✅ very important — closes initSocialCardSystem wrapper
-})(); 
+  if (distanceFromBottom > 200) showArrow();
+}
+
+chatContainer?.addEventListener("scroll", checkScroll);
+
+scrollArrow?.addEventListener("click", () => {
+  chatContainer.scrollTo({
+    top: chatContainer.scrollHeight,
+    behavior: "smooth"
+  });
+});
+
+checkScroll(); // initial
+
