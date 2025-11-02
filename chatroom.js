@@ -2233,22 +2233,22 @@ if (saveMediaBtn) {
   };
 }
 /* ======================================================
-   Social Card System — Username tap + GiftStars + Slider
-   Paste this AFTER Firebase/Firestore is initialized
-   and AFTER your showMeetModal() exists.
-   ====================================================== */
+  Social Card + Gift Stars System — Portrait Style
+  Firebase / Firestore must be initialized
+  showMeetModal() should exist for hosts
+====================================================== */
 
 (async function initSocialCardSystem() {
   const allUsers = [];
   const usersByChatId = {};
 
-  // 1) Fetch all users
+  // --- 1) Fetch all users once ---
   try {
     const usersRef = collection(db, "users");
     const snaps = await getDocs(usersRef);
     snaps.forEach(docSnap => {
       const data = docSnap.data();
-      const chatIdLower = (data.chatIdLower || (data.chatId || "")).toLowerCase();
+      const chatIdLower = (data.chatIdLower || (data.chatId || "")).toString().toLowerCase();
       data._docId = docSnap.id;
       data.chatIdLower = chatIdLower;
       allUsers.push(data);
@@ -2259,25 +2259,25 @@ if (saveMediaBtn) {
     console.error("Failed to fetch users for social card:", err);
   }
 
-  // 2) Create Social Card popup
+  // --- 2) Show Social Card Popup ---
   function showSocialCard(user) {
     if (!user) return;
-
     document.getElementById('socialCard')?.remove();
 
+    // Create popup
     const card = document.createElement('div');
     card.id = 'socialCard';
     Object.assign(card.style, {
       position: 'fixed',
       top: '50%',
       left: '50%',
-      transform: 'translate(-50%, -50%) scale(1)',
+      transform: 'translate(-50%, -50%)',
       background: 'linear-gradient(135deg,#0f0f10,#19191b)',
       borderRadius: '14px',
       padding: '18px 20px',
       color: '#fff',
-      width: '90%',
-      maxWidth: '340px',
+      width: '280px',
+      maxWidth: '90%',
       zIndex: '999999',
       textAlign: 'center',
       boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
@@ -2286,9 +2286,10 @@ if (saveMediaBtn) {
       transition: 'opacity .18s ease, transform .18s ease'
     });
 
-    // Header
+    // Header: Username
     const chatIdDisplay = user.chatId ? user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1) : 'Unknown';
     const color = user.isHost ? '#ff6600' : user.isVIP ? '#ff0099' : '#cccccc';
+
     const header = document.createElement('h3');
     header.textContent = chatIdDisplay;
     Object.assign(header.style, {
@@ -2301,11 +2302,12 @@ if (saveMediaBtn) {
     });
     card.appendChild(header);
 
-    // Details
+    // Details line
     const detailsEl = document.createElement('p');
     detailsEl.style.margin = '0 0 12px';
     detailsEl.style.fontSize = '14px';
     detailsEl.style.lineHeight = '1.4';
+
     const flairText = user.flair || '';
     const pronoun = user.pronoun || 'their';
     const ageGroup = user.ageGroup || (user.age ? `${user.age} yrs` : 'young');
@@ -2324,7 +2326,7 @@ if (saveMediaBtn) {
     }
     card.appendChild(detailsEl);
 
-    // Bio
+    // Bio area
     const bioEl = document.createElement('div');
     bioEl.style.margin = '8px 0 14px';
     bioEl.style.fontStyle = 'italic';
@@ -2332,11 +2334,11 @@ if (saveMediaBtn) {
     card.appendChild(bioEl);
     typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
 
-    // Buttons + Slider
+    // --- Buttons & Slider Wrapper ---
     const btnWrap = document.createElement('div');
-    Object.assign(btnWrap.style, { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginTop: '10px' });
+    Object.assign(btnWrap.style, { display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' });
 
-    // Meet button
+    // Meet button (hosts only)
     if (user.isHost) {
       const meetBtn = document.createElement('button');
       meetBtn.textContent = 'Meet';
@@ -2355,52 +2357,99 @@ if (saveMediaBtn) {
       btnWrap.appendChild(meetBtn);
     }
 
-    // Slider for gift amount
+    // Slider for stars
+    const sliderWrapper = document.createElement('div');
+    sliderWrapper.style.display = 'flex';
+    sliderWrapper.style.flexDirection = 'column';
+    sliderWrapper.style.alignItems = 'center';
+
+    const sliderValueDisplay = document.createElement('span');
+    sliderValueDisplay.textContent = '100 ⭐️';
+    sliderValueDisplay.style.marginBottom = '4px';
+    sliderWrapper.appendChild(sliderValueDisplay);
+
     const slider = document.createElement('input');
     slider.type = 'range';
-    slider.min = 1;
-    slider.max = 999;
-    slider.value = 100;
-    slider.style.width = '90%';
-    slider.style.margin = '6px 0';
-    btnWrap.appendChild(slider);
+    slider.min = '100';
+    slider.max = '999';
+    slider.value = '100';
+    slider.style.width = '100%';
+    slider.oninput = () => sliderValueDisplay.textContent = `${slider.value} ⭐️`;
+    sliderWrapper.appendChild(slider);
 
-    // GiftStars button
+    btnWrap.appendChild(sliderWrapper);
+
+    // Gift Stars Button
     const giftBtn = document.createElement('button');
-    giftBtn.className = 'popup-giftstars-btn'; // unique class
-    giftBtn.textContent = 'Gift Stars ⭐️';
+    giftBtn.textContent = 'Gift Stars';
     Object.assign(giftBtn.style, {
       padding: '8px 16px',
       borderRadius: '6px',
       border: 'none',
       fontWeight: '600',
-      background: 'linear-gradient(90deg,#ffcc00,#ff6600)',
+      background: 'linear-gradient(90deg,#ffcc00,#ff66cc)',
       color: '#000',
       cursor: 'pointer'
     });
-    giftBtn.onclick = () => showGiftModal(user._docId, user, parseInt(slider.value));
+
+    giftBtn.onclick = async () => {
+      const amt = parseInt(slider.value);
+      if (!amt || amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
+      if ((currentUser?.stars || 0) < amt) return showStarPopup("Not enough stars 💫");
+
+      const fromRef = doc(db, "users", currentUser.uid);
+      const toRef = doc(db, "users", user._docId);
+      const glowColor = randomColor();
+
+      const messageData = {
+        content: `${currentUser.chatId} gifted ${user.chatId} ${amt} ⭐️`,
+        uid: currentUser.uid,
+        chatId: user._docId,
+        timestamp: serverTimestamp(),
+        highlight: true,
+        buzzColor: glowColor
+      };
+
+      const docRef = await addDoc(collection(db, CHAT_COLLECTION), messageData);
+
+      await Promise.all([
+        updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
+        updateDoc(toRef, { stars: increment(amt) })
+      ]);
+
+      showStarPopup(`You sent ${amt} ⭐️ to ${user.chatId}!`);
+      renderMessagesFromArray([{ id: docRef.id, data: messageData }]);
+      const msgEl = document.getElementById(docRef.id);
+      if (msgEl) {
+        const contentEl = msgEl.querySelector(".content") || msgEl;
+        contentEl.style.setProperty("--pulse-color", glowColor);
+        contentEl.classList.add("baller-highlight");
+        setTimeout(() => {
+          contentEl.classList.remove("baller-highlight");
+          contentEl.style.boxShadow = "none";
+        }, 21000);
+      }
+
+      card.remove(); // Close popup after gifting
+    };
+
     btnWrap.appendChild(giftBtn);
 
     card.appendChild(btnWrap);
 
-    // Append & animate in
     document.body.appendChild(card);
     requestAnimationFrame(() => {
       card.style.opacity = '1';
       card.style.transform = 'translate(-50%, -50%) scale(1.02)';
-      setTimeout(() => card.style.transform = 'translate(-50%, -50%) scale(1)', 120);
+      setTimeout(() => (card.style.transform = 'translate(-50%, -50%) scale(1)'), 120);
     });
 
-    // Click outside to close
-    const closeHandler = e => {
-      if (!card.contains(e.target)) {
-        card.remove();
-        document.removeEventListener('click', closeHandler);
-      }
-    };
+    // Close on outside click
+    const closeHandler = e => { if (!card.contains(e.target)) { card.remove(); document.removeEventListener('click', closeHandler); } };
     setTimeout(() => document.addEventListener('click', closeHandler), 10);
   }
 
+  // --- Typewriter Helper ---
   function typeWriterEffect(el, text, speed = 35) {
     el.textContent = '';
     let i = 0;
@@ -2411,26 +2460,20 @@ if (saveMediaBtn) {
     }, speed);
   }
 
-  // 3) Username tap detector
+  // --- 3) Username Tap Detection ---
   document.addEventListener('pointerdown', e => {
     const target = e.target;
-    if (!target || !target.textContent) return;
+    if (!target || !target.classList.contains('chat-username')) return;
 
-    const txt = target.textContent;
-    if (!txt.includes(':')) return;
+    // Blink effect
+    target.style.transition = 'opacity 0.15s';
+    target.style.opacity = '0.4';
+    setTimeout(() => (target.style.opacity = ''), 150);
 
-    const chatId = txt.split(':')[0].trim();
-    if (!chatId) return;
-
+    const chatId = target.textContent.trim();
     const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || '').toLowerCase() === chatId.toLowerCase());
     if (!user || user._docId === currentUser?.uid) return;
 
-    // ✨ Username blink effect
-    target.style.transition = 'opacity 0.12s';
-    target.style.opacity = '0.3';
-    setTimeout(() => target.style.opacity = '', 200);
-
-    // Show popup
     showSocialCard(user);
   });
 
