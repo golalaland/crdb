@@ -159,84 +159,7 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 
-/* ===== Notifications Tab Lazy + Live Setup ===== */
-let notificationsListenerAttached = false;
 
-function attachNotificationsListener() {
-  const notificationsList = document.getElementById("notificationsList");
-  const markAllBtn = document.getElementById("markAllRead");
-
-  if (!notificationsList) return console.warn("⚠️ No notificationsList element found");
-
-  if (!currentUser?.uid) {
-    console.warn("⚠️ No currentUser.uid found; cannot attach notifications");
-    return;
-  }
-
-  const notifRef = collection(db, "users", currentUser.uid, "notifications");
-  const q = query(notifRef, orderBy("timestamp", "desc"));
-
-  console.log("🔔 Attaching notifications listener for user:", currentUser.uid);
-
-  onSnapshot(q, (snapshot) => {
-    console.log("📡 Notifications snapshot size:", snapshot.size);
-    console.log("📄 Raw snapshot data:", snapshot.docs.map(d => d.data()));
-
-    if (snapshot.empty) {
-      notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-      return;
-    }
-
-    const items = snapshot.docs.map((docSnap) => {
-      const n = docSnap.data();
-      const time = n.timestamp?.seconds
-        ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-        : "--:--";
-
-      return `
-        <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
-          <span>${n.message || "(no message)"}</span>
-          <span class="notification-time">${time}</span>
-        </div>
-      `;
-    });
-
-    notificationsList.innerHTML = items.join("");
-  }, (error) => {
-    console.error("❌ Notifications listener error:", error);
-  });
-
-  if (markAllBtn) {
-    markAllBtn.onclick = async () => {
-      console.log("🟡 Mark all notifications as read clicked");
-      const snapshot = await getDocs(notifRef);
-      for (const docSnap of snapshot.docs) {
-        const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
-        await updateDoc(ref, { read: true });
-      }
-      showStarPopup("✅ All notifications marked as read.");
-    };
-  }
-
-  notificationsListenerAttached = true;
-}
-
-/* ===== Tab Switching (Lazy attach for notifications) ===== */
-document.querySelectorAll(".tab-btn").forEach((btn) => {
-  btn.onclick = () => {
-    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach((tab) => (tab.style.display = "none"));
-
-    btn.classList.add("active");
-    const tabContent = document.getElementById(btn.dataset.tab);
-    if (tabContent) tabContent.style.display = "block";
-
-    // Attach notifications listener lazily
-    if (btn.dataset.tab === "notificationsTab" && !notificationsListenerAttached && currentUser?.uid) {
-      attachNotificationsListener();
-    }
-  };
-});
 
 /* ---------- Helper: Get current user ID ---------- */
 export function getCurrentUserId() {
@@ -583,6 +506,97 @@ if (msg.highlight && msg.content?.includes("gifted")) {
     });
   });
 }
+
+/* ===== Notifications Tab – Render + Live Setup ===== */
+let notificationsListenerAttached = false;
+
+async function attachNotificationsListener() {
+  const notificationsList = document.getElementById("notificationsList");
+  const markAllBtn = document.getElementById("markAllRead");
+
+  if (!notificationsList) return console.warn("⚠️ No notificationsList element found");
+
+  const notifRef = collection(db, "users", currentUser.uid, "notifications");
+  const q = query(notifRef, orderBy("timestamp", "desc"));
+
+  // --- Render existing notifications first ---
+  const snapshot = await getDocs(q);
+  if (snapshot.empty) {
+    notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+  } else {
+    notificationsList.innerHTML = ""; // clear placeholder
+    snapshot.docs.forEach(docSnap => {
+      const n = docSnap.data();
+      const time = n.timestamp?.seconds
+        ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : "--:--";
+
+      const item = document.createElement("div");
+      item.className = `notification-item ${n.read ? "" : "unread"}`;
+      item.dataset.id = docSnap.id;
+      item.innerHTML = `
+        <span>${n.message || "(no message)"}</span>
+        <span class="notification-time">${time}</span>
+      `;
+      notificationsList.appendChild(item);
+    });
+  }
+
+  // --- Live snapshot for new notifications ---
+  onSnapshot(q, (snap) => {
+    snap.docChanges().forEach(change => {
+      if (change.type === "added") {
+        const n = change.doc.data();
+        const time = n.timestamp?.seconds
+          ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          : "--:--";
+
+        const item = document.createElement("div");
+        item.className = `notification-item ${n.read ? "" : "unread"}`;
+        item.dataset.id = change.doc.id;
+        item.innerHTML = `
+          <span>${n.message || "(no message)"}</span>
+          <span class="notification-time">${time}</span>
+        `;
+        notificationsList.prepend(item); // new ones at top
+      }
+    });
+  });
+
+  // --- Mark all as read ---
+  if (markAllBtn) {
+    markAllBtn.onclick = async () => {
+      const snapshot = await getDocs(q);
+      for (const docSnap of snapshot.docs) {
+        const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
+        await updateDoc(ref, { read: true });
+      }
+      showStarPopup("✅ All notifications marked as read.");
+
+      // Update DOM
+      notificationsList.querySelectorAll(".notification-item.unread").forEach(el => el.classList.remove("unread"));
+    };
+  }
+
+  notificationsListenerAttached = true;
+}
+
+/* ===== Tab Switching (Lazy attach for notifications) ===== */
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(tab => tab.style.display = "none");
+    btn.classList.add("active");
+
+    const tabContent = document.getElementById(btn.dataset.tab);
+    if (tabContent) tabContent.style.display = "block";
+
+    // Attach notifications listener lazily
+    if (btn.dataset.tab === "notificationsTab" && !notificationsListenerAttached && currentUser?.uid) {
+      attachNotificationsListener();
+    }
+  };
+});
 
 /* ---------- 🆔 ChatID Modal ---------- */
 async function promptForChatID(userRef, userData) {
@@ -2522,7 +2536,7 @@ Object.assign(giftBtnLocal.style, {
     showSocialCard(user);
   });
 
-// --- SEND STARS FUNCTION (Ephemeral Banner + Dual showGiftAlert + Receiver Sync) ---
+// --- SEND STARS FUNCTION (Ephemeral Banner + Dual showGiftAlert + Receiver Sync + Notification) ---
 async function sendStarsToUser(targetUser, amt) {
   try {
     const fromRef = doc(db, "users", currentUser.uid);
@@ -2550,7 +2564,7 @@ async function sendStarsToUser(targetUser, amt) {
 
     const docRef = await addDoc(collection(db, "messages_room5"), bannerMsg);
 
-    // --- 3️⃣ Render instantly for sender (or any online user who listens to messages) ---
+    // --- 3️⃣ Render instantly for sender ---
     renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true);
 
     // --- 4️⃣ Glow pulse for banner ---
@@ -2578,7 +2592,17 @@ async function sendStarsToUser(targetUser, amt) {
       }
     });
 
-    // --- 7️⃣ Mark banner as shown after rendering so it won’t appear on reload ---
+    // --- 6.5️⃣ Create notification for receiver ---
+    const notifRef = collection(db, "users", targetUser._docId, "notifications");
+    await addDoc(notifRef, {
+      message: `💫 ${currentUser.chatId} gifted you ${amt} ⭐!`,
+      read: false,
+      timestamp: serverTimestamp(),
+      type: "starGift",
+      fromUserId: currentUser.uid
+    });
+
+    // --- 7️⃣ Mark banner as shown ---
     await updateDoc(doc(db, "messages_room5", docRef.id), {
       bannerShown: true
     });
