@@ -2491,7 +2491,8 @@ if (saveMediaBtn) {
   });
 
   // --- SEND STARS FUNCTION ---
-  async function sendStarsToUser(targetUser, amt) {
+// --- SEND STARS FUNCTION ---
+async function sendStarsToUser(targetUser, amt) {
   const fromRef = doc(db, "users", currentUser.uid);
   const toRef = doc(db, "users", targetUser._docId);
   const glowColor = randomColor();
@@ -2501,30 +2502,39 @@ if (saveMediaBtn) {
     updateDoc(toRef, { stars: increment(amt) })
   ]);
 
-  // System banner message — UID and chatId are irrelevant here
+  // banner content
   const bannerMsg = {
     content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
     timestamp: serverTimestamp(),
     highlight: true,
     buzzColor: glowColor,
-    systemBanner: true // add a flag so renderer knows it’s pure text
+    systemBanner: true
   };
 
-  const docRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
+  // ✅ 1) ADD TO CHAT COLLECTION
+  const chatRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
 
-  // Render banner without prepending chatId/uid
-  renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true); // pass `true` to indicate pure banner
+  // ✅ 2) ADD TO SEPARATE BANNER COLLECTION
+  const bannerRef = await addDoc(collection(db, "bannerMsgs"), {
+    ...bannerMsg,
+    chatDocId: chatRef.id   // so you can clean both later
+  });
 
-  // Apply glow effect
-  const msgEl = document.getElementById(docRef.id);
+  // ✅ Render banner immediately
+  renderMessagesFromArray([{ id: chatRef.id, data: bannerMsg }], true);
+
+  // Glow effect
+  const msgEl = document.getElementById(chatRef.id);
   if (!msgEl) return;
   const contentEl = msgEl.querySelector(".content") || msgEl;
   contentEl.style.setProperty("--pulse-color", glowColor);
   contentEl.classList.add("baller-highlight");
-  setTimeout(() => { contentEl.classList.remove("baller-highlight"); contentEl.style.boxShadow = "none"; }, 21000);
+  setTimeout(() => {
+    contentEl.classList.remove("baller-highlight");
+    contentEl.style.boxShadow = "none";
+  }, 21000);
 }
 
-})();
 
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
