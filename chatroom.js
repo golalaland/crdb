@@ -300,15 +300,15 @@ function setupUsersListener() {
 setupUsersListener();
 
 /* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
-/* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
 let scrollPending = false;
-const renderedMessageIds = new Set(); // <-- Track what has already been rendered
+const renderedMessageIds = new Set(); // track messages rendered this session
 
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
 
-  messages.forEach(item => {
-    if (renderedMessageIds.has(item.id)) return; // skip already rendered messages
+  messages.forEach(async item => {
+    if (renderedMessageIds.has(item.id)) return; // already rendered
+    renderedMessageIds.add(item.id);
 
     const m = item.data;
     const wrapper = document.createElement("div");
@@ -340,7 +340,7 @@ function renderMessagesFromArray(messages) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
-      // --- Confetti + Glow (one-time) ---
+      // Confetti + Glow (one-time)
       if (!m._confettiPlayed) {
         wrapper.style.animation = "pulseGlow 2s";
         m._confettiPlayed = true;
@@ -371,8 +371,27 @@ function renderMessagesFromArray(messages) {
         }, 3000);
       }
 
-      // --- Mark timestamp for cleanup ---
+      // mark timestamp (for local cleanup if needed)
       wrapper.dataset.timestamp = Date.now();
+
+      refs.messagesEl.appendChild(wrapper);
+
+      // Fade out + delete from Firestore after 1 minute
+      setTimeout(async () => {
+        wrapper.style.transition = "opacity 0.5s";
+        wrapper.style.opacity = "0";
+        setTimeout(() => wrapper.remove(), 500);
+
+        try {
+          await firebase.firestore()
+            .collection('messages')
+            .doc(item.id)
+            .delete();
+          console.log("Banner deleted permanently:", item.id);
+        } catch (err) {
+          console.error("Failed to delete banner from Firestore:", err);
+        }
+      }, 60000);
 
     } else {
       // --- Normal message ---
@@ -392,15 +411,12 @@ function renderMessagesFromArray(messages) {
         contentEl.style.fontWeight = "700";
       }
       wrapper.appendChild(contentEl);
+
+      refs.messagesEl.appendChild(wrapper);
     }
-
-    refs.messagesEl.appendChild(wrapper);
-
-    // --- Mark this message as rendered ---
-    renderedMessageIds.add(item.id);
   });
 
-  // --- Auto-scroll ---
+  // Auto-scroll
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
@@ -409,23 +425,6 @@ function renderMessagesFromArray(messages) {
     });
   }
 }
-
-/* ---------- Cleanup old banners ---------- */
-function cleanupOldBanners() {
-  if (!refs.messagesEl) return;
-  const banners = refs.messagesEl.querySelectorAll('.msg');
-  const now = Date.now();
-
-  banners.forEach(banner => {
-    const timestamp = banner.dataset.timestamp;
-    if (timestamp && now - timestamp > 60000) { // older than 60s
-      banner.style.transition = "opacity 0.5s";
-      banner.style.opacity = "0";
-      setTimeout(() => banner.remove(), 500);
-    }
-  });
-}
-setInterval(cleanupOldBanners, 10000);
 
 /* ---------- Animations ---------- */
 const style = document.createElement("style");
