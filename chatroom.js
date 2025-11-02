@@ -2335,40 +2335,42 @@ if (saveMediaBtn) {
     card.appendChild(bioEl);
     typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
 
-    // --- Buttons wrapper ---
-    const btnWrap = document.createElement('div');
-    Object.assign(btnWrap.style, { display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' });
+    // Buttons wrapper
+const btnWrap = document.createElement('div');
+Object.assign(btnWrap.style, { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginTop: '10px' });
 
-    // Meet button (hosts only)
-    if (user.isHost) {
-      const meetBtn = document.createElement('button');
-      meetBtn.textContent = 'Meet';
-      Object.assign(meetBtn.style, {
-        padding: '8px 16px',
-        borderRadius: '6px',
-        border: 'none',
-        fontWeight: '600',
-        background: 'linear-gradient(90deg,#ff6600,#ff0099)',
-        color: '#fff',
-        cursor: 'pointer'
-      });
-      meetBtn.onclick = () => { if (typeof showMeetModal === 'function') showMeetModal(user); };
-      btnWrap.appendChild(meetBtn);
-    }
+// --- Meet button for hosts ---
+if (user.isHost) {
+  const meetBtn = document.createElement('button');
+  meetBtn.textContent = 'Meet';
+  Object.assign(meetBtn.style, {
+    padding: '8px 16px',
+    borderRadius: '6px',
+    border: 'none',
+    fontWeight: '600',
+    background: 'linear-gradient(90deg,#ff6600,#ff0099)',
+    color: '#fff',
+    cursor: 'pointer'
+  });
+  meetBtn.onclick = () => {
+    if (typeof showMeetModal === 'function') showMeetModal(user);
+  };
+  btnWrap.appendChild(meetBtn);
+}
 
-    // Slider to choose stars
-    const slider = document.createElement('input');
-    slider.type = 'range';
-    slider.min = 1;
-    slider.max = 999;
-    slider.value = 100;
-    slider.style.width = '100%';
-    slider.id = 'starGiftSlider';
-    btnWrap.appendChild(slider);
+// --- Slider for gift amount ---
+const slider = document.createElement('input');
+slider.type = 'range';
+slider.min = 1;
+slider.max = 999;
+slider.value = 100;
+slider.style.width = '90%';
+slider.style.margin = '6px 0';
+btnWrap.appendChild(slider);
 
-    // GiftStars button (unique class)
+// --- GiftStars button ---
 const giftBtn = document.createElement('button');
-giftBtn.className = 'popup-gift-btn'; // unique class to avoid conflicts
+giftBtn.className = 'popup-gift-btn'; // unique
 giftBtn.textContent = 'Gift Stars ⭐️';
 Object.assign(giftBtn.style, {
   padding: '8px 16px',
@@ -2379,18 +2381,10 @@ Object.assign(giftBtn.style, {
   color: '#000',
   cursor: 'pointer'
 });
-
-// On click, call your showGiftModal with the slider value
-giftBtn.onclick = async () => {
-  const amount = parseInt(slider.value);
-  if (!amount || amount < 1) return showStarPopup("🔥 Minimum gift is 1 ⭐️");
-  if ((currentUser?.stars || 0) < amount) return showStarPopup("Not enough stars 💫");
-
-  // Call your existing showGiftModal and pass amount
-  await showGiftModal(user._docId, user, amount);
-};
-
+giftBtn.onclick = () => showGiftModal(user._docId, user, parseInt(slider.value));
 btnWrap.appendChild(giftBtn);
+
+card.appendChild(btnWrap);
 
     // Animate in
     requestAnimationFrame(() => {
