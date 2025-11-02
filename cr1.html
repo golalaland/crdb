@@ -169,24 +169,39 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   border-radius: 8px;
   background: var(--glass);
   max-width: 100%;
-  display: flex;
-  gap: 8px;
-  align-items: center;
+  
+  /* ✅ remove side-by-side column / flex alignment */
+  display: block;
+  text-align: left;
 }
-.msg.me { background: rgba(255, 20, 147, 0.06); }
+
+/* your color for ME stays untouched */
+.msg.me { 
+  background: rgba(255, 20, 147, 0.06); 
+}
+
+/* ✅ username */
 .msg .meta {
   font-weight: 700;
   font-size: 13px;
   white-space: nowrap;
   margin-right: 4px;
+  display: inline;     /* ✅ same line */
   color: inherit;
 }
+
+/* ✅ auto add colon */
+.msg .meta::after {
+  content: ": ";
+}
+
+/* ✅ message body */
 .msg .content {
   font-size: 13px;
   color: #fff;
-  white-space: pre-wrap;
+  display: inline;      /* ✅ same line + wraps naturally */
+  white-space: normal;
   word-break: break-word;
-  display: inline-block;
 }
 
 /* 🔥 Keypad (chat input) - always at bottom */
