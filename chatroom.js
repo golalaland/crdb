@@ -2575,6 +2575,12 @@ hostSettingsBtn.addEventListener("click", () => {
   setGreeting();
 });
 
+const input = document.getElementById("chatInput");
+
+input.addEventListener("input", () => {
+  input.style.height = "auto";
+  input.style.height = input.scrollHeight + "px";
+});
 
 const scrollArrow = document.getElementById('scrollArrow');
   const chatContainer = document.querySelector('#chatContainer'); // your chat wrapper
