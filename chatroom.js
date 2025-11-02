@@ -2426,29 +2426,26 @@ if (saveMediaBtn) {
     }, speed);
   }
 
-// ---------------- Username Tap Detector ----------------
-document.addEventListener('pointerdown', (e) => {
+// --------------- Username Tap Detector ----------------
+document.addEventListener('pointerdown', async (e) => {
   const target = e.target;
-  if (!target || !target.textContent) return;
+  if (!target || !target.classList.contains('chat-username')) return;
 
-  // Only elements with class "chat-username" trigger social card
-  if (!target.classList.contains('chat-username')) return;
+  // Username blink (CSS only)
+  target.classList.add('username-blink');
+  setTimeout(() => target.classList.remove('username-blink'), 400);
 
   const chatId = target.textContent.trim();
   if (!chatId) return;
 
-  // Highlight / blink the tapped username
-  target.classList.add('username-blink');
-  setTimeout(() => target.classList.remove('username-blink'), 400);
-
-  // Lookup user by chatIdLower
+  // Lookup user from preloaded map
   const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || '').toLowerCase() === chatId.toLowerCase());
   if (!user) return;
 
   // Prevent self-popup if desired
   if (user._docId === currentUser?.uid) return;
 
-  // Show the social card
+  // Show social card
   showSocialCard(user);
 });
 
