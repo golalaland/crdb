@@ -201,7 +201,6 @@ async function showGiftModal(targetUid, targetData) {
 
   if (!modal || !titleEl || !amountInput || !confirmBtn) return;
 
-  // Show modal title
   titleEl.textContent = `Gift ⭐️`; 
   amountInput.value = "";
   modal.style.display = "flex";
@@ -210,7 +209,7 @@ async function showGiftModal(targetUid, targetData) {
   closeBtn.onclick = close;
   modal.onclick = (e) => { if (e.target === modal) close(); };
 
-  // Replace old confirm button to prevent duplicate events
+  // Prevent duplicate click events
   const newConfirmBtn = confirmBtn.cloneNode(true);
   confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
 
@@ -223,41 +222,41 @@ async function showGiftModal(targetUid, targetData) {
     const toRef = doc(db, "users", targetUid);
     const glowColor = randomColor();
 
-    // Normal chat message, not BallerAlert
-    const messageData = {
-      content: `${currentUser.chatId} gifted ${targetData.chatId} ${amt} ⭐️`, // shows names
-      uid: currentUser.uid,           // normal sender uid
-      chatId: targetUid,              // normal chat id for recipient
+    // --- Create "system banner" message for chat ---
+    const alertText = `💫 ${currentUser.chatId} gifted ${amt} ⭐️ to ${targetData.chatId}!`;
+    const bannerMessage = {
+      content: alertText,      // only the alert text, no username prepended
+      uid: "system",           // special system uid
+      chatId: "banner",        // dummy chatId to avoid normal formatting
       timestamp: serverTimestamp(),
       highlight: true,
       buzzColor: glowColor
     };
 
-    const docRef = await addDoc(collection(db, CHAT_COLLECTION), messageData);
+    // Add to Firestore so everyone sees it in real-time
+    const docRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMessage);
 
+    // Deduct/add stars
     await Promise.all([
       updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
       updateDoc(toRef, { stars: increment(amt) })
     ]);
 
-    showStarPopup(`You sent ${amt} ⭐️ to ${targetData.chatId}!`);
     close();
-    renderMessagesFromArray([{ id: docRef.id, data: messageData }]);
+    renderMessagesFromArray([{ id: docRef.id, data: bannerMessage }]);
 
-    // Apply banner glow in chat
+    // Apply glowing banner effect
     const msgEl = document.getElementById(docRef.id);
     if (!msgEl) return;
     const contentEl = msgEl.querySelector(".content") || msgEl;
 
     contentEl.style.setProperty("--pulse-color", glowColor);
-    contentEl.classList.add("baller-highlight"); // glowing banner effect
+    contentEl.classList.add("baller-highlight");
 
     setTimeout(() => {
       contentEl.classList.remove("baller-highlight");
       contentEl.style.boxShadow = "none";
     }, 21000);
-
-    // ✅ Floating stars removed
   });
 }
 
@@ -2233,22 +2232,19 @@ if (saveMediaBtn) {
   };
 }
 /* ======================================================
-  Social Card + Gift Stars System — Portrait Style
-  Firebase / Firestore must be initialized
-  showMeetModal() should exist for hosts
+  Social Card + Gift Stars System — Firestore + Chat Banner
+  Paste AFTER Firebase/Firestore initialized
 ====================================================== */
-
 (async function initSocialCardSystem() {
   const allUsers = [];
   const usersByChatId = {};
 
-  // --- 1) Fetch all users once ---
   try {
     const usersRef = collection(db, "users");
     const snaps = await getDocs(usersRef);
     snaps.forEach(docSnap => {
       const data = docSnap.data();
-      const chatIdLower = (data.chatIdLower || (data.chatId || "")).toString().toLowerCase();
+      const chatIdLower = (data.chatIdLower || (data.chatId || "")).toLowerCase();
       data._docId = docSnap.id;
       data.chatIdLower = chatIdLower;
       allUsers.push(data);
@@ -2259,12 +2255,12 @@ if (saveMediaBtn) {
     console.error("Failed to fetch users for social card:", err);
   }
 
-  // --- 2) Show Social Card Popup ---
   function showSocialCard(user) {
     if (!user) return;
+
+    // Remove existing
     document.getElementById('socialCard')?.remove();
 
-    // Create popup
     const card = document.createElement('div');
     card.id = 'socialCard';
     Object.assign(card.style, {
@@ -2273,10 +2269,10 @@ if (saveMediaBtn) {
       left: '50%',
       transform: 'translate(-50%, -50%)',
       background: 'linear-gradient(135deg,#0f0f10,#19191b)',
-      borderRadius: '14px',
+      borderRadius: '16px',
       padding: '18px 20px',
       color: '#fff',
-      width: '280px',
+      width: '260px',
       maxWidth: '90%',
       zIndex: '999999',
       textAlign: 'center',
@@ -2286,10 +2282,9 @@ if (saveMediaBtn) {
       transition: 'opacity .18s ease, transform .18s ease'
     });
 
-    // Header: Username
+    // --- Header ---
     const chatIdDisplay = user.chatId ? user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1) : 'Unknown';
     const color = user.isHost ? '#ff6600' : user.isVIP ? '#ff0099' : '#cccccc';
-
     const header = document.createElement('h3');
     header.textContent = chatIdDisplay;
     Object.assign(header.style, {
@@ -2302,19 +2297,17 @@ if (saveMediaBtn) {
     });
     card.appendChild(header);
 
-    // Details line
+    // --- Details ---
     const detailsEl = document.createElement('p');
     detailsEl.style.margin = '0 0 12px';
     detailsEl.style.fontSize = '14px';
     detailsEl.style.lineHeight = '1.4';
-
     const flairText = user.flair || '';
     const pronoun = user.pronoun || 'their';
     const ageGroup = user.ageGroup || (user.age ? `${user.age} yrs` : 'young');
     const gender = user.gender || 'User';
     const country = user.country || '';
     const city = user.city || '';
-
     if (user.isHost) {
       const fruit = user.fruitPick || '🍒';
       const nature = user.naturePick || 'vibe';
@@ -2326,7 +2319,7 @@ if (saveMediaBtn) {
     }
     card.appendChild(detailsEl);
 
-    // Bio area
+    // --- Bio ---
     const bioEl = document.createElement('div');
     bioEl.style.margin = '8px 0 14px';
     bioEl.style.fontStyle = 'italic';
@@ -2334,9 +2327,9 @@ if (saveMediaBtn) {
     card.appendChild(bioEl);
     typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
 
-    // --- Buttons & Slider Wrapper ---
+    // --- Buttons wrapper ---
     const btnWrap = document.createElement('div');
-    Object.assign(btnWrap.style, { display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' });
+    Object.assign(btnWrap.style, { display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', marginTop: '6px' });
 
     // Meet button (hosts only)
     if (user.isHost) {
@@ -2351,114 +2344,126 @@ if (saveMediaBtn) {
         color: '#fff',
         cursor: 'pointer'
       });
-      meetBtn.onclick = () => {
-        if (typeof showMeetModal === 'function') showMeetModal(user);
-      };
+      meetBtn.onclick = () => { if (typeof showMeetModal === 'function') showMeetModal(user); };
       btnWrap.appendChild(meetBtn);
     }
 
-    // Slider for stars
+    // --- Slider to choose stars ---
     const sliderWrapper = document.createElement('div');
     sliderWrapper.style.display = 'flex';
-    sliderWrapper.style.flexDirection = 'column';
     sliderWrapper.style.alignItems = 'center';
-
-    const sliderValueDisplay = document.createElement('span');
-    sliderValueDisplay.textContent = '100 ⭐️';
-    sliderValueDisplay.style.marginBottom = '4px';
-    sliderWrapper.appendChild(sliderValueDisplay);
+    sliderWrapper.style.width = '100%';
+    sliderWrapper.style.gap = '10px';
 
     const slider = document.createElement('input');
     slider.type = 'range';
-    slider.min = '100';
-    slider.max = '999';
-    slider.value = '100';
-    slider.style.width = '100%';
-    slider.oninput = () => sliderValueDisplay.textContent = `${slider.value} ⭐️`;
+    slider.min = 0;
+    slider.max = 999;
+    slider.value = 0;
+    slider.style.flex = '1';
     sliderWrapper.appendChild(slider);
+
+    const sliderLabel = document.createElement('span');
+    sliderLabel.textContent = `${slider.value} ⭐️`;
+    sliderLabel.style.fontSize = '14px';
+    sliderWrapper.appendChild(sliderLabel);
+
+    slider.oninput = () => sliderLabel.textContent = `${slider.value} ⭐️`;
 
     btnWrap.appendChild(sliderWrapper);
 
-    // Gift Stars Button
-    const giftBtn = document.createElement('button');
-    giftBtn.textContent = 'Gift Stars';
-    Object.assign(giftBtn.style, {
+    // --- Gift button ---
+    const giftBtnLocal = document.createElement('button');
+    giftBtnLocal.textContent = 'Gift Stars ⭐️';
+    Object.assign(giftBtnLocal.style, {
       padding: '8px 16px',
       borderRadius: '6px',
       border: 'none',
       fontWeight: '600',
-      background: 'linear-gradient(90deg,#ffcc00,#ff66cc)',
-      color: '#000',
+      background: 'linear-gradient(90deg,#ff0099,#ff33cc)',
+      color: '#fff',
       cursor: 'pointer'
     });
-
-    giftBtn.onclick = async () => {
-  const amt = parseInt(slider.value);
-  if (!amt || amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
-  if ((currentUser?.stars || 0) < amt) return showStarPopup("Not enough stars 💫");
-
-  const fromRef = doc(db, "users", currentUser.uid);
-  const toRef = doc(db, "users", user._docId);
-  const glowColor = randomColor();
-
-  // ✅ Only the alert text, no username/email prepended
-  const alertText = `💫 ${currentUser.chatId} gifted ${amt} ⭐️ to ${user.chatId}!`;
-
-  // Update Firestore balances
-  await Promise.all([
-    updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
-    updateDoc(toRef, { stars: increment(amt) })
-  ]);
-
-  // Show the BallerAlert directly
-  showStarPopup(alertText); // fills chat space, glowing effect, no username prepended
-
-  card.remove(); // close popup
-};
-
-    btnWrap.appendChild(giftBtn);
+    giftBtnLocal.onclick = () => {
+      const amt = parseInt(slider.value);
+      if (!amt || amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
+      if ((currentUser?.stars || 0) < amt) return showStarPopup("Not enough stars 💫");
+      sendStarsToUser(user, amt);
+      slider.value = 0;
+      sliderLabel.textContent = `0 ⭐️`;
+    };
+    btnWrap.appendChild(giftBtnLocal);
 
     card.appendChild(btnWrap);
 
+    // Append & animate
     document.body.appendChild(card);
-    requestAnimationFrame(() => {
-      card.style.opacity = '1';
-      card.style.transform = 'translate(-50%, -50%) scale(1.02)';
-      setTimeout(() => (card.style.transform = 'translate(-50%, -50%) scale(1)'), 120);
-    });
+    requestAnimationFrame(() => { card.style.opacity = '1'; card.style.transform = 'translate(-50%, -50%) scale(1.02)'; setTimeout(() => card.style.transform = 'translate(-50%, -50%) scale(1)', 120); });
 
-    // Close on outside click
-    const closeHandler = e => { if (!card.contains(e.target)) { card.remove(); document.removeEventListener('click', closeHandler); } };
+    // Click outside to close
+    const closeHandler = (ev) => { if (!card.contains(ev.target)) { card.remove(); document.removeEventListener('click', closeHandler); } };
     setTimeout(() => document.addEventListener('click', closeHandler), 10);
   }
 
-  // --- Typewriter Helper ---
   function typeWriterEffect(el, text, speed = 35) {
     el.textContent = '';
     let i = 0;
-    const iv = setInterval(() => {
-      el.textContent += text.charAt(i) || '';
-      i++;
-      if (i >= text.length) clearInterval(iv);
-    }, speed);
+    const iv = setInterval(() => { el.textContent += text.charAt(i) || ''; i++; if (i >= text.length) clearInterval(iv); }, speed);
   }
 
-  // --- 3) Username Tap Detection ---
-  document.addEventListener('pointerdown', e => {
+  // --- USERNAME TAP DETECTOR ---
+  document.addEventListener('pointerdown', (e) => {
     const target = e.target;
-    if (!target || !target.classList.contains('chat-username')) return;
+    if (!target || !target.textContent) return;
 
-    // Blink effect
-    target.style.transition = 'opacity 0.15s';
-    target.style.opacity = '0.4';
-    setTimeout(() => (target.style.opacity = ''), 150);
+    const txt = target.textContent.trim();
+    if (!txt || txt.includes(':')) return; // avoid chat line clicks
+    const chatId = txt.split(' ')[0].trim(); // exact username
+    if (!chatId) return;
 
-    const chatId = target.textContent.trim();
     const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || '').toLowerCase() === chatId.toLowerCase());
     if (!user || user._docId === currentUser?.uid) return;
 
+    // Blink effect
+    const originalColor = target.style.backgroundColor;
+    target.style.backgroundColor = '#ffcc00';
+    setTimeout(() => target.style.backgroundColor = originalColor, 180);
+
+    // Show popup
     showSocialCard(user);
   });
+
+  // --- SEND STARS FUNCTION ---
+  async function sendStarsToUser(targetUser, amt) {
+    const fromRef = doc(db, "users", currentUser.uid);
+    const toRef = doc(db, "users", targetUser._docId);
+    const glowColor = randomColor();
+
+    await Promise.all([
+      updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
+      updateDoc(toRef, { stars: increment(amt) })
+    ]);
+
+    // System banner message
+    const bannerMsg = {
+      content: `💫 ${currentUser.chatId} gifted ${amt} ⭐️ to ${targetUser.chatId}!`,
+      uid: "system",
+      chatId: "banner",
+      timestamp: serverTimestamp(),
+      highlight: true,
+      buzzColor: glowColor
+    };
+
+    const docRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
+    renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }]);
+
+    const msgEl = document.getElementById(docRef.id);
+    if (!msgEl) return;
+    const contentEl = msgEl.querySelector(".content") || msgEl;
+    contentEl.style.setProperty("--pulse-color", glowColor);
+    contentEl.classList.add("baller-highlight");
+    setTimeout(() => { contentEl.classList.remove("baller-highlight"); contentEl.style.boxShadow = "none"; }, 21000);
+  }
 
 })();
 
