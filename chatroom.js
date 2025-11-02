@@ -319,8 +319,53 @@ function setupUsersListener() {
 }
 setupUsersListener();
 
-/* ---------- Render Messages (enhanced gift banners with confetti) ---------- */
+/* ---------- Render Messages (full-width banners + inner glass panel + confetti) ---------- */
 let scrollPending = false;
+
+function createConfetti(wrapper) {
+  const confettiContainer = document.createElement("div");
+  confettiContainer.className = "confetti-container";
+  confettiContainer.style.position = "absolute";
+  confettiContainer.style.top = 0;
+  confettiContainer.style.left = 0;
+  confettiContainer.style.width = "100%";
+  confettiContainer.style.height = "100%";
+  confettiContainer.style.pointerEvents = "none";
+  confettiContainer.style.overflow = "hidden";
+  wrapper.appendChild(confettiContainer);
+
+  const colors = ["#ffcc00", "#ff33cc", "#33ffcc", "#ff3366", "#00ccff", "#ffffff"];
+  const total = 50;
+
+  for (let i = 0; i < total; i++) {
+    const confetti = document.createElement("div");
+    confetti.style.position = "absolute";
+    confetti.style.width = Math.random() * 8 + 4 + "px";
+    confetti.style.height = confetti.style.width;
+    confetti.style.borderRadius = Math.random() > 0.5 ? "50%" : "2px";
+    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+    confetti.style.top = "0px";
+    confetti.style.left = Math.random() * 100 + "%";
+    confetti.style.opacity = Math.random();
+    confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+    confettiContainer.appendChild(confetti);
+
+    const fallDistance = 100 + Math.random() * 200;
+    const duration = 4000 + Math.random() * 2000;
+    const delay = Math.random() * 200;
+    const drift = Math.random() * 80 - 40;
+
+    confetti.animate(
+      [
+        { transform: `translate(0,0) rotate(0deg)`, opacity: 1 },
+        { transform: `translate(${drift}px, ${fallDistance}px) rotate(360deg)`, opacity: 0 }
+      ],
+      { duration, delay, easing: "ease-out", fill: "forwards" }
+    );
+  }
+
+  setTimeout(() => confettiContainer.remove(), 6000);
+}
 
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
@@ -332,89 +377,67 @@ function renderMessagesFromArray(messages) {
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
     wrapper.id = item.id;
+    wrapper.style.position = "relative";
 
-    // === Gift / system banner logic ===
+    // --- System/banner message ---
     if (m.systemBanner) {
       wrapper.style.display = "block";
       wrapper.style.width = "100%";
-      wrapper.style.position = "relative";
       wrapper.style.textAlign = "center";
-      wrapper.style.padding = "10px 0";
+      wrapper.style.padding = "14px 0";
+      wrapper.style.margin = "8px 0";
       wrapper.style.borderRadius = "6px";
-      wrapper.style.margin = "6px 0";
-      wrapper.style.overflow = "hidden"; // for confetti containment
+      wrapper.style.fontWeight = "700";
+      wrapper.style.color = "#000";
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
+      wrapper.classList.add("buzz-content");
 
-      // Confetti container
-      const confettiContainer = document.createElement("div");
-      confettiContainer.style.position = "absolute";
-      confettiContainer.style.top = "0";
-      confettiContainer.style.left = "0";
-      confettiContainer.style.width = "100%";
-      confettiContainer.style.height = "100%";
-      confettiContainer.style.pointerEvents = "none"; // allow clicks through
-      wrapper.appendChild(confettiContainer);
+      // Confetti behind the message
+      createConfetti(wrapper);
 
-      // Generate simple confetti pieces
-      for (let i = 0; i < 20; i++) {
-        const piece = document.createElement("div");
-        piece.style.position = "absolute";
-        piece.style.width = piece.style.height = `${Math.random() * 6 + 4}px`;
-        piece.style.background = `hsl(${Math.random() * 360}, 70%, 60%)`;
-        piece.style.top = `${Math.random() * 100}%`;
-        piece.style.left = `${Math.random() * 100}%`;
-        piece.style.opacity = Math.random() * 0.9 + 0.1;
-        piece.style.borderRadius = "50%";
-        piece.style.animation = `confettiFall ${Math.random() * 2 + 2}s linear forwards`;
-        confettiContainer.appendChild(piece);
-      }
+      // --- Inner translucent text panel ---
+      const innerPanel = document.createElement("div");
+      innerPanel.style.display = "inline-block";
+      innerPanel.style.padding = "6px 14px";
+      innerPanel.style.borderRadius = "8px";
+      innerPanel.style.background = "rgba(255, 255, 255, 0.3)";
+      innerPanel.style.backdropFilter = "blur(6px)";
+      innerPanel.style.boxShadow = "0 0 12px rgba(255,255,255,0.3)";
+      innerPanel.style.margin = "auto";
+      innerPanel.style.color = "#000";
+      innerPanel.style.fontWeight = "700";
+      innerPanel.textContent = m.content || "";
+      wrapper.appendChild(innerPanel);
     } else {
-      // Normal messages with username
+      // Normal chat message
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
       usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
+
+      const contentEl = document.createElement("span");
+      contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
+      contentEl.textContent = " " + (m.content || "");
+      if (m.buzzColor) contentEl.style.background = m.buzzColor;
+      wrapper.appendChild(contentEl);
     }
 
-    // Message content
-    const contentEl = document.createElement("span");
-    contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
-    contentEl.textContent = " " + (m.content || "");
-
-    if (m.buzzColor) contentEl.style.background = m.buzzColor;
-    if (m.highlight) {
-      contentEl.style.color = "#000";
-      contentEl.style.fontWeight = "700";
-    }
-
-    wrapper.appendChild(contentEl);
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // Auto-scroll
-  if (!scrollPending) {
-    scrollPending = true;
-    requestAnimationFrame(() => {
-      const nearBottom = refs.messagesEl.scrollHeight - refs.messagesEl.scrollTop - refs.messagesEl.clientHeight < 50;
-      if (messages.some(msg => msg.data.uid === currentUser?.uid) || nearBottom) {
-        refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
-      }
-      scrollPending = false;
+  // --- Smooth auto-scroll on new messages ---
+  const nearBottom =
+    refs.messagesEl.scrollHeight - refs.messagesEl.scrollTop - refs.messagesEl.clientHeight < 100;
+
+  if (messages.some(msg => msg.data.systemBanner || msg.data.uid === currentUser?.uid) || nearBottom) {
+    refs.messagesEl.scrollTo({
+      top: refs.messagesEl.scrollHeight,
+      behavior: "smooth"
     });
   }
 }
-
-/* ---------- Add confetti keyframes (CSS in JS) ---------- */
-const style = document.createElement("style");
-style.textContent = `
-@keyframes confettiFall {
-  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(120%) rotate(360deg); opacity: 0; }
-}`;
-document.head.appendChild(style);
-
 /* ---------- 🔔 Messages Listener ---------- */
 function attachMessagesListener() {
   const q = query(collection(db, CHAT_COLLECTION), orderBy("timestamp", "asc"));
