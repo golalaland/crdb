@@ -2517,7 +2517,7 @@ if (saveMediaBtn) {
 
   // System banner message — UID and chatId are irrelevant here
   const bannerMsg = {
-    content: `💫 ${currentUser.chatId} gifted ${amt} ⭐️ to ${targetUser.chatId}!`,
+    content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
     timestamp: serverTimestamp(),
     highlight: true,
     buzzColor: glowColor,
