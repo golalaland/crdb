@@ -305,31 +305,32 @@ setupUsersListener();
 /* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
 let scrollPending = false;
 
-function renderMessagesFromArray(messages) {
+function renderMessagesFromArray(messages, isBannerFeed = false) {
   if (!refs.messagesEl) return;
 
   messages.forEach(item => {
-    if (document.getElementById(item.id)) return;
+    if (document.getElementById(item.id)) return; // avoid duplicates
 
     const m = item.data;
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    if (m.systemBanner) {
-      // --- 🎁 Full-width banner style ---
+    // --- 🎁 Banner Detection ---
+    if (m.systemBanner || m.isBanner || m.type === "banner") {
+      wrapper.classList.add("chat-banner");
       wrapper.style.display = "block";
       wrapper.style.width = "100%";
       wrapper.style.textAlign = "center";
       wrapper.style.padding = "4px 0";
-      wrapper.style.margin = "3px 0";
+      wrapper.style.margin = "4px 0";
       wrapper.style.borderRadius = "8px";
       wrapper.style.position = "relative";
       wrapper.style.overflow = "hidden";
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-      // inner panel for text
+      // --- Inner text panel ---
       const innerPanel = document.createElement("div");
       innerPanel.style.display = "inline-block";
       innerPanel.style.padding = "6px 14px";
@@ -341,12 +342,32 @@ function renderMessagesFromArray(messages) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
-      // --- Confetti + Glow (one-time) ---
-      if (!m._confettiPlayed) {
-        wrapper.style.animation = "pulseGlow 2s";
-        m._confettiPlayed = true; // mark so reload doesn't replay
+      // --- 🗑 Optional Delete Button (Admin only) ---
+      if (window.currentUser?.isAdmin) {
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "🗑";
+        delBtn.title = "Delete Banner";
+        delBtn.style.position = "absolute";
+        delBtn.style.right = "6px";
+        delBtn.style.top = "3px";
+        delBtn.style.background = "rgba(255,255,255,0.5)";
+        delBtn.style.border = "none";
+        delBtn.style.borderRadius = "4px";
+        delBtn.style.cursor = "pointer";
+        delBtn.style.fontSize = "14px";
+        delBtn.onclick = async () => {
+          await deleteDoc(doc(db, "messages", item.id));
+          wrapper.remove();
+          console.log(`🗑 Banner ${item.id} deleted by admin`);
+        };
+        wrapper.appendChild(delBtn);
+      }
 
-        // Confetti container
+      // --- 🎊 Confetti + Glow (only once per session) ---
+      if (!sessionStorage.getItem(`confetti_${item.id}`)) {
+        wrapper.style.animation = "pulseGlow 2s";
+        sessionStorage.setItem(`confetti_${item.id}`, "played");
+
         const confettiContainer = document.createElement("div");
         confettiContainer.style.position = "absolute";
         confettiContainer.style.inset = "0";
@@ -367,14 +388,14 @@ function renderMessagesFromArray(messages) {
           confettiContainer.appendChild(piece);
         }
 
-        // Remove confetti and stop glow after duration
         setTimeout(() => {
           confettiContainer.remove();
           wrapper.style.animation = "";
         }, 6000);
       }
+
     } else {
-      // --- Normal message with username ---
+      // --- 💬 Regular message ---
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -2465,25 +2486,28 @@ async function sendStarsToUser(targetUser, amt) {
     const toRef = doc(db, "users", targetUser._docId);
     const glowColor = randomColor();
 
-    // Update Firestore balances
+    // --- Update Firestore balances ---
     await Promise.all([
       updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
       updateDoc(toRef, { stars: increment(amt) })
     ]);
 
-    // Create banner message for chat
+    // --- 🎁 Create banner message inside MAIN messages collection ---
     const bannerMsg = {
       content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
       timestamp: serverTimestamp(),
       systemBanner: true,
       highlight: true,
-      buzzColor: glowColor
+      buzzColor: glowColor,
+      isBanner: true,              // ✅ tag for admin cleanup
+      senderId: currentUser.uid,
+      type: "banner",              // optional tag for filtering
     };
 
-    const docRef = await addDoc(collection(db, "bannerMsgs"), bannerMsg);
+    const docRef = await addDoc(collection(db, "messages"), bannerMsg); // 👈🏽 now in messages
     renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true);
 
-    // Add glow pulse for chat banner
+    // --- ✨ Add glow pulse for chat banner ---
     setTimeout(() => {
       const msgEl = document.getElementById(docRef.id);
       if (!msgEl) return;
@@ -2499,8 +2523,7 @@ async function sendStarsToUser(targetUser, amt) {
     // --- 1️⃣ Sender visual popup ---
     showGiftAlert(`✅ You sent ${amt} ⭐ to ${targetUser.chatId}!`, 4000);
 
-    // --- 2️⃣ Save a quick marker for receiver to see ---
-    // (So their listener can detect and show popup instantly)
+    // --- 2️⃣ Receiver quick sync marker ---
     await updateDoc(toRef, {
       lastGift: {
         from: currentUser.chatId,
