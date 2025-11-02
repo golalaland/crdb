@@ -315,7 +315,6 @@ function setupUsersListener() {
 }
 setupUsersListener();
 
-/* ---------- Render Messages ---------- */
 /* ---------- Render Messages (enhanced for banners) ---------- */
 let scrollPending = false;
 
@@ -330,9 +329,19 @@ function renderMessagesFromArray(messages) {
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    // === Gift / system banner logic ===
-    if (!m.systemBanner) {
-      // normal message with username
+    // === Full-width banner for gifts ===
+    if (m.isBanner) {
+      wrapper.style.display = "block";
+      wrapper.style.width = "100%";
+      wrapper.style.textAlign = "center";
+      wrapper.style.padding = "6px 0";
+      wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
+      wrapper.style.color = "#000";
+      wrapper.style.fontWeight = "700";
+      wrapper.style.borderRadius = "6px";
+      wrapper.style.margin = "4px 0";
+    } else {
+      // Normal message: username + content
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -341,17 +350,12 @@ function renderMessagesFromArray(messages) {
       wrapper.appendChild(usernameEl);
     }
 
+    // Content span (for both normal and banner)
     const contentEl = document.createElement("span");
     contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
     contentEl.textContent = " " + (m.content || "");
-
-    if (m.buzzColor) contentEl.style.background = m.buzzColor;
-    if (m.highlight) {
-      contentEl.style.color = "#000";
-      contentEl.style.fontWeight = "700";
-    }
-
     wrapper.appendChild(contentEl);
+
     refs.messagesEl.appendChild(wrapper);
   });
 
