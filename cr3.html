@@ -201,42 +201,32 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   text-align: center;
 }
 
-/* ✅ FORCE LEFT + KIK STYLE TEXT FLOW */
 .msg {
-  width: 100%;
+  margin-bottom: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  background: var(--glass);
   padding: 8px 10px;
   border-radius: 8px;
-  background: var(--glass);
-  box-sizing: border-box;
-
-  display: block !important;         /* <-- RESETS flex */
-  text-align: left !important;       /* <-- anchor left */
 }
 
-/* username */
+/* USERNAME */
 .msg .meta {
   font-weight: 700;
-  font-size: 13px;
   white-space: nowrap;
-  display: inline;
-  margin-right: 4px;
 }
 
-/* attach colon */
+/* Colon auto */
 .msg .meta::after {
-  content: ":";
-  margin-right: 4px;
+  content: ": ";
 }
 
-/* message body */
+/* MESSAGE TEXT */
 .msg .content {
-  font-size: 13px;
-  display: inline;
-  white-space: normal;
   word-break: break-word;
 }
 
-
+  
 /* 🔥 Keypad (chat input) - always at bottom */
 .send-area {
   position: fixed;       
@@ -1567,6 +1557,21 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
  <div id="guestMsg"></div>
 <div id="authBox">
+
+  <div class="msg">
+  <span class="meta">christy</span>
+  <span class="content">this is a long message that wraps to the next line like normal</span>
+</div>
+
+<div class="msg">
+  <span class="meta">ben</span>
+  <span class="content">yo</span>
+</div>
+
+<div class="msg">
+  <span class="meta">alex</span>
+  <span class="content">hi</span>
+</div>
 
   <!-- VIP Access Login Wrapper -->
   <div id="emailAuthWrapper">
