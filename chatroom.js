@@ -316,7 +316,7 @@ function renderMessagesFromArray(messages) {
     if (m.systemBanner) {
       // --- 🎁 Full-width banner style ---
       wrapper.style.display = "block";
-      wrapper.style.width = "88%";
+      wrapper.style.width = "100%";
       wrapper.style.textAlign = "center";
       wrapper.style.padding = "4px 0";
       wrapper.style.margin = "3px 0";
@@ -2527,7 +2527,6 @@ if (saveMediaBtn) {
 })();
 
 
-
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
   if (!str) return "";
@@ -2556,6 +2555,42 @@ hostSettingsBtn.addEventListener("click", () => {
   setGreeting();
 });
 
+function showBallerAlert(fromUser, toUser, amount) {
+  // Remove existing alert if present
+  document.getElementById('ballerAlert')?.remove();
+
+  const alertEl = document.createElement('div');
+  alertEl.id = 'ballerAlert';
+  alertEl.textContent = `💎 ${fromUser.chatId} gifted ${toUser.chatId} ${amount} ⭐️`;
+  document.body.appendChild(alertEl);
+
+  // Add confetti inside alert
+  for (let i = 0; i < 25; i++) {
+    const confetti = document.createElement('div');
+    confetti.className = 'baller-confetti';
+    confetti.style.background = randomColor(); // function you already have
+    confetti.style.left = Math.random() * 100 + '%';
+    confetti.style.top = Math.random() * 100 + '%';
+    confetti.style.width = `${4 + Math.random() * 6}px`;
+    confetti.style.height = confetti.style.width;
+    confetti.style.animationDuration = `${2 + Math.random() * 2}s`;
+    alertEl.appendChild(confetti);
+  }
+
+  // Animate in
+  requestAnimationFrame(() => {
+    alertEl.style.opacity = 1;
+    alertEl.style.transform = 'translateX(-50%) translateY(0)';
+  });
+
+  alertEl.classList.add('baller-glow');
+
+  // Remove after 7 seconds
+  setTimeout(() => {
+    alertEl.style.opacity = 0;
+    setTimeout(() => alertEl.remove(), 400);
+  }, 7000);
+}
 
 const scrollArrow = document.getElementById('scrollArrow');
   const chatContainer = document.querySelector('#chatContainer'); // your chat wrapper
