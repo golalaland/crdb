@@ -302,12 +302,13 @@ setupUsersListener();
 /* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
 /* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
 let scrollPending = false;
+const renderedMessageIds = new Set(); // <-- Track what has already been rendered
 
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
 
   messages.forEach(item => {
-    if (document.getElementById(item.id)) return;
+    if (renderedMessageIds.has(item.id)) return; // skip already rendered messages
 
     const m = item.data;
     const wrapper = document.createElement("div");
@@ -315,9 +316,9 @@ function renderMessagesFromArray(messages) {
     wrapper.id = item.id;
 
     if (m.systemBanner) {
-      // --- 🎁 Full-width banner style ---
+      // --- Banner styles ---
       wrapper.style.display = "block";
-      wrapper.style.width = "100%";
+      wrapper.style.width = "88%";
       wrapper.style.textAlign = "center";
       wrapper.style.padding = "4px 0";
       wrapper.style.margin = "3px 0";
@@ -327,7 +328,7 @@ function renderMessagesFromArray(messages) {
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-      // --- Inner panel for text ---
+      // inner panel
       const innerPanel = document.createElement("div");
       innerPanel.style.display = "inline-block";
       innerPanel.style.padding = "6px 14px";
@@ -350,7 +351,7 @@ function renderMessagesFromArray(messages) {
         confettiContainer.style.pointerEvents = "none";
         wrapper.appendChild(confettiContainer);
 
-        for (let i = 0; i < 15; i++) { // reduced confetti for performance
+        for (let i = 0; i < 15; i++) {
           const piece = document.createElement("div");
           piece.style.position = "absolute";
           piece.style.width = "6px";
@@ -364,7 +365,6 @@ function renderMessagesFromArray(messages) {
           confettiContainer.appendChild(piece);
         }
 
-        // Remove confetti and stop glow after 3 seconds
         setTimeout(() => {
           confettiContainer.remove();
           wrapper.style.animation = "";
@@ -375,7 +375,7 @@ function renderMessagesFromArray(messages) {
       wrapper.dataset.timestamp = Date.now();
 
     } else {
-      // --- Normal message with username ---
+      // --- Normal message ---
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -395,9 +395,12 @@ function renderMessagesFromArray(messages) {
     }
 
     refs.messagesEl.appendChild(wrapper);
+
+    // --- Mark this message as rendered ---
+    renderedMessageIds.add(item.id);
   });
 
-  // --- Auto-scroll to bottom ---
+  // --- Auto-scroll ---
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
@@ -407,7 +410,7 @@ function renderMessagesFromArray(messages) {
   }
 }
 
-/* ---------- Periodic Cleanup for Old System Banners ---------- */
+/* ---------- Cleanup old banners ---------- */
 function cleanupOldBanners() {
   if (!refs.messagesEl) return;
   const banners = refs.messagesEl.querySelectorAll('.msg');
@@ -422,8 +425,6 @@ function cleanupOldBanners() {
     }
   });
 }
-
-// Run cleanup every 10 seconds
 setInterval(cleanupOldBanners, 10000);
 
 /* ---------- Animations ---------- */
