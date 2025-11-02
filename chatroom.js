@@ -393,15 +393,6 @@ function renderMessagesFromArray(messages) {
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // --- Auto-scroll to bottom ---
-  if (!scrollPending) {
-    scrollPending = true;
-    requestAnimationFrame(() => {
-      refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
-      scrollPending = false;
-    });
-  }
-}
 
 /* ---------- Animations ---------- */
 const style = document.createElement("style");
