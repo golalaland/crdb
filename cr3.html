@@ -199,25 +199,27 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   word-break: break-word;
 }
 
-/* 🔥 Keypad (chat input) - always at bottom */
+/* 🔥 Keypad (chat input) — always at bottom */
 .send-area {
-  position: fixed;       
-  bottom: 0;           /* sits at the very bottom */
+  position: fixed;
+  bottom: 0;
   left: 0;
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
+
   display: flex;
   align-items: center;
   gap: 8px;
+
   background: var(--card);
   padding: 10px;
-  border-radius: 999px;  
+  border-radius: 999px;
   box-sizing: border-box;
-  z-index: 100;           
+  z-index: 100;
 }
 
-/* 🔥 Chat input area */
+/* ✅ Text input with vertical scroll */
 .send-area textarea {
   flex: 1;
   padding: 12px 16px;
@@ -227,33 +229,27 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   color: #fff;
   font-size: 16px;
   outline: none;
+
+  /* ✅ scroll settings */
   resize: none;
   overflow-y: auto;
-  max-height: 120px; 
-}
+  max-height: 120px;
 
-
-.send-area input {
-  flex: 1;
-  padding: 12px 16px;       /* your preferred size */
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background-color: #0e0e0e;
-  color: #fff;
-  font-size: 16px;
-  outline: none;
   transition: all 0.2s ease-in-out;
 }
 
-.send-area input::placeholder {
+/* ✅ Placeholder appearance */
+.send-area textarea::placeholder {
   color: var(--muted, #aaa);
   opacity: 0.7;
 }
 
-.send-area input:focus {
+/* ✅ Glow when typing */
+.send-area textarea:focus {
   border-color: var(--accent, #FF1493);
   box-shadow: 0 0 12px rgba(255, 20, 147, 0.15);
 }
+
 
 .send-btn {
   padding: 10px 16px;
