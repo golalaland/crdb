@@ -2414,20 +2414,20 @@ Object.assign(giftBtnLocal.style, {
     showSocialCard(user);
   });
 
-// --- SEND STARS FUNCTION (Dual Pop-Up + Banner) ---
+// --- SEND STARS FUNCTION (Dual showGiftAlert + Banner + Receiver Sync) ---
 async function sendStarsToUser(targetUser, amt) {
   try {
     const fromRef = doc(db, "users", currentUser.uid);
     const toRef = doc(db, "users", targetUser._docId);
     const glowColor = randomColor();
 
-    // 🔁 Update both users
+    // Update Firestore balances
     await Promise.all([
       updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
       updateDoc(toRef, { stars: increment(amt) })
     ]);
 
-    // 🪧 Create banner message in Firestore
+    // Create banner message for chat
     const bannerMsg = {
       content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
       timestamp: serverTimestamp(),
@@ -2437,36 +2437,37 @@ async function sendStarsToUser(targetUser, amt) {
     };
 
     const docRef = await addDoc(collection(db, "bannerMsgs"), bannerMsg);
-    console.log("✅ Banner stored in bannerMsgs");
-
-    // 🪩 Render banner instantly
     renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true);
 
-    // ✨ Apply glow animation
+    // Add glow pulse for chat banner
     setTimeout(() => {
       const msgEl = document.getElementById(docRef.id);
       if (!msgEl) return;
       const contentEl = msgEl.querySelector(".content") || msgEl;
       contentEl.style.setProperty("--pulse-color", glowColor);
       contentEl.classList.add("baller-highlight");
-
       setTimeout(() => {
         contentEl.classList.remove("baller-highlight");
         contentEl.style.boxShadow = "none";
       }, 21000);
     }, 80);
 
-    // 🎁 Trigger pop-up alerts for both sides
-    showGiftAlert(`✅ You sent ${amt} stars ⭐ to ${targetUser.chatId}!`, 4000);
+    // --- 1️⃣ Sender visual popup ---
+    showGiftAlert(`✅ You sent ${amt} ⭐ to ${targetUser.chatId}!`, 4000);
 
-    // If the target is online or same session, simulate receiver alert too
-    setTimeout(() => {
-      showGiftAlert(`🎁 ${currentUser.chatId} sent you ${amt} stars ⭐`, 4000);
-    }, 1000);
+    // --- 2️⃣ Save a quick marker for receiver to see ---
+    // (So their listener can detect and show popup instantly)
+    await updateDoc(toRef, {
+      lastGift: {
+        from: currentUser.chatId,
+        amt,
+        at: Date.now()
+      }
+    });
 
   } catch (err) {
     console.error("❌ sendStarsToUser failed:", err);
-    showGiftAlert(`⚠️ Something went wrong: ${err.message}`, 4000);
+    showGiftAlert(`⚠️ Error: ${err.message}`, 4000);
   }
 }
 
