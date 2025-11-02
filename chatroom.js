@@ -100,33 +100,39 @@ onAuthStateChanged(auth, async (user) => {
       console.log("🔔 Setting up live notification listener...");
       const notifRef = collection(db, "users", currentUser.uid, "notifications");
 
-      onSnapshot(notifRef, (snapshot) => {
-        console.log("🔔 Notifications update:", snapshot.docs.map(d => d.data()));
-        console.log("📡 Snapshot received:", snapshot.size, "docs");
+     onSnapshot(notifRef, (snapshot) => {
+  console.log("🔔 Notifications update:", snapshot.docs.map(d => d.data()));
+  console.log("📡 Snapshot received:", snapshot.size, "docs");
 
-        if (snapshot.empty) {
-          notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-          return;
-        }
+  const notificationsList = document.getElementById("notificationsList");
+  if (!notificationsList) {
+    console.warn("⚠️ notificationsList not found in DOM when snapshot triggered");
+    return;
+  }
 
-        const items = snapshot.docs.map((docSnap) => {
-          const n = docSnap.data();
-          const time = n.timestamp?.seconds
-            ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "--:--";
-          return `
-            <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
-              <span>${n.message || "(no message)"}</span>
-              <span class="notification-time">${time}</span>
-            </div>
-          `;
-        });
+  if (snapshot.empty) {
+    notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+    return;
+  }
 
-        notificationsList.innerHTML = items.join("");
-      });
+  const items = snapshot.docs.map((docSnap) => {
+    const n = docSnap.data();
+    const time = n.timestamp?.seconds
+      ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "--:--";
+    return `
+      <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
+        <span>${n.message || "(no message)"}</span>
+        <span class="notification-time">${time}</span>
+      </div>
+    `;
+  });
+
+  notificationsList.innerHTML = items.join("");
+});
 
       // ✅ Mark all as read
       if (markAllBtn) {
