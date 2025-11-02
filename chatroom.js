@@ -2490,7 +2490,6 @@ if (saveMediaBtn) {
     showSocialCard(user);
   });
 
-  // --- SEND STARS FUNCTION ---
 // --- SEND STARS FUNCTION ---
 async function sendStarsToUser(targetUser, amt) {
   const fromRef = doc(db, "users", currentUser.uid);
@@ -2514,16 +2513,16 @@ async function sendStarsToUser(targetUser, amt) {
   // ✅ 1) ADD TO CHAT COLLECTION
   const chatRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
 
-  // ✅ 2) ADD TO SEPARATE BANNER COLLECTION
-  const bannerRef = await addDoc(collection(db, "bannerMsgs"), {
+  // ✅ 2) ADD TO NEW COLLECTION "bannerMsgs"
+  await addDoc(collection(db, "bannerMsgs"), {
     ...bannerMsg,
-    chatDocId: chatRef.id   // so you can clean both later
+    chatDocId: chatRef.id   // so you can reference later if deleting
   });
 
-  // ✅ Render banner immediately
+  // ✅ Show banner in UI
   renderMessagesFromArray([{ id: chatRef.id, data: bannerMsg }], true);
 
-  // Glow effect
+  // Glow visual
   const msgEl = document.getElementById(chatRef.id);
   if (!msgEl) return;
   const contentEl = msgEl.querySelector(".content") || msgEl;
@@ -2534,6 +2533,7 @@ async function sendStarsToUser(targetUser, amt) {
     contentEl.style.boxShadow = "none";
   }, 21000);
 }
+
 
 
 // 🌤️ Dynamic Host Panel Greeting
