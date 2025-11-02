@@ -2260,35 +2260,56 @@ document.addEventListener("DOMContentLoaded", () => {
     showSocialCard(user);
   });
 
-    // --- SEND STARS FUNCTION ---
 // --- SEND STARS FUNCTION ---
 async function sendStarsToUser(targetUser, amt) {
-
   try {
     const fromRef = doc(db, "users", currentUser.uid);
     const toRef   = doc(db, "users", targetUser._docId);
+    const glowColor = randomColor();
 
+    // Update stars
     await Promise.all([
       updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
       updateDoc(toRef,   { stars: increment(amt) })
     ]);
 
-    // Only stored banner message
+    // ✅ Banner message (not stored in chats)
     const bannerMsg = {
       content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
       timestamp: serverTimestamp(),
+      highlight: true,
+      buzzColor: glowColor,
       systemBanner: true
     };
 
-    // ✅ Save in separate collection
-    await addDoc(collection(db, "bannerMsgs"), bannerMsg);
+    // ✅ Store ONLY in bannerMsgs
+    const docRef = await addDoc(collection(db, "bannerMsgs"), bannerMsg);
 
-    console.log("✅ Banner stored in bannerMsgs");
+    // ✅ Render into chat UI anyway
+    renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true);
+
+    // ✅ Apply highlight pulse
+    setTimeout(() => {
+      const msgEl = document.getElementById(docRef.id);
+      if (!msgEl) return;
+
+      const contentEl = msgEl.querySelector(".content") || msgEl;
+      contentEl.style.setProperty("--pulse-color", glowColor);
+      contentEl.classList.add("baller-highlight");
+
+      setTimeout(() => {
+        contentEl.classList.remove("baller-highlight");
+        contentEl.style.boxShadow = "none";
+      }, 21000);
+    }, 50);
+
+    console.log("✅ banner stored + rendered");
+
   } catch (err) {
     console.error("❌ sendStarsToUser failed:", err);
   }
 }
-})();   // ✅ closes IIFE
+
 
 
 // ========== 🟣 HOST SETTINGS LOGIC ==========
