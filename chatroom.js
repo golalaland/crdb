@@ -905,37 +905,53 @@ window.addEventListener("DOMContentLoaded", () => {
 autoLogin();
 
 
-  /* ----------------------------
-     💬 Send Message Handler
-  ----------------------------- */
-  refs.sendBtn?.addEventListener("click", async () => {
-    if (!currentUser) return showStarPopup("Sign in to chat.");
-    const txt = refs.messageInputEl?.value.trim();
-    if (!txt) return showStarPopup("Type a message first.");
-    if ((currentUser.stars || 0) < SEND_COST)
-      return showStarPopup("Not enough stars to send message.");
+/* ----------------------------
+   💬 Send Message Handler
+----------------------------- */
+refs.sendBtn?.addEventListener("click", async () => {
+  if (!currentUser) return showStarPopup("Sign in to chat.");
 
-    // Deduct star cost
-    currentUser.stars -= SEND_COST;
-    refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-    await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-SEND_COST) });
+  const txt = refs.messageInputEl?.value.trim();
+  if (!txt) return showStarPopup("Type a message first.");
+  if ((currentUser.stars || 0) < SEND_COST)
+    return showStarPopup("Not enough stars to send message.");
 
-    // Add to chat
-    const newMsg = {
-      content: txt,
-      uid: currentUser.uid,
-      chatId: currentUser.chatId,
-      timestamp: serverTimestamp(),
-      highlight: false,
-      buzzColor: null
-    };
-    const docRef = await addDoc(collection(db, CHAT_COLLECTION), newMsg);
+  // Deduct star cost
+  currentUser.stars -= SEND_COST;
+  refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+  await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-SEND_COST) });
 
-    // Render immediately (optimistic)
-    refs.messageInputEl.value = "";
-    renderMessagesFromArray([{ id: docRef.id, data: newMsg }], true);
+  // Add to chat
+  const newMsg = {
+    content: txt,
+    uid: currentUser.uid,
+    chatId: currentUser.chatId,
+    timestamp: serverTimestamp(),
+    highlight: false,
+    buzzColor: null
+  };
+  const docRef = await addDoc(collection(db, CHAT_COLLECTION), newMsg);
+
+  // Render immediately (optimistic)
+  refs.messageInputEl.value = "";
+  renderMessagesFromArray([{ id: docRef.id, data: newMsg }], true);
+
+  // ✅ Auto-scroll to bottom after rendering
+  setTimeout(() => {
     scrollToBottom(refs.messagesEl);
+  }, 50);
+});
+
+/* ----------------------------
+   ⚙️ Scroll Helper
+----------------------------- */
+function scrollToBottom(el) {
+  if (!el) return;
+  el.scrollTo({
+    top: el.scrollHeight,
+    behavior: "smooth" // or "auto" if you prefer instant jump
   });
+}
 
   /* ----------------------------
      🚨 BUZZ Message Handler
@@ -2124,113 +2140,115 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     card.appendChild(header);
 
-    // --- Details ---
-    const detailsEl = document.createElement('p');
-    Object.assign(detailsEl.style, {
-      margin: '0 0 12px',
-      fontSize: '14px',
-      lineHeight: '1.4'
-    });
+// --- Details ---
+const detailsEl = document.createElement('p');
+Object.assign(detailsEl.style, {
+  margin: '0 0 10px',
+  fontSize: '14px',
+  lineHeight: '1.4'
+});
 
-    const gender = (user.gender || "person").toLowerCase();
-    const pronoun = gender === "male" ? "his" : "her";
-    const ageGroup = !user.age ? "20s" : user.age >= 30 ? "30s" : "20s";
-    const flair = gender === "male" ? "😎" : "💋";
-    const fruit = user.fruitPick || "🍇";
-    const nature = user.naturePick || "cool";
-    const city = user.location || user.city || "Lagos";
-    const country = user.country || "Nigeria";
+const gender = (user.gender || "person").toLowerCase();
+const pronoun = gender === "male" ? "his" : "her";
+const ageGroup = !user.age ? "20s" : user.age >= 30 ? "30s" : "20s";
+const flair = gender === "male" ? "😎" : "💋";
+const fruit = user.fruitPick || "🍇";
+const nature = user.naturePick || "cool";
+const city = user.location || user.city || "Lagos";
+const country = user.country || "Nigeria";
 
-    if (user.isHost) {
-      detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
-    } else if (user.isVIP) {
-      detailsEl.innerHTML = `A ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
-    } else {
-      detailsEl.innerHTML = `A ${gender} from ${city}, ${country}. ${flair}`;
-    }
-    card.appendChild(detailsEl);
+if (user.isHost) {
+  detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
+} else if (user.isVIP) {
+  detailsEl.innerHTML = `A ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
+} else {
+  detailsEl.innerHTML = `A ${gender} from ${city}, ${country}. ${flair}`;
+}
+card.appendChild(detailsEl);
 
-    // --- Bio ---
-    const bioEl = document.createElement('div');
-    Object.assign(bioEl.style, {
-      margin: '8px 0 14px',
-      fontStyle: 'italic',
-      fontSize: '13px'
-    });
-    card.appendChild(bioEl);
-    typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
+// --- Bio ---
+const bioEl = document.createElement('div');
+Object.assign(bioEl.style, {
+  margin: '6px 0 12px',
+  fontStyle: 'italic',
+  fontSize: '13px'
+});
+card.appendChild(bioEl);
+typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
 
-    // --- Buttons wrapper ---
-    const btnWrap = document.createElement('div');
-    Object.assign(btnWrap.style, {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '10px',
-      alignItems: 'center',
-      marginTop: '6px'
-    });
+// --- Buttons wrapper ---
+const btnWrap = document.createElement('div');
+Object.assign(btnWrap.style, {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px',
+  alignItems: 'center',
+  marginTop: '4px'
+});
 
-    // Meet button (hosts only)
-    if (user.isHost) {
-      const meetBtn = document.createElement('button');
-      meetBtn.textContent = 'Meet';
-      Object.assign(meetBtn.style, {
-        padding: '8px 16px',
-        borderRadius: '6px',
-        border: 'none',
-        fontWeight: '600',
-        background: 'linear-gradient(90deg,#ff6600,#ff0099)',
-        color: '#fff',
-        cursor: 'pointer'
-      });
-      meetBtn.onclick = () => { if (typeof showMeetModal === 'function') showMeetModal(user); };
-      btnWrap.appendChild(meetBtn);
-    }
+// Meet button (hosts only)
+if (user.isHost) {
+  const meetBtn = document.createElement('button');
+  meetBtn.textContent = 'Meet';
+  Object.assign(meetBtn.style, {
+    padding: '7px 14px',
+    borderRadius: '6px',
+    border: 'none',
+    fontWeight: '600',
+    background: 'linear-gradient(90deg,#ff6600,#ff0099)',
+    color: '#fff',
+    cursor: 'pointer'
+  });
+  meetBtn.onclick = () => { if (typeof showMeetModal === 'function') showMeetModal(user); };
+  btnWrap.appendChild(meetBtn);
+}
 
-    // --- Glass Slider Panel ---
-    const sliderPanel = document.createElement('div');
-    Object.assign(sliderPanel.style, {
-      width: '100%',
-      padding: '8px 10px',
-      borderRadius: '10px',
-      background: 'rgba(255,255,255,0.06)',
-      backdropFilter: 'blur(10px)',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      justifyContent: 'space-between'
-    });
+// --- Glass Slider Panel (Compact) ---
+const sliderPanel = document.createElement('div');
+Object.assign(sliderPanel.style, {
+  width: '100%',
+  padding: '6px 8px',
+  borderRadius: '8px',
+  background: 'rgba(255,255,255,0.06)',
+  backdropFilter: 'blur(8px)',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  justifyContent: 'space-between'
+});
 
-    const slider = document.createElement('input');
-    slider.type = 'range';
-    slider.min = 0;
-    slider.max = 999;
-    slider.value = 0;
-    slider.style.flex = '1';
-    sliderPanel.appendChild(slider);
+const slider = document.createElement('input');
+slider.type = 'range';
+slider.min = 0;
+slider.max = 999;
+slider.value = 0;
+slider.style.flex = '1';
+slider.style.height = '3px';
+slider.style.cursor = 'pointer';
+sliderPanel.appendChild(slider);
 
-    const sliderLabel = document.createElement('span');
-    sliderLabel.textContent = `${slider.value} ⭐️`;
-    sliderLabel.style.fontSize = '14px';
-    sliderPanel.appendChild(sliderLabel);
+const sliderLabel = document.createElement('span');
+sliderLabel.textContent = `${slider.value} ⭐️`;
+sliderLabel.style.fontSize = '13px';
+sliderPanel.appendChild(sliderLabel);
 
-    slider.oninput = () => (sliderLabel.textContent = `${slider.value} ⭐️`);
+slider.oninput = () => (sliderLabel.textContent = `${slider.value} ⭐️`);
 
-    btnWrap.appendChild(sliderPanel);
+btnWrap.appendChild(sliderPanel);
 
-    // --- Gift button ---
-    const giftBtnLocal = document.createElement('button');
-    giftBtnLocal.textContent = 'Gift Stars ⭐️';
-    Object.assign(giftBtnLocal.style, {
-      padding: '8px 16px',
-      borderRadius: '6px',
-      border: 'none',
-      fontWeight: '600',
-      background: 'linear-gradient(90deg,#ff0099,#ff33cc)',
-      color: '#fff',
-      cursor: 'pointer',
-      position: 'relative'
-    });
+// --- Gift button ---
+const giftBtnLocal = document.createElement('button');
+giftBtnLocal.textContent = 'Gift ⭐️';
+Object.assign(giftBtnLocal.style, {
+  padding: '7px 14px',
+  borderRadius: '6px',
+  border: 'none',
+  fontWeight: '600',
+  background: 'linear-gradient(90deg,#ff0099,#ff33cc)',
+  color: '#fff',
+  cursor: 'pointer',
+  position: 'relative'
+});
 
     giftBtnLocal.onclick = async () => {
       const amt = parseInt(slider.value);
