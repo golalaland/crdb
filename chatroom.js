@@ -2512,226 +2512,264 @@ async function sendStarsToUser(targetUser, amt) {
 
 })(); // ✅ closes IIFE
 
+// ================== 🟣 HOST SETTINGS LOGIC ==================
+const isHost = true; // <-- dynamic later
+const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
+const hostModal = document.getElementById("hostModal");
+const hostSettingsBtn = document.getElementById("hostSettingsBtn");
+const closeModal = hostModal?.querySelector(".close");
 
-/* ============================
-   ⚡ Page Initialization
-============================ */
-document.addEventListener("DOMContentLoaded", () => {
-  // -------- Globals --------
-  let notificationsListenerAttached = false;
+// Force show host wrapper/button if isHost
+if (isHost && hostSettingsWrapper && hostSettingsBtn) {
+  hostSettingsWrapper.style.display = "block";
+  hostSettingsBtn.style.display = "inline-block";
+}
 
-  // -------- Host modal elements --------
-  const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
-  const hostModal = document.getElementById("hostModal");
-  const hostSettingsBtn = document.getElementById("hostSettingsBtn");
-  const closeModal = hostModal?.querySelector(".close");
-  const saveInfoBtn = document.getElementById("saveInfo");
-  const saveMediaBtn = document.getElementById("saveMedia");
+if (hostSettingsBtn && hostModal && closeModal) {
+  hostSettingsBtn.onclick = async () => {
+    hostModal.style.display = "block";
 
-  if (isHost && hostSettingsWrapper) hostSettingsWrapper.style.display = "block";
+    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
 
-  // -------- Host profile helpers --------
-  async function populateHostProfile() {
-    if (!currentUser?.uid) return;
-    const userRef = doc(db, "users", currentUser.uid);
-    const snap = await getDoc(userRef);
-    if (!snap.exists()) return;
+    // Populate fields from Firestore
+    const userRef = doc(db, "users", currentUser.uid);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) return showStarPopup("⚠️ User data not found.");
 
-    const data = snap.data();
-    const fields = ["fullName","city","location","bioPick","bankAccountNumber",
-                    "bankName","telegram","tiktok","whatsapp","instagram"];
-    fields.forEach(f => {
-      const el = document.getElementById(f === "bioPick" ? "bio" : f);
-      if (el) el.value = data[f] || "";
-    });
+    const data = snap.data();
+    document.getElementById("fullName").value = data.fullName || "";
+    document.getElementById("city").value = data.city || "";
+    document.getElementById("location").value = data.location || "";
+    document.getElementById("bio").value = data.bioPick || "";
+    document.getElementById("bankAccountNumber").value = data.bankAccountNumber || "";
+    document.getElementById("bankName").value = data.bankName || "";
+    document.getElementById("telegram").value = data.telegram || "";
+    document.getElementById("tiktok").value = data.tiktok || "";
+    document.getElementById("whatsapp").value = data.whatsapp || "";
+    document.getElementById("instagram").value = data.instagram || "";
+    const naturePickEl = document.getElementById("naturePick");
+    const fruitPickEl = document.getElementById("fruitPick");
+    if (naturePickEl) naturePickEl.value = data.naturePick || "";
+    if (fruitPickEl) fruitPickEl.value = data.fruitPick || "";
 
-    ["naturePick","fruitPick"].forEach(f => {
-      const el = document.getElementById(f);
-      if (el) el.value = data[f] || "";
-    });
+    // Update photo preview
+    if (data.popupPhoto) {
+      const photoPreview = document.getElementById("photoPreview");
+      const photoPlaceholder = document.getElementById("photoPlaceholder");
+      photoPreview.src = data.popupPhoto;
+      photoPreview.style.display = "block";
+      photoPlaceholder.style.display = "none";
+    }
+  };
 
-    if (data.popupPhoto) {
-      const photoPreview = document.getElementById("photoPreview");
-      const photoPlaceholder = document.getElementById("photoPlaceholder");
-      if (photoPreview && photoPlaceholder) {
-        photoPreview.src = data.popupPhoto;
-        photoPreview.style.display = "block";
-        photoPlaceholder.style.display = "none";
-      }
-    }
-  }
+  closeModal.onclick = () => (hostModal.style.display = "none");
+  window.onclick = (e) => {
+    if (e.target === hostModal) hostModal.style.display = "none";
+  };
+}
 
-  function enableRealtimeProfileUpdates() {
-    if (!currentUser?.uid) return;
-    const userRef = doc(db, "users", currentUser.uid);
-    onSnapshot(userRef, (snap) => {
-      if (!snap.exists()) return;
-      const data = snap.data();
-      ["naturePick","fruitPick"].forEach(f => {
-        const el = document.getElementById(f);
-        if (el) el.value = data[f] || "";
-      });
-    });
-  }
+// ================== 🟠 TAB SWITCHER + LAZY NOTIFICATIONS ==================
+window.notificationsListenerAttached = false;
 
-  // -------- Notifications listener (lazy) --------
-  function attachNotificationsListener() {
-    const notificationsList = document.getElementById("notificationsList");
-    const markAllBtn = document.getElementById("markAllRead");
-    if (!notificationsList) return console.warn("⚠️ No notificationsList element found");
+function attachNotificationsListener() {
+  if (!currentUser?.uid) return;
+  const notificationsList = document.getElementById("notificationsList");
+  const markAllBtn = document.getElementById("markAllRead");
+  if (!notificationsList) return console.warn("⚠️ No #notificationsList element");
 
-    const notifRef = collection(db, "users", currentUser.uid, "notifications");
-    const q = query(notifRef, orderBy("timestamp", "desc"));
+  const notifRef = collection(db, "users", currentUser.uid, "notifications");
+  const q = query(notifRef, orderBy("timestamp", "desc"));
 
-    onSnapshot(q, (snapshot) => {
-      if (snapshot.empty) {
-        notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-        return;
-      }
-      const items = snapshot.docs.map(docSnap => {
-        const n = docSnap.data();
-        const time = n.timestamp?.seconds
-          ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-          : "--:--";
-        return `
-          <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
-            <span>${n.message || "(no message)"}</span>
-            <span class="notification-time">${time}</span>
-          </div>
-        `;
-      });
-      notificationsList.innerHTML = items.join("");
-    });
+  onSnapshot(q, (snapshot) => {
+    if (snapshot.empty) {
+      notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+      return;
+    }
 
-    if (markAllBtn) {
-      markAllBtn.addEventListener("click", async () => {
-        const snapshot = await getDocs(notifRef);
-        for (const docSnap of snapshot.docs) {
-          const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
-          await updateDoc(ref, { read: true });
-        }
-        alert("✅ All notifications marked as read.");
-      });
-    }
+    const items = snapshot.docs.map(docSnap => {
+      const n = docSnap.data();
+      const time = n.timestamp?.seconds
+        ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : "--:--";
+      return `
+        <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
+          <span>${n.message || "(no message)"}</span>
+          <span class="notification-time">${time}</span>
+        </div>
+      `;
+    });
+    notificationsList.innerHTML = items.join("");
+  });
 
-    notificationsListenerAttached = true;
-  }
+  if (markAllBtn) {
+    markAllBtn.onclick = async () => {
+      const snapshot = await getDocs(notifRef);
+      for (const docSnap of snapshot.docs) {
+        await updateDoc(doc(db, "users", currentUser.uid, "notifications", docSnap.id), { read: true });
+      }
+      showStarPopup("✅ All notifications marked as read.");
+    };
+  }
 
-  // -------- Tab switcher --------
-  document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-      document.querySelectorAll(".tab-content").forEach(tab => (tab.style.display = "none"));
+  window.notificationsListenerAttached = true;
+}
 
-      btn.classList.add("active");
-      const tabId = btn.dataset.tab;
-      const tabContent = document.getElementById(tabId);
-      if (tabContent) tabContent.style.display = "block";
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.onclick = () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(tab => tab.style.display = "none");
 
-      if (tabId === "notificationsTab" && !notificationsListenerAttached && currentUser?.uid) {
-        attachNotificationsListener();
-      }
-    });
-  });
+    btn.classList.add("active");
+    const tabId = btn.dataset.tab;
+    const tabContent = document.getElementById(tabId);
+    if (tabContent) tabContent.style.display = "block";
 
-  // -------- Host modal open/close --------
-  if (hostSettingsBtn && hostModal && closeModal) {
-    hostSettingsBtn.onclick = async () => {
-      hostModal.style.display = "block";
-      if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
-      await populateHostProfile();
-    };
-    closeModal.onclick = () => hostModal.style.display = "none";
-    window.onclick = e => { if (e.target === hostModal) hostModal.style.display = "none"; };
-  }
+    if (tabId === "notificationsTab" && !window.notificationsListenerAttached) {
+      attachNotificationsListener();
+    }
+  };
+});
 
-  // -------- Save Info --------
-  if (saveInfoBtn) {
-    saveInfoBtn.onclick = async () => {
-      if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
+// ================== 🖼️ PHOTO PREVIEW ==================
+document.addEventListener("change", (e) => {
+  if (e.target.id === "popupPhoto") {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const photoPreview = document.getElementById("photoPreview");
+      const photoPlaceholder = document.getElementById("photoPlaceholder");
+      photoPreview.src = reader.result;
+      photoPreview.style.display = "block";
+      photoPlaceholder.style.display = "none";
+    };
+    reader.readAsDataURL(file);
+  }
+});
 
-      const fields = ["fullName","city","location","bio","bankAccountNumber",
-                      "bankName","telegram","tiktok","whatsapp","instagram"];
-      const dataToUpdate = {};
-      fields.forEach(f => {
-        const el = document.getElementById(f);
-        if (el?.value) dataToUpdate[f === "bio" ? "bioPick" : f] = el.value;
-      });
+// ================== 📝 SAVE INFO & MEDIA HANDLER ==================
+const saveInfoBtn = document.getElementById("saveInfo");
+const saveMediaBtn = document.getElementById("saveMedia");
 
-      ["naturePick","fruitPick"].forEach(f => {
-        const el = document.getElementById(f);
-        if (el?.value) dataToUpdate[f] = el.value;
-      });
+// Firestore update helper
+async function updateFirestoreDoc(userId, data) {
+  const userRef = doc(db, "users", userId);
+  const filteredData = Object.fromEntries(Object.entries(data).filter(([_, value]) => value !== undefined));
+  await updateDoc(userRef, { ...filteredData, lastUpdated: serverTimestamp() });
 
-      // Validation
-      if (dataToUpdate.bankAccountNumber && !/^\d{1,11}$/.test(dataToUpdate.bankAccountNumber)) {
-        return showStarPopup("⚠️ Bank account number must be digits only (max 11).");
-      }
-      if (dataToUpdate.whatsapp && !/^\d+$/.test(dataToUpdate.whatsapp)) {
-        return showStarPopup("⚠️ WhatsApp number must be numbers only.");
-      }
+  const hostRef = doc(db, "featuredHosts", userId);
+  const hostSnap = await getDoc(hostRef);
+  if (hostSnap.exists()) {
+    await updateDoc(hostRef, { ...filteredData, lastUpdated: serverTimestamp() });
+  }
+}
 
-      const originalHTML = saveInfoBtn.innerHTML;
-      saveInfoBtn.innerHTML = `<div class="spinner" style="width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation: spin 0.6s linear infinite;margin:auto;"></div>`;
-      saveInfoBtn.disabled = true;
+// Save Info
+if (saveInfoBtn) {
+  saveInfoBtn.onclick = async () => {
+    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
 
-      try {
-        await updateFirestoreDoc(currentUser.uid, dataToUpdate);
-        showStarPopup("✅ Profile updated successfully!");
-      } catch (err) {
-        console.error("❌ Error updating Firestore:", err);
-        showStarPopup("⚠️ Failed to update info. Please try again.");
-      } finally {
-        saveInfoBtn.innerHTML = originalHTML;
-        saveInfoBtn.disabled = false;
-      }
-    };
-  }
+    const fullName = document.getElementById("fullName")?.value || "";
+    const city = document.getElementById("city")?.value || "";
+    const location = document.getElementById("location")?.value || "";
+    const bio = document.getElementById("bio")?.value || "";
+    const bankAccountNumber = document.getElementById("bankAccountNumber")?.value || "";
+    const bankName = document.getElementById("bankName")?.value || "";
+    const telegram = document.getElementById("telegram")?.value || "";
+    const tiktok = document.getElementById("tiktok")?.value || "";
+    const whatsapp = document.getElementById("whatsapp")?.value || "";
+    const instagram = document.getElementById("instagram")?.value || "";
+    const naturePickEl = document.getElementById("naturePick");
+    const fruitPickEl = document.getElementById("fruitPick");
+    const naturePick = naturePickEl?.value || "";
+    const fruitPick = fruitPickEl?.value || "";
 
-  // -------- Save Media --------
-  if (saveMediaBtn) {
-    saveMediaBtn.onclick = async () => {
-      if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
+    if (bankAccountNumber && !/^\d{1,11}$/.test(bankAccountNumber)) return showStarPopup("⚠️ Bank account number must be digits only (max 11).");
+    if (whatsapp && !/^\d+$/.test(whatsapp)) return showStarPopup("⚠️ WhatsApp number must be numbers only.");
 
-      const popupPhotoFile = document.getElementById("popupPhoto")?.files[0];
-      const uploadVideoFile = document.getElementById("uploadVideo")?.files[0];
+    const dataToUpdate = {
+      fullName: fullName ? fullName.replace(/\b\w/g, l => l.toUpperCase()) : "",
+      city,
+      location,
+      bioPick: bio,
+      bankAccountNumber,
+      bankName,
+      telegram,
+      tiktok,
+      whatsapp,
+      instagram,
+      naturePick,
+      fruitPick
+    };
 
-      if (!popupPhotoFile && !uploadVideoFile) return showStarPopup("⚠️ Select photo or video first.");
+    const originalHTML = saveInfoBtn.innerHTML;
+    saveInfoBtn.innerHTML = `<div class="spinner" style="width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation: spin 0.6s linear infinite;margin:auto;"></div>`;
+    saveInfoBtn.disabled = true;
+    saveInfoBtn.style.display = "flex";
+    saveInfoBtn.style.alignItems = "center";
+    saveInfoBtn.style.justifyContent = "center";
 
-      try {
-        showStarPopup("⏳ Uploading media...");
-        const formData = new FormData();
-        if (popupPhotoFile) formData.append("photo", popupPhotoFile);
-        if (uploadVideoFile) formData.append("video", uploadVideoFile);
+    try {
+      await updateFirestoreDoc(currentUser.uid, dataToUpdate);
+      showStarPopup("✅ Profile updated successfully!");
+      if (naturePickEl) naturePickEl.value = naturePick;
+      if (fruitPickEl) fruitPickEl.value = fruitPick;
+      document.querySelectorAll("#mediaTab input, #mediaTab textarea, #mediaTab select").forEach(input => input.blur());
+    } catch (err) {
+      console.error("❌ Error updating Firestore:", err);
+      showStarPopup("⚠️ Failed to update info. Please try again.");
+    } finally {
+      saveInfoBtn.innerHTML = originalHTML;
+      saveInfoBtn.disabled = false;
+      saveInfoBtn.style.display = "";
+      saveInfoBtn.style.alignItems = "";
+      saveInfoBtn.style.justifyContent = "";
+    }
+  };
+}
 
-        const res = await fetch("/api/uploadShopify", { method: "POST", body: formData });
-        if (!res.ok) throw new Error("Upload failed. Check network.");
-        const data = await res.json(); // { photoUrl, videoUrl }
+// Save Media
+if (saveMediaBtn) {
+  saveMediaBtn.onclick = async () => {
+    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
 
-        await updateFirestoreDoc(currentUser.uid, {
-          ...(data.photoUrl && { popupPhoto: data.photoUrl }),
-          ...(data.videoUrl && { videoUrl: data.videoUrl })
-        });
+    const popupPhotoFile = document.getElementById("popupPhoto")?.files[0];
+    const uploadVideoFile = document.getElementById("uploadVideo")?.files[0];
 
-        if (data.photoUrl) {
-          const photoPreview = document.getElementById("photoPreview");
-          const photoPlaceholder = document.getElementById("photoPlaceholder");
-          if (photoPreview && photoPlaceholder) {
-            photoPreview.src = data.photoUrl;
-            photoPreview.style.display = "block";
-            photoPlaceholder.style.display = "none";
-          }
-        }
+    if (!popupPhotoFile && !uploadVideoFile) return showStarPopup("⚠️ Please select a photo or video to upload.");
 
-        showStarPopup("✅ Media uploaded successfully!");
-        hostModal.style.display = "none";
+    try {
+      showStarPopup("⏳ Uploading media...");
+      const formData = new FormData();
+      if (popupPhotoFile) formData.append("photo", popupPhotoFile);
+      if (uploadVideoFile) formData.append("video", uploadVideoFile);
 
-      } catch (err) {
-        console.error("❌ Media upload error:", err);
-        showStarPopup(`⚠️ Failed to upload media: ${err.message}`);
-      }
-    };
-  }
+      const res = await fetch("/api/uploadShopify", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed. Check your network.");
+
+      const data = await res.json(); // { photoUrl, videoUrl }
+      await updateFirestoreDoc(currentUser.uid, {
+        ...(data.photoUrl && { popupPhoto: data.photoUrl }),
+        ...(data.videoUrl && { videoUrl: data.videoUrl }),
+      });
+
+      if (data.photoUrl) {
+        const photoPreview = document.getElementById("photoPreview");
+        const photoPlaceholder = document.getElementById("photoPlaceholder");
+        photoPreview.src = data.photoUrl;
+        photoPreview.style.display = "block";
+        photoPlaceholder.style.display = "none";
+      }
+
+      showStarPopup("✅ Media uploaded successfully!");
+      hostModal.style.display = "none";
+
+    } catch (err) {
+      console.error("❌ Media upload error:", err);
+      showStarPopup(`⚠️ Failed to upload media: ${err.message}`);
+    }
+  };
+}
 
   // -------- Host profile live updates --------
   enableRealtimeProfileUpdates();
