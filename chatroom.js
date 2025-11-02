@@ -2203,7 +2203,7 @@ if (user.isHost) {
   btnWrap.appendChild(meetBtn);
 }
 
-// --- Glass Slider Panel (Fiery Compact) ---
+// --- Glass Slider Panel (Fiery Compact, Working Colors) ---
 const sliderPanel = document.createElement('div');
 Object.assign(sliderPanel.style, {
   width: '100%',
@@ -2227,6 +2227,7 @@ const fieryColors = [
   ["#ff3300", "#ff0066"], // neon red to hot pink
 ];
 
+// --- Random fiery gradient ---
 function randomFieryGradient() {
   const [c1, c2] = fieryColors[Math.floor(Math.random() * fieryColors.length)];
   return `linear-gradient(90deg, ${c1}, ${c2})`;
@@ -2243,8 +2244,30 @@ slider.style.height = '4px';
 slider.style.borderRadius = '4px';
 slider.style.outline = 'none';
 slider.style.cursor = 'pointer';
+slider.style.appearance = 'none'; // very important
 slider.style.background = randomFieryGradient();
 slider.style.transition = 'background 0.25s ease';
+
+// --- Create CSS for pseudo elements dynamically ---
+const style = document.createElement('style');
+style.textContent = `
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 8px rgba(255, 120, 0, 0.8);
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 4px;
+    background: ${randomFieryGradient()};
+  }
+`;
+document.head.appendChild(style);
 
 const sliderLabel = document.createElement('span');
 sliderLabel.textContent = `${slider.value} ⭐️`;
@@ -2252,14 +2275,31 @@ sliderLabel.style.fontSize = '13px';
 sliderPanel.appendChild(slider);
 sliderPanel.appendChild(sliderLabel);
 
-// --- Dynamic fiery effect on input ---
+// --- Dynamic fiery gradient as slider moves ---
 slider.addEventListener('input', () => {
   sliderLabel.textContent = `${slider.value} ⭐️`;
-  slider.style.background = randomFieryGradient();
+  const gradient = randomFieryGradient();
+  slider.style.background = gradient;
+  style.textContent = `
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 8px rgba(255, 120, 0, 0.8);
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 4px;
+      border-radius: 4px;
+      background: ${gradient};
+    }
+  `;
 });
 
 btnWrap.appendChild(sliderPanel);
-
 // --- Gift button ---
 const giftBtnLocal = document.createElement('button');
 giftBtnLocal.textContent = 'Gift ⭐️';
