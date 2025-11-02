@@ -216,48 +216,38 @@ html, body {
   display: flex;
   flex-direction: column;
   justify-content: flex-end; /* stack from bottom */
-  gap: 4px; /* tighter spacing like Twitch */
+  gap: 2px; /* small spacing like Twitch chat */
   background: #000;
   margin-bottom: 70px;
   box-sizing: border-box;
   scroll-behavior: smooth;
 }
 
-/* ================= Twitch-style Messages ================= */
+/* ================= Twitch-style Inline Messages ================= */
 .msg {
   display: flex;
-  width: 100%; /* stretch full container width */
+  align-items: flex-start;
   font-size: 14px;
   line-height: 1.4;
   word-break: break-word;
   white-space: pre-wrap;
-  align-items: flex-start;
-  padding: 0 4px; /* small horizontal padding like Twitch */
-  transition: color 0.2s ease;
+  padding: 0 4px;
 }
 
-/* Username / Meta */
+/* Username fixed width, right next to message */
 .msg .meta {
   font-weight: 700;
   font-size: 13px;
   color: var(--accent);
   margin-right: 6px;
-  flex-shrink: 0; /* username doesn't shrink */
+  flex-shrink: 0; /* username never shrinks */
 }
 
-/* Message content */
+/* Message stretches to remaining space */
 .msg .content {
   color: #fff;
+  flex: 1; /* takes remaining horizontal space */
   word-wrap: break-word;
-  flex: 1; /* content stretches to remaining width */
-}
-
-/* Optional: highlight your messages (me) */
-.msg.me .meta {
-  color: #ff1493; /* bright pink like Twitch highlight */
-}
-.msg.me .content {
-  color: #fff;
 }
 
 /* 🔥 Keypad (chat input) - always at bottom */
