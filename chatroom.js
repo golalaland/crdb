@@ -319,7 +319,7 @@ function setupUsersListener() {
 }
 setupUsersListener();
 
-/* ---------- Render Messages (full-width banners + colors) ---------- */
+/* ---------- Render Messages (enhanced gift banners with confetti) ---------- */
 let scrollPending = false;
 
 function renderMessagesFromArray(messages) {
@@ -333,21 +333,43 @@ function renderMessagesFromArray(messages) {
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    // --- Check if this is a system/banner message ---
+    // === Gift / system banner logic ===
     if (m.systemBanner) {
-      // Full-width banner style
       wrapper.style.display = "block";
       wrapper.style.width = "100%";
+      wrapper.style.position = "relative";
       wrapper.style.textAlign = "center";
-      wrapper.style.padding = "8px 0";
-      wrapper.style.margin = "4px 0";
+      wrapper.style.padding = "10px 0";
       wrapper.style.borderRadius = "6px";
-      wrapper.style.fontWeight = "700";
-      wrapper.style.color = "#000";
+      wrapper.style.margin = "6px 0";
+      wrapper.style.overflow = "hidden"; // for confetti containment
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
-      wrapper.classList.add("buzz-content"); // glow effect
+
+      // Confetti container
+      const confettiContainer = document.createElement("div");
+      confettiContainer.style.position = "absolute";
+      confettiContainer.style.top = "0";
+      confettiContainer.style.left = "0";
+      confettiContainer.style.width = "100%";
+      confettiContainer.style.height = "100%";
+      confettiContainer.style.pointerEvents = "none"; // allow clicks through
+      wrapper.appendChild(confettiContainer);
+
+      // Generate simple confetti pieces
+      for (let i = 0; i < 20; i++) {
+        const piece = document.createElement("div");
+        piece.style.position = "absolute";
+        piece.style.width = piece.style.height = `${Math.random() * 6 + 4}px`;
+        piece.style.background = `hsl(${Math.random() * 360}, 70%, 60%)`;
+        piece.style.top = `${Math.random() * 100}%`;
+        piece.style.left = `${Math.random() * 100}%`;
+        piece.style.opacity = Math.random() * 0.9 + 0.1;
+        piece.style.borderRadius = "50%";
+        piece.style.animation = `confettiFall ${Math.random() * 2 + 2}s linear forwards`;
+        confettiContainer.appendChild(piece);
+      }
     } else {
-      // Normal message with username
+      // Normal messages with username
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -356,13 +378,13 @@ function renderMessagesFromArray(messages) {
       wrapper.appendChild(usernameEl);
     }
 
-    // --- Content span ---
+    // Message content
     const contentEl = document.createElement("span");
     contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
     contentEl.textContent = " " + (m.content || "");
 
-    if (m.buzzColor && !m.systemBanner) contentEl.style.background = m.buzzColor;
-    if (m.highlight && !m.systemBanner) {
+    if (m.buzzColor) contentEl.style.background = m.buzzColor;
+    if (m.highlight) {
       contentEl.style.color = "#000";
       contentEl.style.fontWeight = "700";
     }
@@ -371,7 +393,7 @@ function renderMessagesFromArray(messages) {
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // --- Auto-scroll logic ---
+  // Auto-scroll
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
@@ -383,6 +405,15 @@ function renderMessagesFromArray(messages) {
     });
   }
 }
+
+/* ---------- Add confetti keyframes (CSS in JS) ---------- */
+const style = document.createElement("style");
+style.textContent = `
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(120%) rotate(360deg); opacity: 0; }
+}`;
+document.head.appendChild(style);
 
 /* ---------- 🔔 Messages Listener ---------- */
 function attachMessagesListener() {
