@@ -2233,10 +2233,13 @@ if (saveMediaBtn) {
   };
 }
 /* ======================================================
-  Social Card System — Firestore fetch + username tap trigger
-  Full redesign with gift slider + buttons
-  ====================================================== */
+  Enhanced Social Card System — Firestore fetch + username tap trigger
+  Includes: username blink, unique gift button, typewriter bio, meet/socials buttons
+  Paste this AFTER Firebase/Firestore is initialized and AFTER showMeetModal() exists
+====================================================== */
+
 (async function initSocialCardSystem() {
+  // --- 1) Fetch all users once and build a lookup map ---
   const allUsers = [];
   const usersByChatId = {};
 
@@ -2251,92 +2254,93 @@ if (saveMediaBtn) {
       allUsers.push(data);
       usersByChatId[chatIdLower] = data;
     });
-    console.log('✅ Social card: loaded', allUsers.length, 'users');
+    console.log('Social card: loaded', allUsers.length, 'users');
   } catch (err) {
-    console.error('❌ Failed to fetch users:', err);
+    console.error("Failed to fetch users for social card:", err);
   }
 
-  // ---------- SHOW CARD ----------
+  // --- 2) showSocialCard(user) — creates the popup card ---
   function showSocialCard(user) {
     if (!user) return;
 
+    // remove existing
     document.getElementById('socialCard')?.remove();
 
+    // Container card
     const card = document.createElement('div');
     card.id = 'socialCard';
     Object.assign(card.style, {
       position: 'fixed',
       top: '50%',
       left: '50%',
-      transform: 'translate(-50%, -50%) scale(0.95)',
-      width: '240px',
-      padding: '16px',
+      transform: 'translate(-50%, -50%) scale(1)',
       background: 'linear-gradient(135deg,#0f0f10,#19191b)',
       borderRadius: '14px',
+      padding: '16px 20px',
       color: '#fff',
-      textAlign: 'center',
-      fontFamily: 'Poppins,sans-serif',
-      boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+      width: '90%',
+      maxWidth: '320px',
       zIndex: '999999',
+      textAlign: 'center',
+      boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
+      fontFamily: 'Poppins, sans-serif',
       opacity: '0',
       transition: 'opacity .18s ease, transform .18s ease'
     });
 
-    // HEADER
-    const nameHeader = document.createElement('h3');
+    // Header with gradient text
     const chatIdDisplay = user.chatId ? user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1) : 'Unknown';
-    const color = user.isHost ? '#ff6600' : user.isVIP ? '#ff0099' : '#bbb';
-    nameHeader.textContent = chatIdDisplay;
-    Object.assign(nameHeader.style, {
-      margin: '0 0 6px',
+    const color = user.isHost ? '#ff6600' : user.isVIP ? '#ff0099' : '#cccccc';
+
+    const header = document.createElement('h3');
+    header.textContent = chatIdDisplay;
+    Object.assign(header.style, {
+      margin: '0 0 8px',
       fontSize: '18px',
       fontWeight: '700',
       background: `linear-gradient(90deg, ${color}, #ff33cc)`,
       WebkitBackgroundClip: 'text',
       WebkitTextFillColor: 'transparent'
     });
-    card.appendChild(nameHeader);
+    card.appendChild(header);
 
-    // DETAILS
+    // Details line
     const detailsEl = document.createElement('p');
-    detailsEl.style.fontSize = '13px';
+    detailsEl.style.margin = '0 0 12px';
+    detailsEl.style.fontSize = '14px';
     detailsEl.style.lineHeight = '1.4';
-    detailsEl.style.margin = '0 0 8px';
-    const pron = user.pronoun || 'their';
+
+    const flairText = user.flair || '';
+    const pronoun = user.pronoun || 'their';
     const ageGroup = user.ageGroup || (user.age ? `${user.age} yrs` : 'young');
-    const fruit = user.fruitPick || '🍒';
-    const nature = user.naturePick || 'vibe';
-    const city = user.city || 'somewhere';
+    const gender = user.gender || 'User';
     const country = user.country || '';
-    const flair = user.flair || '';
+    const city = user.city || '';
 
     if (user.isHost) {
-      detailsEl.textContent = `A ${fruit} ${nature} ${user.gender || 'User'} in ${pron} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
+      const fruit = user.fruitPick || '🍒';
+      const nature = user.naturePick || 'vibe';
+      detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
     } else if (user.isVIP) {
-      detailsEl.textContent = `A ${user.gender || 'User'} in ${pron} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
+      detailsEl.innerHTML = `A ${gender} in ${pronoun} ${ageGroup}, currently in ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
     } else {
-      detailsEl.textContent = `A ${user.gender || 'User'} from ${city}, ${country}. ${flair}`;
+      detailsEl.innerHTML = `A ${gender} from ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
     }
     card.appendChild(detailsEl);
 
-    // BIO
+    // Bio area (typewriter)
     const bioEl = document.createElement('div');
-    bioEl.style.fontSize = '12px';
+    bioEl.style.margin = '8px 0 14px';
     bioEl.style.fontStyle = 'italic';
-    bioEl.style.marginBottom = '10px';
+    bioEl.style.fontSize = '13px';
     card.appendChild(bioEl);
     typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
 
-    // BUTTONS WRAPPER
+    // Buttons wrapper
     const btnWrap = document.createElement('div');
-    Object.assign(btnWrap.style, {
-      display: 'flex',
-      justifyContent: 'center',
-      gap: '8px',
-      marginBottom: '8px'
-    });
+    Object.assign(btnWrap.style, { display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '8px', flexWrap: 'wrap' });
 
-    // Meet button (hosts only)
+    // --- Meet button for hosts ---
     if (user.isHost) {
       const meetBtn = document.createElement('button');
       meetBtn.textContent = 'Meet';
@@ -2349,17 +2353,17 @@ if (saveMediaBtn) {
         color: '#fff',
         cursor: 'pointer'
       });
-      meetBtn.onclick = () => typeof showMeetModal === 'function' && showMeetModal(user);
+      meetBtn.onclick = () => { if (typeof showMeetModal === 'function') showMeetModal(user); };
       btnWrap.appendChild(meetBtn);
     }
 
-    // Socials
+    // --- Socials button ---
     const socialsPresent = user.whatsapp || user.instagram || user.tiktok || user.telegram;
     if (socialsPresent) {
       const socialBtn = document.createElement('button');
       socialBtn.textContent = 'Socials';
       Object.assign(socialBtn.style, {
-        padding: '6px 12px',
+        padding: '6px 10px',
         borderRadius: '6px',
         border: '1px solid rgba(255,255,255,0.06)',
         background: 'transparent',
@@ -2373,53 +2377,26 @@ if (saveMediaBtn) {
       };
       btnWrap.appendChild(socialBtn);
     }
-    card.appendChild(btnWrap);
 
-    // ---------- GIFT SLIDER ----------
-    const sliderWrapper = document.createElement('div');
-    sliderWrapper.style.display = 'flex';
-    sliderWrapper.style.alignItems = 'center';
-    sliderWrapper.style.justifyContent = 'space-between';
-    sliderWrapper.style.marginBottom = '6px';
-
-    const slider = document.createElement('input');
-    slider.type = 'range';
-    slider.min = 0;
-    slider.max = 999;
-    slider.value = 0;
-    slider.style.flex = '1';
-    slider.style.accentColor = '#ff33cc';
-    sliderWrapper.appendChild(slider);
-
-    const starCount = document.createElement('span');
-    starCount.textContent = '0 ⭐️';
-    starCount.style.fontSize = '12px';
-    starCount.style.width = '40px';
-    starCount.style.textAlign = 'right';
-    sliderWrapper.appendChild(starCount);
-
-    slider.oninput = () => {
-      starCount.textContent = `${slider.value} ⭐️`;
-    };
-    card.appendChild(sliderWrapper);
-
-    // Gift button
-    const giftButton = document.createElement('button');
-    giftButton.textContent = 'Gift Stars';
-    Object.assign(giftButton.style, {
+    // --- ⭐ Unique Gift Stars button ---
+    const giftBtn = document.createElement('button');
+    giftBtn.className = 'popupGiftBtn'; // UNIQUE class to prevent clash
+    giftBtn.textContent = 'Gift Stars ⭐️';
+    Object.assign(giftBtn.style, {
       padding: '6px 12px',
       borderRadius: '6px',
       border: 'none',
-      background: 'linear-gradient(90deg,#ff33cc,#ff0099)',
-      color: '#fff',
-      cursor: 'pointer',
+      background: 'linear-gradient(90deg,#ffd700,#ff9900)',
+      color: '#000',
       fontWeight: '600',
-      marginBottom: '4px'
+      cursor: 'pointer'
     });
-    giftButton.onclick = () => typeof showGiftModal === 'function' && showGiftModal(user._docId, user);
-    card.appendChild(giftButton);
+    giftBtn.onclick = () => showGiftModal(user._docId, user);
+    btnWrap.appendChild(giftBtn);
 
-    // ---------- APPEND & ANIMATE ----------
+    card.appendChild(btnWrap);
+
+    // Append & animate in
     document.body.appendChild(card);
     requestAnimationFrame(() => {
       card.style.opacity = '1';
@@ -2427,9 +2404,9 @@ if (saveMediaBtn) {
       setTimeout(() => card.style.transform = 'translate(-50%, -50%) scale(1)', 120);
     });
 
-    // Click outside closes
-    const closeHandler = e => {
-      if (!card.contains(e.target)) {
+    // Click outside to close
+    const closeHandler = (ev) => {
+      if (!card.contains(ev.target)) {
         card.remove();
         document.removeEventListener('click', closeHandler);
       }
@@ -2440,7 +2417,7 @@ if (saveMediaBtn) {
     makeDraggable(card);
   }
 
-  // ---------- TYPEWRITER ----------
+  // --- Small helpers ---
   function typeWriterEffect(el, text, speed = 35) {
     el.textContent = '';
     let i = 0;
@@ -2451,18 +2428,14 @@ if (saveMediaBtn) {
     }, speed);
   }
 
-  // ---------- DRAGGABLE ----------
   function makeDraggable(el) {
-    let isDown = false, offset = [0,0];
+    let isDown = false, offset = [0, 0];
     el.addEventListener('mousedown', e => {
       isDown = true;
       offset = [el.offsetLeft - e.clientX, el.offsetTop - e.clientY];
       el.style.cursor = 'grabbing';
     });
-    document.addEventListener('mouseup', () => {
-      isDown = false;
-      el.style.cursor = 'grab';
-    });
+    document.addEventListener('mouseup', () => { isDown = false; el.style.cursor = 'grab'; });
     document.addEventListener('mousemove', e => {
       if (!isDown) return;
       e.preventDefault();
@@ -2472,25 +2445,31 @@ if (saveMediaBtn) {
     });
   }
 
-  // ---------- TAP DETECTOR ----------
-  document.addEventListener('pointerdown', e => {
+  // --- 3) Username tap detector ---
+  document.addEventListener('pointerdown', (e) => {
     const target = e.target;
-    if (!target?.textContent || !target.textContent.includes(':')) return;
+    if (!target || !target.textContent) return;
 
-    const chatId = target.textContent.split(':')[0].trim();
+    // Ensure exact username is tapped (optional: add a specific class to username spans)
+    const txt = target.textContent;
+    if (!txt.includes(':')) return;
+    const chatId = txt.split(':')[0].trim();
     if (!chatId) return;
 
     const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || '').toLowerCase() === chatId.toLowerCase());
     if (!user) return;
 
-    // optional: allow self-popup by removing the next line
-    if (user._docId === currentUser?.uid) return;
+    if (user._docId === currentUser?.uid) return; // prevent self-popup
 
-    // small tap effect
-    try { target.style.transition = 'opacity 0.12s'; target.style.opacity = '0.5'; setTimeout(()=>target.style.opacity='','140'); } catch(e){}
+    // Blink effect
+    target.style.transition = 'opacity 0.12s';
+    target.style.opacity = '0.3';
+    setTimeout(() => target.style.opacity = '', 150);
 
+    // Show popup
     showSocialCard(user);
   });
+
 })();
 
 // 🌤️ Dynamic Host Panel Greeting
