@@ -345,7 +345,7 @@ function renderMessagesFromArray(messages) {
       wrapper.style.overflow = "hidden";
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
-      wrapper.style.animation = "pulseGlow 2s"; // glow animation stops automatically
+      wrapper.style.animation = "pulseGlow 2s"; // glow stops automatically
 
       // inner panel for text
       const innerPanel = document.createElement("div");
@@ -391,20 +391,19 @@ function renderMessagesFromArray(messages) {
       usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
+
+      // Content span
+      const contentEl = document.createElement("span");
+      contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
+      contentEl.textContent = " " + (m.content || "");
+      if (m.buzzColor) contentEl.style.background = m.buzzColor;
+      if (m.highlight) {
+        contentEl.style.color = "#000";
+        contentEl.style.fontWeight = "700";
+      }
+      wrapper.appendChild(contentEl);
     }
 
-    // --- Content span ---
-    const contentEl = document.createElement("span");
-    contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
-    contentEl.textContent = " " + (m.content || "");
-
-    if (m.buzzColor && !m.systemBanner) contentEl.style.background = m.buzzColor;
-    if (m.highlight && !m.systemBanner) {
-      contentEl.style.color = "#000";
-      contentEl.style.fontWeight = "700";
-    }
-
-    wrapper.appendChild(contentEl);
     refs.messagesEl.appendChild(wrapper);
   });
 
