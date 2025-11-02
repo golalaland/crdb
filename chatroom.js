@@ -190,7 +190,7 @@ function showStarPopup(text) {
 
 
 /* ----------------------------
-   ⭐ GIFT MODAL / CHAT BANNER ALERT
+   ⭐ GIFT / BALLER ALERT Glow
 ----------------------------- */
 async function showGiftModal(targetUid, targetData) {
   const modal = document.getElementById("giftModal");
@@ -201,7 +201,7 @@ async function showGiftModal(targetUid, targetData) {
 
   if (!modal || !titleEl || !amountInput || !confirmBtn) return;
 
-  titleEl.textContent = `Gift ⭐️`;
+  titleEl.textContent = `Gift ${targetData.chatId} stars ⭐️`;
   amountInput.value = "";
   modal.style.display = "flex";
 
@@ -209,13 +209,13 @@ async function showGiftModal(targetUid, targetData) {
   closeBtn.onclick = close;
   modal.onclick = (e) => { if (e.target === modal) close(); };
 
-  // Remove previous click listeners
+  // Replace old confirm button with fresh one
   const newConfirmBtn = confirmBtn.cloneNode(true);
-  confirmBtn.replaceWith(newConfirmBtn);
+  confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
 
   newConfirmBtn.addEventListener("click", async () => {
-    const amt = parseInt(amountInput.value) || 0;
-    if (amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
+    const amt = parseInt(amountInput.value);
+    if (!amt || amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
     if ((currentUser?.stars || 0) < amt) return showStarPopup("Not enough stars 💫");
 
     const fromRef = doc(db, "users", currentUser.uid);
@@ -223,29 +223,38 @@ async function showGiftModal(targetUid, targetData) {
     const glowColor = randomColor();
 
     const messageData = {
-      content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetData.chatId}!`,
-      uid: currentUser.uid,
+      content: `${currentUser.chatId} gifted ${targetData.chatId} ${amt} ⭐️`,
+      uid: "balleralert",
+      chatId: "BallerAlert🤩",
       timestamp: serverTimestamp(),
       highlight: true,
-      buzzColor: glowColor,
-      systemBanner: true,
-      _confettiPlayed: false
+      buzzColor: glowColor
     };
 
     const docRef = await addDoc(collection(db, CHAT_COLLECTION), messageData);
-
     await Promise.all([
       updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
       updateDoc(toRef, { stars: increment(amt) })
     ]);
 
-    showStarPopup(`You sent ${amt} stars ⭐️ to ${targetData.chatId}!`);
+    showStarPopup(`You sent ${amt} ⭐️ to ${targetData.chatId}!`);
     close();
-
-    // Render banner; confetti/glow handled only once in renderer
     renderMessagesFromArray([{ id: docRef.id, data: messageData }]);
+
+    const msgEl = document.getElementById(docRef.id);
+    if (!msgEl) return;
+    const contentEl = msgEl.querySelector(".content") || msgEl;
+
+    // Apply BallerAlert glow
+    contentEl.style.setProperty("--pulse-color", glowColor);
+    contentEl.classList.add("baller-highlight");
+    setTimeout(() => {
+      contentEl.classList.remove("baller-highlight");
+      contentEl.style.boxShadow = "none";
+    }, 21000);
   });
 }
+
 /* ---------- Gift Alert (Optional Popup) ---------- */
 function showGiftAlert(text) {
   const alertEl = document.getElementById("giftAlert");
