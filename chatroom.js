@@ -478,39 +478,43 @@ if (msg.highlight && msg.content?.includes("gifted")) {
   });
 }
 
-// --- ⚡ Global Live Banner Feed ---
-let bannersInitialized = false;
-
+// --- ⚡ Global Ephemeral Banner Feed ---
 function initBannerFeed() {
-  if (bannersInitialized) return;
-  bannersInitialized = true;
-
-  console.log("🚀 Banner feed initialized");
+  if (!currentUser) return; // only run after login
 
   const bannerQuery = query(
     collection(db, "bannerMsgs"),
     orderBy("timestamp", "desc"),
-    limit(30)
+    limit(20)
   );
 
-  onSnapshot(bannerQuery, (snapshot) => {
+  onSnapshot(bannerQuery, async (snapshot) => {
     const now = Date.now();
     const newBanners = [];
 
-    snapshot.docChanges().forEach(change => {
+    for (const change of snapshot.docChanges()) {
       if (change.type === "added") {
         const data = change.doc.data();
         const createdAt = data.timestamp?.toMillis?.() || 0;
 
-        // ⚡ Only show banners created within the last 15 seconds
-        if (createdAt > now - 15000) {
+        // Only show recent banners (last 30s)
+        if (createdAt > now - 30000) {
           newBanners.push({ id: change.doc.id, data });
         }
+
+        // ✅ Delete banners automatically after showing
+        if (!data.keepAlive) {
+          try {
+            await deleteDoc(change.doc.ref);
+            console.log("🧹 Deleted banner after showing:", change.doc.id);
+          } catch (err) {
+            console.warn("⚠️ Failed to delete banner:", err);
+          }
+        }
       }
-    });
+    }
 
     if (newBanners.length > 0) {
-      console.log("🎉 Showing new global banners:", newBanners);
       renderMessagesFromArray(newBanners, true);
     }
   });
