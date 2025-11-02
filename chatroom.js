@@ -2490,53 +2490,63 @@ if (saveMediaBtn) {
     showSocialCard(user);
   });
 
-// --- SEND STARS FUNCTION ---
+/* --------------------------------------------------
+   SEND STARS FUNCTION — now also writes to bannerMsgs
+-------------------------------------------------- */
 async function sendStarsToUser(targetUser, amt) {
-  const fromRef = doc(db, "users", currentUser.uid);
-  const toRef = doc(db, "users", targetUser._docId);
-  const glowColor = randomColor();
+  try {
+    const fromRef = doc(db, "users", currentUser.uid);
+    const toRef = doc(db, "users", targetUser._docId);
+    const glowColor = randomColor();
 
-  await Promise.all([
-    updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
-    updateDoc(toRef, { stars: increment(amt) })
-  ]);
+    // Update sender + receiver balances
+    await Promise.all([
+      updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
+      updateDoc(toRef, { stars: increment(amt) })
+    ]);
 
-  // banner content
-  const bannerMsg = {
-    content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
-    timestamp: serverTimestamp(),
-    highlight: true,
-    buzzColor: glowColor,
-    systemBanner: true
-  };
+    // Chat banner content
+    const bannerMsg = {
+      content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
+      timestamp: serverTimestamp(),
+      highlight: true,
+      buzzColor: glowColor,
+      systemBanner: true
+    };
 
-  // ✅ 1) ADD TO CHAT COLLECTION
-  const chatRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
+    // ✅ A) Write to main chat
+    const chatRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
 
-  // ✅ 2) ADD TO NEW COLLECTION "bannerMsgs"
-  await addDoc(collection(db, "bannerMsgs"), {
-    ...bannerMsg,
-    chatDocId: chatRef.id   // so you can reference later if deleting
-  });
+    // ✅ B) Write duplicate to bannerMsgs (deletable later)
+    await addDoc(collection(db, "bannerMsgs"), {
+      ...bannerMsg,
+      chatDocId: chatRef.id
+    });
 
-  // ✅ Show banner in UI
-  renderMessagesFromArray([{ id: chatRef.id, data: bannerMsg }], true);
+    // Render banner immediately
+    renderMessagesFromArray([{ id: chatRef.id, data: bannerMsg }], true);
 
-  // Glow visual
-  const msgEl = document.getElementById(chatRef.id);
-  if (!msgEl) return;
-  const contentEl = msgEl.querySelector(".content") || msgEl;
-  contentEl.style.setProperty("--pulse-color", glowColor);
-  contentEl.classList.add("baller-highlight");
-  setTimeout(() => {
-    contentEl.classList.remove("baller-highlight");
-    contentEl.style.boxShadow = "none";
-  }, 21000);
+    // Glow highlight
+    const msgEl = document.getElementById(chatRef.id);
+    if (msgEl) {
+      const contentEl = msgEl.querySelector(".content") || msgEl;
+      contentEl.style.setProperty("--pulse-color", glowColor);
+      contentEl.classList.add("baller-highlight");
+
+      setTimeout(() => {
+        contentEl.classList.remove("baller-highlight");
+        contentEl.style.boxShadow = "none";
+      }, 21000);
+    }
+  } catch (err) {
+    console.error("❌ sendStarsToUser failed:", err);
+  }
 }
 
 
-
-// 🌤️ Dynamic Host Panel Greeting
+/* --------------------------------------------------
+   DYNAMIC HOST PANEL GREETING
+-------------------------------------------------- */
 function capitalizeFirstLetter(str) {
   if (!str) return "";
   return str.charAt(0).toUpperCase() + str.slice(1);
@@ -2547,51 +2557,59 @@ function setGreeting() {
   const name = capitalizeFirstLetter(chatId);
   const hour = new Date().getHours();
 
-  let greeting, emoji;
-  if (hour < 12) {
-    greeting = `Good Morning, ${name}! ☀️`;
-  } else if (hour < 18) {
-    greeting = `Good Afternoon, ${name}! ⛅️`;
-  } else {
-    greeting = `Good Evening, ${name}! 🌙`;
-  }
+  let greeting = "";
+  if (hour < 12) greeting = `Good Morning, ${name}! ☀️`;
+  else if (hour < 18) greeting = `Good Afternoon, ${name}! ⛅️`;
+  else greeting = `Good Evening, ${name}! 🌙`;
 
-  document.getElementById("hostPanelTitle").textContent = greeting;
+  const titleEl = document.getElementById("hostPanelTitle");
+  if (titleEl) titleEl.textContent = greeting;
 }
 
-// Run whenever the modal opens
-hostSettingsBtn.addEventListener("click", () => {
-  setGreeting();
-});
+// Open modal → update greeting
+if (typeof hostSettingsBtn !== "undefined") {
+  hostSettingsBtn.addEventListener("click", () => setGreeting());
+}
 
 
-const scrollArrow = document.getElementById('scrollArrow');
-  const chatContainer = document.querySelector('#chatContainer'); // your chat wrapper
-  let fadeTimeout;
+/* --------------------------------------------------
+   SCROLL ARROW HANDLER
+-------------------------------------------------- */
+const scrollArrow = document.getElementById("scrollArrow");
+const chatContainer = document.querySelector("#chatContainer");
+let fadeTimeout;
 
+if (scrollArrow && chatContainer) {
   function showArrow() {
-    scrollArrow.classList.add('show');
+    scrollArrow.classList.add("show");
     if (fadeTimeout) clearTimeout(fadeTimeout);
     fadeTimeout = setTimeout(() => {
-      scrollArrow.classList.remove('show');
-    }, 2000); // disappears after 2 seconds
+      scrollArrow.classList.remove("show");
+    }, 2000);
   }
 
   function checkScroll() {
-    const distanceFromBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight;
-    if (distanceFromBottom > 200) { // threshold for showing arrow
+    const distanceFromBottom =
+      chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight;
+
+    if (distanceFromBottom > 200) {
       showArrow();
     }
   }
 
-  chatContainer.addEventListener('scroll', checkScroll);
+  chatContainer.addEventListener("scroll", checkScroll);
 
-  scrollArrow.addEventListener('click', () => {
+  scrollArrow.addEventListener("click", () => {
     chatContainer.scrollTo({
       top: chatContainer.scrollHeight,
-      behavior: 'smooth'
+      behavior: "smooth"
     });
   });
 
-  checkScroll(); // initial check
-}); // ✅ closes DOMContentLoaded event listener
+  // First check
+  checkScroll();
+}
+
+
+// ✅ ✅ ✅ very important — closes initSocialCardSystem wrapper
+})(); 
