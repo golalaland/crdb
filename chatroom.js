@@ -201,7 +201,7 @@ async function showGiftModal(targetUid, targetData) {
 
   if (!modal || !titleEl || !amountInput || !confirmBtn) return;
 
-  // Show modal title
+  // Show modal
   titleEl.textContent = `Gift ⭐️`;
   amountInput.value = "";
   modal.style.display = "flex";
@@ -210,7 +210,7 @@ async function showGiftModal(targetUid, targetData) {
   closeBtn.onclick = close;
   modal.onclick = (e) => { if (e.target === modal) close(); };
 
-  // Prevent duplicate confirm handlers
+  // Prevent duplicate handlers
   const newConfirmBtn = confirmBtn.cloneNode(true);
   confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
 
@@ -221,18 +221,21 @@ async function showGiftModal(targetUid, targetData) {
 
     const fromRef = doc(db, "users", currentUser.uid);
     const toRef = doc(db, "users", targetUid);
-    const glowColor = randomColor();
 
-    // Message data for chat, full-width banner style
+    // Generate a random gradient for glow
+    const glowColor = `linear-gradient(90deg, #${Math.floor(Math.random()*16777215).toString(16)}, #${Math.floor(Math.random()*16777215).toString(16)})`;
+
+    // Chat banner message
     const messageData = {
       content: `💫 ${currentUser.chatId} gifted ${amt} ⭐️ to ${targetData.chatId}!`,
-      uid: currentUser.uid,       // sender uid
+      uid: currentUser.uid,
       timestamp: serverTimestamp(),
       highlight: true,
       buzzColor: glowColor,
-      systemBanner: true          // <-- important: renders full-width, no username
+      systemBanner: true // renders full-width without username
     };
 
+    // Save to chat collection
     const docRef = await addDoc(collection(db, CHAT_COLLECTION), messageData);
 
     // Update stars balances
@@ -241,13 +244,14 @@ async function showGiftModal(targetUid, targetData) {
       updateDoc(toRef, { stars: increment(amt) })
     ]);
 
+    // Show local popup feedback
     showStarPopup(`You sent ${amt} ⭐️ to ${targetData.chatId}!`);
     close();
 
-    // Render the banner in chat
+    // Render banner in chat
     renderMessagesFromArray([{ id: docRef.id, data: messageData }]);
 
-    // Apply glowing effect
+    // Apply glow animation
     const msgEl = document.getElementById(docRef.id);
     if (msgEl) {
       const contentEl = msgEl.querySelector(".content") || msgEl;
@@ -329,19 +333,19 @@ function renderMessagesFromArray(messages) {
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    // === Full-width banner for gifts ===
     if (m.isBanner) {
+      // Full-width gift/star banner
       wrapper.style.display = "block";
       wrapper.style.width = "100%";
       wrapper.style.textAlign = "center";
-      wrapper.style.padding = "6px 0";
+      wrapper.style.padding = "8px 0";
+      wrapper.style.margin = "4px 0";
+      wrapper.style.borderRadius = "6px";
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.color = "#000";
       wrapper.style.fontWeight = "700";
-      wrapper.style.borderRadius = "6px";
-      wrapper.style.margin = "4px 0";
     } else {
-      // Normal message: username + content
+      // Normal message: append username
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -350,16 +354,16 @@ function renderMessagesFromArray(messages) {
       wrapper.appendChild(usernameEl);
     }
 
-    // Content span (for both normal and banner)
+    // Content span (for both)
     const contentEl = document.createElement("span");
     contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
-    contentEl.textContent = " " + (m.content || "");
+    contentEl.textContent = m.content || "";
     wrapper.appendChild(contentEl);
 
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // auto-scroll
+  // Auto-scroll
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
