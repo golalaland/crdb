@@ -2203,7 +2203,7 @@ if (user.isHost) {
   btnWrap.appendChild(meetBtn);
 }
 
-// --- Glass Slider Panel (Compact) ---
+// --- Glass Slider Panel (Fiery Compact) ---
 const sliderPanel = document.createElement('div');
 Object.assign(sliderPanel.style, {
   width: '100%',
@@ -2217,22 +2217,46 @@ Object.assign(sliderPanel.style, {
   justifyContent: 'space-between'
 });
 
+// --- Fiery color palette ---
+const fieryColors = [
+  ["#ff0000", "#ff8c00"], // red to orange
+  ["#ff4500", "#ffd700"], // orange to gold
+  ["#ff1493", "#ff6347"], // pinkish red
+  ["#ff0055", "#ff7a00"], // magenta to orange
+  ["#ff5500", "#ffcc00"], // deep orange to yellow
+  ["#ff3300", "#ff0066"], // neon red to hot pink
+];
+
+function randomFieryGradient() {
+  const [c1, c2] = fieryColors[Math.floor(Math.random() * fieryColors.length)];
+  return `linear-gradient(90deg, ${c1}, ${c2})`;
+}
+
+// --- Slider ---
 const slider = document.createElement('input');
 slider.type = 'range';
 slider.min = 0;
 slider.max = 999;
 slider.value = 0;
 slider.style.flex = '1';
-slider.style.height = '3px';
+slider.style.height = '4px';
+slider.style.borderRadius = '4px';
+slider.style.outline = 'none';
 slider.style.cursor = 'pointer';
-sliderPanel.appendChild(slider);
+slider.style.background = randomFieryGradient();
+slider.style.transition = 'background 0.25s ease';
 
 const sliderLabel = document.createElement('span');
 sliderLabel.textContent = `${slider.value} ⭐️`;
 sliderLabel.style.fontSize = '13px';
+sliderPanel.appendChild(slider);
 sliderPanel.appendChild(sliderLabel);
 
-slider.oninput = () => (sliderLabel.textContent = `${slider.value} ⭐️`);
+// --- Dynamic fiery effect on input ---
+slider.addEventListener('input', () => {
+  sliderLabel.textContent = `${slider.value} ⭐️`;
+  slider.style.background = randomFieryGradient();
+});
 
 btnWrap.appendChild(sliderPanel);
 
@@ -2244,7 +2268,7 @@ Object.assign(giftBtnLocal.style, {
   borderRadius: '6px',
   border: 'none',
   fontWeight: '600',
-  background: 'linear-gradient(90deg,#ff0099,#ff33cc)',
+  background: 'linear-gradient(90deg,#ff0099,#ff0066)',
   color: '#fff',
   cursor: 'pointer',
   position: 'relative'
