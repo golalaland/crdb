@@ -313,107 +313,85 @@ function renderMessagesFromArray(messages) {
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-if (m.systemBanner) {
-  // --- 🎁 Full-width banner style ---
-  wrapper.style.display = "block";
-  wrapper.style.width = "100%";
-  wrapper.style.textAlign = "center";
-  wrapper.style.padding = "4px 0";
-  wrapper.style.margin = "3px 0";
-  wrapper.style.borderRadius = "8px";
-  wrapper.style.position = "relative";
-  wrapper.style.overflow = "hidden";
-  wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
-  wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
+    if (m.systemBanner) {
+      // --- 🎁 Full-width banner style ---
+      wrapper.style.display = "block";
+      wrapper.style.width = "88%";
+      wrapper.style.textAlign = "center";
+      wrapper.style.padding = "4px 0";
+      wrapper.style.margin = "3px 0";
+      wrapper.style.borderRadius = "8px";
+      wrapper.style.position = "relative";
+      wrapper.style.overflow = "hidden";
+      wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
+      wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-  // --- Inner panel for text ---
-  const innerPanel = document.createElement("div");
-  innerPanel.style.display = "inline-block";
-  innerPanel.style.padding = "6px 14px";
-  innerPanel.style.borderRadius = "6px";
-  innerPanel.style.background = "rgba(255,255,255,0.35)";
-  innerPanel.style.backdropFilter = "blur(6px)";
-  innerPanel.style.color = "#000";
-  innerPanel.style.fontWeight = "700";
-  innerPanel.textContent = m.content || "";
-  wrapper.appendChild(innerPanel);
+      // inner panel for text
+      const innerPanel = document.createElement("div");
+      innerPanel.style.display = "inline-block";
+      innerPanel.style.padding = "6px 14px";
+      innerPanel.style.borderRadius = "6px";
+      innerPanel.style.background = "rgba(255,255,255,0.35)";
+      innerPanel.style.backdropFilter = "blur(6px)";
+      innerPanel.style.color = "#000";
+      innerPanel.style.fontWeight = "700";
+      innerPanel.textContent = m.content || "";
+      wrapper.appendChild(innerPanel);
 
-  // --- Confetti + Glow (one-time) ---
-  if (!m._confettiPlayed) {
-    wrapper.style.animation = "pulseGlow 2s";
-    m._confettiPlayed = true;
+      // --- Confetti + Glow (one-time) ---
+      if (!m._confettiPlayed) {
+        wrapper.style.animation = "pulseGlow 2s";
+        m._confettiPlayed = true; // mark so reload doesn't replay
 
-    const confettiContainer = document.createElement("div");
-    confettiContainer.style.position = "absolute";
-    confettiContainer.style.inset = "0";
-    confettiContainer.style.pointerEvents = "none";
-    wrapper.appendChild(confettiContainer);
+        // Confetti container
+        const confettiContainer = document.createElement("div");
+        confettiContainer.style.position = "absolute";
+        confettiContainer.style.inset = "0";
+        confettiContainer.style.pointerEvents = "none";
+        wrapper.appendChild(confettiContainer);
 
-    for (let i = 0; i < 30; i++) {
-      const piece = document.createElement("div");
-      piece.style.position = "absolute";
-      piece.style.width = "6px";
-      piece.style.height = "6px";
-      piece.style.borderRadius = "50%";
-      piece.style.background = randomColor();
-      piece.style.left = Math.random() * 100 + "%";
-      piece.style.top = Math.random() * 100 + "%";
-      piece.style.opacity = 0.8;
-      piece.style.animation = `floatConfetti ${3 + Math.random() * 3}s ease-in-out`;
-      confettiContainer.appendChild(piece);
+        for (let i = 0; i < 30; i++) {
+          const piece = document.createElement("div");
+          piece.style.position = "absolute";
+          piece.style.width = "6px";
+          piece.style.height = "6px";
+          piece.style.borderRadius = "50%";
+          piece.style.background = randomColor();
+          piece.style.left = Math.random() * 100 + "%";
+          piece.style.top = Math.random() * 100 + "%";
+          piece.style.opacity = 0.8;
+          piece.style.animation = `floatConfetti ${3 + Math.random() * 3}s ease-in-out`;
+          confettiContainer.appendChild(piece);
+        }
+
+        // Remove confetti and stop glow after duration
+        setTimeout(() => {
+          confettiContainer.remove();
+          wrapper.style.animation = "";
+        }, 6000);
+      }
+    } else {
+      // --- Normal message with username ---
+      const usernameEl = document.createElement("span");
+      usernameEl.className = "meta";
+      usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
+      usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
+      usernameEl.style.marginRight = "4px";
+      wrapper.appendChild(usernameEl);
+
+      const contentEl = document.createElement("span");
+      contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
+      contentEl.textContent = " " + (m.content || "");
+      if (m.buzzColor) contentEl.style.background = m.buzzColor;
+      if (m.highlight) {
+        contentEl.style.color = "#000";
+        contentEl.style.fontWeight = "700";
+      }
+      wrapper.appendChild(contentEl);
     }
 
-    // Remove confetti and stop glow after 6 seconds
-    setTimeout(() => {
-      confettiContainer.remove();
-      wrapper.style.animation = "";
-    }, 6000);
-  }
-
-  // --- Loading bar ---
-  const loadingBar = document.createElement("div");
-  loadingBar.style.position = "absolute";
-  loadingBar.style.bottom = "0";
-  loadingBar.style.left = "0";
-  loadingBar.style.height = "4px";
-  loadingBar.style.width = "100%";
-  loadingBar.style.background = "rgba(0,0,0,0.2)";
-  wrapper.appendChild(loadingBar);
-
-  // Animate loading bar over 60 seconds
-  loadingBar.animate(
-    [{ width: "100%" }, { width: "0%" }],
-    { duration: 60000, easing: "linear", fill: "forwards" }
-  );
-
-  // Fade out and remove banner after 60 seconds
-  setTimeout(() => {
-    wrapper.style.transition = "opacity 0.5s";
-    wrapper.style.opacity = "0";
-    setTimeout(() => wrapper.remove(), 500);
-  }, 60000);
-
-} else {
-  // --- Normal message with username ---
-  const usernameEl = document.createElement("span");
-  usernameEl.className = "meta";
-  usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
-  usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
-  usernameEl.style.marginRight = "4px";
-  wrapper.appendChild(usernameEl);
-
-  const contentEl = document.createElement("span");
-  contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
-  contentEl.textContent = " " + (m.content || "");
-  if (m.buzzColor) contentEl.style.background = m.buzzColor;
-  if (m.highlight) {
-    contentEl.style.color = "#000";
-    contentEl.style.fontWeight = "700";
-  }
-  wrapper.appendChild(contentEl);
-}
-
-refs.messagesEl.appendChild(wrapper);
+    refs.messagesEl.appendChild(wrapper);
+  });
 
   // --- Auto-scroll to bottom ---
   if (!scrollPending) {
@@ -424,6 +402,20 @@ refs.messagesEl.appendChild(wrapper);
     });
   }
 }
+
+/* ---------- Animations ---------- */
+const style = document.createElement("style");
+style.textContent = `
+@keyframes floatConfetti {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 12px rgba(255,255,255,0.2); }
+  50% { box-shadow: 0 0 24px rgba(255,255,255,0.6); }
+}`;
+document.head.appendChild(style);
+
 
 /* ---------- 🔔 Messages Listener ---------- */
 function attachMessagesListener() {
