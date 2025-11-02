@@ -291,7 +291,7 @@ function renderMessagesFromArray(messages) {
     wrapper.id = item.id;
 
     if (m.systemBanner) {
-      // --- 🎁 Full-width banner / admin message style ---
+      // --- Full-width banner / admin message style ---
       wrapper.style.display = "block";
       wrapper.style.width = "88%";
       wrapper.style.textAlign = "center";
@@ -303,7 +303,6 @@ function renderMessagesFromArray(messages) {
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-      // --- Inner panel for text ---
       const innerPanel = document.createElement("div");
       innerPanel.style.display = "inline-block";
       innerPanel.style.padding = "6px 14px";
@@ -315,10 +314,9 @@ function renderMessagesFromArray(messages) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
-      // --- Confetti + Glow (one-time per user) ---
       if (!m._confettiPlayed) {
         wrapper.style.animation = "pulseGlow 2s";
-        m._confettiPlayed = true; // mark so reload doesn’t replay
+        m._confettiPlayed = true;
 
         const confettiContainer = document.createElement("div");
         confettiContainer.style.position = "absolute";
@@ -347,7 +345,7 @@ function renderMessagesFromArray(messages) {
       }
 
     } else {
-      // --- Normal message (user / BUZZ) ---
+      // --- Normal user message ---
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -369,7 +367,6 @@ function renderMessagesFromArray(messages) {
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // --- Auto-scroll ---
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
@@ -378,32 +375,6 @@ function renderMessagesFromArray(messages) {
     });
   }
 }
-
-/* ---------- Animations ---------- */
-const style = document.createElement("style");
-style.textContent = `
-@keyframes floatConfetti {
-  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
-}
-@keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 12px rgba(255,255,255,0.2); }
-  50% { box-shadow: 0 0 24px rgba(255,255,255,0.6); }
-}`;
-document.head.appendChild(style);
-
-/* ---------- Animations ---------- */
-const style = document.createElement("style");
-style.textContent = `
-@keyframes floatConfetti {
-  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
-}
-@keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 12px rgba(255,255,255,0.2); }
-  50% { box-shadow: 0 0 24px rgba(255,255,255,0.6); }
-}`;
-document.head.appendChild(style);
 
 
 /* ---------- 🔔 Messages Listener ---------- */
@@ -467,9 +438,9 @@ if (msg.highlight && msg.content?.includes("gifted")) {
   /* ----------------------------
    ⭐ GIFT POP MODAL / CHAT BANNER ALERT
 ----------------------------- */
-  function showGiftPopup(message, options = {}) {
-  const duration = options.duration || 31000; 
-  const glowColor = options.glowColor || `linear-gradient(90deg, #${Math.floor(Math.random()*16777215).toString(16)}, #${Math.floor(Math.random()*16777215).toString(16)})`;
+function showGiftPopup(message, options = {}) {
+  const duration = options.duration || 31000;
+  const glowColor = options.glowColor || `linear-gradient(90deg,#${Math.floor(Math.random()*16777215).toString(16)},#${Math.floor(Math.random()*16777215).toString(16)})`;
 
   const existing = document.getElementById("giftPopupBanner");
   if (existing) existing.remove();
@@ -502,6 +473,7 @@ if (msg.highlight && msg.content?.includes("gifted")) {
   innerPanel.textContent = message;
   wrapper.appendChild(innerPanel);
 
+  // Confetti
   const confettiContainer = document.createElement("div");
   confettiContainer.style.position = "absolute";
   confettiContainer.style.inset = "0";
@@ -522,6 +494,7 @@ if (msg.highlight && msg.content?.includes("gifted")) {
     confettiContainer.appendChild(piece);
   }
 
+  // Progress bar
   const progress = document.createElement("div");
   progress.style.position = "absolute";
   progress.style.bottom = "0";
@@ -538,6 +511,7 @@ if (msg.highlight && msg.content?.includes("gifted")) {
   setTimeout(() => confettiContainer.remove(), 6000);
   setTimeout(() => wrapper.remove(), duration);
 }
+
 
 /* ---------- 🆔 ChatID Modal ---------- */
 async function promptForChatID(userRef, userData) {
