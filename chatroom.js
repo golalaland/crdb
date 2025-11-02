@@ -314,9 +314,8 @@ function renderMessagesFromArray(messages) {
     wrapper.id = item.id;
 
     if (m.systemBanner) {
-  // --- 🎁 Full-width banner style ---
   wrapper.style.display = "block";
-  wrapper.style.width = "100%";
+  wrapper.style.width = "88%";
   wrapper.style.textAlign = "center";
   wrapper.style.padding = "4px 0";
   wrapper.style.margin = "3px 0";
@@ -326,7 +325,6 @@ function renderMessagesFromArray(messages) {
   wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
   wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-  // --- Inner panel for text ---
   const innerPanel = document.createElement("div");
   innerPanel.style.display = "inline-block";
   innerPanel.style.padding = "6px 14px";
@@ -338,10 +336,10 @@ function renderMessagesFromArray(messages) {
   innerPanel.textContent = m.content || "";
   wrapper.appendChild(innerPanel);
 
-  // --- Confetti + Glow (one-time) ---
+  // Confetti + Glow (one-time only)
   if (!m._confettiPlayed) {
-    wrapper.style.animation = "pulseGlow 2s";
     m._confettiPlayed = true;
+    wrapper.style.animation = "pulseGlow 2s";
 
     const confettiContainer = document.createElement("div");
     confettiContainer.style.position = "absolute";
@@ -349,7 +347,7 @@ function renderMessagesFromArray(messages) {
     confettiContainer.style.pointerEvents = "none";
     wrapper.appendChild(confettiContainer);
 
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 15; i++) { // reduced confetti count
       const piece = document.createElement("div");
       piece.style.position = "absolute";
       piece.style.width = "6px";
@@ -359,18 +357,19 @@ function renderMessagesFromArray(messages) {
       piece.style.left = Math.random() * 100 + "%";
       piece.style.top = Math.random() * 100 + "%";
       piece.style.opacity = 0.8;
-      piece.style.animation = `floatConfetti ${3 + Math.random() * 3}s ease-in-out`;
+      piece.style.animation = `floatConfetti ${2 + Math.random() * 2}s ease-in-out`;
       confettiContainer.appendChild(piece);
     }
 
-    // Remove confetti and stop glow after 6 seconds
     setTimeout(() => {
       confettiContainer.remove();
       wrapper.style.animation = "";
-    }, 6000);
+    }, 3000); // shorter confetti duration
   }
 
-  // --- Fade out and remove after 60 seconds ---
+  refs.messagesEl.appendChild(wrapper);
+
+  // Fade out and remove after 60 seconds
   setTimeout(() => {
     wrapper.style.transition = "opacity 0.5s";
     wrapper.style.opacity = "0";
@@ -378,7 +377,7 @@ function renderMessagesFromArray(messages) {
   }, 60000);
 
 } else {
-  // --- Normal message with username ---
+  // --- Normal message logic ---
   const usernameEl = document.createElement("span");
   usernameEl.className = "meta";
   usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -395,10 +394,9 @@ function renderMessagesFromArray(messages) {
     contentEl.style.fontWeight = "700";
   }
   wrapper.appendChild(contentEl);
+
+  refs.messagesEl.appendChild(wrapper);
 }
-
-refs.messagesEl.appendChild(wrapper);
-
   // --- Auto-scroll to bottom ---
   if (!scrollPending) {
     scrollPending = true;
