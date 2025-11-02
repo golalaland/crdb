@@ -478,16 +478,19 @@ if (msg.highlight && msg.content?.includes("gifted")) {
   });
 }
 
-// --- ⚡ Global Ephemeral Banner Feed ---
-let lastSeenBannerTime = Date.now();
+// --- ⚡ Global Live Banner Feed ---
+let bannersInitialized = false;
 
 function initBannerFeed() {
-  if (!currentUser) return; // don't run before login
+  if (bannersInitialized) return;
+  bannersInitialized = true;
+
+  console.log("🚀 Banner feed initialized");
 
   const bannerQuery = query(
     collection(db, "bannerMsgs"),
     orderBy("timestamp", "desc"),
-    limit(30) // read only the most recent ones
+    limit(30)
   );
 
   onSnapshot(bannerQuery, (snapshot) => {
@@ -499,18 +502,19 @@ function initBannerFeed() {
         const data = change.doc.data();
         const createdAt = data.timestamp?.toMillis?.() || 0;
 
-        // Only show banners created within the last 30 seconds
-        if (createdAt > now - 30000) {
+        // ⚡ Only show banners created within the last 15 seconds
+        if (createdAt > now - 15000) {
           newBanners.push({ id: change.doc.id, data });
         }
       }
     });
 
     if (newBanners.length > 0) {
+      console.log("🎉 Showing new global banners:", newBanners);
       renderMessagesFromArray(newBanners, true);
     }
   });
-} 
+}
 
 /* ---------- 🆔 ChatID Modal ---------- */
 async function promptForChatID(userRef, userData) {
