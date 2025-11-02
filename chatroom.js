@@ -2090,24 +2090,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const card = document.createElement('div');
     card.id = 'socialCard';
     Object.assign(card.style, {
-      position: 'fixed',
-      top: '50%',
-      left: '50%',
-      transform: 'translate(-50%, -50%)',
-      background: 'linear-gradient(135deg, rgba(20,20,22,0.9), rgba(25,25,27,0.9))',
-      backdropFilter: 'blur(12px)',
-      borderRadius: '16px',
-      padding: '18px 20px',
-      color: '#fff',
-      width: '260px',
-      maxWidth: '90%',
-      zIndex: '999999',
-      textAlign: 'center',
-      boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
-      fontFamily: 'Poppins, sans-serif',
-      opacity: '0',
-      transition: 'opacity .18s ease, transform .18s ease'
-    });
+  position: 'fixed',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  background: 'linear-gradient(135deg, rgba(20,20,22,0.9), rgba(25,25,27,0.9))',
+  backdropFilter: 'blur(10px)',
+  borderRadius: '14px',
+  padding: '12px 16px',
+  color: '#fff',
+  width: '230px',
+  maxWidth: '90%',
+  zIndex: '999999',
+  textAlign: 'center',
+  boxShadow: '0 6px 24px rgba(0,0,0,0.5)',
+  fontFamily: 'Poppins, sans-serif',
+  opacity: '0',
+  transition: 'opacity .18s ease, transform .18s ease'
+});
 
     // --- Header ---
     const chatIdDisplay = user.chatId ? user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1) : 'Unknown';
@@ -2155,8 +2155,24 @@ const bioEl = document.createElement('div');
 Object.assign(bioEl.style, {
   margin: '6px 0 12px',
   fontStyle: 'italic',
-  fontSize: '13px'
+  fontWeight: '600', // 🔥 makes it bolder
+  fontSize: '13px',
+  transition: 'color 0.5s ease'
 });
+
+// 🎨 Random color generator
+function randomBioColor() {
+  const colors = [
+    '#ff99cc', '#ffcc33', '#66ff99',
+    '#66ccff', '#ff6699', '#ff9966',
+    '#ccccff', '#f8b500'
+  ];
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
+// Apply random color each time
+bioEl.style.color = randomBioColor();
+
 card.appendChild(bioEl);
 typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
 
