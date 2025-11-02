@@ -2508,45 +2508,96 @@ async function sendStarsToUser(targetUser, amt) {
 
 
 // ========== 🟣 HOST SETTINGS LOGIC ==========
-const isHost = true; // <-- later dynamic
+const isHost = true; // <-- dynamic later
 const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
 const hostModal = document.getElementById("hostModal");
 const hostSettingsBtn = document.getElementById("hostSettingsBtn");
 const closeModal = hostModal?.querySelector(".close");
+const saveInfoBtn = document.getElementById("saveInfo");
+const saveMediaBtn = document.getElementById("saveMedia");
 
 if (isHost && hostSettingsWrapper) hostSettingsWrapper.style.display = "block";
 
+// -------- Firestore update helper --------
+async function updateFirestoreDoc(userId, data) {
+  const userRef = doc(db, "users", userId);
+
+  const filteredData = Object.fromEntries(
+    Object.entries(data).filter(([_, value]) => value !== undefined)
+  );
+
+  await updateDoc(userRef, { ...filteredData, lastUpdated: serverTimestamp() });
+
+  const hostRef = doc(db, "featuredHosts", userId);
+  const hostSnap = await getDoc(hostRef);
+  if (hostSnap.exists()) {
+    await updateDoc(hostRef, { ...filteredData, lastUpdated: serverTimestamp() });
+  }
+}
+
+// -------- Populate modal and dropdowns --------
+async function populateHostProfile() {
+  if (!currentUser?.uid) return;
+
+  const userRef = doc(db, "users", currentUser.uid);
+  const snap = await getDoc(userRef);
+  if (!snap.exists()) return;
+
+  const data = snap.data();
+
+  // Regular inputs
+  const fields = ["fullName","city","location","bioPick","bankAccountNumber",
+                  "bankName","telegram","tiktok","whatsapp","instagram"];
+  fields.forEach(f => {
+    const el = document.getElementById(f === "bioPick" ? "bio" : f);
+    if (el) el.value = data[f] || "";
+  });
+
+  // Dropdowns
+  const naturePickEl = document.getElementById("naturePick");
+  const fruitPickEl = document.getElementById("fruitPick");
+  if (naturePickEl) naturePickEl.value = data.naturePick || "";
+  if (fruitPickEl) fruitPickEl.value = data.fruitPick || "";
+
+  // Photo preview
+  if (data.popupPhoto) {
+    const photoPreview = document.getElementById("photoPreview");
+    const photoPlaceholder = document.getElementById("photoPlaceholder");
+    if (photoPreview && photoPlaceholder) {
+      photoPreview.src = data.popupPhoto;
+      photoPreview.style.display = "block";
+      photoPlaceholder.style.display = "none";
+    }
+  }
+}
+
+// Real-time updates (optional but keeps everything instantly live)
+function enableRealtimeProfileUpdates() {
+  if (!currentUser?.uid) return;
+  const userRef = doc(db, "users", currentUser.uid);
+
+  onSnapshot(userRef, (snap) => {
+    if (!snap.exists()) return;
+    const data = snap.data();
+
+    const naturePickEl = document.getElementById("naturePick");
+    const fruitPickEl = document.getElementById("fruitPick");
+    if (naturePickEl) naturePickEl.value = data.naturePick || "";
+    if (fruitPickEl) fruitPickEl.value = data.fruitPick || "";
+  });
+}
+
+// Call on page load
+populateHostProfile();
+enableRealtimeProfileUpdates();
+
+// -------- Open/close modal --------
 if (hostSettingsBtn && hostModal && closeModal) {
   hostSettingsBtn.onclick = async () => {
     hostModal.style.display = "block";
 
     if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
-
-    // Populate fields from Firestore (kept blank until user edits)
-    const userRef = doc(db, "users", currentUser.uid);
-    const snap = await getDoc(userRef);
-    if (!snap.exists()) return showStarPopup("⚠️ User data not found.");
-
-    const data = snap.data();
-    document.getElementById("fullName").value = data.fullName || "";
-    document.getElementById("city").value = data.city || "";
-    document.getElementById("location").value = data.location || "";
-    document.getElementById("bio").value = data.bioPick || "";
-    document.getElementById("bankAccountNumber").value = data.bankAccountNumber || "";
-    document.getElementById("bankName").value = data.bankName || "";
-    document.getElementById("telegram").value = data.telegram || "";
-    document.getElementById("tiktok").value = data.tiktok || "";
-    document.getElementById("whatsapp").value = data.whatsapp || "";
-    document.getElementById("instagram").value = data.instagram || "";
-
-    // Update photo preview if exists
-    if (data.popupPhoto) {
-      const photoPreview = document.getElementById("photoPreview");
-      const photoPlaceholder = document.getElementById("photoPlaceholder");
-      photoPreview.src = data.popupPhoto;
-      photoPreview.style.display = "block";
-      photoPlaceholder.style.display = "none";
-    }
+    await populateHostProfile(); // ensure latest data
   };
 
   closeModal.onclick = () => (hostModal.style.display = "none");
@@ -2555,60 +2606,7 @@ if (hostSettingsBtn && hostModal && closeModal) {
   };
 }
 
-// ========== 🟠 TAB LOGIC ==========
-document.querySelectorAll(".tab-btn").forEach((btn) => {
-  btn.onclick = () => {
-    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach((tab) => (tab.style.display = "none"));
-    btn.classList.add("active");
-    document.getElementById(btn.dataset.tab).style.display = "block";
-  };
-});
-
-// ========== 🖼️ PHOTO PREVIEW ==========
-document.addEventListener("change", (e) => {
-  if (e.target.id === "popupPhoto") {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const photoPreview = document.getElementById("photoPreview");
-      const photoPlaceholder = document.getElementById("photoPlaceholder");
-      if (photoPreview && photoPlaceholder) {
-        photoPreview.src = reader.result;
-        photoPreview.style.display = "block";
-        photoPlaceholder.style.display = "none";
-      }
-    };
-    reader.readAsDataURL(file);
-  }
-});
-
-// ========== 📝 SAVE INFO & MEDIA HANDLER ==========
-const saveInfoBtn = document.getElementById("saveInfo");
-const saveMediaBtn = document.getElementById("saveMedia");
-
-
-// -------- Firestore update helper --------
-async function updateFirestoreDoc(userId, data) {
-  const userRef = doc(db, "users", userId);
-
-  // Only filter undefined (allow clearing fields to "")
-  const filteredData = Object.fromEntries(
-    Object.entries(data).filter(([_, value]) => value !== undefined)
-  );
-
-  await updateDoc(userRef, { ...filteredData, lastUpdated: serverTimestamp() });
-
-  // Sync to featuredHosts if doc exists
-  const hostRef = doc(db, "featuredHosts", userId);
-  const hostSnap = await getDoc(hostRef);
-  if (hostSnap.exists()) {
-    await updateDoc(hostRef, { ...filteredData, lastUpdated: serverTimestamp() });
-  }
-}
-
-// -------- Save Info --------
+// ==================== SAVE INFO ====================
 if (saveInfoBtn) {
   saveInfoBtn.onclick = async () => {
     if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
@@ -2628,6 +2626,7 @@ if (saveInfoBtn) {
     const naturePick = naturePickEl?.value || "";
     const fruitPick = fruitPickEl?.value || "";
 
+    // Validation
     if (bankAccountNumber && !/^\d{1,11}$/.test(bankAccountNumber)) {
       return showStarPopup("⚠️ Bank account number must be digits only (max 11).");
     }
@@ -2650,7 +2649,7 @@ if (saveInfoBtn) {
       fruitPick
     };
 
-    // ---------- Tiny centered spinner ----------
+    // Spinner
     const originalHTML = saveInfoBtn.innerHTML;
     saveInfoBtn.innerHTML = `
       <div class="spinner" style="
@@ -2691,7 +2690,7 @@ if (saveInfoBtn) {
   };
 }
 
-// -------- Save Media --------
+// ==================== SAVE MEDIA ====================
 if (saveMediaBtn) {
   saveMediaBtn.onclick = async () => {
     if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
