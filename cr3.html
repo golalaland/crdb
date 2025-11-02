@@ -201,14 +201,16 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   text-align: center;
 }
 
-/* ✅ KIK-STYLE INLINE USERNAME + MESSAGE WRAP */
+/* ✅ FORCE LEFT + KIK STYLE TEXT FLOW */
 .msg {
   width: 100%;
   padding: 8px 10px;
   border-radius: 8px;
   background: var(--glass);
   box-sizing: border-box;
-  display: block;   /* ensures username always begins at far left */
+
+  display: block !important;         /* <-- RESETS flex */
+  text-align: left !important;       /* <-- anchor left */
 }
 
 /* username */
@@ -216,11 +218,11 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   font-weight: 700;
   font-size: 13px;
   white-space: nowrap;
-  display: inline;   /* keep on same line with content */
+  display: inline;
   margin-right: 4px;
 }
 
-/* add colon automatically */
+/* attach colon */
 .msg .meta::after {
   content: ":";
   margin-right: 4px;
@@ -229,9 +231,9 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 /* message body */
 .msg .content {
   font-size: 13px;
-  display: inline;        /* INLINE so it flows on same line */
-  white-space: normal;    /* so wrapping occurs naturally */
-  word-break: break-word; /* allow wrapping mid-word if needed */
+  display: inline;
+  white-space: normal;
+  word-break: break-word;
 }
 
 
