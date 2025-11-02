@@ -358,51 +358,51 @@ function renderMessagesFromArray(messages) {
 
     // --- 🎁 Full-width banner style ---
     if (m.systemBanner) {
-      wrapper.style.display = "block";
-      wrapper.style.width = "100%";
-      wrapper.style.textAlign = "center";
-      wrapper.style.padding = "4px 0";
-      wrapper.style.margin = "3px 0";
-      wrapper.style.borderRadius = "8px";
-      wrapper.style.position = "relative";
-      wrapper.style.overflow = "hidden";
-      wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
-      wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
+  // --- 🎁 Full-width banner ---
+  wrapper.style.display = "block";
+  wrapper.style.width = "100%";
+  wrapper.style.textAlign = "center";
+  wrapper.style.padding = "4px 0";
+  wrapper.style.margin = "3px 0";
+  wrapper.style.borderRadius = "8px";
+  wrapper.style.position = "relative";
+  wrapper.style.overflow = "hidden";
+  wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
+  wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
+  wrapper.style.animation = "pulseGlow 2s";
 
-      // inner panel for text
-      const innerPanel = document.createElement("div");
-      innerPanel.style.display = "inline-block";
-      innerPanel.style.padding = "6px 14px";
-      innerPanel.style.borderRadius = "6px";
-      innerPanel.style.background = "rgba(255,255,255,0.35)";
-      innerPanel.style.backdropFilter = "blur(6px)";
-      innerPanel.style.color = "#000";
-      innerPanel.style.fontWeight = "700";
-      innerPanel.textContent = m.content || "";
-      wrapper.appendChild(innerPanel);
-    } else {
-      // Normal message
-      const usernameEl = document.createElement("span");
-      usernameEl.className = "meta";
-      usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
-      usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
-      usernameEl.style.marginRight = "4px";
-      wrapper.appendChild(usernameEl);
-    }
+  // inner panel only — contains the message
+  const innerPanel = document.createElement("div");
+  innerPanel.style.display = "inline-block";
+  innerPanel.style.padding = "6px 14px";
+  innerPanel.style.borderRadius = "6px";
+  innerPanel.style.background = "rgba(255,255,255,0.35)";
+  innerPanel.style.backdropFilter = "blur(6px)";
+  innerPanel.style.color = "#000";
+  innerPanel.style.fontWeight = "700";
+  innerPanel.textContent = m.content || "";
+  wrapper.appendChild(innerPanel);
 
-    // --- Content span ---
-    const contentEl = document.createElement("span");
-    contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
-    contentEl.textContent = " " + (m.content || "");
-    if (m.buzzColor && !m.systemBanner) contentEl.style.background = m.buzzColor;
-    if (m.highlight && !m.systemBanner) {
-      contentEl.style.color = "#000";
-      contentEl.style.fontWeight = "700";
-    }
-    wrapper.appendChild(contentEl);
+  // confetti inside wrapper...
+} else {
+  // normal username + content logic
+  const usernameEl = document.createElement("span");
+  usernameEl.className = "meta";
+  usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
+  usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
+  usernameEl.style.marginRight = "4px";
+  wrapper.appendChild(usernameEl);
 
-    refs.messagesEl.appendChild(wrapper);
-  });
+  const contentEl = document.createElement("span");
+  contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
+  contentEl.textContent = " " + (m.content || "");
+  if (m.buzzColor) contentEl.style.background = m.buzzColor;
+  if (m.highlight) {
+    contentEl.style.color = "#000";
+    contentEl.style.fontWeight = "700";
+  }
+  wrapper.appendChild(contentEl);
+}
 
   // --- Auto-scroll ---
   refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
