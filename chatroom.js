@@ -227,7 +227,7 @@ async function showGiftModal(targetUid, targetData) {
 
     // Chat banner message
     const messageData = {
-      content: `💫 ${currentUser.chatId} gifted ${amt} ⭐️ to ${targetData.chatId}!`,
+      content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetData.chatId}!`,
       uid: currentUser.uid,
       timestamp: serverTimestamp(),
       highlight: true,
@@ -319,8 +319,7 @@ function setupUsersListener() {
 }
 setupUsersListener();
 
-/* ---------- Render Messages (full-width banners + inner glass panel + confetti) ---------- */
-/* ---------- Render Messages (confetti banners, refined size) ---------- */
+//* ---------- Render Messages (full-width banners + confetti + auto glow stop) ---------- */
 let scrollPending = false;
 
 function renderMessagesFromArray(messages) {
@@ -346,7 +345,7 @@ function renderMessagesFromArray(messages) {
       wrapper.style.overflow = "hidden";
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
-      wrapper.style.animation = "pulseGlow 2s infinite";
+      wrapper.style.animation = "pulseGlow 2s"; // glow animation stops automatically
 
       // inner panel for text
       const innerPanel = document.createElement("div");
@@ -358,10 +357,9 @@ function renderMessagesFromArray(messages) {
       innerPanel.style.color = "#000";
       innerPanel.style.fontWeight = "700";
       innerPanel.textContent = m.content || "";
-
       wrapper.appendChild(innerPanel);
 
-      // 🎉 Confetti spray
+      // 🎉 Confetti spray inside wrapper
       const confettiContainer = document.createElement("div");
       confettiContainer.style.position = "absolute";
       confettiContainer.style.inset = "0";
@@ -382,39 +380,42 @@ function renderMessagesFromArray(messages) {
         confettiContainer.appendChild(piece);
       }
 
+      // Remove confetti after 6 seconds
       setTimeout(() => confettiContainer.remove(), 6000);
     } 
     else {
-      // --- Normal messages ---
+      // Normal message with username
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
-      usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">
-        ${m.chatId || "Guest"}
-      </span>:`;
+      usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
       usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
       usernameEl.style.marginRight = "4px";
-
-      const contentEl = document.createElement("span");
-      contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
-      contentEl.textContent = " " + (m.content || "");
-
-      if (m.buzzColor) contentEl.style.background = m.buzzColor;
-      if (m.highlight) {
-        contentEl.style.color = "#000";
-        contentEl.style.fontWeight = "700";
-      }
-
-      wrapper.append(usernameEl, contentEl);
+      wrapper.appendChild(usernameEl);
     }
 
+    // --- Content span ---
+    const contentEl = document.createElement("span");
+    contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
+    contentEl.textContent = " " + (m.content || "");
+
+    if (m.buzzColor && !m.systemBanner) contentEl.style.background = m.buzzColor;
+    if (m.highlight && !m.systemBanner) {
+      contentEl.style.color = "#000";
+      contentEl.style.fontWeight = "700";
+    }
+
+    wrapper.appendChild(contentEl);
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // --- Smooth scroll to bottom after new messages ---
-  refs.messagesEl.scrollTo({
-    top: refs.messagesEl.scrollHeight,
-    behavior: "smooth",
-  });
+  // --- Auto-scroll logic ---
+  if (!scrollPending) {
+    scrollPending = true;
+    requestAnimationFrame(() => {
+      refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight; // scroll immediately to bottom
+      scrollPending = false;
+    });
+  }
 }
 
 /* ---------- Animations ---------- */
