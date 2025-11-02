@@ -2608,5 +2608,3 @@ if (saveMediaBtn) {
 
     checkScroll(); // initial check
   }); // ✅ closes DOMContentLoaded
-
-})(); // ✅ closes initSocialCardSystem IIFE
