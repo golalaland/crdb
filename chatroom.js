@@ -2526,11 +2526,12 @@ if (saveMediaBtn) {
 
 })();
 
-  // --- Trigger special banner popup ---
-  if (typeof showGiftAlert === "function") {
-    showGiftAlert(currentUser.chatId, targetUser.chatId, amt, glowColor);
-  }
+// 🌤️ Dynamic Host Panel Greeting
+function capitalizeFirstLetter(str) {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
+
 function setGreeting() {
   const chatId = currentUser?.chatId || "Guest";
   const name = capitalizeFirstLetter(chatId);
