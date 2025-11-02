@@ -425,20 +425,6 @@ refs.messagesEl.appendChild(wrapper);
   }
 }
 
-/* ---------- Animations ---------- */
-const style = document.createElement("style");
-style.textContent = `
-@keyframes floatConfetti {
-  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
-}
-@keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 12px rgba(255,255,255,0.2); }
-  50% { box-shadow: 0 0 24px rgba(255,255,255,0.6); }
-}`;
-document.head.appendChild(style);
-
-
 /* ---------- 🔔 Messages Listener ---------- */
 function attachMessagesListener() {
   const q = query(collection(db, CHAT_COLLECTION), orderBy("timestamp", "asc"));
