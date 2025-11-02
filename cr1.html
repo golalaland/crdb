@@ -1467,6 +1467,14 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   font-size: 14px !important;
   border-radius: 8px !important;
 }
+.username-blink {
+  animation: blinkName 0.4s ease-in-out;
+}
+
+@keyframes blinkName {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(255, 255, 0, 0.4); border-radius: 4px; }
+}
 </style>
 </head>
 <body>
