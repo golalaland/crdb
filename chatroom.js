@@ -2422,45 +2422,36 @@ if (saveMediaBtn) {
 
 // --- SEND STARS FUNCTION ---
 async function sendStarsToUser(targetUser, amt) {
+  if (!currentUser) return showStarPopup("Sign in first.");
+  if (!targetUser?._docId) return console.warn("Target user invalid");
+
   const fromRef = doc(db, "users", currentUser.uid);
   const toRef = doc(db, "users", targetUser._docId);
   const glowColor = randomColor();
 
-  await Promise.all([
-    updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
-    updateDoc(toRef, { stars: increment(amt) })
-  ]);
+  try {
+    // Update Firestore balances only
+    await Promise.all([
+      updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
+      updateDoc(toRef, { stars: increment(amt) })
+    ]);
 
-  // System banner message — UID and chatId are irrelevant here
-  const bannerMsg = {
-    content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
-    timestamp: serverTimestamp(),
-    highlight: true,
-    buzzColor: glowColor,
-    systemBanner: true // add a flag so renderer knows it’s pure text
-  };
+    // Show the Gift Alert popup to everyone online
+    if (typeof showGiftAlert === "function") {
+      showGiftAlert(`💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`, {
+        glowColor,
+        duration: 7000
+      });
+    } else {
+      console.warn("showGiftAlert not defined!");
+    }
 
-  // Save banner to Firestore
-  const docRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
-
-  // Render banner in chat for everyone
-  renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true); // `true` = pure banner
-
-  // Apply glow effect
-  const msgEl = document.getElementById(docRef.id);
-  if (msgEl) {
-    const contentEl = msgEl.querySelector(".content") || msgEl;
-    contentEl.style.setProperty("--pulse-color", glowColor);
-    contentEl.classList.add("baller-highlight");
-    setTimeout(() => {
-      contentEl.classList.remove("baller-highlight");
-      contentEl.style.boxShadow = "none";
-    }, 21000);
+  } catch (err) {
+    console.error("Failed to send stars:", err);
+    showStarPopup("Something went wrong 💫");
   }
-
-  // ✅ Show Gift Alert for all users who are online
-  showGiftAlert(bannerMsg.content, { glowColor: glowColor, duration: 7000 });
 }
+
 
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
