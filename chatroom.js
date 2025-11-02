@@ -242,10 +242,9 @@ async function showGiftModal(targetUid, targetData) {
     showStarPopup(`You sent ${amt} stars ⭐️ to ${targetData.chatId}!`);
     close();
 
-    // Render banner; confetti/glow handled only once in renderer
-    renderMessagesFromArray([{ id: docRef.id, data: messageData }]);
-  });
-}
+// Show floating gift popup for all online users
+showGiftPopup(messageData.content, { glowColor: messageData.buzzColor });
+
 /* ---------- Gift Alert (Optional Popup) ---------- */
 function showGiftAlert(text) {
   const alertEl = document.getElementById("giftAlert");
@@ -299,7 +298,7 @@ function setupUsersListener() {
 }
 setupUsersListener();
 
-/* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
+/* ---------- Render Messages (normal + admin/system banners) ---------- */
 let scrollPending = false;
 
 function renderMessagesFromArray(messages) {
@@ -314,7 +313,7 @@ function renderMessagesFromArray(messages) {
     wrapper.id = item.id;
 
     if (m.systemBanner) {
-      // --- 🎁 Full-width banner style ---
+      // --- 🎁 Full-width banner / admin message style ---
       wrapper.style.display = "block";
       wrapper.style.width = "88%";
       wrapper.style.textAlign = "center";
@@ -326,7 +325,7 @@ function renderMessagesFromArray(messages) {
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-      // inner panel for text
+      // --- Inner panel for text ---
       const innerPanel = document.createElement("div");
       innerPanel.style.display = "inline-block";
       innerPanel.style.padding = "6px 14px";
@@ -338,12 +337,11 @@ function renderMessagesFromArray(messages) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
-      // --- Confetti + Glow (one-time) ---
+      // --- Confetti + Glow (one-time per user) ---
       if (!m._confettiPlayed) {
         wrapper.style.animation = "pulseGlow 2s";
-        m._confettiPlayed = true; // mark so reload doesn't replay
+        m._confettiPlayed = true; // mark so reload doesn’t replay
 
-        // Confetti container
         const confettiContainer = document.createElement("div");
         confettiContainer.style.position = "absolute";
         confettiContainer.style.inset = "0";
@@ -364,14 +362,14 @@ function renderMessagesFromArray(messages) {
           confettiContainer.appendChild(piece);
         }
 
-        // Remove confetti and stop glow after duration
         setTimeout(() => {
           confettiContainer.remove();
           wrapper.style.animation = "";
         }, 6000);
       }
+
     } else {
-      // --- Normal message with username ---
+      // --- Normal message (user / BUZZ) ---
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -393,7 +391,7 @@ function renderMessagesFromArray(messages) {
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // --- Auto-scroll to bottom ---
+  // --- Auto-scroll ---
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
@@ -402,6 +400,19 @@ function renderMessagesFromArray(messages) {
     });
   }
 }
+
+/* ---------- Animations ---------- */
+const style = document.createElement("style");
+style.textContent = `
+@keyframes floatConfetti {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 12px rgba(255,255,255,0.2); }
+  50% { box-shadow: 0 0 24px rgba(255,255,255,0.6); }
+}`;
+document.head.appendChild(style);
 
 /* ---------- Animations ---------- */
 const style = document.createElement("style");
@@ -475,6 +486,80 @@ if (msg.highlight && msg.content?.includes("gifted")) {
   });
 }
   
+  /* ----------------------------
+   ⭐ GIFT POP MODAL / CHAT BANNER ALERT
+----------------------------- */
+  function showGiftPopup(message, options = {}) {
+  const duration = options.duration || 31000; 
+  const glowColor = options.glowColor || `linear-gradient(90deg, #${Math.floor(Math.random()*16777215).toString(16)}, #${Math.floor(Math.random()*16777215).toString(16)})`;
+
+  const existing = document.getElementById("giftPopupBanner");
+  if (existing) existing.remove();
+
+  const wrapper = document.createElement("div");
+  wrapper.id = "giftPopupBanner";
+  wrapper.style.position = "fixed";
+  wrapper.style.top = "20px";
+  wrapper.style.left = "50%";
+  wrapper.style.transform = "translateX(-50%)";
+  wrapper.style.zIndex = 9999;
+  wrapper.style.width = "fit-content";
+  wrapper.style.maxWidth = "90%";
+  wrapper.style.display = "inline-block";
+  wrapper.style.padding = "4px 0";
+  wrapper.style.borderRadius = "8px";
+  wrapper.style.overflow = "hidden";
+  wrapper.style.background = glowColor;
+  wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
+  wrapper.style.animation = "pulseGlow 2s";
+
+  const innerPanel = document.createElement("div");
+  innerPanel.style.display = "inline-block";
+  innerPanel.style.padding = "6px 14px";
+  innerPanel.style.borderRadius = "6px";
+  innerPanel.style.background = "rgba(255,255,255,0.35)";
+  innerPanel.style.backdropFilter = "blur(6px)";
+  innerPanel.style.color = "#000";
+  innerPanel.style.fontWeight = "700";
+  innerPanel.textContent = message;
+  wrapper.appendChild(innerPanel);
+
+  const confettiContainer = document.createElement("div");
+  confettiContainer.style.position = "absolute";
+  confettiContainer.style.inset = "0";
+  confettiContainer.style.pointerEvents = "none";
+  wrapper.appendChild(confettiContainer);
+
+  for (let i = 0; i < 30; i++) {
+    const piece = document.createElement("div");
+    piece.style.position = "absolute";
+    piece.style.width = "6px";
+    piece.style.height = "6px";
+    piece.style.borderRadius = "50%";
+    piece.style.background = randomColor();
+    piece.style.left = Math.random() * 100 + "%";
+    piece.style.top = Math.random() * 100 + "%";
+    piece.style.opacity = 0.8;
+    piece.style.animation = `floatConfetti ${3 + Math.random() * 3}s ease-in-out`;
+    confettiContainer.appendChild(piece);
+  }
+
+  const progress = document.createElement("div");
+  progress.style.position = "absolute";
+  progress.style.bottom = "0";
+  progress.style.left = "0";
+  progress.style.height = "4px";
+  progress.style.background = "#fff";
+  progress.style.width = "0%";
+  progress.style.transition = `width ${duration}ms linear`;
+  wrapper.appendChild(progress);
+
+  document.body.appendChild(wrapper);
+  requestAnimationFrame(() => progress.style.width = "100%");
+
+  setTimeout(() => confettiContainer.remove(), 6000);
+  setTimeout(() => wrapper.remove(), duration);
+}
 
 /* ---------- 🆔 ChatID Modal ---------- */
 async function promptForChatID(userRef, userData) {
@@ -2490,41 +2575,50 @@ if (saveMediaBtn) {
     showSocialCard(user);
   });
 
-  // --- SEND STARS FUNCTION ---
-  async function sendStarsToUser(targetUser, amt) {
+// --- SEND STARS FUNCTION ---
+async function sendStarsToUser(targetUser, amt) {
+  if (!currentUser || !targetUser) return;
+
   const fromRef = doc(db, "users", currentUser.uid);
   const toRef = doc(db, "users", targetUser._docId);
   const glowColor = randomColor();
 
+  // Deduct and add stars
   await Promise.all([
     updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
     updateDoc(toRef, { stars: increment(amt) })
   ]);
 
-  // System banner message — UID and chatId are irrelevant here
+  // --- Chat banner message ---
   const bannerMsg = {
     content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
     timestamp: serverTimestamp(),
     highlight: true,
     buzzColor: glowColor,
-    systemBanner: true // add a flag so renderer knows it’s pure text
+    systemBanner: true // flag for renderer to style as banner
   };
 
+  // Add to chat collection
   const docRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
 
-  // Render banner without prepending chatId/uid
-  renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true); // pass `true` to indicate pure banner
+  // Render banner in chat
+  renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true); // 'true' indicates pure banner
 
-  // Apply glow effect
+  // --- Show floating gift popup for all online users ---
+  showGiftPopup(bannerMsg.content, { glowColor: bannerMsg.buzzColor });
+
+  // --- Apply glow to chat banner ---
   const msgEl = document.getElementById(docRef.id);
   if (!msgEl) return;
   const contentEl = msgEl.querySelector(".content") || msgEl;
   contentEl.style.setProperty("--pulse-color", glowColor);
   contentEl.classList.add("baller-highlight");
-  setTimeout(() => { contentEl.classList.remove("baller-highlight"); contentEl.style.boxShadow = "none"; }, 21000);
-}
 
-})();
+  setTimeout(() => {
+    contentEl.classList.remove("baller-highlight");
+    contentEl.style.boxShadow = "none";
+  }, 21000); // same duration as your pulse animation
+}
 
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
