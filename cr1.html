@@ -1475,6 +1475,52 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   0%, 100% { background-color: transparent; }
   50% { background-color: rgba(255, 255, 0, 0.4); border-radius: 4px; }
 }
+/* Baller Alert Wrapper */
+#ballerAlert {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #ffcc00, #ff33cc);
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  color: #000;
+  font-size: 16px;
+  text-align: center;
+  z-index: 999999;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Glow pulse */
+.baller-glow {
+  animation: pulseGlow 2s ease-in-out;
+}
+
+/* Confetti pieces */
+.baller-confetti {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  opacity: 0.9;
+  animation: floatConfetti 3s ease-in-out forwards;
+}
+
+@keyframes floatConfetti {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
+}
+
+@keyframes pulseGlow {
+  0%,100% { box-shadow: 0 0 12px rgba(255,255,255,0.2); }
+  50% { box-shadow: 0 0 24px rgba(255,255,255,0.8); }
+}
 </style>
 </head>
 <body>
