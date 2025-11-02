@@ -2237,8 +2237,8 @@ if (saveMediaBtn) {
   Paste AFTER Firebase/Firestore is initialized
   and AFTER showMeetModal() exists.
 ====================================================== */
-
 (async function initSocialCardSystem() {
+  // --- 1) Fetch all users once and build a lookup map ---
   const allUsers = [];
   const usersByChatId = {};
 
@@ -2247,7 +2247,7 @@ if (saveMediaBtn) {
     const snaps = await getDocs(usersRef);
     snaps.forEach(docSnap => {
       const data = docSnap.data();
-      const chatIdLower = (data.chatIdLower || (data.chatId || "")).toLowerCase();
+      const chatIdLower = (data.chatIdLower || (data.chatId || "")).toString().toLowerCase();
       data._docId = docSnap.id;
       data.chatIdLower = chatIdLower;
       allUsers.push(data);
@@ -2258,18 +2258,21 @@ if (saveMediaBtn) {
     console.error("Failed to fetch users for social card:", err);
   }
 
-  // --- Show Social Card Popup ---
+  // --- 2) Show social card popup ---
   function showSocialCard(user) {
     if (!user) return;
+
+    // Remove any existing card
     document.getElementById('socialCard')?.remove();
 
+    // Card container
     const card = document.createElement('div');
     card.id = 'socialCard';
     Object.assign(card.style, {
       position: 'fixed',
       top: '50%',
       left: '50%',
-      transform: 'translate(-50%, -50%) scale(1)',
+      transform: 'translate(-50%, -50%)',
       background: 'linear-gradient(135deg,#0f0f10,#19191b)',
       borderRadius: '14px',
       padding: '18px 20px',
@@ -2284,7 +2287,7 @@ if (saveMediaBtn) {
       transition: 'opacity .18s ease, transform .18s ease'
     });
 
-    // --- Header ---
+    // Header
     const chatIdDisplay = user.chatId ? user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1) : 'Unknown';
     const color = user.isHost ? '#ff6600' : user.isVIP ? '#ff0099' : '#cccccc';
 
@@ -2300,7 +2303,7 @@ if (saveMediaBtn) {
     });
     card.appendChild(header);
 
-    // --- Details ---
+    // Details
     const detailsEl = document.createElement('p');
     detailsEl.style.margin = '0 0 12px';
     detailsEl.style.fontSize = '14px';
@@ -2324,7 +2327,7 @@ if (saveMediaBtn) {
     }
     card.appendChild(detailsEl);
 
-    // --- Bio (typewriter) ---
+    // Bio
     const bioEl = document.createElement('div');
     bioEl.style.margin = '8px 0 14px';
     bioEl.style.fontStyle = 'italic';
@@ -2332,11 +2335,11 @@ if (saveMediaBtn) {
     card.appendChild(bioEl);
     typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
 
-    // --- Buttons & Slider Wrapper ---
+    // --- Buttons wrapper ---
     const btnWrap = document.createElement('div');
-    Object.assign(btnWrap.style, { display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px', alignItems: 'center' });
+    Object.assign(btnWrap.style, { display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' });
 
-    // Meet Button
+    // Meet button (hosts only)
     if (user.isHost) {
       const meetBtn = document.createElement('button');
       meetBtn.textContent = 'Meet';
@@ -2353,52 +2356,43 @@ if (saveMediaBtn) {
       btnWrap.appendChild(meetBtn);
     }
 
-    // Slider
-    const sliderWrapper = document.createElement('div');
-    sliderWrapper.style.display = 'flex';
-    sliderWrapper.style.alignItems = 'center';
-    sliderWrapper.style.gap = '6px';
-
-    const sliderValue = document.createElement('span');
-    sliderValue.textContent = '0 ⭐️';
-
+    // Slider to choose stars
     const slider = document.createElement('input');
     slider.type = 'range';
-    slider.min = '0';
-    slider.max = '999';
-    slider.value = '0';
-    slider.style.width = '160px';
-    slider.addEventListener('input', () => { sliderValue.textContent = `${slider.value} ⭐️`; });
+    slider.min = 1;
+    slider.max = 999;
+    slider.value = 100;
+    slider.style.width = '100%';
+    slider.id = 'starGiftSlider';
+    btnWrap.appendChild(slider);
 
-    sliderWrapper.appendChild(sliderValue);
-    sliderWrapper.appendChild(slider);
-    btnWrap.appendChild(sliderWrapper);
-
-    // Gift Stars Button (unique class)
+    // GiftStars button (unique class)
     const giftBtn = document.createElement('button');
-    giftBtn.className = 'popupStarsBtn';
+    giftBtn.className = 'popup-gift-btn'; // unique class to avoid conflicts
     giftBtn.textContent = 'Gift Stars ⭐️';
     Object.assign(giftBtn.style, {
       padding: '8px 16px',
       borderRadius: '6px',
       border: 'none',
       fontWeight: '600',
-      background: 'linear-gradient(90deg,#ffcc00,#ff33cc)',
+      background: 'linear-gradient(90deg,#ffcc00,#ff6600)',
       color: '#000',
       cursor: 'pointer'
     });
 
     giftBtn.onclick = () => {
-      const amt = parseInt(slider.value);
-      if (amt < 1) return showStarPopup('🔥 Select at least 1 ⭐️');
-      showGiftModal(user._docId, user, amt);
+      const amount = parseInt(slider.value);
+      if ((currentUser?.stars || 0) < amount) return showStarPopup("Not enough stars 💫");
+
+      showGiftModal(user._docId, user, amount); // Pass selected amount
     };
 
     btnWrap.appendChild(giftBtn);
-    card.appendChild(btnWrap);
 
-    // Append & animate
+    card.appendChild(btnWrap);
     document.body.appendChild(card);
+
+    // Animate in
     requestAnimationFrame(() => {
       card.style.opacity = '1';
       card.style.transform = 'translate(-50%, -50%) scale(1.02)';
@@ -2406,48 +2400,37 @@ if (saveMediaBtn) {
     });
 
     // Click outside to close
-    const closeHandler = (ev) => {
-      if (!card.contains(ev.target)) {
-        card.remove();
-        document.removeEventListener('click', closeHandler);
-      }
-    };
+    const closeHandler = (ev) => { if (!card.contains(ev.target)) { card.remove(); document.removeEventListener('click', closeHandler); } };
     setTimeout(() => document.addEventListener('click', closeHandler), 10);
   }
 
-  // --- Typewriter Helper ---
+  // --- Small helpers ---
   function typeWriterEffect(el, text, speed = 35) {
     el.textContent = '';
     let i = 0;
-    const iv = setInterval(() => {
-      el.textContent += text.charAt(i) || '';
-      i++;
-      if (i >= text.length) clearInterval(iv);
-    }, speed);
+    const iv = setInterval(() => { el.textContent += text.charAt(i) || ''; i++; if (i >= text.length) clearInterval(iv); }, speed);
   }
 
-// --------------- Username Tap Detector ----------------
-document.addEventListener('pointerdown', async (e) => {
-  const target = e.target;
-  if (!target || !target.classList.contains('chat-username')) return;
+  // --- 3) Username tap only (with blink) ---
+  document.addEventListener('pointerdown', (e) => {
+    const target = e.target;
+    if (!target || !target.classList.contains('chat-username')) return;
 
-  // Username blink (CSS only)
-  target.classList.add('username-blink');
-  setTimeout(() => target.classList.remove('username-blink'), 400);
+    // Blink feedback
+    target.classList.add('username-blink');
+    setTimeout(() => target.classList.remove('username-blink'), 400);
 
-  const chatId = target.textContent.trim();
-  if (!chatId) return;
+    const chatId = target.textContent.trim();
+    if (!chatId) return;
 
-  // Lookup user from preloaded map
-  const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || '').toLowerCase() === chatId.toLowerCase());
-  if (!user) return;
+    const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || '').toLowerCase() === chatId.toLowerCase());
+    if (!user) return;
+    if (user._docId === currentUser?.uid) return;
 
-  // Prevent self-popup if desired
-  if (user._docId === currentUser?.uid) return;
+    showSocialCard(user);
+  });
 
-  // Show social card
-  showSocialCard(user);
-});
+})();
 
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
