@@ -896,53 +896,37 @@ window.addEventListener("DOMContentLoaded", () => {
 autoLogin();
 
 
-/* ----------------------------
-   💬 Send Message Handler
------------------------------ */
-refs.sendBtn?.addEventListener("click", async () => {
-  if (!currentUser) return showStarPopup("Sign in to chat.");
+  /* ----------------------------
+     💬 Send Message Handler
+  ----------------------------- */
+  refs.sendBtn?.addEventListener("click", async () => {
+    if (!currentUser) return showStarPopup("Sign in to chat.");
+    const txt = refs.messageInputEl?.value.trim();
+    if (!txt) return showStarPopup("Type a message first.");
+    if ((currentUser.stars || 0) < SEND_COST)
+      return showStarPopup("Not enough stars to send message.");
 
-  const txt = refs.messageInputEl?.value.trim();
-  if (!txt) return showStarPopup("Type a message first.");
-  if ((currentUser.stars || 0) < SEND_COST)
-    return showStarPopup("Not enough stars to send message.");
+    // Deduct star cost
+    currentUser.stars -= SEND_COST;
+    refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+    await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-SEND_COST) });
 
-  // Deduct star cost
-  currentUser.stars -= SEND_COST;
-  refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-  await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-SEND_COST) });
+    // Add to chat
+    const newMsg = {
+      content: txt,
+      uid: currentUser.uid,
+      chatId: currentUser.chatId,
+      timestamp: serverTimestamp(),
+      highlight: false,
+      buzzColor: null
+    };
+    const docRef = await addDoc(collection(db, CHAT_COLLECTION), newMsg);
 
-  // Add to chat
-  const newMsg = {
-    content: txt,
-    uid: currentUser.uid,
-    chatId: currentUser.chatId,
-    timestamp: serverTimestamp(),
-    highlight: false,
-    buzzColor: null
-  };
-  const docRef = await addDoc(collection(db, CHAT_COLLECTION), newMsg);
-
-  // Render immediately (optimistic)
-  refs.messageInputEl.value = "";
-  renderMessagesFromArray([{ id: docRef.id, data: newMsg }], true);
-
-  // ✅ Auto-scroll to bottom after rendering
-  setTimeout(() => {
+    // Render immediately (optimistic)
+    refs.messageInputEl.value = "";
+    renderMessagesFromArray([{ id: docRef.id, data: newMsg }], true);
     scrollToBottom(refs.messagesEl);
-  }, 50);
-});
-
-/* ----------------------------
-   ⚙️ Scroll Helper
------------------------------ */
-function scrollToBottom(el) {
-  if (!el) return;
-  el.scrollTo({
-    top: el.scrollHeight,
-    behavior: "smooth" // or "auto" if you prefer instant jump
   });
-}
 
   /* ----------------------------
      🚨 BUZZ Message Handler
