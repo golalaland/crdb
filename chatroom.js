@@ -1,4 +1,4 @@
-  /* ---------- Imports (Firebase v10) ---------- */
+l  /* ---------- Imports (Firebase v10) ---------- */
 import { 
   initializeApp 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -301,13 +301,13 @@ setupUsersListener();
 
 /* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
 let scrollPending = false;
-const renderedMessageIds = new Set(); // track messages rendered this session
+const renderedMessageIds = new Set(); // track already rendered messages
 
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
 
-  messages.forEach(async item => {
-    if (renderedMessageIds.has(item.id)) return; // already rendered
+  messages.forEach(item => {
+    if (renderedMessageIds.has(item.id)) return; // skip already rendered
     renderedMessageIds.add(item.id);
 
     const m = item.data;
@@ -316,9 +316,9 @@ function renderMessagesFromArray(messages) {
     wrapper.id = item.id;
 
     if (m.systemBanner) {
-      // --- Banner styles ---
+      // --- Banner styling ---
       wrapper.style.display = "block";
-      wrapper.style.width = "100%";
+      wrapper.style.width = "88%";
       wrapper.style.textAlign = "center";
       wrapper.style.padding = "4px 0";
       wrapper.style.margin = "3px 0";
@@ -328,7 +328,7 @@ function renderMessagesFromArray(messages) {
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-      // inner panel
+      // inner panel for text
       const innerPanel = document.createElement("div");
       innerPanel.style.display = "inline-block";
       innerPanel.style.padding = "6px 14px";
@@ -371,27 +371,26 @@ function renderMessagesFromArray(messages) {
         }, 3000);
       }
 
-      // mark timestamp (for local cleanup if needed)
-      wrapper.dataset.timestamp = Date.now();
-
+      // append banner to chat
       refs.messagesEl.appendChild(wrapper);
 
-      // Fade out + delete from Firestore after 1 minute
+      // --- Fade out & delete permanently from Firestore after 1 minute ---
       setTimeout(async () => {
         wrapper.style.transition = "opacity 0.5s";
         wrapper.style.opacity = "0";
+
         setTimeout(() => wrapper.remove(), 500);
 
         try {
           await firebase.firestore()
             .collection('messages')
             .doc(item.id)
-            .delete();
-          console.log("Banner deleted permanently:", item.id);
+            .delete(); // permanently deletes the document
+          console.log("Banner permanently deleted:", item.id);
         } catch (err) {
           console.error("Failed to delete banner from Firestore:", err);
         }
-      }, 60000);
+      }, 60000); // 60 seconds
 
     } else {
       // --- Normal message ---
@@ -416,7 +415,7 @@ function renderMessagesFromArray(messages) {
     }
   });
 
-  // Auto-scroll
+  // --- Auto-scroll to bottom ---
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
