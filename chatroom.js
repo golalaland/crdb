@@ -2393,45 +2393,28 @@ if (saveMediaBtn) {
     });
 
     giftBtn.onclick = async () => {
-      const amt = parseInt(slider.value);
-      if (!amt || amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
-      if ((currentUser?.stars || 0) < amt) return showStarPopup("Not enough stars 💫");
+  const amt = parseInt(slider.value);
+  if (!amt || amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
+  if ((currentUser?.stars || 0) < amt) return showStarPopup("Not enough stars 💫");
 
-      const fromRef = doc(db, "users", currentUser.uid);
-      const toRef = doc(db, "users", user._docId);
-      const glowColor = randomColor();
+  const fromRef = doc(db, "users", currentUser.uid);
+  const toRef = doc(db, "users", user._docId);
+  const glowColor = randomColor();
 
-      const messageData = {
-        content: `${currentUser.chatId} gifted ${user.chatId} ${amt} ⭐️`,
-        uid: currentUser.uid,
-        chatId: user._docId,
-        timestamp: serverTimestamp(),
-        highlight: true,
-        buzzColor: glowColor
-      };
+  // ✅ Only the alert text, no username/email prepended
+  const alertText = `💫 ${currentUser.chatId} gifted ${amt} ⭐️ to ${user.chatId}!`;
 
-      const docRef = await addDoc(collection(db, CHAT_COLLECTION), messageData);
+  // Update Firestore balances
+  await Promise.all([
+    updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
+    updateDoc(toRef, { stars: increment(amt) })
+  ]);
 
-      await Promise.all([
-        updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
-        updateDoc(toRef, { stars: increment(amt) })
-      ]);
+  // Show the BallerAlert directly
+  showStarPopup(alertText); // fills chat space, glowing effect, no username prepended
 
-      showStarPopup(`You sent ${amt} ⭐️ to ${user.chatId}!`);
-      renderMessagesFromArray([{ id: docRef.id, data: messageData }]);
-      const msgEl = document.getElementById(docRef.id);
-      if (msgEl) {
-        const contentEl = msgEl.querySelector(".content") || msgEl;
-        contentEl.style.setProperty("--pulse-color", glowColor);
-        contentEl.classList.add("baller-highlight");
-        setTimeout(() => {
-          contentEl.classList.remove("baller-highlight");
-          contentEl.style.boxShadow = "none";
-        }, 21000);
-      }
-
-      card.remove(); // Close popup after gifting
-    };
+  card.remove(); // close popup
+};
 
     btnWrap.appendChild(giftBtn);
 
