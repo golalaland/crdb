@@ -474,6 +474,26 @@ if (msg.highlight && msg.content?.includes("gifted")) {
     });
   });
 }
+
+// --- 🔥 Global Banner Feed ---
+const bannerQuery = query(
+  collection(db, "bannerMsgs"),
+  orderBy("timestamp", "desc")
+);
+
+onSnapshot(bannerQuery, (snapshot) => {
+  const banners = [];
+  snapshot.docChanges().forEach(change => {
+    if (change.type === "added") {
+      const data = change.doc.data();
+      banners.push({ id: change.doc.id, data });
+    }
+  });
+
+  if (banners.length > 0) {
+    renderMessagesFromArray(banners, true);
+  }
+});
   
 
 /* ---------- 🆔 ChatID Modal ---------- */
