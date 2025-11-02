@@ -319,7 +319,7 @@ function setupUsersListener() {
 }
 setupUsersListener();
 
-/* ---------- Render Messages (enhanced for banners) ---------- */
+/* ---------- Render Messages (full-width banners + colors) ---------- */
 let scrollPending = false;
 
 function renderMessagesFromArray(messages) {
@@ -333,19 +333,21 @@ function renderMessagesFromArray(messages) {
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    if (m.isBanner) {
-      // Full-width gift/star banner
+    // --- Check if this is a system/banner message ---
+    if (m.systemBanner) {
+      // Full-width banner style
       wrapper.style.display = "block";
       wrapper.style.width = "100%";
       wrapper.style.textAlign = "center";
       wrapper.style.padding = "8px 0";
       wrapper.style.margin = "4px 0";
       wrapper.style.borderRadius = "6px";
-      wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
-      wrapper.style.color = "#000";
       wrapper.style.fontWeight = "700";
+      wrapper.style.color = "#000";
+      wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
+      wrapper.classList.add("buzz-content"); // glow effect
     } else {
-      // Normal message: append username
+      // Normal message with username
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -354,16 +356,22 @@ function renderMessagesFromArray(messages) {
       wrapper.appendChild(usernameEl);
     }
 
-    // Content span (for both)
+    // --- Content span ---
     const contentEl = document.createElement("span");
     contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
-    contentEl.textContent = m.content || "";
-    wrapper.appendChild(contentEl);
+    contentEl.textContent = " " + (m.content || "");
 
+    if (m.buzzColor && !m.systemBanner) contentEl.style.background = m.buzzColor;
+    if (m.highlight && !m.systemBanner) {
+      contentEl.style.color = "#000";
+      contentEl.style.fontWeight = "700";
+    }
+
+    wrapper.appendChild(contentEl);
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // Auto-scroll
+  // --- Auto-scroll logic ---
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
