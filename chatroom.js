@@ -2203,7 +2203,7 @@ if (user.isHost) {
   btnWrap.appendChild(meetBtn);
 }
 
-// --- Glass Slider Panel (Fiery Compact, Working Colors) ---
+// --- Glass Slider Panel (Fiery Compact, Centered Thumb) ---
 const sliderPanel = document.createElement('div');
 Object.assign(sliderPanel.style, {
   width: '100%',
@@ -2244,7 +2244,7 @@ slider.style.height = '4px';
 slider.style.borderRadius = '4px';
 slider.style.outline = 'none';
 slider.style.cursor = 'pointer';
-slider.style.appearance = 'none'; // very important
+slider.style.appearance = 'none'; // important
 slider.style.background = randomFieryGradient();
 slider.style.transition = 'background 0.25s ease';
 
@@ -2260,6 +2260,7 @@ style.textContent = `
     background: #fff;
     box-shadow: 0 0 8px rgba(255, 120, 0, 0.8);
     cursor: pointer;
+    margin-top: -5px; /* ✅ centers the thumb vertically */
   }
   input[type="range"]::-webkit-slider-runnable-track {
     height: 4px;
@@ -2290,6 +2291,7 @@ slider.addEventListener('input', () => {
       background: #fff;
       box-shadow: 0 0 8px rgba(255, 120, 0, 0.8);
       cursor: pointer;
+      margin-top: -5px; /* ✅ thumb stays centered */
     }
     input[type="range"]::-webkit-slider-runnable-track {
       height: 4px;
@@ -2300,6 +2302,7 @@ slider.addEventListener('input', () => {
 });
 
 btnWrap.appendChild(sliderPanel);
+
 // --- Gift button ---
 const giftBtnLocal = document.createElement('button');
 giftBtnLocal.textContent = 'Gift ⭐️';
