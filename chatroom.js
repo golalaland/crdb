@@ -201,7 +201,8 @@ async function showGiftModal(targetUid, targetData) {
 
   if (!modal || !titleEl || !amountInput || !confirmBtn) return;
 
-  titleEl.textContent = `Gift ⭐️`; 
+  // Show modal title
+  titleEl.textContent = `Gift ⭐️`;
   amountInput.value = "";
   modal.style.display = "flex";
 
@@ -209,7 +210,7 @@ async function showGiftModal(targetUid, targetData) {
   closeBtn.onclick = close;
   modal.onclick = (e) => { if (e.target === modal) close(); };
 
-  // Prevent duplicate click events
+  // Prevent duplicate confirm handlers
   const newConfirmBtn = confirmBtn.cloneNode(true);
   confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
 
@@ -222,41 +223,42 @@ async function showGiftModal(targetUid, targetData) {
     const toRef = doc(db, "users", targetUid);
     const glowColor = randomColor();
 
-    // --- Create "system banner" message for chat ---
-    const alertText = `💫 ${currentUser.chatId} gifted ${amt} ⭐️ to ${targetData.chatId}!`;
-    const bannerMessage = {
-      content: alertText,      // only the alert text, no username prepended
-      uid: "system",           // special system uid
-      chatId: "banner",        // dummy chatId to avoid normal formatting
+    // Message data for chat, full-width banner style
+    const messageData = {
+      content: `💫 ${currentUser.chatId} gifted ${amt} ⭐️ to ${targetData.chatId}!`,
+      uid: currentUser.uid,       // sender uid
       timestamp: serverTimestamp(),
       highlight: true,
-      buzzColor: glowColor
+      buzzColor: glowColor,
+      systemBanner: true          // <-- important: renders full-width, no username
     };
 
-    // Add to Firestore so everyone sees it in real-time
-    const docRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMessage);
+    const docRef = await addDoc(collection(db, CHAT_COLLECTION), messageData);
 
-    // Deduct/add stars
+    // Update stars balances
     await Promise.all([
       updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
       updateDoc(toRef, { stars: increment(amt) })
     ]);
 
+    showStarPopup(`You sent ${amt} ⭐️ to ${targetData.chatId}!`);
     close();
-    renderMessagesFromArray([{ id: docRef.id, data: bannerMessage }]);
 
-    // Apply glowing banner effect
+    // Render the banner in chat
+    renderMessagesFromArray([{ id: docRef.id, data: messageData }]);
+
+    // Apply glowing effect
     const msgEl = document.getElementById(docRef.id);
-    if (!msgEl) return;
-    const contentEl = msgEl.querySelector(".content") || msgEl;
+    if (msgEl) {
+      const contentEl = msgEl.querySelector(".content") || msgEl;
+      contentEl.style.setProperty("--pulse-color", glowColor);
+      contentEl.classList.add("baller-highlight");
 
-    contentEl.style.setProperty("--pulse-color", glowColor);
-    contentEl.classList.add("baller-highlight");
-
-    setTimeout(() => {
-      contentEl.classList.remove("baller-highlight");
-      contentEl.style.boxShadow = "none";
-    }, 21000);
+      setTimeout(() => {
+        contentEl.classList.remove("baller-highlight");
+        contentEl.style.boxShadow = "none";
+      }, 21000);
+    }
   });
 }
 
@@ -314,6 +316,9 @@ function setupUsersListener() {
 setupUsersListener();
 
 /* ---------- Render Messages ---------- */
+/* ---------- Render Messages (enhanced for banners) ---------- */
+let scrollPending = false;
+
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
 
@@ -325,8 +330,9 @@ function renderMessagesFromArray(messages) {
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    // Check for system banner (full-width, no username)
+    // === Gift / system banner logic ===
     if (!m.systemBanner) {
+      // normal message with username
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -349,7 +355,7 @@ function renderMessagesFromArray(messages) {
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // auto-scroll logic
+  // auto-scroll
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
