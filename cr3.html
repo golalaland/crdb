@@ -216,74 +216,50 @@ html, body {
   display: flex;
   flex-direction: column;
   justify-content: flex-end; /* stack from bottom */
-  gap: 8px;
+  gap: 4px; /* tighter spacing like Twitch */
   background: #000;
   margin-bottom: 70px;
   box-sizing: border-box;
   scroll-behavior: smooth;
 }
 
-/* ================= Chat Message Bubble ================= */
+/* ================= Twitch-style Messages ================= */
 .msg {
-  display: inline-block;
-  max-width: 75%; /* bubble width limit */
-  padding: 10px 14px;
-  border-radius: 18px;
-  word-wrap: break-word;
-  white-space: pre-wrap;
-  word-break: break-word;
+  display: flex;
+  width: 100%; /* stretch full container width */
   font-size: 14px;
   line-height: 1.4;
-  position: relative;
-  background: rgba(255, 255, 255, 0.05); /* received message bubble */
-  color: #fff;
-  align-self: flex-start; /* default: left-aligned */
-  transition: background 0.2s ease;
+  word-break: break-word;
+  white-space: pre-wrap;
+  align-items: flex-start;
+  padding: 0 4px; /* small horizontal padding like Twitch */
+  transition: color 0.2s ease;
 }
 
-/* Sent messages */
-.msg.me {
-  align-self: flex-end;
-  background: rgba(255, 20, 147, 0.2); /* sent bubble color */
-  color: #fff;
-}
-
-/* ================= Chat Bubble Tails ================= */
-/* Tail for received messages */
-.msg::before {
-  content: '';
-  position: absolute;
-  width: 0;
-  height: 0;
-  border-top: 10px solid transparent;
-  border-bottom: 10px solid transparent;
-  border-right: 10px solid rgba(255, 255, 255, 0.05);
-  left: -8px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-/* Tail for sent messages */
-.msg.me::before {
-  border-right: none;
-  border-left: 10px solid rgba(255, 20, 147, 0.2);
-  left: auto;
-  right: -8px;
-}
-
-/* ================= Meta / Username ================= */
+/* Username / Meta */
 .msg .meta {
   font-weight: 700;
   font-size: 13px;
-  margin-bottom: 4px;
   color: var(--accent);
-  display: block;
+  margin-right: 6px;
+  flex-shrink: 0; /* username doesn't shrink */
 }
 
-/* ================= Message Content ================= */
+/* Message content */
 .msg .content {
-  display: block;
+  color: #fff;
+  word-wrap: break-word;
+  flex: 1; /* content stretches to remaining width */
 }
+
+/* Optional: highlight your messages (me) */
+.msg.me .meta {
+  color: #ff1493; /* bright pink like Twitch highlight */
+}
+.msg.me .content {
+  color: #fff;
+}
+
 /* 🔥 Keypad (chat input) - always at bottom */
 .send-area {
   position: fixed;       
