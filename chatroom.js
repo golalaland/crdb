@@ -165,14 +165,22 @@ let notificationsListenerAttached = false;
 function attachNotificationsListener() {
   const notificationsList = document.getElementById("notificationsList");
   const markAllBtn = document.getElementById("markAllRead");
+
   if (!notificationsList) return console.warn("⚠️ No notificationsList element found");
+
+  if (!currentUser?.uid) {
+    console.warn("⚠️ No currentUser.uid found; cannot attach notifications");
+    return;
+  }
 
   const notifRef = collection(db, "users", currentUser.uid, "notifications");
   const q = query(notifRef, orderBy("timestamp", "desc"));
 
-  // Live snapshot listener
+  console.log("🔔 Attaching notifications listener for user:", currentUser.uid);
+
   onSnapshot(q, (snapshot) => {
-    console.log("📡 Notifications snapshot:", snapshot.docs.map(d => d.data()));
+    console.log("📡 Notifications snapshot size:", snapshot.size);
+    console.log("📄 Raw snapshot data:", snapshot.docs.map(d => d.data()));
 
     if (snapshot.empty) {
       notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
@@ -184,6 +192,7 @@ function attachNotificationsListener() {
       const time = n.timestamp?.seconds
         ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
         : "--:--";
+
       return `
         <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
           <span>${n.message || "(no message)"}</span>
@@ -193,11 +202,13 @@ function attachNotificationsListener() {
     });
 
     notificationsList.innerHTML = items.join("");
+  }, (error) => {
+    console.error("❌ Notifications listener error:", error);
   });
 
-  // Mark all as read
   if (markAllBtn) {
     markAllBtn.onclick = async () => {
+      console.log("🟡 Mark all notifications as read clicked");
       const snapshot = await getDocs(notifRef);
       for (const docSnap of snapshot.docs) {
         const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
@@ -213,11 +224,10 @@ function attachNotificationsListener() {
 /* ===== Tab Switching (Lazy attach for notifications) ===== */
 document.querySelectorAll(".tab-btn").forEach((btn) => {
   btn.onclick = () => {
-    // Switch tabs visually
     document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
     document.querySelectorAll(".tab-content").forEach((tab) => (tab.style.display = "none"));
-    btn.classList.add("active");
 
+    btn.classList.add("active");
     const tabContent = document.getElementById(btn.dataset.tab);
     if (tabContent) tabContent.style.display = "block";
 
