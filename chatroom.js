@@ -320,52 +320,8 @@ function setupUsersListener() {
 setupUsersListener();
 
 /* ---------- Render Messages (full-width banners + inner glass panel + confetti) ---------- */
+/* ---------- Render Messages (confetti banners, refined size) ---------- */
 let scrollPending = false;
-
-function createConfetti(wrapper) {
-  const confettiContainer = document.createElement("div");
-  confettiContainer.className = "confetti-container";
-  confettiContainer.style.position = "absolute";
-  confettiContainer.style.top = 0;
-  confettiContainer.style.left = 0;
-  confettiContainer.style.width = "100%";
-  confettiContainer.style.height = "100%";
-  confettiContainer.style.pointerEvents = "none";
-  confettiContainer.style.overflow = "hidden";
-  wrapper.appendChild(confettiContainer);
-
-  const colors = ["#ffcc00", "#ff33cc", "#33ffcc", "#ff3366", "#00ccff", "#ffffff"];
-  const total = 50;
-
-  for (let i = 0; i < total; i++) {
-    const confetti = document.createElement("div");
-    confetti.style.position = "absolute";
-    confetti.style.width = Math.random() * 8 + 4 + "px";
-    confetti.style.height = confetti.style.width;
-    confetti.style.borderRadius = Math.random() > 0.5 ? "50%" : "2px";
-    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-    confetti.style.top = "0px";
-    confetti.style.left = Math.random() * 100 + "%";
-    confetti.style.opacity = Math.random();
-    confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
-    confettiContainer.appendChild(confetti);
-
-    const fallDistance = 100 + Math.random() * 200;
-    const duration = 4000 + Math.random() * 2000;
-    const delay = Math.random() * 200;
-    const drift = Math.random() * 80 - 40;
-
-    confetti.animate(
-      [
-        { transform: `translate(0,0) rotate(0deg)`, opacity: 1 },
-        { transform: `translate(${drift}px, ${fallDistance}px) rotate(360deg)`, opacity: 0 }
-      ],
-      { duration, delay, easing: "ease-out", fill: "forwards" }
-    );
-  }
-
-  setTimeout(() => confettiContainer.remove(), 6000);
-}
 
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
@@ -377,67 +333,104 @@ function renderMessagesFromArray(messages) {
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
     wrapper.id = item.id;
-    wrapper.style.position = "relative";
 
-    // --- System/banner message ---
+    // --- 🎁 Full-width banner style ---
     if (m.systemBanner) {
       wrapper.style.display = "block";
       wrapper.style.width = "100%";
       wrapper.style.textAlign = "center";
-      wrapper.style.padding = "14px 0";
-      wrapper.style.margin = "8px 0";
-      wrapper.style.borderRadius = "6px";
-      wrapper.style.fontWeight = "700";
-      wrapper.style.color = "#000";
+      wrapper.style.padding = "4px 0"; // tighter height
+      wrapper.style.margin = "3px 0";
+      wrapper.style.borderRadius = "8px";
+      wrapper.style.position = "relative";
+      wrapper.style.overflow = "hidden";
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
-      wrapper.classList.add("buzz-content");
+      wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
+      wrapper.style.animation = "pulseGlow 2s infinite";
 
-      // Confetti behind the message
-      createConfetti(wrapper);
-
-      // --- Inner translucent text panel ---
+      // inner panel for text
       const innerPanel = document.createElement("div");
       innerPanel.style.display = "inline-block";
       innerPanel.style.padding = "6px 14px";
-      innerPanel.style.borderRadius = "8px";
-      innerPanel.style.background = "rgba(255, 255, 255, 0.3)";
+      innerPanel.style.borderRadius = "6px";
+      innerPanel.style.background = "rgba(255,255,255,0.35)";
       innerPanel.style.backdropFilter = "blur(6px)";
-      innerPanel.style.boxShadow = "0 0 12px rgba(255,255,255,0.3)";
-      innerPanel.style.margin = "auto";
       innerPanel.style.color = "#000";
       innerPanel.style.fontWeight = "700";
       innerPanel.textContent = m.content || "";
+
       wrapper.appendChild(innerPanel);
-    } else {
-      // Normal chat message
+
+      // 🎉 Confetti spray
+      const confettiContainer = document.createElement("div");
+      confettiContainer.style.position = "absolute";
+      confettiContainer.style.inset = "0";
+      confettiContainer.style.pointerEvents = "none";
+      wrapper.appendChild(confettiContainer);
+
+      for (let i = 0; i < 30; i++) {
+        const piece = document.createElement("div");
+        piece.style.position = "absolute";
+        piece.style.width = "6px";
+        piece.style.height = "6px";
+        piece.style.borderRadius = "50%";
+        piece.style.background = randomColor();
+        piece.style.left = Math.random() * 100 + "%";
+        piece.style.top = Math.random() * 100 + "%";
+        piece.style.opacity = 0.8;
+        piece.style.animation = `floatConfetti ${3 + Math.random() * 3}s ease-in-out`;
+        confettiContainer.appendChild(piece);
+      }
+
+      setTimeout(() => confettiContainer.remove(), 6000);
+    } 
+    else {
+      // --- Normal messages ---
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
-      usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
+      usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">
+        ${m.chatId || "Guest"}
+      </span>:`;
       usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
       usernameEl.style.marginRight = "4px";
-      wrapper.appendChild(usernameEl);
 
       const contentEl = document.createElement("span");
       contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
       contentEl.textContent = " " + (m.content || "");
+
       if (m.buzzColor) contentEl.style.background = m.buzzColor;
-      wrapper.appendChild(contentEl);
+      if (m.highlight) {
+        contentEl.style.color = "#000";
+        contentEl.style.fontWeight = "700";
+      }
+
+      wrapper.append(usernameEl, contentEl);
     }
 
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // --- Smooth auto-scroll on new messages ---
-  const nearBottom =
-    refs.messagesEl.scrollHeight - refs.messagesEl.scrollTop - refs.messagesEl.clientHeight < 100;
-
-  if (messages.some(msg => msg.data.systemBanner || msg.data.uid === currentUser?.uid) || nearBottom) {
-    refs.messagesEl.scrollTo({
-      top: refs.messagesEl.scrollHeight,
-      behavior: "smooth"
-    });
-  }
+  // --- Smooth scroll to bottom after new messages ---
+  refs.messagesEl.scrollTo({
+    top: refs.messagesEl.scrollHeight,
+    behavior: "smooth",
+  });
 }
+
+/* ---------- Animations ---------- */
+const style = document.createElement("style");
+style.textContent = `
+@keyframes floatConfetti {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 12px rgba(255,255,255,0.2); }
+  50% { box-shadow: 0 0 24px rgba(255,255,255,0.6); }
+}`;
+document.head.appendChild(style);
+
+
 /* ---------- 🔔 Messages Listener ---------- */
 function attachMessagesListener() {
   const q = query(collection(db, CHAT_COLLECTION), orderBy("timestamp", "asc"));
