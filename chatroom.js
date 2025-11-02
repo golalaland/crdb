@@ -201,7 +201,6 @@ async function showGiftModal(targetUid, targetData) {
 
   if (!modal || !titleEl || !amountInput || !confirmBtn) return;
 
-  // Show modal
   titleEl.textContent = `Gift ⭐️`;
   amountInput.value = "";
   modal.style.display = "flex";
@@ -210,7 +209,6 @@ async function showGiftModal(targetUid, targetData) {
   closeBtn.onclick = close;
   modal.onclick = (e) => { if (e.target === modal) close(); };
 
-  // Prevent duplicate handlers
   const newConfirmBtn = confirmBtn.cloneNode(true);
   confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
 
@@ -221,50 +219,75 @@ async function showGiftModal(targetUid, targetData) {
 
     const fromRef = doc(db, "users", currentUser.uid);
     const toRef = doc(db, "users", targetUid);
+    const glowColor = randomColor();
 
-    // Generate a random gradient for glow
-    const glowColor = `linear-gradient(90deg, #${Math.floor(Math.random()*16777215).toString(16)}, #${Math.floor(Math.random()*16777215).toString(16)})`;
-
-    // Chat banner message
     const messageData = {
       content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetData.chatId}!`,
       uid: currentUser.uid,
       timestamp: serverTimestamp(),
       highlight: true,
       buzzColor: glowColor,
-      systemBanner: true // renders full-width without username
+      systemBanner: true // full-width banner
     };
 
-    // Save to chat collection
     const docRef = await addDoc(collection(db, CHAT_COLLECTION), messageData);
 
-    // Update stars balances
     await Promise.all([
       updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
       updateDoc(toRef, { stars: increment(amt) })
     ]);
 
-    // Show local popup feedback
-    showStarPopup(`You sent ${amt} ⭐️ to ${targetData.chatId}!`);
+    showStarPopup(`You sent ${amt} stars ⭐️ to ${targetData.chatId}!`);
     close();
 
-    // Render banner in chat
+    // Render banner
     renderMessagesFromArray([{ id: docRef.id, data: messageData }]);
 
-    // Apply glow animation
+    // --- One-time confetti + glow ---
     const msgEl = document.getElementById(docRef.id);
     if (msgEl) {
-      const contentEl = msgEl.querySelector(".content") || msgEl;
-      contentEl.style.setProperty("--pulse-color", glowColor);
-      contentEl.classList.add("baller-highlight");
+      // Glow
+      msgEl.style.animation = "pulseGlow 2s";
+      setTimeout(() => msgEl.style.animation = "", 6000);
 
-      setTimeout(() => {
-        contentEl.classList.remove("baller-highlight");
-        contentEl.style.boxShadow = "none";
-      }, 21000);
+      // Confetti
+      const confettiContainer = document.createElement("div");
+      confettiContainer.style.position = "absolute";
+      confettiContainer.style.inset = "0";
+      confettiContainer.style.pointerEvents = "none";
+      msgEl.appendChild(confettiContainer);
+
+      for (let i = 0; i < 30; i++) {
+        const piece = document.createElement("div");
+        piece.style.position = "absolute";
+        piece.style.width = "6px";
+        piece.style.height = "6px";
+        piece.style.borderRadius = "50%";
+        piece.style.background = randomColor();
+        piece.style.left = Math.random() * 100 + "%";
+        piece.style.top = Math.random() * 100 + "%";
+        piece.style.opacity = 0.8;
+        piece.style.animation = `floatConfetti ${3 + Math.random() * 3}s ease-in-out`;
+        confettiContainer.appendChild(piece);
+      }
+
+      setTimeout(() => confettiContainer.remove(), 6000);
     }
   });
 }
+
+/* ---------- Animations ---------- */
+const style = document.createElement("style");
+style.textContent = `
+@keyframes floatConfetti {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 12px rgba(255,255,255,0.2); }
+  50% { box-shadow: 0 0 24px rgba(255,255,255,0.6); }
+}`;
+document.head.appendChild(style);
 
 /* ---------- Gift Alert (Optional Popup) ---------- */
 function showGiftAlert(text) {
@@ -319,14 +342,14 @@ function setupUsersListener() {
 }
 setupUsersListener();
 
-//* ---------- Render Messages (full-width banners + confetti + auto glow stop) ---------- */
+/* ---------- Render Messages (full-width banners + inner panel) ---------- */
 let scrollPending = false;
 
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
 
   messages.forEach(item => {
-    if (document.getElementById(item.id)) return;
+    if (document.getElementById(item.id)) return; // already rendered
 
     const m = item.data;
     const wrapper = document.createElement("div");
@@ -338,14 +361,13 @@ function renderMessagesFromArray(messages) {
       wrapper.style.display = "block";
       wrapper.style.width = "100%";
       wrapper.style.textAlign = "center";
-      wrapper.style.padding = "4px 0"; // tighter height
+      wrapper.style.padding = "4px 0";
       wrapper.style.margin = "3px 0";
       wrapper.style.borderRadius = "8px";
       wrapper.style.position = "relative";
       wrapper.style.overflow = "hidden";
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
-      wrapper.style.animation = "pulseGlow 2s"; // glow stops automatically
 
       // inner panel for text
       const innerPanel = document.createElement("div");
@@ -358,77 +380,33 @@ function renderMessagesFromArray(messages) {
       innerPanel.style.fontWeight = "700";
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
-
-      // 🎉 Confetti spray inside wrapper
-      const confettiContainer = document.createElement("div");
-      confettiContainer.style.position = "absolute";
-      confettiContainer.style.inset = "0";
-      confettiContainer.style.pointerEvents = "none";
-      wrapper.appendChild(confettiContainer);
-
-      for (let i = 0; i < 30; i++) {
-        const piece = document.createElement("div");
-        piece.style.position = "absolute";
-        piece.style.width = "6px";
-        piece.style.height = "6px";
-        piece.style.borderRadius = "50%";
-        piece.style.background = randomColor();
-        piece.style.left = Math.random() * 100 + "%";
-        piece.style.top = Math.random() * 100 + "%";
-        piece.style.opacity = 0.8;
-        piece.style.animation = `floatConfetti ${3 + Math.random() * 3}s ease-in-out`;
-        confettiContainer.appendChild(piece);
-      }
-
-      // Remove confetti after 6 seconds
-      setTimeout(() => confettiContainer.remove(), 6000);
-    } 
-    else {
-      // Normal message with username
+    } else {
+      // Normal message
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
       usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
-
-      // Content span
-      const contentEl = document.createElement("span");
-      contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
-      contentEl.textContent = " " + (m.content || "");
-      if (m.buzzColor) contentEl.style.background = m.buzzColor;
-      if (m.highlight) {
-        contentEl.style.color = "#000";
-        contentEl.style.fontWeight = "700";
-      }
-      wrapper.appendChild(contentEl);
     }
+
+    // --- Content span ---
+    const contentEl = document.createElement("span");
+    contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
+    contentEl.textContent = " " + (m.content || "");
+    if (m.buzzColor && !m.systemBanner) contentEl.style.background = m.buzzColor;
+    if (m.highlight && !m.systemBanner) {
+      contentEl.style.color = "#000";
+      contentEl.style.fontWeight = "700";
+    }
+    wrapper.appendChild(contentEl);
 
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // --- Auto-scroll logic ---
-  if (!scrollPending) {
-    scrollPending = true;
-    requestAnimationFrame(() => {
-      refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight; // scroll immediately to bottom
-      scrollPending = false;
-    });
-  }
+  // --- Auto-scroll ---
+  refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
 }
-
-/* ---------- Animations ---------- */
-const style = document.createElement("style");
-style.textContent = `
-@keyframes floatConfetti {
-  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
-}
-@keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 12px rgba(255,255,255,0.2); }
-  50% { box-shadow: 0 0 24px rgba(255,255,255,0.6); }
-}`;
-document.head.appendChild(style);
 
 
 /* ---------- 🔔 Messages Listener ---------- */
