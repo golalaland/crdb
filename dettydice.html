@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Solid Dice</title>
+<title>Realistic Ground Dice Roll</title>
 <style>
   body {
     display: flex;
@@ -11,22 +11,38 @@
     align-items: center;
     justify-content: center;
     height: 100vh;
-    background: #222;
+    background: radial-gradient(circle at center, #333 0%, #111 100%);
     color: white;
     font-family: sans-serif;
+    overflow: hidden;
   }
 
   .dice-container {
-    perspective: 800px;
-    margin-bottom: 80px; /* moved dice away from button */
+    perspective: 1000px;
+    position: relative;
+    height: 200px;
   }
 
   .dice {
     width: 100px;
     height: 100px;
-    position: relative;
+    position: absolute;
+    bottom: 0;
     transform-style: preserve-3d;
+    transform-origin: center bottom;
     transition: transform 1s ease-out;
+  }
+
+  /* Ground shadow effect */
+  .shadow {
+    position: absolute;
+    bottom: 10px;
+    width: 120px;
+    height: 30px;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, transparent 80%);
+    border-radius: 50%;
+    filter: blur(3px);
+    transition: all 0.4s ease;
   }
 
   .face {
@@ -43,14 +59,14 @@
   }
 
   .pip {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     background: black;
     border-radius: 50%;
     margin: 5px;
   }
 
-  /* Positioning faces in 3D */
+  /* 3D cube face positions */
   .front  { transform: rotateY(0deg) translateZ(50px); }
   .back   { transform: rotateY(180deg) translateZ(50px); }
   .right  { transform: rotateY(90deg) translateZ(50px); }
@@ -82,9 +98,10 @@
   .face-6 .pip:nth-child(6) { order: 9; }
 
   button {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%; /* circular button */
+    margin-top: 50px;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
     border: none;
     background: #ff6f61;
     color: white;
@@ -103,20 +120,12 @@
     width: 200px;
     text-align: center;
   }
-
-  #scores h3 {
-    margin-bottom: 10px;
-  }
-
-  #scores ul {
-    list-style: none;
-    padding: 0;
-  }
 </style>
 </head>
 <body>
 
 <div class="dice-container">
+  <div class="shadow" id="shadow"></div>
   <div class="dice" id="dice">
     <div class="face front face-1"><div class="pip"></div></div>
     <div class="face back face-6"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
@@ -127,7 +136,7 @@
   </div>
 </div>
 
-<button id="rollBtn">Roll Dice</button>
+<button id="rollBtn">ROLL</button>
 
 <div id="scores">
   <h3>Score Sheet</h3>
@@ -136,32 +145,50 @@
 
 <script>
 const dice = document.getElementById('dice');
+const shadow = document.getElementById('shadow');
 const rollBtn = document.getElementById('rollBtn');
 const scoreList = document.getElementById('scoreList');
 
-// Face rotations [rotateX, rotateY] for faces 1-6
 const rotations = [
   [0,0], [90,0], [0,-90], [0,90], [-90,0], [180,0]
 ];
 
 rollBtn.addEventListener('click', () => {
-  rollBtn.disabled = true; // prevent click during roll
-
-  // pick random final face
+  rollBtn.disabled = true;
   const random = Math.floor(Math.random() * 6);
   const [xRot, yRot] = rotations[random];
-  const xSpin = xRot + 1440 * Math.random(); // 4 spins
-  const ySpin = yRot + 1440 * Math.random();
+  const spinX = xRot + (720 + Math.random() * 1440);
+  const spinY = yRot + (720 + Math.random() * 1440);
+  const bounce = 60; // how high it lifts off ground
 
-  // animate for 8 seconds
-  dice.style.transition = 'transform 8s cubic-bezier(0.28, 1.5, 0.5, 1)';
-  dice.style.transform = `rotateX(${xSpin}deg) rotateY(${ySpin}deg)`;
+  dice.style.transition = 'transform 3.5s cubic-bezier(0.19, 1, 0.22, 1)';
+  shadow.style.transition = 'all 0.3s ease-in-out';
 
-  // after 8 seconds, record score
+  // Animate bounce illusion
+  dice.animate([
+    { transform: `translateY(0px) rotateX(0) rotateY(0)` },
+    { transform: `translateY(-${bounce}px) rotateX(${spinX/2}deg) rotateY(${spinY/2}deg)` },
+    { transform: `translateY(0px) rotateX(${spinX}deg) rotateY(${spinY}deg)` }
+  ], {
+    duration: 3500,
+    easing: 'cubic-bezier(0.19, 1, 0.22, 1)',
+    fill: 'forwards'
+  });
+
+  // Shadow compression
+  shadow.animate([
+    { transform: 'scale(1)', opacity: 0.4 },
+    { transform: 'scale(0.6)', opacity: 0.2 },
+    { transform: 'scale(1)', opacity: 0.4 }
+  ], {
+    duration: 3500,
+    easing: 'ease-in-out'
+  });
+
   setTimeout(() => {
     scoreList.innerHTML += `<li>Roll: ${random + 1}</li>`;
     rollBtn.disabled = false;
-  }, 8000);
+  }, 3500);
 });
 </script>
 
