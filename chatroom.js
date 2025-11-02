@@ -300,6 +300,7 @@ function setupUsersListener() {
 setupUsersListener();
 
 /* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
+/* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
 let scrollPending = false;
 
 function renderMessagesFromArray(messages) {
@@ -314,89 +315,88 @@ function renderMessagesFromArray(messages) {
     wrapper.id = item.id;
 
     if (m.systemBanner) {
-  wrapper.style.display = "block";
-  wrapper.style.width = "88%";
-  wrapper.style.textAlign = "center";
-  wrapper.style.padding = "4px 0";
-  wrapper.style.margin = "3px 0";
-  wrapper.style.borderRadius = "8px";
-  wrapper.style.position = "relative";
-  wrapper.style.overflow = "hidden";
-  wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
-  wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
+      // --- 🎁 Full-width banner style ---
+      wrapper.style.display = "block";
+      wrapper.style.width = "88%";
+      wrapper.style.textAlign = "center";
+      wrapper.style.padding = "4px 0";
+      wrapper.style.margin = "3px 0";
+      wrapper.style.borderRadius = "8px";
+      wrapper.style.position = "relative";
+      wrapper.style.overflow = "hidden";
+      wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
+      wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-  const innerPanel = document.createElement("div");
-  innerPanel.style.display = "inline-block";
-  innerPanel.style.padding = "6px 14px";
-  innerPanel.style.borderRadius = "6px";
-  innerPanel.style.background = "rgba(255,255,255,0.35)";
-  innerPanel.style.backdropFilter = "blur(6px)";
-  innerPanel.style.color = "#000";
-  innerPanel.style.fontWeight = "700";
-  innerPanel.textContent = m.content || "";
-  wrapper.appendChild(innerPanel);
+      // --- Inner panel for text ---
+      const innerPanel = document.createElement("div");
+      innerPanel.style.display = "inline-block";
+      innerPanel.style.padding = "6px 14px";
+      innerPanel.style.borderRadius = "6px";
+      innerPanel.style.background = "rgba(255,255,255,0.35)";
+      innerPanel.style.backdropFilter = "blur(6px)";
+      innerPanel.style.color = "#000";
+      innerPanel.style.fontWeight = "700";
+      innerPanel.textContent = m.content || "";
+      wrapper.appendChild(innerPanel);
 
-  // Confetti + Glow (one-time only)
-  if (!m._confettiPlayed) {
-    m._confettiPlayed = true;
-    wrapper.style.animation = "pulseGlow 2s";
+      // --- Confetti + Glow (one-time) ---
+      if (!m._confettiPlayed) {
+        wrapper.style.animation = "pulseGlow 2s";
+        m._confettiPlayed = true;
 
-    const confettiContainer = document.createElement("div");
-    confettiContainer.style.position = "absolute";
-    confettiContainer.style.inset = "0";
-    confettiContainer.style.pointerEvents = "none";
-    wrapper.appendChild(confettiContainer);
+        const confettiContainer = document.createElement("div");
+        confettiContainer.style.position = "absolute";
+        confettiContainer.style.inset = "0";
+        confettiContainer.style.pointerEvents = "none";
+        wrapper.appendChild(confettiContainer);
 
-    for (let i = 0; i < 15; i++) { // reduced confetti count
-      const piece = document.createElement("div");
-      piece.style.position = "absolute";
-      piece.style.width = "6px";
-      piece.style.height = "6px";
-      piece.style.borderRadius = "50%";
-      piece.style.background = randomColor();
-      piece.style.left = Math.random() * 100 + "%";
-      piece.style.top = Math.random() * 100 + "%";
-      piece.style.opacity = 0.8;
-      piece.style.animation = `floatConfetti ${2 + Math.random() * 2}s ease-in-out`;
-      confettiContainer.appendChild(piece);
+        for (let i = 0; i < 15; i++) { // reduced confetti for performance
+          const piece = document.createElement("div");
+          piece.style.position = "absolute";
+          piece.style.width = "6px";
+          piece.style.height = "6px";
+          piece.style.borderRadius = "50%";
+          piece.style.background = randomColor();
+          piece.style.left = Math.random() * 100 + "%";
+          piece.style.top = Math.random() * 100 + "%";
+          piece.style.opacity = 0.8;
+          piece.style.animation = `floatConfetti ${2 + Math.random() * 2}s ease-in-out`;
+          confettiContainer.appendChild(piece);
+        }
+
+        // Remove confetti and stop glow after 3 seconds
+        setTimeout(() => {
+          confettiContainer.remove();
+          wrapper.style.animation = "";
+        }, 3000);
+      }
+
+      // --- Mark timestamp for cleanup ---
+      wrapper.dataset.timestamp = Date.now();
+
+    } else {
+      // --- Normal message with username ---
+      const usernameEl = document.createElement("span");
+      usernameEl.className = "meta";
+      usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
+      usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
+      usernameEl.style.marginRight = "4px";
+      wrapper.appendChild(usernameEl);
+
+      const contentEl = document.createElement("span");
+      contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
+      contentEl.textContent = " " + (m.content || "");
+      if (m.buzzColor) contentEl.style.background = m.buzzColor;
+      if (m.highlight) {
+        contentEl.style.color = "#000";
+        contentEl.style.fontWeight = "700";
+      }
+      wrapper.appendChild(contentEl);
     }
 
-    setTimeout(() => {
-      confettiContainer.remove();
-      wrapper.style.animation = "";
-    }, 3000); // shorter confetti duration
-  }
+    refs.messagesEl.appendChild(wrapper);
+  });
 
-  refs.messagesEl.appendChild(wrapper);
-
-  // Fade out and remove after 60 seconds
-  setTimeout(() => {
-    wrapper.style.transition = "opacity 0.5s";
-    wrapper.style.opacity = "0";
-    setTimeout(() => wrapper.remove(), 500);
-  }, 60000);
-
-} else {
-  // --- Normal message logic ---
-  const usernameEl = document.createElement("span");
-  usernameEl.className = "meta";
-  usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
-  usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
-  usernameEl.style.marginRight = "4px";
-  wrapper.appendChild(usernameEl);
-
-  const contentEl = document.createElement("span");
-  contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
-  contentEl.textContent = " " + (m.content || "");
-  if (m.buzzColor) contentEl.style.background = m.buzzColor;
-  if (m.highlight) {
-    contentEl.style.color = "#000";
-    contentEl.style.fontWeight = "700";
-  }
-  wrapper.appendChild(contentEl);
-
-  refs.messagesEl.appendChild(wrapper);
-}
   // --- Auto-scroll to bottom ---
   if (!scrollPending) {
     scrollPending = true;
@@ -405,6 +405,26 @@ function renderMessagesFromArray(messages) {
       scrollPending = false;
     });
   }
+}
+
+/* ---------- Periodic Cleanup for Old System Banners ---------- */
+function cleanupOldBanners() {
+  if (!refs.messagesEl) return;
+  const banners = refs.messagesEl.querySelectorAll('.msg');
+  const now = Date.now();
+
+  banners.forEach(banner => {
+    const timestamp = banner.dataset.timestamp;
+    if (timestamp && now - timestamp > 60000) { // older than 60s
+      banner.style.transition = "opacity 0.5s";
+      banner.style.opacity = "0";
+      setTimeout(() => banner.remove(), 500);
+    }
+  });
+}
+
+// Run cleanup every 10 seconds
+setInterval(cleanupOldBanners, 10000);
 
 /* ---------- Animations ---------- */
 const style = document.createElement("style");
@@ -418,7 +438,6 @@ style.textContent = `
   50% { box-shadow: 0 0 24px rgba(255,255,255,0.6); }
 }`;
 document.head.appendChild(style);
-
 
 /* ---------- 🔔 Messages Listener ---------- */
 function attachMessagesListener() {
