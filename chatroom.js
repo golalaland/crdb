@@ -2367,30 +2367,30 @@ if (saveMediaBtn) {
     btnWrap.appendChild(slider);
 
     // GiftStars button (unique class)
-    const giftBtn = document.createElement('button');
-    giftBtn.className = 'popup-gift-btn'; // unique class to avoid conflicts
-    giftBtn.textContent = 'Gift Stars ⭐️';
-    Object.assign(giftBtn.style, {
-      padding: '8px 16px',
-      borderRadius: '6px',
-      border: 'none',
-      fontWeight: '600',
-      background: 'linear-gradient(90deg,#ffcc00,#ff6600)',
-      color: '#000',
-      cursor: 'pointer'
-    });
+const giftBtn = document.createElement('button');
+giftBtn.className = 'popup-gift-btn'; // unique class to avoid conflicts
+giftBtn.textContent = 'Gift Stars ⭐️';
+Object.assign(giftBtn.style, {
+  padding: '8px 16px',
+  borderRadius: '6px',
+  border: 'none',
+  fontWeight: '600',
+  background: 'linear-gradient(90deg,#ffcc00,#ff6600)',
+  color: '#000',
+  cursor: 'pointer'
+});
 
-    giftBtn.onclick = () => {
-      const amount = parseInt(slider.value);
-      if ((currentUser?.stars || 0) < amount) return showStarPopup("Not enough stars 💫");
+// On click, call your showGiftModal with the slider value
+giftBtn.onclick = async () => {
+  const amount = parseInt(slider.value);
+  if (!amount || amount < 1) return showStarPopup("🔥 Minimum gift is 1 ⭐️");
+  if ((currentUser?.stars || 0) < amount) return showStarPopup("Not enough stars 💫");
 
-      showGiftModal(user._docId, user, amount); // Pass selected amount
-    };
+  // Call your existing showGiftModal and pass amount
+  await showGiftModal(user._docId, user, amount);
+};
 
-    btnWrap.appendChild(giftBtn);
-
-    card.appendChild(btnWrap);
-    document.body.appendChild(card);
+btnWrap.appendChild(giftBtn);
 
     // Animate in
     requestAnimationFrame(() => {
