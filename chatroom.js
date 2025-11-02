@@ -208,7 +208,6 @@ async function showGiftModal(targetUid, targetData) {
   closeBtn.onclick = close;
   modal.onclick = (e) => { if (e.target === modal) close(); };
 
-  // Remove previous click listeners safely
   const newConfirmBtn = confirmBtn.cloneNode(true);
   confirmBtn.replaceWith(newConfirmBtn);
 
@@ -217,7 +216,7 @@ async function showGiftModal(targetUid, targetData) {
     if (amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
     if ((currentUser?.stars || 0) < amt) return showStarPopup("Not enough stars 💫");
 
-    await sendStarsToUser(targetData, amt); // single source handles everything
+    await sendStarsToUser(targetData, amt);
     showStarPopup(`You sent ${amt} stars ⭐️ to ${targetData.chatId}!`);
     close();
   });
