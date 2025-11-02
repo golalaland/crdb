@@ -299,14 +299,14 @@ function setupUsersListener() {
 }
 setupUsersListener();
 
-/* ---------- Render Messages (full-width banners + confetti + inner panel + glow stop) ---------- */
+/* ---------- Render Messages (full-width banners + one-time confetti + glow) ---------- */
 let scrollPending = false;
 
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
 
   messages.forEach(item => {
-    if (document.getElementById(item.id)) return;
+    if (document.getElementById(item.id)) return; // already rendered
 
     const m = item.data;
     const wrapper = document.createElement("div");
@@ -318,14 +318,13 @@ function renderMessagesFromArray(messages) {
       wrapper.style.display = "block";
       wrapper.style.width = "100%";
       wrapper.style.textAlign = "center";
-      wrapper.style.padding = "4px 0"; 
+      wrapper.style.padding = "4px 0";
       wrapper.style.margin = "3px 0";
       wrapper.style.borderRadius = "8px";
       wrapper.style.position = "relative";
       wrapper.style.overflow = "hidden";
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
-      wrapper.style.animation = "pulseGlow 2s"; // one-time glow
 
       // --- inner panel for text ---
       const innerPanel = document.createElement("div");
@@ -339,29 +338,38 @@ function renderMessagesFromArray(messages) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
-      // --- Confetti inside wrapper ---
-      const confettiContainer = document.createElement("div");
-      confettiContainer.style.position = "absolute";
-      confettiContainer.style.inset = "0";
-      confettiContainer.style.pointerEvents = "none";
-      wrapper.appendChild(confettiContainer);
+      // --- Confetti + Glow (one-time) ---
+      if (!m._confettiPlayed) {
+        m._confettiPlayed = true; // mark as played
 
-      for (let i = 0; i < 30; i++) {
-        const piece = document.createElement("div");
-        piece.style.position = "absolute";
-        piece.style.width = "6px";
-        piece.style.height = "6px";
-        piece.style.borderRadius = "50%";
-        piece.style.background = randomColor();
-        piece.style.left = Math.random() * 100 + "%";
-        piece.style.top = Math.random() * 100 + "%";
-        piece.style.opacity = 0.8;
-        piece.style.animation = `floatConfetti ${3 + Math.random() * 3}s ease-in-out`;
-        confettiContainer.appendChild(piece);
+        // glow animation
+        wrapper.style.animation = "pulseGlow 2s";
+        setTimeout(() => wrapper.style.animation = "", 6000);
+
+        // confetti container
+        const confettiContainer = document.createElement("div");
+        confettiContainer.style.position = "absolute";
+        confettiContainer.style.inset = "0";
+        confettiContainer.style.pointerEvents = "none";
+        wrapper.appendChild(confettiContainer);
+
+        for (let i = 0; i < 30; i++) {
+          const piece = document.createElement("div");
+          piece.style.position = "absolute";
+          piece.style.width = "6px";
+          piece.style.height = "6px";
+          piece.style.borderRadius = "50%";
+          piece.style.background = randomColor();
+          piece.style.left = Math.random() * 100 + "%";
+          piece.style.top = Math.random() * 100 + "%";
+          piece.style.opacity = 0.8;
+          piece.style.animation = `floatConfetti ${3 + Math.random() * 3}s ease-in-out`;
+          confettiContainer.appendChild(piece);
+        }
+
+        setTimeout(() => confettiContainer.remove(), 6000);
       }
 
-      // Remove confetti after 6 seconds
-      setTimeout(() => confettiContainer.remove(), 6000);
     } else {
       // --- Normal message with username ---
       const usernameEl = document.createElement("span");
@@ -391,7 +399,7 @@ function renderMessagesFromArray(messages) {
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
-      refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight; // scroll immediately to bottom
+      refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight; // scroll immediately
       scrollPending = false;
     });
   }
