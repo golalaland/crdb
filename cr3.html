@@ -201,29 +201,39 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   text-align: center;
 }
 
+/* Each message block */
 .msg {
+  display: block;       /* remove any flex/column behavior */
   margin-bottom: 6px;
+  padding: 0;
+  background: none;     /* optional — remove bubbles if needed */
+  border-radius: 0;
   font-size: 14px;
   line-height: 1.4;
   text-align: left;
   word-wrap: break-word;
 }
 
+/* Username */
 .msg .meta {
   font-weight: 600;
   white-space: nowrap;
   display: inline;
+  color: var(--accent, #ff1493);
 }
 
+/* Add colon after username */
 .msg .meta::after {
   content: ": ";
 }
 
+/* Message body */
 .msg .content {
   display: inline;
   white-space: normal;
   word-break: break-word;
 }
+
 
   
 /* 🔥 Keypad (chat input) - always at bottom */
