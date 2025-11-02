@@ -2057,6 +2057,244 @@ if (!window.verifyHandlersInitialized) {
 
 document.addEventListener("DOMContentLoaded", () => {
 
+
+  /* ======================================================
+  Social Card + Gift Stars System — Firestore + Chat Banner
+  Paste AFTER Firebase/Firestore initialized
+====================================================== */
+(async function initSocialCardSystem() {
+  const allUsers = [];
+  const usersByChatId = {};
+
+  try {
+    const usersRef = collection(db, "users");
+    const snaps = await getDocs(usersRef);
+    snaps.forEach(docSnap => {
+      const data = docSnap.data();
+      const chatIdLower = (data.chatIdLower || (data.chatId || "")).toLowerCase();
+      data._docId = docSnap.id;
+      data.chatIdLower = chatIdLower;
+      allUsers.push(data);
+      usersByChatId[chatIdLower] = data;
+    });
+    console.log('Social card: loaded', allUsers.length, 'users');
+  } catch (err) {
+    console.error("Failed to fetch users for social card:", err);
+  }
+
+  function showSocialCard(user) {
+    if (!user) return;
+
+    // Remove existing
+    document.getElementById('socialCard')?.remove();
+
+    const card = document.createElement('div');
+    card.id = 'socialCard';
+    Object.assign(card.style, {
+      position: 'fixed',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      background: 'linear-gradient(135deg,#0f0f10,#19191b)',
+      borderRadius: '16px',
+      padding: '18px 20px',
+      color: '#fff',
+      width: '260px',
+      maxWidth: '90%',
+      zIndex: '999999',
+      textAlign: 'center',
+      boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
+      fontFamily: 'Poppins, sans-serif',
+      opacity: '0',
+      transition: 'opacity .18s ease, transform .18s ease'
+    });
+
+    // --- Header ---
+    const chatIdDisplay = user.chatId ? user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1) : 'Unknown';
+    const color = user.isHost ? '#ff6600' : user.isVIP ? '#ff0099' : '#cccccc';
+    const header = document.createElement('h3');
+    header.textContent = chatIdDisplay;
+    Object.assign(header.style, {
+      margin: '0 0 8px',
+      fontSize: '18px',
+      fontWeight: '700',
+      background: `linear-gradient(90deg, ${color}, #ff33cc)`,
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent'
+    });
+    card.appendChild(header);
+
+    // --- Details ---
+    const detailsEl = document.createElement('p');
+    detailsEl.style.margin = '0 0 12px';
+    detailsEl.style.fontSize = '14px';
+    detailsEl.style.lineHeight = '1.4';
+    const flairText = user.flair || '';
+    const pronoun = user.pronoun || 'their';
+    const ageGroup = user.ageGroup || (user.age ? `${user.age} yrs` : 'young');
+    const gender = user.gender || 'User';
+    const country = user.country || '';
+    const city = user.city || '';
+    if (user.isHost) {
+      const fruit = user.fruitPick || '🍒';
+      const nature = user.naturePick || 'vibe';
+      detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
+    } else if (user.isVIP) {
+      detailsEl.innerHTML = `A ${gender} in ${pronoun} ${ageGroup}, currently in ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
+    } else {
+      detailsEl.innerHTML = `A ${gender} from ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
+    }
+    card.appendChild(detailsEl);
+
+    // --- Bio ---
+    const bioEl = document.createElement('div');
+    bioEl.style.margin = '8px 0 14px';
+    bioEl.style.fontStyle = 'italic';
+    bioEl.style.fontSize = '13px';
+    card.appendChild(bioEl);
+    typeWriterEffect(bioEl, user.bioPick || '✨ Nothing shared yet...');
+
+    // --- Buttons wrapper ---
+    const btnWrap = document.createElement('div');
+    Object.assign(btnWrap.style, { display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', marginTop: '6px' });
+
+    // Meet button (hosts only)
+    if (user.isHost) {
+      const meetBtn = document.createElement('button');
+      meetBtn.textContent = 'Meet';
+      Object.assign(meetBtn.style, {
+        padding: '8px 16px',
+        borderRadius: '6px',
+        border: 'none',
+        fontWeight: '600',
+        background: 'linear-gradient(90deg,#ff6600,#ff0099)',
+        color: '#fff',
+        cursor: 'pointer'
+      });
+      meetBtn.onclick = () => { if (typeof showMeetModal === 'function') showMeetModal(user); };
+      btnWrap.appendChild(meetBtn);
+    }
+
+    // --- Slider to choose stars ---
+    const sliderWrapper = document.createElement('div');
+    sliderWrapper.style.display = 'flex';
+    sliderWrapper.style.alignItems = 'center';
+    sliderWrapper.style.width = '100%';
+    sliderWrapper.style.gap = '10px';
+
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = 0;
+    slider.max = 999;
+    slider.value = 0;
+    slider.style.flex = '1';
+    sliderWrapper.appendChild(slider);
+
+    const sliderLabel = document.createElement('span');
+    sliderLabel.textContent = `${slider.value} ⭐️`;
+    sliderLabel.style.fontSize = '14px';
+    sliderWrapper.appendChild(sliderLabel);
+
+    slider.oninput = () => sliderLabel.textContent = `${slider.value} ⭐️`;
+
+    btnWrap.appendChild(sliderWrapper);
+
+    // --- Gift button ---
+    const giftBtnLocal = document.createElement('button');
+    giftBtnLocal.textContent = 'Gift Stars ⭐️';
+    Object.assign(giftBtnLocal.style, {
+      padding: '8px 16px',
+      borderRadius: '6px',
+      border: 'none',
+      fontWeight: '600',
+      background: 'linear-gradient(90deg,#ff0099,#ff33cc)',
+      color: '#fff',
+      cursor: 'pointer'
+    });
+    giftBtnLocal.onclick = () => {
+      const amt = parseInt(slider.value);
+      if (!amt || amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
+      if ((currentUser?.stars || 0) < amt) return showStarPopup("Not enough stars 💫");
+      sendStarsToUser(user, amt);
+      slider.value = 0;
+      sliderLabel.textContent = `0 ⭐️`;
+    };
+    btnWrap.appendChild(giftBtnLocal);
+
+    card.appendChild(btnWrap);
+
+    // Append & animate
+    document.body.appendChild(card);
+    requestAnimationFrame(() => { card.style.opacity = '1'; card.style.transform = 'translate(-50%, -50%) scale(1.02)'; setTimeout(() => card.style.transform = 'translate(-50%, -50%) scale(1)', 120); });
+
+    // Click outside to close
+    const closeHandler = (ev) => { if (!card.contains(ev.target)) { card.remove(); document.removeEventListener('click', closeHandler); } };
+    setTimeout(() => document.addEventListener('click', closeHandler), 10);
+  }
+
+  function typeWriterEffect(el, text, speed = 35) {
+    el.textContent = '';
+    let i = 0;
+    const iv = setInterval(() => { el.textContent += text.charAt(i) || ''; i++; if (i >= text.length) clearInterval(iv); }, speed);
+  }
+
+  // --- USERNAME TAP DETECTOR ---
+  document.addEventListener('pointerdown', (e) => {
+    const target = e.target;
+    if (!target || !target.textContent) return;
+
+    const txt = target.textContent.trim();
+    if (!txt || txt.includes(':')) return; // avoid chat line clicks
+    const chatId = txt.split(' ')[0].trim(); // exact username
+    if (!chatId) return;
+
+    const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || '').toLowerCase() === chatId.toLowerCase());
+    if (!user || user._docId === currentUser?.uid) return;
+
+    // Blink effect
+    const originalColor = target.style.backgroundColor;
+    target.style.backgroundColor = '#ffcc00';
+    setTimeout(() => target.style.backgroundColor = originalColor, 180);
+
+    // Show popup
+    showSocialCard(user);
+  });
+
+    // --- SEND STARS FUNCTION ---
+  async function sendStarsToUser(targetUser, amt) {
+    const fromRef = doc(db, "users", currentUser.uid);
+    const toRef = doc(db, "users", targetUser._docId);
+    const glowColor = randomColor();
+
+    await Promise.all([
+      updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
+      updateDoc(toRef, { stars: increment(amt) })
+    ]);
+
+    const bannerMsg = {
+      content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
+      timestamp: serverTimestamp(),
+      highlight: true,
+      buzzColor: glowColor,
+      systemBanner: true
+    };
+
+    const docRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
+
+    renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true);
+
+    const msgEl = document.getElementById(docRef.id);
+    if (!msgEl) return;
+    const contentEl = msgEl.querySelector(".content") || msgEl;
+    contentEl.style.setProperty("--pulse-color", glowColor);
+    contentEl.classList.add("baller-highlight");
+    setTimeout(() => {
+      contentEl.classList.remove("baller-highlight");
+      contentEl.style.boxShadow = "none";
+    }, 21000);
+  }
+})();   // ✅ ← properly closes IIFE
+
 // ========== 🟣 HOST SETTINGS LOGIC ==========
 const isHost = true; // <-- later dynamic
 const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
