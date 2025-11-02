@@ -2490,48 +2490,53 @@ if (saveMediaBtn) {
     showSocialCard(user);
   });
 
-  // --- SEND STARS FUNCTION ---
-  async function sendStarsToUser(targetUser, amt) {
+
+// --- SEND STARS FUNCTION ---
+async function sendStarsToUser(targetUser, amt) {
   const fromRef = doc(db, "users", currentUser.uid);
   const toRef = doc(db, "users", targetUser._docId);
   const glowColor = randomColor();
 
+  // Update both users
   await Promise.all([
     updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
     updateDoc(toRef, { stars: increment(amt) })
   ]);
 
-  // System banner message — UID and chatId are irrelevant here
+  // --- Create Firestore banner message ---
   const bannerMsg = {
-    content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
+    content: `💫 ${currentUser.chatId} gifted ${amt} ⭐️ to ${targetUser.chatId}!`,
+    uid: "balleralert",
+    chatId: "BallerAlert🤩",
     timestamp: serverTimestamp(),
     highlight: true,
     buzzColor: glowColor,
-    systemBanner: true // add a flag so renderer knows it’s pure text
+    systemBanner: true
   };
 
-  const docRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
+  // Save banner to Firestore
+  const docRef = await addDoc(collection(db, "banners"), bannerMsg);
 
-  // Render banner without prepending chatId/uid
-  renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true); // pass `true` to indicate pure banner
+  // Render banner visually in chat
+  renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true);
 
-  // Apply glow effect
+  // Apply glow animation in chat area
   const msgEl = document.getElementById(docRef.id);
-  if (!msgEl) return;
-  const contentEl = msgEl.querySelector(".content") || msgEl;
-  contentEl.style.setProperty("--pulse-color", glowColor);
-  contentEl.classList.add("baller-highlight");
-  setTimeout(() => { contentEl.classList.remove("baller-highlight"); contentEl.style.boxShadow = "none"; }, 21000);
+  if (msgEl) {
+    const contentEl = msgEl.querySelector(".content") || msgEl;
+    contentEl.style.setProperty("--pulse-color", glowColor);
+    contentEl.classList.add("baller-highlight");
+    setTimeout(() => {
+      contentEl.classList.remove("baller-highlight");
+      contentEl.style.boxShadow = "none";
+    }, 7000);
+  }
+
+  // --- Trigger special banner popup ---
+  if (typeof showGiftAlert === "function") {
+    showGiftAlert(currentUser.chatId, targetUser.chatId, amt, glowColor);
+  }
 }
-
-})();
-
-// 🌤️ Dynamic Host Panel Greeting
-function capitalizeFirstLetter(str) {
-  if (!str) return "";
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
 function setGreeting() {
   const chatId = currentUser?.chatId || "Guest";
   const name = capitalizeFirstLetter(chatId);
