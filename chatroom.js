@@ -300,24 +300,21 @@ function setupUsersListener() {
 setupUsersListener();
 
 /* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
-const renderedMessageIds = new Set();
+let scrollPending = false;
 
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
 
   messages.forEach(item => {
+    if (document.getElementById(item.id)) return;
+
     const m = item.data;
-
-    // skip already rendered or deleted banners
-    if (renderedMessageIds.has(item.id) || m.deleted) return;
-    renderedMessageIds.add(item.id);
-
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
     wrapper.id = item.id;
 
     if (m.systemBanner) {
-      // --- Banner styles ---
+      // --- 🎁 Full-width banner style ---
       wrapper.style.display = "block";
       wrapper.style.width = "88%";
       wrapper.style.textAlign = "center";
@@ -329,6 +326,7 @@ function renderMessagesFromArray(messages) {
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
+      // inner panel for text
       const innerPanel = document.createElement("div");
       innerPanel.style.display = "inline-block";
       innerPanel.style.padding = "6px 14px";
@@ -340,19 +338,40 @@ function renderMessagesFromArray(messages) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
-      refs.messagesEl.appendChild(wrapper);
+      // --- Confetti + Glow (one-time) ---
+      if (!m._confettiPlayed) {
+        wrapper.style.animation = "pulseGlow 2s";
+        m._confettiPlayed = true; // mark so reload doesn't replay
 
-      // schedule fade + removal locally
-      setTimeout(() => {
-        wrapper.style.transition = "opacity 0.5s";
-        wrapper.style.opacity = "0";
-        setTimeout(() => wrapper.remove(), 500);
-      }, 60000);
+        // Confetti container
+        const confettiContainer = document.createElement("div");
+        confettiContainer.style.position = "absolute";
+        confettiContainer.style.inset = "0";
+        confettiContainer.style.pointerEvents = "none";
+        wrapper.appendChild(confettiContainer);
 
-      // --- OPTIONAL: trigger Firestore deletion via server/admin --- 
-      // Do NOT call Firestore delete inside this loop if using live snapshot
+        for (let i = 0; i < 30; i++) {
+          const piece = document.createElement("div");
+          piece.style.position = "absolute";
+          piece.style.width = "6px";
+          piece.style.height = "6px";
+          piece.style.borderRadius = "50%";
+          piece.style.background = randomColor();
+          piece.style.left = Math.random() * 100 + "%";
+          piece.style.top = Math.random() * 100 + "%";
+          piece.style.opacity = 0.8;
+          piece.style.animation = `floatConfetti ${3 + Math.random() * 3}s ease-in-out`;
+          confettiContainer.appendChild(piece);
+        }
+
+        // Remove confetti and stop glow after duration
+        setTimeout(() => {
+          confettiContainer.remove();
+          wrapper.style.animation = "";
+        }, 6000);
+      }
     } else {
-      // normal message
+      // --- Normal message with username ---
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -369,11 +388,12 @@ function renderMessagesFromArray(messages) {
         contentEl.style.fontWeight = "700";
       }
       wrapper.appendChild(contentEl);
-
-      refs.messagesEl.appendChild(wrapper);
     }
+
+    refs.messagesEl.appendChild(wrapper);
   });
 
+  // --- Auto-scroll to bottom ---
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
@@ -395,6 +415,7 @@ style.textContent = `
   50% { box-shadow: 0 0 24px rgba(255,255,255,0.6); }
 }`;
 document.head.appendChild(style);
+
 
 /* ---------- 🔔 Messages Listener ---------- */
 function attachMessagesListener() {
