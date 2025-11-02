@@ -201,30 +201,37 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   text-align: center;
 }
 
+/* ✅ KIK-STYLE INLINE USERNAME + MESSAGE WRAP */
 .msg {
+  width: 100%;
   padding: 8px 10px;
   border-radius: 8px;
   background: var(--glass);
-  max-width: 100%;
-  display: block;           /* important */
+  box-sizing: border-box;
+  display: block;   /* ensures username always begins at far left */
 }
 
+/* username */
 .msg .meta {
   font-weight: 700;
   font-size: 13px;
-  display: inline;          /* critical */
   white-space: nowrap;
+  display: inline;   /* keep on same line with content */
+  margin-right: 4px;
 }
 
+/* add colon automatically */
+.msg .meta::after {
+  content: ":";
+  margin-right: 4px;
+}
+
+/* message body */
 .msg .content {
   font-size: 13px;
-  display: inline;          /* critical */
-  white-space: normal;
-  word-break: break-word;
-}
-
-.msg .meta::after {
-  content: ": ";
+  display: inline;        /* INLINE so it flows on same line */
+  white-space: normal;    /* so wrapping occurs naturally */
+  word-break: break-word; /* allow wrapping mid-word if needed */
 }
 
 
