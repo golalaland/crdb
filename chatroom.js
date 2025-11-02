@@ -2420,8 +2420,8 @@ if (saveMediaBtn) {
     showSocialCard(user);
   });
 
-  // --- SEND STARS FUNCTION ---
-  async function sendStarsToUser(targetUser, amt) {
+// --- SEND STARS FUNCTION ---
+async function sendStarsToUser(targetUser, amt) {
   const fromRef = doc(db, "users", currentUser.uid);
   const toRef = doc(db, "users", targetUser._docId);
   const glowColor = randomColor();
@@ -2440,21 +2440,27 @@ if (saveMediaBtn) {
     systemBanner: true // add a flag so renderer knows it’s pure text
   };
 
+  // Save banner to Firestore
   const docRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
 
-  // Render banner without prepending chatId/uid
-  renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true); // pass `true` to indicate pure banner
+  // Render banner in chat for everyone
+  renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true); // `true` = pure banner
 
   // Apply glow effect
   const msgEl = document.getElementById(docRef.id);
-  if (!msgEl) return;
-  const contentEl = msgEl.querySelector(".content") || msgEl;
-  contentEl.style.setProperty("--pulse-color", glowColor);
-  contentEl.classList.add("baller-highlight");
-  setTimeout(() => { contentEl.classList.remove("baller-highlight"); contentEl.style.boxShadow = "none"; }, 21000);
-}
+  if (msgEl) {
+    const contentEl = msgEl.querySelector(".content") || msgEl;
+    contentEl.style.setProperty("--pulse-color", glowColor);
+    contentEl.classList.add("baller-highlight");
+    setTimeout(() => {
+      contentEl.classList.remove("baller-highlight");
+      contentEl.style.boxShadow = "none";
+    }, 21000);
+  }
 
-})();
+  // ✅ Show Gift Alert for all users who are online
+  showGiftAlert(bannerMsg.content, { glowColor: glowColor, duration: 7000 });
+}
 
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
