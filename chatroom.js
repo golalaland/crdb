@@ -499,48 +499,6 @@ if (msg.highlight && msg.content?.includes("gifted")) {
   });
 }
 
-// --- ⚡ Global Ephemeral Banner Feed ---
-function initBannerFeed() {
-  if (!currentUser) return; // only run after login
-
-  const bannerQuery = query(
-    collection(db, "bannerMsgs"),
-    orderBy("timestamp", "desc"),
-    limit(20)
-  );
-
-  onSnapshot(bannerQuery, async (snapshot) => {
-    const now = Date.now();
-    const newBanners = [];
-
-    for (const change of snapshot.docChanges()) {
-      if (change.type === "added") {
-        const data = change.doc.data();
-        const createdAt = data.timestamp?.toMillis?.() || 0;
-
-        // Only show recent banners (last 30s)
-        if (createdAt > now - 30000) {
-          newBanners.push({ id: change.doc.id, data });
-        }
-
-        // ✅ Delete banners automatically after showing
-        if (!data.keepAlive) {
-          try {
-            await deleteDoc(change.doc.ref);
-            console.log("🧹 Deleted banner after showing:", change.doc.id);
-          } catch (err) {
-            console.warn("⚠️ Failed to delete banner:", err);
-          }
-        }
-      }
-    }
-
-    if (newBanners.length > 0) {
-      renderMessagesFromArray(newBanners, true);
-    }
-  });
-}
-
 /* ---------- 🆔 ChatID Modal ---------- */
 async function promptForChatID(userRef, userData) {
   if (!refs.chatIDModal || !refs.chatIDInput || !refs.chatIDConfirmBtn)
@@ -2482,6 +2440,8 @@ Object.assign(giftBtnLocal.style, {
 // --- SEND STARS FUNCTION (Dual showGiftAlert + Banner + Receiver Sync) ---
 async function sendStarsToUser(targetUser, amt) {
   try {
+    if (!currentUser || !targetUser?._docId) throw new Error("Invalid sender or receiver.");
+
     const fromRef = doc(db, "users", currentUser.uid);
     const toRef = doc(db, "users", targetUser._docId);
     const glowColor = randomColor();
@@ -2492,19 +2452,20 @@ async function sendStarsToUser(targetUser, amt) {
       updateDoc(toRef, { stars: increment(amt) })
     ]);
 
-    // --- 🎁 Create banner message inside MAIN messages collection ---
+    // --- 🎁 Create banner message inside main messages collection ---
     const bannerMsg = {
       content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
       timestamp: serverTimestamp(),
       systemBanner: true,
       highlight: true,
       buzzColor: glowColor,
-      isBanner: true,              // ✅ tag for admin cleanup
+      isBanner: true,          // ✅ tag for admin dashboard / cleanup
       senderId: currentUser.uid,
-      type: "banner",              // optional tag for filtering
+      type: "banner",          // optional tag for filtering
+      roomId: "room5",         // optional, if you have multiple rooms
     };
 
-    const docRef = await addDoc(collection(db, "messages"), bannerMsg); // 👈🏽 now in messages
+    const docRef = await addDoc(collection(db, "messages_room5"), bannerMsg); // 👈🏽 now in main chat
     renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true);
 
     // --- ✨ Add glow pulse for chat banner ---
