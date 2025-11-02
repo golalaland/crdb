@@ -300,23 +300,24 @@ function setupUsersListener() {
 setupUsersListener();
 
 /* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
-let scrollPending = false;
-const renderedMessageIds = new Set(); // track already rendered messages
+const renderedMessageIds = new Set();
 
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
 
   messages.forEach(item => {
-    if (renderedMessageIds.has(item.id)) return; // skip already rendered
+    const m = item.data;
+
+    // skip already rendered or deleted banners
+    if (renderedMessageIds.has(item.id) || m.deleted) return;
     renderedMessageIds.add(item.id);
 
-    const m = item.data;
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
     wrapper.id = item.id;
 
     if (m.systemBanner) {
-      // --- Banner styling ---
+      // --- Banner styles ---
       wrapper.style.display = "block";
       wrapper.style.width = "88%";
       wrapper.style.textAlign = "center";
@@ -328,7 +329,6 @@ function renderMessagesFromArray(messages) {
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-      // inner panel for text
       const innerPanel = document.createElement("div");
       innerPanel.style.display = "inline-block";
       innerPanel.style.padding = "6px 14px";
@@ -340,60 +340,19 @@ function renderMessagesFromArray(messages) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
-      // Confetti + Glow (one-time)
-      if (!m._confettiPlayed) {
-        wrapper.style.animation = "pulseGlow 2s";
-        m._confettiPlayed = true;
-
-        const confettiContainer = document.createElement("div");
-        confettiContainer.style.position = "absolute";
-        confettiContainer.style.inset = "0";
-        confettiContainer.style.pointerEvents = "none";
-        wrapper.appendChild(confettiContainer);
-
-        for (let i = 0; i < 15; i++) {
-          const piece = document.createElement("div");
-          piece.style.position = "absolute";
-          piece.style.width = "6px";
-          piece.style.height = "6px";
-          piece.style.borderRadius = "50%";
-          piece.style.background = randomColor();
-          piece.style.left = Math.random() * 100 + "%";
-          piece.style.top = Math.random() * 100 + "%";
-          piece.style.opacity = 0.8;
-          piece.style.animation = `floatConfetti ${2 + Math.random() * 2}s ease-in-out`;
-          confettiContainer.appendChild(piece);
-        }
-
-        setTimeout(() => {
-          confettiContainer.remove();
-          wrapper.style.animation = "";
-        }, 3000);
-      }
-
-      // append banner to chat
       refs.messagesEl.appendChild(wrapper);
 
-      // --- Fade out & delete permanently from Firestore after 1 minute ---
-      setTimeout(async () => {
+      // schedule fade + removal locally
+      setTimeout(() => {
         wrapper.style.transition = "opacity 0.5s";
         wrapper.style.opacity = "0";
-
         setTimeout(() => wrapper.remove(), 500);
+      }, 60000);
 
-        try {
-          await firebase.firestore()
-            .collection('messages')
-            .doc(item.id)
-            .delete(); // permanently deletes the document
-          console.log("Banner permanently deleted:", item.id);
-        } catch (err) {
-          console.error("Failed to delete banner from Firestore:", err);
-        }
-      }, 60000); // 60 seconds
-
+      // --- OPTIONAL: trigger Firestore deletion via server/admin --- 
+      // Do NOT call Firestore delete inside this loop if using live snapshot
     } else {
-      // --- Normal message ---
+      // normal message
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -415,7 +374,6 @@ function renderMessagesFromArray(messages) {
     }
   });
 
-  // --- Auto-scroll to bottom ---
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
