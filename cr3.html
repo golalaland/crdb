@@ -152,43 +152,46 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   background: #000;
   margin-bottom: 70px;
   box-sizing: border-box;
 }
 
-/* Message wrapper (full width) */
+/* Message wrapper */
 .msg {
-  width: 100%; /* stretch to container */
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px; /* smaller padding like Twitch */
-  background: transparent; /* no bubble by default */
+  max-width: 80%; /* limit bubble width */
+  padding: 8px 12px;
+  border-radius: 16px;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: rgba(255, 255, 255, 0.05); /* received message bubble */
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
-/* My messages (optional highlight) */
+/* Align sent messages to the right */
 .msg.me {
-  color: #ff1493;
-  font-weight: 700;
+  align-self: flex-end;
+  background: rgba(255, 20, 147, 0.2);
+  color: #fff;
 }
 
-/* Username/meta info */
+/* Optional meta/username styling */
 .msg .meta {
   font-weight: 700;
   font-size: 13px;
-  white-space: nowrap;
-  margin-right: 6px;
+  margin-bottom: 4px;
   color: var(--accent);
+  display: block;
 }
 
-/* Message content */
+/* Content inside the bubble */
 .msg .content {
-  font-size: 14px;
-  color: #fff;
-  white-space: pre-wrap;
-  word-break: break-word;
+  display: block;
 }
 
 /* 🔥 Keypad (chat input) - always at bottom */
