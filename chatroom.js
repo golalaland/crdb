@@ -2437,38 +2437,38 @@ Object.assign(giftBtnLocal.style, {
     showSocialCard(user);
   });
 
-// --- SEND STARS FUNCTION (Dual showGiftAlert + Banner + Receiver Sync) ---
+// --- SEND STARS FUNCTION (Ephemeral Banner + Dual showGiftAlert + Receiver Sync) ---
 async function sendStarsToUser(targetUser, amt) {
   try {
-    if (!currentUser || !targetUser?._docId) throw new Error("Invalid sender or receiver.");
-
     const fromRef = doc(db, "users", currentUser.uid);
     const toRef = doc(db, "users", targetUser._docId);
     const glowColor = randomColor();
 
-    // --- Update Firestore balances ---
+    // --- 1️⃣ Update Firestore balances ---
     await Promise.all([
       updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
       updateDoc(toRef, { stars: increment(amt) })
     ]);
 
-    // --- 🎁 Create banner message inside main messages collection ---
+    // --- 2️⃣ Create ephemeral banner inside main messages collection ---
     const bannerMsg = {
       content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
       timestamp: serverTimestamp(),
       systemBanner: true,
       highlight: true,
       buzzColor: glowColor,
-      isBanner: true,          // ✅ tag for admin dashboard / cleanup
+      isBanner: true,           // ✅ tag for admin cleanup
+      bannerShown: false,       // ✅ ephemeral display
       senderId: currentUser.uid,
-      type: "banner",          // optional tag for filtering
-      roomId: "room5",         // optional, if you have multiple rooms
+      type: "banner"
     };
 
-    const docRef = await addDoc(collection(db, "messages_room5"), bannerMsg); // 👈🏽 now in main chat
+    const docRef = await addDoc(collection(db, "messages_room5"), bannerMsg);
+
+    // --- 3️⃣ Render instantly for sender (or any online user who listens to messages) ---
     renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true);
 
-    // --- ✨ Add glow pulse for chat banner ---
+    // --- 4️⃣ Glow pulse for banner ---
     setTimeout(() => {
       const msgEl = document.getElementById(docRef.id);
       if (!msgEl) return;
@@ -2481,16 +2481,21 @@ async function sendStarsToUser(targetUser, amt) {
       }, 21000);
     }, 80);
 
-    // --- 1️⃣ Sender visual popup ---
+    // --- 5️⃣ Sender popup ---
     showGiftAlert(`✅ You sent ${amt} ⭐ to ${targetUser.chatId}!`, 4000);
 
-    // --- 2️⃣ Receiver quick sync marker ---
+    // --- 6️⃣ Receiver quick sync marker ---
     await updateDoc(toRef, {
       lastGift: {
         from: currentUser.chatId,
         amt,
         at: Date.now()
       }
+    });
+
+    // --- 7️⃣ Mark banner as shown after rendering so it won’t appear on reload ---
+    await updateDoc(doc(db, "messages_room5", docRef.id), {
+      bannerShown: true
     });
 
   } catch (err) {
