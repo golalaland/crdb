@@ -299,14 +299,14 @@ function setupUsersListener() {
 }
 setupUsersListener();
 
-/* ---------- Render Messages (full-width banners + one-time confetti + glow) ---------- */
+/* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
 let scrollPending = false;
 
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
 
   messages.forEach(item => {
-    if (document.getElementById(item.id)) return; // already rendered
+    if (document.getElementById(item.id)) return;
 
     const m = item.data;
     const wrapper = document.createElement("div");
@@ -326,7 +326,7 @@ function renderMessagesFromArray(messages) {
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-      // --- inner panel for text ---
+      // inner panel for text
       const innerPanel = document.createElement("div");
       innerPanel.style.display = "inline-block";
       innerPanel.style.padding = "6px 14px";
@@ -340,13 +340,10 @@ function renderMessagesFromArray(messages) {
 
       // --- Confetti + Glow (one-time) ---
       if (!m._confettiPlayed) {
-        m._confettiPlayed = true; // mark as played
-
-        // glow animation
         wrapper.style.animation = "pulseGlow 2s";
-        setTimeout(() => wrapper.style.animation = "", 6000);
+        m._confettiPlayed = true; // mark so reload doesn't replay
 
-        // confetti container
+        // Confetti container
         const confettiContainer = document.createElement("div");
         confettiContainer.style.position = "absolute";
         confettiContainer.style.inset = "0";
@@ -367,9 +364,12 @@ function renderMessagesFromArray(messages) {
           confettiContainer.appendChild(piece);
         }
 
-        setTimeout(() => confettiContainer.remove(), 6000);
+        // Remove confetti and stop glow after duration
+        setTimeout(() => {
+          confettiContainer.remove();
+          wrapper.style.animation = "";
+        }, 6000);
       }
-
     } else {
       // --- Normal message with username ---
       const usernameEl = document.createElement("span");
@@ -382,24 +382,22 @@ function renderMessagesFromArray(messages) {
       const contentEl = document.createElement("span");
       contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
       contentEl.textContent = " " + (m.content || "");
-
       if (m.buzzColor) contentEl.style.background = m.buzzColor;
       if (m.highlight) {
         contentEl.style.color = "#000";
         contentEl.style.fontWeight = "700";
       }
-
       wrapper.appendChild(contentEl);
     }
 
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // --- Auto-scroll ---
+  // --- Auto-scroll to bottom ---
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
-      refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight; // scroll immediately
+      refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
       scrollPending = false;
     });
   }
