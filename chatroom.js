@@ -78,85 +78,85 @@ function pushNotificationTx(tx, userId, message) {
 }
 
 /* ---------- Auth State Watcher ---------- */
+/* ---------- Auth State Watcher (Stable Notification Setup) ---------- */
 onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    currentUser = user;
-    console.log("✅ Logged in as:", user.uid);
-    localStorage.setItem("userId", user.uid);
+  if (user) {
+    currentUser = user;
+    console.log("✅ Logged in as:", user.uid);
+    localStorage.setItem("userId", user.uid);
 
-    // 🟣 Start live banner feed once user logged in
-    initBannerFeed(); // 👈🏽 Add this line
+    // Wait until notificationsList actually exists in DOM
+    const waitForElement = (selector) =>
+      new Promise((resolve) => {
+        const el = document.querySelector(selector);
+        if (el) return resolve(el);
+        const observer = new MutationObserver(() => {
+          const elNow = document.querySelector(selector);
+          if (elNow) {
+            observer.disconnect();
+            resolve(elNow);
+          }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
 
-    // Wait for DOM elements
-    const notificationsList = document.getElementById("notificationsList");
-    const markAllBtn = document.getElementById("markAllRead");
+    const notificationsList = await waitForElement("#notificationsList");
+    const markAllBtn = document.getElementById("markAllRead");
 
-    if (!notificationsList) {
-      console.warn("⚠️ notificationsList element not found in DOM");
-      return;
-    }
+    try {
+      console.log("🔔 Setting up live notification listener...");
+      const notifRef = collection(db, "users", currentUser.uid, "notifications");
+      const q = query(notifRef, orderBy("timestamp", "desc"));
 
-    try {
-      console.log("🔔 Setting up live notification listener...");
-      const notifRef = collection(db, "users", currentUser.uid, "notifications");
+      onSnapshot(q, (snapshot) => {
+        console.log("📡 Snapshot received:", snapshot.size, "docs");
 
-     onSnapshot(notifRef, (snapshot) => {
-  console.log("🔔 Notifications update:", snapshot.docs.map(d => d.data()));
-  console.log("📡 Snapshot received:", snapshot.size, "docs");
+        if (snapshot.empty) {
+          notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+          return;
+        }
 
-  const notificationsList = document.getElementById("notificationsList");
-  if (!notificationsList) {
-    console.warn("⚠️ notificationsList not found in DOM when snapshot triggered");
-    return;
+        const items = snapshot.docs.map((docSnap) => {
+          const n = docSnap.data();
+          const time = n.timestamp?.seconds
+            ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "--:--";
+          return `
+            <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
+              <span>${n.message || "(no message)"}</span>
+              <span class="notification-time">${time}</span>
+            </div>
+          `;
+        });
+
+        notificationsList.innerHTML = items.join("");
+      });
+
+      // ✅ Mark all as read
+      if (markAllBtn) {
+        markAllBtn.addEventListener("click", async () => {
+          console.log("🟡 Marking all notifications as read...");
+          const snapshot = await getDocs(notifRef);
+          for (const docSnap of snapshot.docs) {
+            const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
+            await updateDoc(ref, { read: true });
+          }
+          alert("✅ All notifications marked as read.");
+        });
+      }
+
+    } catch (err) {
+      console.error("❌ Notification listener error:", err);
+    }
+  } else {
+    console.warn("⚠️ No logged-in user found");
+    currentUser = null;
+    localStorage.removeItem("userId");
   }
-
-  if (snapshot.empty) {
-    notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-    return;
-  }
-
-  const items = snapshot.docs.map((docSnap) => {
-    const n = docSnap.data();
-    const time = n.timestamp?.seconds
-      ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : "--:--";
-    return `
-      <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
-        <span>${n.message || "(no message)"}</span>
-        <span class="notification-time">${time}</span>
-      </div>
-    `;
-  });
-
-  notificationsList.innerHTML = items.join("");
 });
-
-      // ✅ Mark all as read
-      if (markAllBtn) {
-        markAllBtn.addEventListener("click", async () => {
-          console.log("🟡 Marking all notifications as read...");
-          const snapshot = await getDocs(notifRef);
-          for (const docSnap of snapshot.docs) {
-            const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
-            await updateDoc(ref, { read: true });
-          }
-          alert("✅ All notifications marked as read.");
-        });
-      }
-
-    } catch (err) {
-      console.error("❌ Notification listener error:", err);
-    }
-
-  } else {
-    console.warn("⚠️ No logged-in user found");
-    currentUser = null;
-    localStorage.removeItem("userId");
-  }
-}); // ✅ properly closed
 
 
 /* ---------- Helper: Get current user ID ---------- */
