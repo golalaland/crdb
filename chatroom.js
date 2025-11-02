@@ -2426,25 +2426,31 @@ if (saveMediaBtn) {
     }, speed);
   }
 
-  // --- Username Tap Detector (no chatline) ---
-  document.addEventListener('pointerdown', (e) => {
-    const target = e.target;
-    if (!target || !target.textContent || !target.classList.contains('username')) return;
+// ---------------- Username Tap Detector ----------------
+document.addEventListener('pointerdown', (e) => {
+  const target = e.target;
+  if (!target || !target.textContent) return;
 
-    const chatId = target.textContent.trim();
-    const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || '').toLowerCase() === chatId.toLowerCase());
-    if (!user) return;
-    if (user._docId === currentUser?.uid) return;
+  // Only elements with class "chat-username" trigger social card
+  if (!target.classList.contains('chat-username')) return;
 
-    // Blink effect
-    target.style.transition = 'opacity 0.12s';
-    target.style.opacity = '0.3';
-    setTimeout(() => target.style.opacity = '', 140);
+  const chatId = target.textContent.trim();
+  if (!chatId) return;
 
-    showSocialCard(user);
-  });
+  // Highlight / blink the tapped username
+  target.classList.add('username-blink');
+  setTimeout(() => target.classList.remove('username-blink'), 400);
 
-})();
+  // Lookup user by chatIdLower
+  const user = usersByChatId[chatId.toLowerCase()] || allUsers.find(u => (u.chatId || '').toLowerCase() === chatId.toLowerCase());
+  if (!user) return;
+
+  // Prevent self-popup if desired
+  if (user._docId === currentUser?.uid) return;
+
+  // Show the social card
+  showSocialCard(user);
+});
 
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
