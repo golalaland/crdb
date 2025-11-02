@@ -316,7 +316,7 @@ function renderMessagesFromArray(messages) {
     if (m.systemBanner) {
       // --- 🎁 Full-width banner style ---
       wrapper.style.display = "block";
-      wrapper.style.width = "88%";
+      wrapper.style.width = "100%";
       wrapper.style.textAlign = "center";
       wrapper.style.padding = "4px 0";
       wrapper.style.margin = "3px 0";
