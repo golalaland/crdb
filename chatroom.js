@@ -314,8 +314,6 @@ function setupUsersListener() {
 setupUsersListener();
 
 /* ---------- Render Messages ---------- */
-let scrollPending = false;
-
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
 
@@ -327,11 +325,15 @@ function renderMessagesFromArray(messages) {
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    const usernameEl = document.createElement("span");
-    usernameEl.className = "meta";
-    usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
-    usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
-    usernameEl.style.marginRight = "4px";
+    // Check for system banner (full-width, no username)
+    if (!m.systemBanner) {
+      const usernameEl = document.createElement("span");
+      usernameEl.className = "meta";
+      usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
+      usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
+      usernameEl.style.marginRight = "4px";
+      wrapper.appendChild(usernameEl);
+    }
 
     const contentEl = document.createElement("span");
     contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
@@ -343,7 +345,7 @@ function renderMessagesFromArray(messages) {
       contentEl.style.fontWeight = "700";
     }
 
-    wrapper.append(usernameEl, contentEl);
+    wrapper.appendChild(contentEl);
     refs.messagesEl.appendChild(wrapper);
   });
 
@@ -2435,35 +2437,37 @@ if (saveMediaBtn) {
 
   // --- SEND STARS FUNCTION ---
   async function sendStarsToUser(targetUser, amt) {
-    const fromRef = doc(db, "users", currentUser.uid);
-    const toRef = doc(db, "users", targetUser._docId);
-    const glowColor = randomColor();
+  const fromRef = doc(db, "users", currentUser.uid);
+  const toRef = doc(db, "users", targetUser._docId);
+  const glowColor = randomColor();
 
-    await Promise.all([
-      updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
-      updateDoc(toRef, { stars: increment(amt) })
-    ]);
+  await Promise.all([
+    updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
+    updateDoc(toRef, { stars: increment(amt) })
+  ]);
 
-    // System banner message
-    const bannerMsg = {
-      content: `💫 ${currentUser.chatId} gifted ${amt} ⭐️ to ${targetUser.chatId}!`,
-      uid: "system",
-      chatId: "banner",
-      timestamp: serverTimestamp(),
-      highlight: true,
-      buzzColor: glowColor
-    };
+  // System banner message — UID and chatId are irrelevant here
+  const bannerMsg = {
+    content: `💫 ${currentUser.chatId} gifted ${amt} ⭐️ to ${targetUser.chatId}!`,
+    timestamp: serverTimestamp(),
+    highlight: true,
+    buzzColor: glowColor,
+    systemBanner: true // add a flag so renderer knows it’s pure text
+  };
 
-    const docRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
-    renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }]);
+  const docRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
 
-    const msgEl = document.getElementById(docRef.id);
-    if (!msgEl) return;
-    const contentEl = msgEl.querySelector(".content") || msgEl;
-    contentEl.style.setProperty("--pulse-color", glowColor);
-    contentEl.classList.add("baller-highlight");
-    setTimeout(() => { contentEl.classList.remove("baller-highlight"); contentEl.style.boxShadow = "none"; }, 21000);
-  }
+  // Render banner without prepending chatId/uid
+  renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true); // pass `true` to indicate pure banner
+
+  // Apply glow effect
+  const msgEl = document.getElementById(docRef.id);
+  if (!msgEl) return;
+  const contentEl = msgEl.querySelector(".content") || msgEl;
+  contentEl.style.setProperty("--pulse-color", glowColor);
+  contentEl.classList.add("baller-highlight");
+  setTimeout(() => { contentEl.classList.remove("baller-highlight"); contentEl.style.boxShadow = "none"; }, 21000);
+}
 
 })();
 
