@@ -2603,4 +2603,5 @@ scrollArrow?.addEventListener("click", () => {
 });
 
 checkScroll(); // initial
+});   // ✅ closes DOMContentLoaded
 
