@@ -2490,41 +2490,44 @@ if (saveMediaBtn) {
     showSocialCard(user);
   });
 
-  // --- SEND STARS FUNCTION ---
-  async function sendStarsToUser(targetUser, amt) {
-  const fromRef = doc(db, "users", currentUser.uid);
-  const toRef = doc(db, "users", targetUser._docId);
-  const glowColor = randomColor();
+// --- SEND STARS FUNCTION (no banner, no highlight) ---
+async function sendStarsToUser(targetUser, amt) {
+  try {
+    if (!currentUser || !targetUser || !amt) return;
 
-  await Promise.all([
-    updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
-    updateDoc(toRef, { stars: increment(amt) })
-  ]);
+    const fromRef = doc(db, "users", currentUser.uid);
+    const toRef = doc(db, "users", targetUser._docId);
 
-  // System banner message — UID and chatId are irrelevant here
-  const bannerMsg = {
-    content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
-    timestamp: serverTimestamp(),
-    highlight: true,
-    buzzColor: glowColor,
-    systemBanner: true // add a flag so renderer knows it’s pure text
-  };
+    // Update balances
+    await Promise.all([
+      updateDoc(fromRef, {
+        stars: increment(-amt),
+        starsGifted: increment(amt),
+      }),
+      updateDoc(toRef, {
+        stars: increment(amt),
+      })
+    ]);
 
-  const docRef = await addDoc(collection(db, CHAT_COLLECTION), bannerMsg);
+    // Plain chat system message
+    const msg = {
+      content: `${currentUser.chatId} gifted ${amt} ⭐️ to ${targetUser.chatId}`,
+      timestamp: serverTimestamp(),
+      system: true
+    };
 
-  // Render banner without prepending chatId/uid
-  renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true); // pass `true` to indicate pure banner
+    // Add to main chat
+    const docRef = await addDoc(collection(db, CHAT_COLLECTION), msg);
 
-  // Apply glow effect
-  const msgEl = document.getElementById(docRef.id);
-  if (!msgEl) return;
-  const contentEl = msgEl.querySelector(".content") || msgEl;
-  contentEl.style.setProperty("--pulse-color", glowColor);
-  contentEl.classList.add("baller-highlight");
-  setTimeout(() => { contentEl.classList.remove("baller-highlight"); contentEl.style.boxShadow = "none"; }, 21000);
+    // Render to UI if function exists
+    if (typeof renderMessagesFromArray === "function") {
+      renderMessagesFromArray([{ id: docRef.id, data: msg }], true);
+    }
+
+  } catch (err) {
+    console.error("sendStarsToUser ERROR:", err);
+  }
 }
-
-})();
 
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
