@@ -1,4 +1,4 @@
-/* ---------- Imports (Firebase v10) ---------- */
+  /* ---------- Imports (Firebase v10) ---------- */
 import { 
   initializeApp 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -316,7 +316,7 @@ function renderMessagesFromArray(messages) {
     if (m.systemBanner) {
       // --- 🎁 Full-width banner style ---
       wrapper.style.display = "block";
-      wrapper.style.width = "100%";
+      wrapper.style.width = "88%";
       wrapper.style.textAlign = "center";
       wrapper.style.padding = "4px 0";
       wrapper.style.margin = "3px 0";
@@ -2288,72 +2288,6 @@ if (saveMediaBtn) {
     }
   };
 }
-
-function showBallerAlert(fromUser, toUser, amount) {
-  // Remove existing alert if present
-  document.getElementById('ballerAlert')?.remove();
-
-  const alertEl = document.createElement('div');
-  alertEl.id = 'ballerAlert';
-  alertEl.textContent = `💎 ${fromUser.chatId} gifted ${toUser.chatId} ${amount} ⭐️`;
-  document.body.appendChild(alertEl);
-
-  // Add confetti inside alert
-  for (let i = 0; i < 25; i++) {
-    const confetti = document.createElement('div');
-    confetti.className = 'baller-confetti';
-    confetti.style.background = randomColor(); // function you already have
-    confetti.style.left = Math.random() * 100 + '%';
-    confetti.style.top = Math.random() * 100 + '%';
-    confetti.style.width = `${4 + Math.random() * 6}px`;
-    confetti.style.height = confetti.style.width;
-    confetti.style.animationDuration = `${2 + Math.random() * 2}s`;
-    alertEl.appendChild(confetti);
-  }
-
-  // Animate in
-  requestAnimationFrame(() => {
-    alertEl.style.opacity = 1;
-    alertEl.style.transform = 'translateX(-50%) translateY(0)';
-  });
-
-  alertEl.classList.add('baller-glow');
-
-  // Remove after 7 seconds
-  setTimeout(() => {
-    alertEl.style.opacity = 0;
-    setTimeout(() => alertEl.remove(), 400);
-  }, 7000);
-}
-
-const scrollArrow = document.getElementById('scrollArrow');
-  const chatContainer = document.querySelector('#chatContainer'); // your chat wrapper
-  let fadeTimeout;
-
-  function showArrow() {
-    scrollArrow.classList.add('show');
-    if (fadeTimeout) clearTimeout(fadeTimeout);
-    fadeTimeout = setTimeout(() => {
-      scrollArrow.classList.remove('show');
-    }, 2000); // disappears after 2 seconds
-  }
-
-  function checkScroll() {
-    const distanceFromBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight;
-    if (distanceFromBottom > 200) { // threshold for showing arrow
-      showArrow();
-    }
-  }
-
-  chatContainer.addEventListener('scroll', checkScroll);
-
-  scrollArrow.addEventListener('click', () => {
-    chatContainer.scrollTo({
-      top: chatContainer.scrollHeight,
-      behavior: 'smooth'
-    });
-  });
-  
 /* ======================================================
   Social Card + Gift Stars System — Firestore + Chat Banner
   Paste AFTER Firebase/Firestore initialized
@@ -2471,87 +2405,68 @@ const scrollArrow = document.getElementById('scrollArrow');
       btnWrap.appendChild(meetBtn);
     }
 
-// --- Slider to choose stars ---
-const sliderWrapper = document.createElement('div');
-sliderWrapper.style.display = 'flex';
-sliderWrapper.style.alignItems = 'center';
-sliderWrapper.style.width = '100%';
-sliderWrapper.style.gap = '10px';
+    // --- Slider to choose stars ---
+    const sliderWrapper = document.createElement('div');
+    sliderWrapper.style.display = 'flex';
+    sliderWrapper.style.alignItems = 'center';
+    sliderWrapper.style.width = '100%';
+    sliderWrapper.style.gap = '10px';
 
-const slider = document.createElement('input');
-slider.type = 'range';
-slider.min = 0;
-slider.max = 999;
-slider.value = 0;
-slider.style.flex = '1';
-sliderWrapper.appendChild(slider);
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = 0;
+    slider.max = 999;
+    slider.value = 0;
+    slider.style.flex = '1';
+    sliderWrapper.appendChild(slider);
 
-const sliderLabel = document.createElement('span');
-sliderLabel.textContent = `${slider.value} ⭐️`;
-sliderLabel.style.fontSize = '14px';
-sliderWrapper.appendChild(sliderLabel);
+    const sliderLabel = document.createElement('span');
+    sliderLabel.textContent = `${slider.value} ⭐️`;
+    sliderLabel.style.fontSize = '14px';
+    sliderWrapper.appendChild(sliderLabel);
 
-slider.oninput = () => sliderLabel.textContent = `${slider.value} ⭐️`;
+    slider.oninput = () => sliderLabel.textContent = `${slider.value} ⭐️`;
 
-btnWrap.appendChild(sliderWrapper);
+    btnWrap.appendChild(sliderWrapper);
 
-// --- Gift button ---
-const giftBtnLocal = document.createElement('button');
-giftBtnLocal.textContent = 'Gift Stars ⭐️';
-Object.assign(giftBtnLocal.style, {
-  padding: '8px 16px',
-  borderRadius: '6px',
-  border: 'none',
-  fontWeight: '600',
-  background: 'linear-gradient(90deg,#ff0099,#ff33cc)',
-  color: '#fff',
-  cursor: 'pointer'
-});
-giftBtnLocal.onclick = () => {
-  const amt = parseInt(slider.value);
-  if (!amt || amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
-  if ((currentUser?.stars || 0) < amt) return showStarPopup("Not enough stars 💫");
+    // --- Gift button ---
+    const giftBtnLocal = document.createElement('button');
+    giftBtnLocal.textContent = 'Gift Stars ⭐️';
+    Object.assign(giftBtnLocal.style, {
+      padding: '8px 16px',
+      borderRadius: '6px',
+      border: 'none',
+      fontWeight: '600',
+      background: 'linear-gradient(90deg,#ff0099,#ff33cc)',
+      color: '#fff',
+      cursor: 'pointer'
+    });
+    giftBtnLocal.onclick = () => {
+      const amt = parseInt(slider.value);
+      if (!amt || amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
+      if ((currentUser?.stars || 0) < amt) return showStarPopup("Not enough stars 💫");
+      sendStarsToUser(user, amt);
+      slider.value = 0;
+      sliderLabel.textContent = `0 ⭐️`;
+    };
+    btnWrap.appendChild(giftBtnLocal);
 
-  // ✅ Send stars via Firestore
-  sendStarsToUser(user, amt);
+    card.appendChild(btnWrap);
 
-  // ✅ Show Baller Alert in chat area
-  showBallerAlert(currentUser.chatId, user.chatId, amt);
+    // Append & animate
+    document.body.appendChild(card);
+    requestAnimationFrame(() => { card.style.opacity = '1'; card.style.transform = 'translate(-50%, -50%) scale(1.02)'; setTimeout(() => card.style.transform = 'translate(-50%, -50%) scale(1)', 120); });
 
-  // Reset slider
-  slider.value = 0;
-  sliderLabel.textContent = `0 ⭐️`;
-};
-btnWrap.appendChild(giftBtnLocal);
-
-card.appendChild(btnWrap);
-
-// Append & animate
-document.body.appendChild(card);
-requestAnimationFrame(() => {
-  card.style.opacity = '1';
-  card.style.transform = 'translate(-50%, -50%) scale(1.02)';
-  setTimeout(() => card.style.transform = 'translate(-50%, -50%) scale(1)', 120);
-});
-
-// Click outside to close
-const closeHandler = (ev) => {
-  if (!card.contains(ev.target)) {
-    card.remove();
-    document.removeEventListener('click', closeHandler);
+    // Click outside to close
+    const closeHandler = (ev) => { if (!card.contains(ev.target)) { card.remove(); document.removeEventListener('click', closeHandler); } };
+    setTimeout(() => document.addEventListener('click', closeHandler), 10);
   }
-};
-setTimeout(() => document.addEventListener('click', closeHandler), 10);
 
-function typeWriterEffect(el, text, speed = 35) {
-  el.textContent = '';
-  let i = 0;
-  const iv = setInterval(() => {
-    el.textContent += text.charAt(i) || '';
-    i++;
-    if (i >= text.length) clearInterval(iv);
-  }, speed);
-}
+  function typeWriterEffect(el, text, speed = 35) {
+    el.textContent = '';
+    let i = 0;
+    const iv = setInterval(() => { el.textContent += text.charAt(i) || ''; i++; if (i >= text.length) clearInterval(iv); }, speed);
+  }
 
   // --- USERNAME TAP DETECTOR ---
   document.addEventListener('pointerdown', (e) => {
@@ -2611,7 +2526,6 @@ function typeWriterEffect(el, text, speed = 35) {
 
 })();
 
-
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
   if (!str) return "";
@@ -2639,6 +2553,35 @@ function setGreeting() {
 hostSettingsBtn.addEventListener("click", () => {
   setGreeting();
 });
+
+
+const scrollArrow = document.getElementById('scrollArrow');
+  const chatContainer = document.querySelector('#chatContainer'); // your chat wrapper
+  let fadeTimeout;
+
+  function showArrow() {
+    scrollArrow.classList.add('show');
+    if (fadeTimeout) clearTimeout(fadeTimeout);
+    fadeTimeout = setTimeout(() => {
+      scrollArrow.classList.remove('show');
+    }, 2000); // disappears after 2 seconds
+  }
+
+  function checkScroll() {
+    const distanceFromBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight;
+    if (distanceFromBottom > 200) { // threshold for showing arrow
+      showArrow();
+    }
+  }
+
+  chatContainer.addEventListener('scroll', checkScroll);
+
+  scrollArrow.addEventListener('click', () => {
+    chatContainer.scrollTo({
+      top: chatContainer.scrollHeight,
+      behavior: 'smooth'
+    });
+  });
 
   checkScroll(); // initial check
 }); // ✅ closes DOMContentLoaded event listener
