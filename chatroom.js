@@ -2124,27 +2124,36 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     card.appendChild(header);
 
-    // --- Details ---
-    const detailsEl = document.createElement('p');
-    detailsEl.style.margin = '0 0 12px';
-    detailsEl.style.fontSize = '14px';
-    detailsEl.style.lineHeight = '1.4';
-    const flairText = user.flair || '';
-    const pronoun = user.pronoun || 'their';
-    const ageGroup = user.ageGroup || (user.age ? `${user.age} yrs` : 'young');
-    const gender = user.gender || 'User';
-    const country = user.country || '';
-    const city = user.city || '';
-    if (user.isHost) {
-      const fruit = user.fruitPick || '🍒';
-      const nature = user.naturePick || 'vibe';
-      detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
-    } else if (user.isVIP) {
-      detailsEl.innerHTML = `A ${gender} in ${pronoun} ${ageGroup}, currently in ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
-    } else {
-      detailsEl.innerHTML = `A ${gender} from ${city || 'somewhere'}, ${country || ''}. ${flairText}`;
-    }
-    card.appendChild(detailsEl);
+// --- Details ---
+const detailsEl = document.createElement('p');
+Object.assign(detailsEl.style, {
+  margin: '0 0 12px',
+  fontSize: '14px',
+  lineHeight: '1.4'
+});
+
+const gender = (user.gender || "person").toLowerCase();
+const pronoun = gender === "male" ? "his" : "her";
+const ageGroup = !user.age ? "20s" : user.age >= 30 ? "30s" : "20s";
+const flair = gender === "male" ? "😎" : "💋";
+const fruit = user.fruitPick || "🍇";
+const nature = user.naturePick || "cool";
+const city = user.location || user.city || "Lagos";
+const country = user.country || "Nigeria";
+
+// --- Build text based on role ---
+let detailText = "";
+
+if (user.isHost) {
+  detailText = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
+} else if (user.isVIP) {
+  detailText = `A ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
+} else {
+  detailText = `A ${gender} from ${city}, ${country}. ${flair}`;
+}
+
+detailsEl.innerHTML = detailText;
+card.appendChild(detailsEl);
 
     // --- Bio ---
     const bioEl = document.createElement('div');
@@ -2175,53 +2184,91 @@ document.addEventListener("DOMContentLoaded", () => {
       btnWrap.appendChild(meetBtn);
     }
 
-    // --- Slider to choose stars ---
-    const sliderWrapper = document.createElement('div');
-    sliderWrapper.style.display = 'flex';
-    sliderWrapper.style.alignItems = 'center';
-    sliderWrapper.style.width = '100%';
-    sliderWrapper.style.gap = '10px';
+  // --- Slider to choose stars ---
+const sliderWrapper = document.createElement('div');
+Object.assign(sliderWrapper.style, {
+  display: 'flex',
+  alignItems: 'center',
+  width: '100%',
+  gap: '10px',
+  padding: '10px',
+  borderRadius: '12px',
+  background: 'rgba(255,255,255,0.08)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+  boxShadow: 'inset 0 0 10px rgba(255,255,255,0.1)',
+});
 
-    const slider = document.createElement('input');
-    slider.type = 'range';
-    slider.min = 0;
-    slider.max = 999;
+const slider = document.createElement('input');
+slider.type = 'range';
+slider.min = 0;
+slider.max = 999;
+slider.value = 0;
+slider.style.flex = '1';
+slider.style.accentColor = '#ff33cc';
+sliderWrapper.appendChild(slider);
+
+const sliderLabel = document.createElement('span');
+sliderLabel.textContent = `${slider.value} ⭐️`;
+sliderLabel.style.fontSize = '14px';
+sliderLabel.style.minWidth = '60px';
+sliderLabel.style.textAlign = 'center';
+sliderWrapper.appendChild(sliderLabel);
+
+slider.oninput = () => sliderLabel.textContent = `${slider.value} ⭐️`;
+
+btnWrap.appendChild(sliderWrapper);
+
+// --- Gift button with spinner ---
+const giftBtnLocal = document.createElement('button');
+giftBtnLocal.textContent = 'Gift ⭐️';
+Object.assign(giftBtnLocal.style, {
+  padding: '8px 16px',
+  borderRadius: '6px',
+  border: 'none',
+  fontWeight: '600',
+  background: 'linear-gradient(90deg,#ff0099,#ff33cc)',
+  color: '#fff',
+  cursor: 'pointer',
+  position: 'relative',
+  overflow: 'hidden',
+});
+
+giftBtnLocal.onclick = async () => {
+  const amt = parseInt(slider.value);
+  if (!amt || amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
+  if ((currentUser?.stars || 0) < amt) return showStarPopup("Not enough stars 💫");
+
+  // 🔄 Show spinner in button
+  const oldText = giftBtnLocal.textContent;
+  giftBtnLocal.disabled = true;
+  giftBtnLocal.innerHTML = `<div class="spinner" style="
+      width:14px;height:14px;
+      border:2px solid rgba(255,255,255,0.4);
+      border-top-color:#fff;
+      border-radius:50%;
+      margin:0 auto;
+      animation:spin .7s linear infinite;">
+    </div>`;
+
+  await sendStarsToUser(user, amt);
+
+  // 🧹 Reset after short delay
+  setTimeout(() => {
+    giftBtnLocal.disabled = false;
+    giftBtnLocal.textContent = oldText;
     slider.value = 0;
-    slider.style.flex = '1';
-    sliderWrapper.appendChild(slider);
+    sliderLabel.textContent = `0 ⭐️`;
 
-    const sliderLabel = document.createElement('span');
-    sliderLabel.textContent = `${slider.value} ⭐️`;
-    sliderLabel.style.fontSize = '14px';
-    sliderWrapper.appendChild(sliderLabel);
+    // ✅ Close modal & scroll chat
+    card.remove();
+    const msgContainer = document.querySelector('.chat-messages') || document.getElementById('messages');
+    if (msgContainer) msgContainer.scrollTop = msgContainer.scrollHeight;
+  }, 1000);
+};
 
-    slider.oninput = () => sliderLabel.textContent = `${slider.value} ⭐️`;
-
-    btnWrap.appendChild(sliderWrapper);
-
-    // --- Gift button ---
-    const giftBtnLocal = document.createElement('button');
-    giftBtnLocal.textContent = 'Gift Stars ⭐️';
-    Object.assign(giftBtnLocal.style, {
-      padding: '8px 16px',
-      borderRadius: '6px',
-      border: 'none',
-      fontWeight: '600',
-      background: 'linear-gradient(90deg,#ff0099,#ff33cc)',
-      color: '#fff',
-      cursor: 'pointer'
-    });
-    giftBtnLocal.onclick = () => {
-      const amt = parseInt(slider.value);
-      if (!amt || amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
-      if ((currentUser?.stars || 0) < amt) return showStarPopup("Not enough stars 💫");
-      sendStarsToUser(user, amt);
-      slider.value = 0;
-      sliderLabel.textContent = `0 ⭐️`;
-    };
-    btnWrap.appendChild(giftBtnLocal);
-
-    card.appendChild(btnWrap);
+btnWrap.appendChild(giftBtnLocal);
+card.appendChild(btnWrap);
 
     // Append & animate
     document.body.appendChild(card);
@@ -2256,9 +2303,26 @@ document.addEventListener("DOMContentLoaded", () => {
     target.style.backgroundColor = '#ffcc00';
     setTimeout(() => target.style.backgroundColor = originalColor, 180);
 
-    // Show popup
-    showSocialCard(user);
-  });
+
+   // Show popup
+if (user.isVIP) {
+  const gender = (user.gender || "person").toLowerCase();
+  const pronoun = gender === "male" ? "his" : "her";
+  const ageGroup = !user.age ? "20s" : user.age >= 30 ? "30s" : "20s";
+  const flair = gender === "male" ? "😎" : "💋";
+  const city = user.location || "Lagos";
+  const country = user.country || "Nigeria";
+
+  showGoldAlert(`${user.chatId} is VIP! ✨`, 2500);
+  setTimeout(() => {
+    showSocialCard({
+      ...user,
+      bioPick: `A ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`,
+    });
+  }, 2600);
+} else {
+  showSocialCard(user);
+}
 
 // --- SEND STARS FUNCTION ---
 async function sendStarsToUser(targetUser, amt) {
