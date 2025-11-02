@@ -84,6 +84,9 @@ onAuthStateChanged(auth, async (user) => {
     console.log("✅ Logged in as:", user.uid);
     localStorage.setItem("userId", user.uid);
 
+    // 🟣 Start live banner feed once user logged in
+    initBannerFeed(); // 👈🏽 Add this line
+
     // Wait for DOM elements
     const notificationsList = document.getElementById("notificationsList");
     const markAllBtn = document.getElementById("markAllRead");
