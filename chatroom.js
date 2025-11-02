@@ -373,20 +373,18 @@ function renderMessagesFromArray(messages) {
       wrapper.appendChild(usernameEl);
     }
 
-    // --- Content span ---
-    const contentEl = document.createElement("span");
-    contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
-    contentEl.textContent = " " + (m.content || "");
+// --- Content span ---
+const contentEl = document.createElement("span");
+contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
+contentEl.textContent = " " + (m.content || "");
 
-    if (m.buzzColor && !m.systemBanner) contentEl.style.background = m.buzzColor;
-    if (m.highlight && !m.systemBanner) {
-      contentEl.style.color = "#000";
-      contentEl.style.fontWeight = "700";
-    }
+if (m.buzzColor && !m.systemBanner) contentEl.style.background = m.buzzColor;
+if (m.highlight && !m.systemBanner) {
+  contentEl.style.color = "#000";
+  contentEl.style.fontWeight = "700";
+}
 
-    wrapper.appendChild(contentEl);
-    refs.messagesEl.appendChild(wrapper);
-  });
+wrapper.appendChild(contentEl); // ✅ appending contentEl
 
   // --- Auto-scroll logic ---
   if (!scrollPending) {
