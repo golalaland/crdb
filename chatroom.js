@@ -405,7 +405,6 @@ function renderMessagesFromArray(messages) {
       scrollPending = false;
     });
   }
-}
 
 /* ---------- Animations ---------- */
 const style = document.createElement("style");
