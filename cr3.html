@@ -1,8 +1,9 @@
-  <!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
- <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<meta charset="utf-8" />
+<meta name="viewport"
+  content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Xixi</title>
 <link rel="icon" href="data:," />
 <style>
@@ -114,70 +115,21 @@
   pointer-events: none;
 }
   
-/* ================= Overall Layout ================= */
+/* overall layout */
 html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;color:#fff;background:var(--bg);}
+#appWrapper{width:100%;height:100%;display:flex;justify-content:center;}
+.app{display:flex;flex-direction:column;height:100%;gap:10px;padding:10px;box-sizing:border-box;width:100%;max-width:480px;}
+.brand{font-weight:700;font-size:24px;color:var(--accent);text-align:center;}
+.room-desc{font-size:11px;color:var(--muted);text-align:center;margin-bottom:6px;}
+#greeting{font-size:13px;text-align:center;font-weight:600;margin-bottom:6px;color:var(--accent);}
+#helloText{font-size:21px;font-weight:900;text-align:center;margin:6px 0;color:#fff;transition:color .2s ease;}
+#center{flex:1;display:flex;flex-direction:column;gap:6px;}
 
-#appWrapper {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-}
-
-.app {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  gap: 10px;
-  padding: 10px;
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 480px;
-}
-
-.brand {
-  font-weight: 700;
-  font-size: 24px;
-  color: var(--accent);
-  text-align: center;
-}
-
-.room-desc {
-  font-size: 11px;
-  color: var(--muted);
-  text-align: center;
-  margin-bottom: 6px;
-}
-
-#greeting {
-  font-size: 13px;
-  text-align: center;
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: var(--accent);
-}
-
-#helloText {
-  font-size: 21px;
-  font-weight: 900;
-  text-align: center;
-  margin: 6px 0;
-  color: #fff;
-  transition: color .2s ease;
-}
-
-#center {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-/* ================= Sticky Video Wrapper ================= */
+/* Sticky video wrapper */
 #videoPlayerWrapper {
   position: fixed;
-  top: 10px;
-  right: 10px;
+  top: 10px; /* distance from top */
+  right: 10px; /* or left: 50%; transform: translateX(-50%) for center */
   width: 320px;
   height: 180px;
   z-index: 999;
@@ -185,57 +137,68 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   background: #111;
 }
-
 #videoPlayer {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: cover; /* or contain if you prefer full visibility */
 }
 
-/* ================= Guest Message ================= */
-#guestMsg {
-  font-size: 16px;
-  font-weight: 700;
-  margin: 4px 0;
-  color: var(--accent);
-  text-align: center;
+#guestMsg{font-size:16px;font-weight:700;margin:4px 0;color:var(--accent);text-align:center;}
+
+/* messages */
+/* 🔥 Chat messages container */
+/* 🔥 Chat messages container */
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: 8px;
+  background: #000;
+
+  /* ✅ give space so last message never hides behind bar */
+  margin-bottom: 70px;
+  box-sizing: border-box;
 }
 
-/* Each message block */
+/* 🔥 Message bubble */
 .msg {
-  display: block;       /* remove any flex/column behavior */
-  margin-bottom: 6px;
-  padding: 0;
-  background: none;     /* optional — remove bubbles if needed */
-  border-radius: 0;
-  font-size: 14px;
-  line-height: 1.4;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--glass);
+  max-width: 100%;
+  
+  /* ✅ remove side-by-side column / flex alignment */
+  display: block;
   text-align: left;
-  word-wrap: break-word;
 }
 
-/* Username */
+/* your color for ME stays untouched */
+.msg.me { 
+  background: rgba(255, 20, 147, 0.06); 
+}
+
+/* ✅ username */
 .msg .meta {
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 13px;
   white-space: nowrap;
-  display: inline;
-  color: var(--accent, #ff1493);
+  margin-right: 4px;
+  display: inline;     /* ✅ same line */
+  color: inherit;
 }
 
-/* Add colon after username */
-.msg .meta::after {
-  content: ": ";
-}
-
-/* Message body */
+/* ✅ message body */
 .msg .content {
-  display: inline;
+  font-size: 13px;
+  color: #fff;
+  display: inline;      /* ✅ same line + wraps naturally */
   white-space: normal;
   word-break: break-word;
 }
 
-
-  
 /* 🔥 Keypad (chat input) - always at bottom */
 .send-area {
   position: fixed;       
@@ -255,20 +218,20 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 }
 
 /* 🔥 Chat input area */
-.send-area {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--card, #111);
-  padding: 10px;
-  position: sticky;   /* sticky inside container */
-  bottom: 0;          /* always at bottom */
-  z-index: 10;
+.send-area textarea {
+  flex: 1;
+  padding: 12px 16px;
   border-radius: 999px;
-  width: 100%;
-  box-sizing: border-box;
-  border-top: 1px solid rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  background-color: #0e0e0e;
+  color: #fff;
+  font-size: 16px;
+  outline: none;
+  resize: none;
+  overflow-y: auto;
+  max-height: 120px; 
 }
+
 
 .send-area input {
   flex: 1;
@@ -1522,6 +1485,52 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   0%, 100% { background-color: transparent; }
   50% { background-color: rgba(255, 255, 0, 0.4); border-radius: 4px; }
 }
+/* Baller Alert Wrapper */
+#ballerAlert {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #ffcc00, #ff33cc);
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  color: #000;
+  font-size: 16px;
+  text-align: center;
+  z-index: 999999;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Glow pulse */
+.baller-glow {
+  animation: pulseGlow 2s ease-in-out;
+}
+
+/* Confetti pieces */
+.baller-confetti {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  opacity: 0.9;
+  animation: floatConfetti 3s ease-in-out forwards;
+}
+
+@keyframes floatConfetti {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
+}
+
+@keyframes pulseGlow {
+  0%,100% { box-shadow: 0 0 12px rgba(255,255,255,0.2); }
+  50% { box-shadow: 0 0 24px rgba(255,255,255,0.8); }
+}
 </style>
 </head>
 <body>
@@ -1566,7 +1575,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
  <div id="guestMsg"></div>
 <div id="authBox">
-
 
   <!-- VIP Access Login Wrapper -->
   <div id="emailAuthWrapper">
