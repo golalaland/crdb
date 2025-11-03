@@ -476,7 +476,7 @@ const modalTop = rect.top - chatRect.top + scrollOffset - 10; // small offset ab
 const modalLeft = rect.left - chatRect.left + 20; // small left offset from bubble start
 
 modal.style.top = `${modalTop - 20}px`;   // move it slightly lower / closer to message
-modal.style.left = `${modalLeft + 20}px`; // shift a bit to the right so it doesn’t cover text
+modal.style.left = `${modalLeft + 33}px`; // shift a bit to the right so it doesn’t cover text
 
 modal.style.zIndex = 1000;
 modal.style.display = "flex";
