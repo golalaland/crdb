@@ -454,15 +454,16 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
 wrapper.addEventListener("click", (e) => {
   e.stopPropagation();
 
-  // Remove any existing modal first
+  // remove any existing modal first
   document.querySelectorAll(".tap-modal").forEach(mod => mod.remove());
 
   const modal = document.createElement("div");
   modal.className = "tap-modal";
 
-  // Buttons — CSS handles most styling
+  // Buttons
   const replyOption = document.createElement("button");
   replyOption.textContent = "Reply";
+  replyOption.style.cursor = "pointer";
   replyOption.onclick = () => {
     currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
     refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
@@ -473,6 +474,7 @@ wrapper.addEventListener("click", (e) => {
 
   const reportOption = document.createElement("button");
   reportOption.textContent = "Report";
+  reportOption.style.cursor = "pointer";
   reportOption.onclick = () => {
     alert(`Reported message from ${m.chatId}`);
     modal.remove();
@@ -481,27 +483,22 @@ wrapper.addEventListener("click", (e) => {
 
   const cancelOption = document.createElement("button");
   cancelOption.textContent = "✕";
+  cancelOption.style.cursor = "pointer";
   cancelOption.onclick = () => modal.remove();
   modal.appendChild(cancelOption);
 
-  // --- Position modal relative to tapped message ---
-  const wrapperRect = wrapper.getBoundingClientRect();
-  const chatRect = refs.messagesEl.getBoundingClientRect();
-
-  // Include scroll offset
-  const top = wrapperRect.top - chatRect.top + refs.messagesEl.scrollTop - 40; // above message
-  const left = wrapperRect.left - chatRect.left + 10; // small left offset
-
+  // --- Minimal positioning tweak ---
+  // Just offset a bit from the click inside the message
   modal.style.position = "absolute";
-  modal.style.top = `${top}px`;
-  modal.style.left = `${left}px`;
+  modal.style.top = `${e.offsetY - 20}px`;   // slightly above click
+  modal.style.left = `${e.offsetX + 10}px`;  // slightly right
   modal.style.zIndex = 1000;
   modal.style.display = "flex";
   modal.style.gap = "6px";
 
-  refs.messagesEl.appendChild(modal);
+  wrapper.appendChild(modal);
 
-  // Auto-hide after 3 seconds if no action
+  // Auto-hide after 3 seconds
   setTimeout(() => modal.remove(), 3000);
 });
 
