@@ -513,23 +513,14 @@ wrapper.addEventListener("click", (e) => {
   }, 3000);
 });
 
-// --- Auto-scroll to bottom (smart + smooth) ---
-if (!scrollPending) {
-  scrollPending = true;
-
-  requestAnimationFrame(() => {
-    const chatEl = refs.messagesEl;
-
-    // How far from bottom is the user? 
-    const distanceFromBottom = chatEl.scrollHeight - chatEl.scrollTop - chatEl.clientHeight;
-
-    // If user is near bottom (e.g., <= 100px), auto-scroll
-    if (distanceFromBottom <= 100) {
-      chatEl.scrollTo({ top: chatEl.scrollHeight, behavior: "smooth" });
-    }
-
-    scrollPending = false;
-  });
+  // --- Auto-scroll to bottom ---
+  if (!scrollPending) {
+    scrollPending = true;
+    requestAnimationFrame(() => {
+      refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
+      scrollPending = false;
+    });
+  }
 }
 /* ---------- Animations ---------- */
 const style = document.createElement("style");
