@@ -466,10 +466,14 @@ modal.style.color = "#fff";
 modal.style.borderRadius = "6px";
 modal.style.fontSize = "12px";
 
+// get message position relative to messages container
 const rect = wrapper.getBoundingClientRect();
 const chatRect = refs.messagesEl.getBoundingClientRect();
 
-modal.style.top = `${rect.top - chatRect.top - 36}px`; // slightly above message
+// account for container scroll
+const scrollOffset = refs.messagesEl.scrollTop;
+
+modal.style.top = `${rect.top - chatRect.top + scrollOffset - 36}px`; // slightly above message
 modal.style.left = `${rect.left - chatRect.left + 10}px`; // small left offset
 
 modal.style.zIndex = 1000;
