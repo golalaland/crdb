@@ -312,6 +312,7 @@ setupUsersListener();
 
 /* ---------- Render Messages (full-width banners + one-time confetti/glow + tap-to-reply) ---------- */
 let scrollPending = false;
+let currentReplyTarget = null; // holds info about message being replied to
 
 function renderMessagesFromArray(messages, isBannerFeed = false) {
   if (!refs.messagesEl) return;
@@ -324,7 +325,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    // --- 🎁 System Banner Detection ---
+    // --- 🎁 Banner Detection ---
     if (m.systemBanner || m.isBanner || m.type === "banner") {
       wrapper.classList.add("chat-banner");
       wrapper.style.display = "block";
@@ -338,7 +339,6 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-      // Inner text panel
       const innerPanel = document.createElement("div");
       innerPanel.style.display = "inline-block";
       innerPanel.style.padding = "6px 14px";
@@ -350,7 +350,6 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
-      // Admin delete button
       if (window.currentUser?.isAdmin) {
         const delBtn = document.createElement("button");
         delBtn.textContent = "🗑";
@@ -366,12 +365,11 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
         delBtn.onclick = async () => {
           await deleteDoc(doc(db, "messages", item.id));
           wrapper.remove();
-          console.log(`🗑 Banner ${item.id} deleted by admin`);
         };
         wrapper.appendChild(delBtn);
       }
 
-      // Confetti + Glow (once per session)
+      // Confetti + Glow once per session
       if (!sessionStorage.getItem(`confetti_${item.id}`)) {
         wrapper.style.animation = "pulseGlow 2s";
         sessionStorage.setItem(`confetti_${item.id}`, "played");
@@ -418,7 +416,6 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
           const replyPreview = document.createElement("div");
           replyPreview.className = "reply-preview";
           replyPreview.textContent = originalMsgEl.querySelector(".content, .buzz-content")?.textContent || m.replyToContent || "Original message";
-
           replyPreview.style.fontSize = "12px";
           replyPreview.style.opacity = 0.7;
           replyPreview.style.borderLeft = "2px solid #FFD700";
@@ -426,13 +423,16 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
           replyPreview.style.marginBottom = "2px";
           replyPreview.style.cursor = "pointer";
 
-          // Scroll to original message when clicked
-          replyPreview.addEventListener("click", (e) => {
-            e.stopPropagation();
-            originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
-            const originalBg = originalMsgEl.style.background;
-            originalMsgEl.style.background = "#FFD70033";
-            setTimeout(() => originalMsgEl.style.background = originalBg, 1000);
+          replyPreview.addEventListener("click", () => {
+            if (originalMsgEl) {
+              originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
+              const originalBg = originalMsgEl.style.background;
+              originalMsgEl.style.transition = "background 0.5s";
+              originalMsgEl.style.background = "#FFD70033";
+              setTimeout(() => {
+                originalMsgEl.style.background = originalBg;
+              }, 1000);
+            }
           });
 
           wrapper.appendChild(replyPreview);
@@ -450,8 +450,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       }
       wrapper.appendChild(contentEl);
 
-      // --- Tap entire message to reply (WhatsApp style) ---
-      wrapper.style.cursor = "pointer";
+      // --- Tap to reply ---
       wrapper.addEventListener("click", () => {
         currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
         refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
@@ -1057,22 +1056,21 @@ autoLogin();
 
 
 /* ----------------------------
-   💬 Send Message Handler (with Reply Support)
+   💬 Send Message Handler
 ----------------------------- */
 refs.sendBtn?.addEventListener("click", async () => {
   if (!currentUser) return showStarPopup("Sign in to chat.");
-
   const txt = refs.messageInputEl?.value.trim();
   if (!txt) return showStarPopup("Type a message first.");
   if ((currentUser.stars || 0) < SEND_COST)
     return showStarPopup("Not enough stars to send message.");
 
-  // Deduct star cost
+  // Deduct stars
   currentUser.stars -= SEND_COST;
   refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
   await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-SEND_COST) });
 
-  // Prepare message object
+  // Create new message
   const newMsg = {
     content: txt,
     uid: currentUser.uid,
@@ -1080,7 +1078,6 @@ refs.sendBtn?.addEventListener("click", async () => {
     timestamp: serverTimestamp(),
     highlight: false,
     buzzColor: null,
-    // Attach reply info if replying
     replyTo: currentReplyTarget?.id || null,
     replyToContent: currentReplyTarget?.content || null
   };
@@ -1088,14 +1085,15 @@ refs.sendBtn?.addEventListener("click", async () => {
   // Add to Firestore
   const docRef = await addDoc(collection(db, CHAT_COLLECTION), newMsg);
 
-  // Render immediately (optimistic UI)
+  // Render immediately
   refs.messageInputEl.value = "";
-  refs.messageInputEl.placeholder = "Type a message...";
   renderMessagesFromArray([{ id: docRef.id, data: newMsg }], true);
-  scrollToBottom(refs.messagesEl);
 
-  // Clear reply target after sending
+  // Reset reply target
   currentReplyTarget = null;
+  refs.messageInputEl.placeholder = "Type a message...";
+
+  scrollToBottom(refs.messagesEl);
 });
 
   /* ----------------------------
