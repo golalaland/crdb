@@ -1531,6 +1531,33 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   0%,100% { box-shadow: 0 0 12px rgba(255,255,255,0.2); }
   50% { box-shadow: 0 0 24px rgba(255,255,255,0.8); }
 }
+/* ---------- Chat Tap Modal ---------- */
+.tap-modal {
+  position: absolute;
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 9999;
+  pointer-events: auto;
+}
+
+.tap-modal button {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 2px 6px;
+}
+
+.tap-modal button:hover {
+  background: rgba(255,255,255,0.2);
+  border-radius: 4px;
+}
 </style>
 </head>
 <body>
