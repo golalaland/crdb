@@ -310,9 +310,8 @@ function setupUsersListener() {
 }
 setupUsersListener();
 
-/* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
+/* ---------- Render Messages (full-width banners + one-time confetti/glow + tap-to-reply) ---------- */
 let scrollPending = false;
-const messagesCache = {}; // key: msg.id, value: msg.data
 
 function renderMessagesFromArray(messages, isBannerFeed = false) {
   if (!refs.messagesEl) return;
@@ -325,10 +324,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    // --- Cache message ---
-    messagesCache[item.id] = m;
-
-    // --- 🎁 Banner Detection ---
+    // --- 🎁 System Banner Detection ---
     if (m.systemBanner || m.isBanner || m.type === "banner") {
       wrapper.classList.add("chat-banner");
       wrapper.style.display = "block";
@@ -342,7 +338,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-      // --- Inner text panel ---
+      // Inner text panel
       const innerPanel = document.createElement("div");
       innerPanel.style.display = "inline-block";
       innerPanel.style.padding = "6px 14px";
@@ -354,7 +350,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
-      // --- 🗑 Optional Delete Button (Admin only) ---
+      // Admin delete button
       if (window.currentUser?.isAdmin) {
         const delBtn = document.createElement("button");
         delBtn.textContent = "🗑";
@@ -375,7 +371,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
         wrapper.appendChild(delBtn);
       }
 
-      // --- 🎊 Confetti + Glow (only once per session) ---
+      // Confetti + Glow (once per session)
       if (!sessionStorage.getItem(`confetti_${item.id}`)) {
         wrapper.style.animation = "pulseGlow 2s";
         sessionStorage.setItem(`confetti_${item.id}`, "played");
@@ -416,37 +412,32 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       wrapper.appendChild(usernameEl);
 
       // --- REPLY PREVIEW ---
-if (m.replyTo) {
-  const originalMsgEl = document.getElementById(m.replyTo);
-  if (originalMsgEl) {
-    const replyPreview = document.createElement("div");
-    replyPreview.className = "reply-preview";
-    replyPreview.textContent = originalMsgEl.querySelector(".content, .buzz-content")?.textContent || m.replyToContent || "Original message";
+      if (m.replyTo) {
+        const originalMsgEl = document.getElementById(m.replyTo);
+        if (originalMsgEl) {
+          const replyPreview = document.createElement("div");
+          replyPreview.className = "reply-preview";
+          replyPreview.textContent = originalMsgEl.querySelector(".content, .buzz-content")?.textContent || m.replyToContent || "Original message";
 
-    replyPreview.style.fontSize = "12px";
-    replyPreview.style.opacity = 0.7;
-    replyPreview.style.borderLeft = "2px solid #FFD700";
-    replyPreview.style.paddingLeft = "4px";
-    replyPreview.style.marginBottom = "2px";
-    replyPreview.style.cursor = "pointer";
+          replyPreview.style.fontSize = "12px";
+          replyPreview.style.opacity = 0.7;
+          replyPreview.style.borderLeft = "2px solid #FFD700";
+          replyPreview.style.paddingLeft = "4px";
+          replyPreview.style.marginBottom = "2px";
+          replyPreview.style.cursor = "pointer";
 
-    // --- Scroll to original message when clicked ---
-    replyPreview.addEventListener("click", () => {
-      if (originalMsgEl) {
-        originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
-        // optional: highlight original message briefly
-        originalMsgEl.style.transition = "background 0.5s";
-        const originalBg = originalMsgEl.style.background;
-        originalMsgEl.style.background = "#FFD70033"; // soft highlight
-        setTimeout(() => {
-          originalMsgEl.style.background = originalBg;
-        }, 1000);
+          // Scroll to original message when clicked
+          replyPreview.addEventListener("click", (e) => {
+            e.stopPropagation();
+            originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
+            const originalBg = originalMsgEl.style.background;
+            originalMsgEl.style.background = "#FFD70033";
+            setTimeout(() => originalMsgEl.style.background = originalBg, 1000);
+          });
+
+          wrapper.appendChild(replyPreview);
+        }
       }
-    });
-
-    wrapper.appendChild(replyPreview);
-  }
-}
 
       // --- Message content ---
       const contentEl = document.createElement("span");
@@ -459,18 +450,13 @@ if (m.replyTo) {
       }
       wrapper.appendChild(contentEl);
 
-      // --- REPLY BUTTON ---
-      const replyBtn = document.createElement("button");
-      replyBtn.textContent = "↩ Reply";
-      replyBtn.className = "reply-btn";
-      replyBtn.style.marginLeft = "6px";
-      replyBtn.style.fontSize = "12px";
-      replyBtn.onclick = () => {
+      // --- Tap entire message to reply (WhatsApp style) ---
+      wrapper.style.cursor = "pointer";
+      wrapper.addEventListener("click", () => {
         currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
         refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
         refs.messageInputEl.focus();
-      };
-      wrapper.appendChild(replyBtn);
+      });
     }
 
     refs.messagesEl.appendChild(wrapper);
@@ -1071,10 +1057,11 @@ autoLogin();
 
 
 /* ----------------------------
-   💬 Send Message Handler
+   💬 Send Message Handler (with Reply Support)
 ----------------------------- */
 refs.sendBtn?.addEventListener("click", async () => {
   if (!currentUser) return showStarPopup("Sign in to chat.");
+
   const txt = refs.messageInputEl?.value.trim();
   if (!txt) return showStarPopup("Type a message first.");
   if ((currentUser.stars || 0) < SEND_COST)
@@ -1085,31 +1072,30 @@ refs.sendBtn?.addEventListener("click", async () => {
   refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
   await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-SEND_COST) });
 
-  // Prepare new message
+  // Prepare message object
   const newMsg = {
     content: txt,
     uid: currentUser.uid,
     chatId: currentUser.chatId,
     timestamp: serverTimestamp(),
     highlight: false,
-    buzzColor: null
+    buzzColor: null,
+    // Attach reply info if replying
+    replyTo: currentReplyTarget?.id || null,
+    replyToContent: currentReplyTarget?.content || null
   };
-
-  // If replying, include reply info
-  if (currentReplyTarget) {
-    newMsg.replyTo = currentReplyTarget.id;
-    newMsg.replyToContent = currentReplyTarget.content; // store original message content for preview
-  }
 
   // Add to Firestore
   const docRef = await addDoc(collection(db, CHAT_COLLECTION), newMsg);
 
-  // Render immediately (optimistic)
+  // Render immediately (optimistic UI)
   refs.messageInputEl.value = "";
-  currentReplyTarget = null;
   refs.messageInputEl.placeholder = "Type a message...";
   renderMessagesFromArray([{ id: docRef.id, data: newMsg }], true);
   scrollToBottom(refs.messagesEl);
+
+  // Clear reply target after sending
+  currentReplyTarget = null;
 });
 
   /* ----------------------------
