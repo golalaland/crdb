@@ -60,7 +60,13 @@ let currentUser = null;
 ================================= */
 async function pushNotification(userId, message) {
   if (!userId) return;
-  const notifRef = doc(collection(db, "users", userId, "notifications"));
+  
+  // 1. Get the reference to the "notifications" subcollection for the specific user.
+  const subcollectionRef = collection(db, "users", userId, "notifications");
+  
+  // 2. Get a reference to a new, auto-generated document within that subcollection.
+  const notifRef = doc(subcollectionRef); 
+  
   await setDoc(notifRef, {
     message,
     timestamp: serverTimestamp(),
@@ -69,13 +75,19 @@ async function pushNotification(userId, message) {
 }
 
 function pushNotificationTx(tx, userId, message) {
-  const notifRef = doc(collection(db, "users", userId, "notifications"));
+  // 1. Get the reference to the "notifications" subcollection for the specific user.
+  const subcollectionRef = collection(db, "users", userId, "notifications");
+
+  // 2. Get a reference to a new, auto-generated document within that subcollection.
+  const notifRef = doc(subcollectionRef); 
+  
   tx.set(notifRef, {
     message,
     timestamp: serverTimestamp(),
     read: false,
   });
 }
+
 
 /* ---------- Auth State Watcher (Stable + Lazy Notifications) ---------- */
 onAuthStateChanged(auth, async (user) => {
