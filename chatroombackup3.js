@@ -79,83 +79,77 @@ function pushNotificationTx(tx, userId, message) {
 
 /* ---------- Auth State Watcher (Stable + Lazy Notifications) ---------- */
 onAuthStateChanged(auth, async (user) => {
-  currentUser = user;
+  currentUser = user;
 
-  if (!user) {
-    console.warn("⚠️ No logged-in user found");
-    localStorage.removeItem("userId");
-    return;
-  }
+  if (!user) {
+    console.warn("⚠️ No logged-in user found");
+    localStorage.removeItem("userId");
+    return;
+  }
 
-  console.log("✅ Logged in as:", user.uid);
-  localStorage.setItem("userId", user.uid);
+  console.log("✅ Logged in as:", user.uid);
+  localStorage.setItem("userId", user.uid);
 
-  // Utility: wait for element to appear in DOM
-  const waitForElement = (selector) =>
-    new Promise((resolve) => {
-      const el = document.querySelector(selector);
-      if (el) return resolve(el);
+  const notifRef = collection(db, "users", currentUser.uid, "notifications");
+  const notifQuery = query(notifRef, orderBy("timestamp", "desc"));
 
-      const observer = new MutationObserver(() => {
-        const elNow = document.querySelector(selector);
-        if (elNow) {
-          observer.disconnect();
-          resolve(elNow);
-        }
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
-    });
+  let unsubscribe = null;
 
-  const notificationsList = await waitForElement("#notificationsList");
-  const markAllBtn = document.getElementById("markAllRead");
+  async function initNotificationsListener() {
+    const notificationsList = document.getElementById("notificationsList");
+    if (!notificationsList) return console.warn("⚠️ #notificationsList not found yet");
 
-  try {
-    console.log("🔔 Setting up live notification listener...");
-    const notifRef = collection(db, "users", currentUser.uid, "notifications");
-    const notifQuery = query(notifRef, orderBy("timestamp", "desc"));
+    if (unsubscribe) unsubscribe();
 
-    // Live updates
-    onSnapshot(notifQuery, (snapshot) => {
-      if (snapshot.empty) {
-        notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-        return;
-      }
+    console.log("🔔 Setting up live notification listener...");
+    unsubscribe = onSnapshot(notifQuery, (snapshot) => {
+      if (snapshot.empty) {
+        notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+        return;
+      }
 
-      const items = snapshot.docs.map((docSnap) => {
-        const n = docSnap.data();
-        const time = n.timestamp?.seconds
-          ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : "--:--";
+      const items = snapshot.docs.map((docSnap) => {
+        const n = docSnap.data();
+        const time = n.timestamp?.seconds
+          ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "--:--";
 
-        return `
-          <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
-            <span>${n.message || "(no message)"}</span>
-            <span class="notification-time">${time}</span>
-          </div>
-        `;
-      });
+        return `
+          <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
+            <span>${n.message || "(no message)"}</span>
+            <span class="notification-time">${time}</span>
+          </div>
+        `;
+      });
 
-      notificationsList.innerHTML = items.join("");
-    });
+      notificationsList.innerHTML = items.join("");
+    });
+  }
 
-    // Mark all notifications as read
-    if (markAllBtn) {
-      markAllBtn.addEventListener("click", async () => {
-        console.log("🟡 Marking all notifications as read...");
-        const snapshot = await getDocs(notifRef);
-        for (const docSnap of snapshot.docs) {
-          const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
-          await updateDoc(ref, { read: true });
-        }
-        alert("✅ All notifications marked as read.");
-      });
-    }
-  } catch (err) {
-    console.error("❌ Notification listener error:", err);
-  }
+  document.addEventListener("DOMContentLoaded", initNotificationsListener);
+
+  const notifTabBtn = document.querySelector('.tab-btn[data-tab="notificationsTab"]');
+  if (notifTabBtn) {
+    notifTabBtn.addEventListener("click", () => {
+      setTimeout(initNotificationsListener, 150);
+    });
+  }
+
+  const markAllBtn = document.getElementById("markAllRead");
+  if (markAllBtn) {
+    markAllBtn.addEventListener("click", async () => {
+      console.log("🟡 Marking all notifications as read...");
+      const snapshot = await getDocs(notifRef);
+      for (const docSnap of snapshot.docs) {
+        const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
+        await updateDoc(ref, { read: true });
+      }
+      alert("✅ All notifications marked as read.");
+    });
+  }
 });
 
 
@@ -310,8 +304,9 @@ function setupUsersListener() {
 }
 setupUsersListener();
 
-/* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
+/* ---------- Render Messages ---------- */
 let scrollPending = false;
+let currentReplyTarget = null; // holds info about the message being replied to
 
 function renderMessagesFromArray(messages, isBannerFeed = false) {
   if (!refs.messagesEl) return;
@@ -338,7 +333,6 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-      // --- Inner text panel ---
       const innerPanel = document.createElement("div");
       innerPanel.style.display = "inline-block";
       innerPanel.style.padding = "6px 14px";
@@ -350,7 +344,6 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
-      // --- 🗑 Optional Delete Button (Admin only) ---
       if (window.currentUser?.isAdmin) {
         const delBtn = document.createElement("button");
         delBtn.textContent = "🗑";
@@ -366,12 +359,11 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
         delBtn.onclick = async () => {
           await deleteDoc(doc(db, "messages", item.id));
           wrapper.remove();
-          console.log(`🗑 Banner ${item.id} deleted by admin`);
         };
         wrapper.appendChild(delBtn);
       }
 
-      // --- 🎊 Confetti + Glow (only once per session) ---
+      // Confetti + Glow once per session
       if (!sessionStorage.getItem(`confetti_${item.id}`)) {
         wrapper.style.animation = "pulseGlow 2s";
         sessionStorage.setItem(`confetti_${item.id}`, "played");
@@ -411,6 +403,37 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
+      // --- REPLY PREVIEW ---
+      if (m.replyTo) {
+        const originalMsgEl = document.getElementById(m.replyTo);
+        if (originalMsgEl) {
+          const replyPreview = document.createElement("div");
+          replyPreview.className = "reply-preview";
+          replyPreview.textContent = originalMsgEl.querySelector(".content, .buzz-content")?.textContent || m.replyToContent || "Original message";
+          replyPreview.style.fontSize = "12px";
+          replyPreview.style.opacity = 0.7;
+          replyPreview.style.borderLeft = "2px solid #FFD700";
+          replyPreview.style.paddingLeft = "4px";
+          replyPreview.style.marginBottom = "2px";
+          replyPreview.style.cursor = "pointer";
+
+          replyPreview.addEventListener("click", () => {
+            if (originalMsgEl) {
+              originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
+              const originalBg = originalMsgEl.style.background;
+              originalMsgEl.style.transition = "background 0.5s";
+              originalMsgEl.style.background = "#FFD70033";
+              setTimeout(() => {
+                originalMsgEl.style.background = originalBg;
+              }, 1000);
+            }
+          });
+
+          wrapper.appendChild(replyPreview);
+        }
+      }
+
+      // --- Message content ---
       const contentEl = document.createElement("span");
       contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
       contentEl.textContent = " " + (m.content || "");
@@ -420,11 +443,82 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
         contentEl.style.fontWeight = "700";
       }
       wrapper.appendChild(contentEl);
+
+// --- Tap-to-reply modal ---
+      wrapper.addEventListener("click", (e) => {
+        e.stopPropagation();
+
+        // remove any existing modal first
+        document.querySelectorAll(".tap-modal").forEach(mod => mod.remove());
+
+const modal = document.createElement("div");
+modal.className = "tap-modal";
+modal.style.position = "absolute";
+modal.style.padding = "6px 10px";
+modal.style.background = "#333";
+modal.style.color = "#fff";
+modal.style.borderRadius = "6px";
+modal.style.fontSize = "12px";
+
+// get message position relative to messages container
+const rect = wrapper.getBoundingClientRect();
+const chatRect = refs.messagesEl.getBoundingClientRect();
+const scrollOffset = refs.messagesEl.scrollTop;
+
+// Calculate position inside the scrollable chat container
+const modalTop = rect.top - chatRect.top + scrollOffset - 10; // small offset above bubble
+const modalLeft = rect.left - chatRect.left + 20; // small left offset from bubble start
+
+modal.style.top = `${modalTop - 20}px`;   // move it slightly lower / closer to message
+modal.style.left = `${modalLeft + 80}px`; // shift a bit to the right so it doesn’t cover text
+
+modal.style.zIndex = 1000;
+modal.style.display = "flex";
+modal.style.gap = "6px";
+
+        // --- Reply button in modal ---
+        const replyOption = document.createElement("button");
+        replyOption.textContent = "Reply";
+        replyOption.style.cursor = "pointer";
+        replyOption.onclick = () => {
+          currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
+          refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
+          refs.messageInputEl.focus();
+          modal.remove();
+        };
+        modal.appendChild(replyOption);
+
+        // --- Report button ---
+        const reportOption = document.createElement("button");
+        reportOption.textContent = "Report";
+        reportOption.style.cursor = "pointer";
+        reportOption.onclick = () => {
+          alert(`Reported message from ${m.chatId}`);
+          modal.remove();
+        };
+        modal.appendChild(reportOption);
+
+        // --- Cancel button ---
+        const cancelOption = document.createElement("button");
+        cancelOption.textContent = "✕";
+        cancelOption.style.cursor = "pointer";
+        cancelOption.onclick = () => {
+          modal.remove();
+        };
+        modal.appendChild(cancelOption);
+
+        wrapper.appendChild(modal);
+
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+          modal.remove();
+        }, 3000);
+      });
     }
 
     refs.messagesEl.appendChild(wrapper);
   });
-
+  
   // --- Auto-scroll to bottom ---
   if (!scrollPending) {
     scrollPending = true;
@@ -1019,37 +1113,46 @@ window.addEventListener("DOMContentLoaded", () => {
 autoLogin();
 
 
-  /* ----------------------------
-     💬 Send Message Handler
-  ----------------------------- */
-  refs.sendBtn?.addEventListener("click", async () => {
-    if (!currentUser) return showStarPopup("Sign in to chat.");
-    const txt = refs.messageInputEl?.value.trim();
-    if (!txt) return showStarPopup("Type a message first.");
-    if ((currentUser.stars || 0) < SEND_COST)
-      return showStarPopup("Not enough stars to send message.");
+/* ----------------------------
+   💬 Send Message Handler
+----------------------------- */
+refs.sendBtn?.addEventListener("click", async () => {
+  if (!currentUser) return showStarPopup("Sign in to chat.");
+  const txt = refs.messageInputEl?.value.trim();
+  if (!txt) return showStarPopup("Type a message first.");
+  if ((currentUser.stars || 0) < SEND_COST)
+    return showStarPopup("Not enough stars to send message.");
 
-    // Deduct star cost
-    currentUser.stars -= SEND_COST;
-    refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-    await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-SEND_COST) });
+  // Deduct stars
+  currentUser.stars -= SEND_COST;
+  refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+  await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-SEND_COST) });
 
-    // Add to chat
-    const newMsg = {
-      content: txt,
-      uid: currentUser.uid,
-      chatId: currentUser.chatId,
-      timestamp: serverTimestamp(),
-      highlight: false,
-      buzzColor: null
-    };
-    const docRef = await addDoc(collection(db, CHAT_COLLECTION), newMsg);
+  // Create new message
+  const newMsg = {
+    content: txt,
+    uid: currentUser.uid,
+    chatId: currentUser.chatId,
+    timestamp: serverTimestamp(),
+    highlight: false,
+    buzzColor: null,
+    replyTo: currentReplyTarget?.id || null,
+    replyToContent: currentReplyTarget?.content || null
+  };
 
-    // Render immediately (optimistic)
-    refs.messageInputEl.value = "";
-    renderMessagesFromArray([{ id: docRef.id, data: newMsg }], true);
-    scrollToBottom(refs.messagesEl);
-  });
+  // Add to Firestore
+  const docRef = await addDoc(collection(db, CHAT_COLLECTION), newMsg);
+
+  // Render immediately
+  refs.messageInputEl.value = "";
+  renderMessagesFromArray([{ id: docRef.id, data: newMsg }], true);
+
+  // Reset reply target
+  currentReplyTarget = null;
+  refs.messageInputEl.placeholder = "Type a message...";
+
+  scrollToBottom(refs.messagesEl);
+});
 
   /* ----------------------------
      🚨 BUZZ Message Handler
