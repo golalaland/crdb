@@ -312,6 +312,7 @@ setupUsersListener();
 
 /* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
 let scrollPending = false;
+const messagesCache = {}; // key: msg.id, value: msg.data
 
 function renderMessagesFromArray(messages, isBannerFeed = false) {
   if (!refs.messagesEl) return;
@@ -323,6 +324,9 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
     wrapper.id = item.id;
+
+    // --- Cache message ---
+    messagesCache[item.id] = m;
 
     // --- 🎁 Banner Detection ---
     if (m.systemBanner || m.isBanner || m.type === "banner") {
@@ -411,6 +415,40 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
+      // --- REPLY PREVIEW ---
+if (m.replyTo) {
+  const originalMsgEl = document.getElementById(m.replyTo);
+  if (originalMsgEl) {
+    const replyPreview = document.createElement("div");
+    replyPreview.className = "reply-preview";
+    replyPreview.textContent = originalMsgEl.querySelector(".content, .buzz-content")?.textContent || m.replyToContent || "Original message";
+
+    replyPreview.style.fontSize = "12px";
+    replyPreview.style.opacity = 0.7;
+    replyPreview.style.borderLeft = "2px solid #FFD700";
+    replyPreview.style.paddingLeft = "4px";
+    replyPreview.style.marginBottom = "2px";
+    replyPreview.style.cursor = "pointer";
+
+    // --- Scroll to original message when clicked ---
+    replyPreview.addEventListener("click", () => {
+      if (originalMsgEl) {
+        originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        // optional: highlight original message briefly
+        originalMsgEl.style.transition = "background 0.5s";
+        const originalBg = originalMsgEl.style.background;
+        originalMsgEl.style.background = "#FFD70033"; // soft highlight
+        setTimeout(() => {
+          originalMsgEl.style.background = originalBg;
+        }, 1000);
+      }
+    });
+
+    wrapper.appendChild(replyPreview);
+  }
+}
+
+      // --- Message content ---
       const contentEl = document.createElement("span");
       contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
       contentEl.textContent = " " + (m.content || "");
@@ -420,6 +458,19 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
         contentEl.style.fontWeight = "700";
       }
       wrapper.appendChild(contentEl);
+
+      // --- REPLY BUTTON ---
+      const replyBtn = document.createElement("button");
+      replyBtn.textContent = "↩ Reply";
+      replyBtn.className = "reply-btn";
+      replyBtn.style.marginLeft = "6px";
+      replyBtn.style.fontSize = "12px";
+      replyBtn.onclick = () => {
+        currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
+        refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
+        refs.messageInputEl.focus();
+      };
+      wrapper.appendChild(replyBtn);
     }
 
     refs.messagesEl.appendChild(wrapper);
@@ -1019,37 +1070,47 @@ window.addEventListener("DOMContentLoaded", () => {
 autoLogin();
 
 
-  /* ----------------------------
-     💬 Send Message Handler
-  ----------------------------- */
-  refs.sendBtn?.addEventListener("click", async () => {
-    if (!currentUser) return showStarPopup("Sign in to chat.");
-    const txt = refs.messageInputEl?.value.trim();
-    if (!txt) return showStarPopup("Type a message first.");
-    if ((currentUser.stars || 0) < SEND_COST)
-      return showStarPopup("Not enough stars to send message.");
+/* ----------------------------
+   💬 Send Message Handler
+----------------------------- */
+refs.sendBtn?.addEventListener("click", async () => {
+  if (!currentUser) return showStarPopup("Sign in to chat.");
+  const txt = refs.messageInputEl?.value.trim();
+  if (!txt) return showStarPopup("Type a message first.");
+  if ((currentUser.stars || 0) < SEND_COST)
+    return showStarPopup("Not enough stars to send message.");
 
-    // Deduct star cost
-    currentUser.stars -= SEND_COST;
-    refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-    await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-SEND_COST) });
+  // Deduct star cost
+  currentUser.stars -= SEND_COST;
+  refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+  await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-SEND_COST) });
 
-    // Add to chat
-    const newMsg = {
-      content: txt,
-      uid: currentUser.uid,
-      chatId: currentUser.chatId,
-      timestamp: serverTimestamp(),
-      highlight: false,
-      buzzColor: null
-    };
-    const docRef = await addDoc(collection(db, CHAT_COLLECTION), newMsg);
+  // Prepare new message
+  const newMsg = {
+    content: txt,
+    uid: currentUser.uid,
+    chatId: currentUser.chatId,
+    timestamp: serverTimestamp(),
+    highlight: false,
+    buzzColor: null
+  };
 
-    // Render immediately (optimistic)
-    refs.messageInputEl.value = "";
-    renderMessagesFromArray([{ id: docRef.id, data: newMsg }], true);
-    scrollToBottom(refs.messagesEl);
-  });
+  // If replying, include reply info
+  if (currentReplyTarget) {
+    newMsg.replyTo = currentReplyTarget.id;
+    newMsg.replyToContent = currentReplyTarget.content; // store original message content for preview
+  }
+
+  // Add to Firestore
+  const docRef = await addDoc(collection(db, CHAT_COLLECTION), newMsg);
+
+  // Render immediately (optimistic)
+  refs.messageInputEl.value = "";
+  currentReplyTarget = null;
+  refs.messageInputEl.placeholder = "Type a message...";
+  renderMessagesFromArray([{ id: docRef.id, data: newMsg }], true);
+  scrollToBottom(refs.messagesEl);
+});
 
   /* ----------------------------
      🚨 BUZZ Message Handler
