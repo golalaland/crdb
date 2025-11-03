@@ -1,4 +1,4 @@
-  /* ---------- Imports (Firebase v10) ---------- */
+/* ---------- Imports (Firebase v10) ---------- */
 import { 
   initializeApp 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -7,18 +7,13 @@ import {
   getFirestore, 
   doc, 
   setDoc, 
-  getDoc, 
   updateDoc, 
   collection, 
-  addDoc, 
   serverTimestamp, 
   onSnapshot, 
   query, 
   orderBy, 
-  increment, 
-  getDocs, 
-  where,
-  runTransaction
+  getDocs 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { 
@@ -56,6 +51,13 @@ const auth = getAuth(app);
 let currentUser = null;
 
 /* ===============================
+   🧩 Utility: Sanitize Email
+================================= */
+function sanitizeEmail(email) {
+  return email.replace(/\./g, ",");
+}
+
+/* ===============================
    🔔 Notification Helpers
 ================================= */
 async function pushNotification(userId, message) {
@@ -77,7 +79,9 @@ function pushNotificationTx(tx, userId, message) {
   });
 }
 
-/* ---------- Auth State Watcher (Stable + Lazy Notifications) ---------- */
+/* ===============================
+   📡 Auth State + Notification Watcher
+================================= */
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
 
@@ -87,21 +91,27 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  console.log("✅ Logged in as:", user.uid);
+  console.log("✅ Logged in as:", user.email || user.uid);
   localStorage.setItem("userId", user.uid);
 
-  const notifRef = collection(db, "users", currentUser.uid, "notifications");
+  const userDocId = sanitizeEmail(user.email);
+  const notifRef = collection(db, "users", userDocId, "notifications");
   const notifQuery = query(notifRef, orderBy("timestamp", "desc"));
 
   let unsubscribe = null;
 
   async function initNotificationsListener() {
     const notificationsList = document.getElementById("notificationsList");
-    if (!notificationsList) return console.warn("⚠️ #notificationsList not found yet");
+    if (!notificationsList) {
+      console.warn("⚠️ #notificationsList not found in DOM yet");
+      return;
+    }
 
+    // Unsubscribe from any previous listener to avoid duplicates
     if (unsubscribe) unsubscribe();
 
-    console.log("🔔 Setting up live notification listener...");
+    console.log("🔔 Setting up live Firestore listener for notifications...");
+
     unsubscribe = onSnapshot(notifQuery, (snapshot) => {
       if (snapshot.empty) {
         notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
@@ -129,8 +139,10 @@ onAuthStateChanged(auth, async (user) => {
     });
   }
 
+  // Initialize once DOM is loaded
   document.addEventListener("DOMContentLoaded", initNotificationsListener);
 
+  // Also trigger when Notifications tab is clicked
   const notifTabBtn = document.querySelector('.tab-btn[data-tab="notificationsTab"]');
   if (notifTabBtn) {
     notifTabBtn.addEventListener("click", () => {
@@ -138,23 +150,24 @@ onAuthStateChanged(auth, async (user) => {
     });
   }
 
+  // Handle “Mark All Read” button
   const markAllBtn = document.getElementById("markAllRead");
   if (markAllBtn) {
     markAllBtn.addEventListener("click", async () => {
-      console.log("🟡 Marking all notifications as read...");
-      const snapshot = await getDocs(notifRef);
-      for (const docSnap of snapshot.docs) {
-        const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
-        await updateDoc(ref, { read: true });
+      try {
+        console.log("🟡 Marking all notifications as read...");
+        const snapshot = await getDocs(notifRef);
+        for (const docSnap of snapshot.docs) {
+          const ref = doc(db, "users", userDocId, "notifications", docSnap.id);
+          await updateDoc(ref, { read: true });
+        }
+        alert("✅ All notifications marked as read.");
+      } catch (err) {
+        console.error("❌ Error marking notifications as read:", err);
       }
-      alert("✅ All notifications marked as read.");
     });
   }
 });
-
-
-
-
 /* ---------- Helper: Get current user ID ---------- */
 export function getCurrentUserId() {
   return currentUser ? currentUser.uid : localStorage.getItem("userId");
