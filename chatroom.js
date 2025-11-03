@@ -451,57 +451,78 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       wrapper.appendChild(contentEl);
 
 // --- Tap-to-reply modal ---
-wrapper.addEventListener("click", (e) => {
-  e.stopPropagation();
+      wrapper.addEventListener("click", (e) => {
+        e.stopPropagation();
 
-  // remove any existing modal first
-  document.querySelectorAll(".tap-modal").forEach(mod => mod.remove());
+        // remove any existing modal first
+        document.querySelectorAll(".tap-modal").forEach(mod => mod.remove());
 
-  const modal = document.createElement("div");
-  modal.className = "tap-modal";
+const modal = document.createElement("div");
+modal.className = "tap-modal";
+modal.style.position = "absolute";
+modal.style.padding = "6px 10px";
+modal.style.background = "#333";
+modal.style.color = "#fff";
+modal.style.borderRadius = "6px";
+modal.style.fontSize = "12px";
 
-  // Buttons
-  const replyOption = document.createElement("button");
-  replyOption.textContent = "Reply";
-  replyOption.style.cursor = "pointer";
-  replyOption.onclick = () => {
-    currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
-    refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
-    refs.messageInputEl.focus();
-    modal.remove();
-  };
-  modal.appendChild(replyOption);
+// get message position relative to messages container
+const rect = wrapper.getBoundingClientRect();
+const chatRect = refs.messagesEl.getBoundingClientRect();
 
-  const reportOption = document.createElement("button");
-  reportOption.textContent = "Report";
-  reportOption.style.cursor = "pointer";
-  reportOption.onclick = () => {
-    alert(`Reported message from ${m.chatId}`);
-    modal.remove();
-  };
-  modal.appendChild(reportOption);
+// account for container scroll
+const scrollOffset = refs.messagesEl.scrollTop;
 
-  const cancelOption = document.createElement("button");
-  cancelOption.textContent = "✕";
-  cancelOption.style.cursor = "pointer";
-  cancelOption.onclick = () => modal.remove();
-  modal.appendChild(cancelOption);
+modal.style.top = `${rect.top - chatRect.top + scrollOffset - 36}px`; // slightly above message
+modal.style.left = `${rect.left - chatRect.left + 10}px`; // small left offset
 
-  // --- Minimal positioning tweak ---
-  // Just offset a bit from the click inside the message
-  modal.style.position = "absolute";
-  modal.style.top = `${e.offsetY - 20}px`;   // slightly above click
-  modal.style.left = `${e.offsetX + 10}px`;  // slightly right
-  modal.style.zIndex = 1000;
-  modal.style.display = "flex";
-  modal.style.gap = "6px";
+modal.style.zIndex = 1000;
+modal.style.display = "flex";
+modal.style.gap = "6px";
 
-  wrapper.appendChild(modal);
+        // --- Reply button in modal ---
+        const replyOption = document.createElement("button");
+        replyOption.textContent = "Reply";
+        replyOption.style.cursor = "pointer";
+        replyOption.onclick = () => {
+          currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
+          refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
+          refs.messageInputEl.focus();
+          modal.remove();
+        };
+        modal.appendChild(replyOption);
 
-  // Auto-hide after 3 seconds
-  setTimeout(() => modal.remove(), 3000);
-});
+        // --- Report button ---
+        const reportOption = document.createElement("button");
+        reportOption.textContent = "Report";
+        reportOption.style.cursor = "pointer";
+        reportOption.onclick = () => {
+          alert(`Reported message from ${m.chatId}`);
+          modal.remove();
+        };
+        modal.appendChild(reportOption);
 
+        // --- Cancel button ---
+        const cancelOption = document.createElement("button");
+        cancelOption.textContent = "✕";
+        cancelOption.style.cursor = "pointer";
+        cancelOption.onclick = () => {
+          modal.remove();
+        };
+        modal.appendChild(cancelOption);
+
+        wrapper.appendChild(modal);
+
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+          modal.remove();
+        }, 3000);
+      });
+    }
+
+    refs.messagesEl.appendChild(wrapper);
+  });
+  
   // --- Auto-scroll to bottom ---
   if (!scrollPending) {
     scrollPending = true;
