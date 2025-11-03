@@ -451,77 +451,85 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       wrapper.appendChild(contentEl);
 
       // --- Tap-to-reply modal ---
-      wrapper.addEventListener("click", (e) => {
-        e.stopPropagation();
+wrapper.addEventListener("click", (e) => {
+  e.stopPropagation();
 
-        // remove any existing modal first
-        document.querySelectorAll(".tap-modal").forEach(mod => mod.remove());
+  // Remove any existing modal first
+  document.querySelectorAll(".tap-modal").forEach(mod => mod.remove());
 
-        const modal = document.createElement("div");
-        modal.className = "tap-modal";
-        modal.style.position = "absolute";
-        modal.style.padding = "6px 10px";
-        modal.style.background = "#333";
-        modal.style.color = "#fff";
-        modal.style.borderRadius = "6px";
-        modal.style.fontSize = "12px";
-        modal.style.top = `${e.offsetY}px`;
-        modal.style.left = `${e.offsetX}px`;
-        modal.style.zIndex = 1000;
-        modal.style.display = "flex";
-        modal.style.gap = "6px";
+  const modal = document.createElement("div");
+  modal.className = "tap-modal";
+  modal.style.position = "absolute";
+  modal.style.padding = "6px 10px";
+  modal.style.background = "#333";
+  modal.style.color = "#fff";
+  modal.style.borderRadius = "6px";
+  modal.style.fontSize = "12px";
+  modal.style.display = "flex";
+  modal.style.gap = "6px";
+  modal.style.zIndex = 1000;
+  modal.style.boxShadow = "0 0 6px rgba(0,0,0,0.4)";
 
-        // --- Reply button in modal ---
-        const replyOption = document.createElement("button");
-        replyOption.textContent = "Reply";
-        replyOption.style.cursor = "pointer";
-        replyOption.onclick = () => {
-          currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
-          refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
-          refs.messageInputEl.focus();
-          modal.remove();
-        };
-        modal.appendChild(replyOption);
+  // --- Buttons ---
+  const replyOption = document.createElement("button");
+  replyOption.textContent = "Reply";
+  replyOption.style.cursor = "pointer";
+  replyOption.onclick = () => {
+    currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
+    refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
+    refs.messageInputEl.focus();
+    modal.remove();
+  };
+  modal.appendChild(replyOption);
 
-        // --- Report button ---
-        const reportOption = document.createElement("button");
-        reportOption.textContent = "Report";
-        reportOption.style.cursor = "pointer";
-        reportOption.onclick = () => {
-          alert(`Reported message from ${m.chatId}`);
-          modal.remove();
-        };
-        modal.appendChild(reportOption);
+  const reportOption = document.createElement("button");
+  reportOption.textContent = "Report";
+  reportOption.style.cursor = "pointer";
+  reportOption.onclick = () => {
+    alert(`Reported message from ${m.chatId}`);
+    modal.remove();
+  };
+  modal.appendChild(reportOption);
 
-        // --- Cancel button ---
-        const cancelOption = document.createElement("button");
-        cancelOption.textContent = "✕";
-        cancelOption.style.cursor = "pointer";
-        cancelOption.onclick = () => {
-          modal.remove();
-        };
-        modal.appendChild(cancelOption);
+  const cancelOption = document.createElement("span");
+  cancelOption.textContent = "✕";
+  cancelOption.style.marginLeft = "6px";
+  cancelOption.style.cursor = "pointer";
+  cancelOption.onclick = () => modal.remove();
+  modal.appendChild(cancelOption);
 
-        wrapper.appendChild(modal);
+  // --- Position modal near the tapped message ---
+  const rect = wrapper.getBoundingClientRect();
+  const chatRect = refs.messagesEl.getBoundingClientRect();
 
-        // Auto-hide after 3 seconds
-        setTimeout(() => {
-          modal.remove();
-        }, 3000);
-      });
+  modal.style.top = `${rect.top - chatRect.top - modal.offsetHeight - 4}px`; // slightly above message
+  modal.style.left = `${rect.left - chatRect.left}px`;
+
+  refs.messagesEl.appendChild(modal);
+
+  // Auto-hide after 3 seconds if no choice is made
+  setTimeout(() => {
+    modal.remove();
+  }, 3000);
+});
+
+// --- Auto-scroll to bottom (smart + smooth) ---
+if (!scrollPending) {
+  scrollPending = true;
+
+  requestAnimationFrame(() => {
+    const chatEl = refs.messagesEl;
+
+    // How far from bottom is the user? 
+    const distanceFromBottom = chatEl.scrollHeight - chatEl.scrollTop - chatEl.clientHeight;
+
+    // If user is near bottom (e.g., <= 100px), auto-scroll
+    if (distanceFromBottom <= 100) {
+      chatEl.scrollTo({ top: chatEl.scrollHeight, behavior: "smooth" });
     }
 
-    refs.messagesEl.appendChild(wrapper);
+    scrollPending = false;
   });
-
-  // --- Auto-scroll to bottom ---
-  if (!scrollPending) {
-    scrollPending = true;
-    requestAnimationFrame(() => {
-      refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
-      scrollPending = false;
-    });
-  }
 }
 /* ---------- Animations ---------- */
 const style = document.createElement("style");
