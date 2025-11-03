@@ -77,77 +77,88 @@ function pushNotificationTx(tx, userId, message) {
   });
 }
 
-/* ---------- Auth State Watcher ---------- */
+/* ---------- Auth State Watcher (Stable + Lazy Notifications) ---------- */
 onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    currentUser = user;
-    console.log("✅ Logged in as:", user.uid);
-    localStorage.setItem("userId", user.uid);
+  currentUser = user;
 
-    // Wait for DOM elements
-    const notificationsList = document.getElementById("notificationsList");
-    const markAllBtn = document.getElementById("markAllRead");
+  if (!user) {
+    console.warn("⚠️ No logged-in user found");
+    localStorage.removeItem("userId");
+    return;
+  }
 
-    if (!notificationsList) {
-      console.warn("⚠️ notificationsList element not found in DOM");
-      return;
-    }
+  console.log("✅ Logged in as:", user.uid);
+  localStorage.setItem("userId", user.uid);
 
-    try {
-      console.log("🔔 Setting up live notification listener...");
-      const notifRef = collection(db, "users", currentUser.uid, "notifications");
+  // Utility: wait for element to appear in DOM
+  const waitForElement = (selector) =>
+    new Promise((resolve) => {
+      const el = document.querySelector(selector);
+      if (el) return resolve(el);
 
-      onSnapshot(notifRef, (snapshot) => {
-        console.log("🔔 Notifications update:", snapshot.docs.map(d => d.data()));
-        console.log("📡 Snapshot received:", snapshot.size, "docs");
+      const observer = new MutationObserver(() => {
+        const elNow = document.querySelector(selector);
+        if (elNow) {
+          observer.disconnect();
+          resolve(elNow);
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
 
-        if (snapshot.empty) {
-          notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-          return;
-        }
+  const notificationsList = await waitForElement("#notificationsList");
+  const markAllBtn = document.getElementById("markAllRead");
 
-        const items = snapshot.docs.map((docSnap) => {
-          const n = docSnap.data();
-          const time = n.timestamp?.seconds
-            ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "--:--";
-          return `
-            <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
-              <span>${n.message || "(no message)"}</span>
-              <span class="notification-time">${time}</span>
-            </div>
-          `;
-        });
+  try {
+    console.log("🔔 Setting up live notification listener...");
+    const notifRef = collection(db, "users", currentUser.uid, "notifications");
+    const notifQuery = query(notifRef, orderBy("timestamp", "desc"));
 
-        notificationsList.innerHTML = items.join("");
-      });
+    // Live updates
+    onSnapshot(notifQuery, (snapshot) => {
+      if (snapshot.empty) {
+        notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+        return;
+      }
 
-      // ✅ Mark all as read
-      if (markAllBtn) {
-        markAllBtn.addEventListener("click", async () => {
-          console.log("🟡 Marking all notifications as read...");
-          const snapshot = await getDocs(notifRef);
-          for (const docSnap of snapshot.docs) {
-            const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
-            await updateDoc(ref, { read: true });
-          }
-          alert("✅ All notifications marked as read.");
-        });
-      }
+      const items = snapshot.docs.map((docSnap) => {
+        const n = docSnap.data();
+        const time = n.timestamp?.seconds
+          ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "--:--";
 
-    } catch (err) {
-      console.error("❌ Notification listener error:", err);
-    }
+        return `
+          <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
+            <span>${n.message || "(no message)"}</span>
+            <span class="notification-time">${time}</span>
+          </div>
+        `;
+      });
 
-  } else {
-    console.warn("⚠️ No logged-in user found");
-    currentUser = null;
-    localStorage.removeItem("userId");
-  }
-}); // ✅ properly closed
+      notificationsList.innerHTML = items.join("");
+    });
+
+    // Mark all notifications as read
+    if (markAllBtn) {
+      markAllBtn.addEventListener("click", async () => {
+        console.log("🟡 Marking all notifications as read...");
+        const snapshot = await getDocs(notifRef);
+        for (const docSnap of snapshot.docs) {
+          const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
+          await updateDoc(ref, { read: true });
+        }
+        alert("✅ All notifications marked as read.");
+      });
+    }
+  } catch (err) {
+    console.error("❌ Notification listener error:", err);
+  }
+});
+
+
 
 
 /* ---------- Helper: Get current user ID ---------- */
@@ -302,31 +313,32 @@ setupUsersListener();
 /* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
 let scrollPending = false;
 
-function renderMessagesFromArray(messages) {
+function renderMessagesFromArray(messages, isBannerFeed = false) {
   if (!refs.messagesEl) return;
 
   messages.forEach(item => {
-    if (document.getElementById(item.id)) return;
+    if (document.getElementById(item.id)) return; // avoid duplicates
 
     const m = item.data;
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    if (m.systemBanner) {
-      // --- 🎁 Full-width banner style ---
+    // --- 🎁 Banner Detection ---
+    if (m.systemBanner || m.isBanner || m.type === "banner") {
+      wrapper.classList.add("chat-banner");
       wrapper.style.display = "block";
       wrapper.style.width = "100%";
       wrapper.style.textAlign = "center";
       wrapper.style.padding = "4px 0";
-      wrapper.style.margin = "3px 0";
+      wrapper.style.margin = "4px 0";
       wrapper.style.borderRadius = "8px";
       wrapper.style.position = "relative";
       wrapper.style.overflow = "hidden";
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-      // inner panel for text
+      // --- Inner text panel ---
       const innerPanel = document.createElement("div");
       innerPanel.style.display = "inline-block";
       innerPanel.style.padding = "6px 14px";
@@ -338,12 +350,32 @@ function renderMessagesFromArray(messages) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
-      // --- Confetti + Glow (one-time) ---
-      if (!m._confettiPlayed) {
-        wrapper.style.animation = "pulseGlow 2s";
-        m._confettiPlayed = true; // mark so reload doesn't replay
+      // --- 🗑 Optional Delete Button (Admin only) ---
+      if (window.currentUser?.isAdmin) {
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "🗑";
+        delBtn.title = "Delete Banner";
+        delBtn.style.position = "absolute";
+        delBtn.style.right = "6px";
+        delBtn.style.top = "3px";
+        delBtn.style.background = "rgba(255,255,255,0.5)";
+        delBtn.style.border = "none";
+        delBtn.style.borderRadius = "4px";
+        delBtn.style.cursor = "pointer";
+        delBtn.style.fontSize = "14px";
+        delBtn.onclick = async () => {
+          await deleteDoc(doc(db, "messages", item.id));
+          wrapper.remove();
+          console.log(`🗑 Banner ${item.id} deleted by admin`);
+        };
+        wrapper.appendChild(delBtn);
+      }
 
-        // Confetti container
+      // --- 🎊 Confetti + Glow (only once per session) ---
+      if (!sessionStorage.getItem(`confetti_${item.id}`)) {
+        wrapper.style.animation = "pulseGlow 2s";
+        sessionStorage.setItem(`confetti_${item.id}`, "played");
+
         const confettiContainer = document.createElement("div");
         confettiContainer.style.position = "absolute";
         confettiContainer.style.inset = "0";
@@ -364,14 +396,14 @@ function renderMessagesFromArray(messages) {
           confettiContainer.appendChild(piece);
         }
 
-        // Remove confetti and stop glow after duration
         setTimeout(() => {
           confettiContainer.remove();
           wrapper.style.animation = "";
         }, 6000);
       }
+
     } else {
-      // --- Normal message with username ---
+      // --- 💬 Regular message ---
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -474,7 +506,89 @@ if (msg.highlight && msg.content?.includes("gifted")) {
     });
   });
 }
-  
+
+/* ===== Notifications Tab Lazy + Live Setup (Robust) ===== */
+let notificationsListenerAttached = false;
+
+async function attachNotificationsListener() {
+  // Wait for the notifications tab and list to exist
+  const waitForElement = (selector) => new Promise((resolve) => {
+    const el = document.querySelector(selector);
+    if (el) return resolve(el);
+    const observer = new MutationObserver(() => {
+      const elNow = document.querySelector(selector);
+      if (elNow) {
+        observer.disconnect();
+        resolve(elNow);
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
+
+  const notificationsList = await waitForElement("#notificationsList");
+  const markAllBtn = await waitForElement("#markAllRead");
+
+  if (!currentUser?.uid) return console.warn("⚠️ No logged-in user");
+  const notifRef = collection(db, "users", currentUser.uid, "notifications");
+  const q = query(notifRef, orderBy("timestamp", "desc"));
+
+  // Live snapshot listener
+  onSnapshot(q, (snapshot) => {
+    console.log("📡 Notifications snapshot:", snapshot.docs.map(d => d.data()));
+
+    if (snapshot.empty) {
+      notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+      return;
+    }
+
+    const items = snapshot.docs.map(docSnap => {
+      const n = docSnap.data();
+      const time = n.timestamp?.seconds
+        ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : "--:--";
+      return `
+        <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
+          <span>${n.message || "(no message)"}</span>
+          <span class="notification-time">${time}</span>
+        </div>
+      `;
+    });
+
+    notificationsList.innerHTML = items.join("");
+  });
+
+  // Mark all as read
+  if (markAllBtn) {
+    markAllBtn.onclick = async () => {
+      const snapshot = await getDocs(notifRef);
+      for (const docSnap of snapshot.docs) {
+        const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
+        await updateDoc(ref, { read: true });
+      }
+      showStarPopup("✅ All notifications marked as read.");
+    };
+  }
+
+  notificationsListenerAttached = true;
+}
+
+/* ===== Tab Switching (Lazy attach for notifications) ===== */
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.onclick = async () => {
+    // Switch tabs visually
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(tab => tab.style.display = "none");
+
+    btn.classList.add("active");
+    const tabContent = document.getElementById(btn.dataset.tab);
+    if (tabContent) tabContent.style.display = "block";
+
+    // Attach notifications listener lazily
+    if (btn.dataset.tab === "notificationsTab" && !notificationsListenerAttached) {
+      await attachNotificationsListener();
+    }
+  };
+});
 
 /* ---------- 🆔 ChatID Modal ---------- */
 async function promptForChatID(userRef, userData) {
@@ -2414,64 +2528,84 @@ Object.assign(giftBtnLocal.style, {
     showSocialCard(user);
   });
 
-// --- SEND STARS FUNCTION (Dual Pop-Up + Banner) ---
+// --- SEND STARS FUNCTION (Ephemeral Banner + Dual showGiftAlert + Receiver Sync + Notification) ---
 async function sendStarsToUser(targetUser, amt) {
   try {
     const fromRef = doc(db, "users", currentUser.uid);
     const toRef = doc(db, "users", targetUser._docId);
     const glowColor = randomColor();
 
-    // 🔁 Update both users
+    // --- 1️⃣ Update Firestore balances ---
     await Promise.all([
       updateDoc(fromRef, { stars: increment(-amt), starsGifted: increment(amt) }),
       updateDoc(toRef, { stars: increment(amt) })
     ]);
 
-    // 🪧 Create banner message in Firestore
+    // --- 2️⃣ Create ephemeral banner inside main messages collection ---
     const bannerMsg = {
       content: `💫 ${currentUser.chatId} gifted ${amt} stars ⭐️ to ${targetUser.chatId}!`,
       timestamp: serverTimestamp(),
       systemBanner: true,
       highlight: true,
-      buzzColor: glowColor
+      buzzColor: glowColor,
+      isBanner: true,           // ✅ tag for admin cleanup
+      bannerShown: false,       // ✅ ephemeral display
+      senderId: currentUser.uid,
+      type: "banner"
     };
 
-    const docRef = await addDoc(collection(db, "bannerMsgs"), bannerMsg);
-    console.log("✅ Banner stored in bannerMsgs");
+    const docRef = await addDoc(collection(db, "messages_room5"), bannerMsg);
 
-    // 🪩 Render banner instantly
+    // --- 3️⃣ Render instantly for sender ---
     renderMessagesFromArray([{ id: docRef.id, data: bannerMsg }], true);
 
-    // ✨ Apply glow animation
+    // --- 4️⃣ Glow pulse for banner ---
     setTimeout(() => {
       const msgEl = document.getElementById(docRef.id);
       if (!msgEl) return;
       const contentEl = msgEl.querySelector(".content") || msgEl;
       contentEl.style.setProperty("--pulse-color", glowColor);
       contentEl.classList.add("baller-highlight");
-
       setTimeout(() => {
         contentEl.classList.remove("baller-highlight");
         contentEl.style.boxShadow = "none";
       }, 21000);
     }, 80);
 
-    // 🎁 Trigger pop-up alerts for both sides
-    showGiftAlert(`✅ You sent ${amt} stars ⭐ to ${targetUser.chatId}!`, 4000);
+    // --- 5️⃣ Sender popup ---
+    showGiftAlert(`✅ You sent ${amt} ⭐ to ${targetUser.chatId}!`, 4000);
 
-    // If the target is online or same session, simulate receiver alert too
-    setTimeout(() => {
-      showGiftAlert(`🎁 ${currentUser.chatId} sent you ${amt} stars ⭐`, 4000);
-    }, 1000);
+    // --- 6️⃣ Receiver quick sync marker ---
+    await updateDoc(toRef, {
+      lastGift: {
+        from: currentUser.chatId,
+        amt,
+        at: Date.now()
+      }
+    });
+
+    // --- 6.5️⃣ Create notification for receiver ---
+    const notifRef = collection(db, "users", targetUser._docId, "notifications");
+    await addDoc(notifRef, {
+      message: `💫 ${currentUser.chatId} gifted you ${amt} ⭐!`,
+      read: false,
+      timestamp: serverTimestamp(),
+      type: "starGift",
+      fromUserId: currentUser.uid
+    });
+
+    // --- 7️⃣ Mark banner as shown ---
+    await updateDoc(doc(db, "messages_room5", docRef.id), {
+      bannerShown: true
+    });
 
   } catch (err) {
     console.error("❌ sendStarsToUser failed:", err);
-    showGiftAlert(`⚠️ Something went wrong: ${err.message}`, 4000);
+    showGiftAlert(`⚠️ Error: ${err.message}`, 4000);
   }
 }
 
 })(); // ✅ closes IIFE
-
 
 // ========== 🟣 HOST SETTINGS LOGIC ==========
 const isHost = true; // <-- later dynamic
