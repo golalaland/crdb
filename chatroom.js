@@ -7,7 +7,6 @@ import {
   getFirestore, 
   doc, 
   setDoc, 
-  getDoc, 
   updateDoc, 
   collection, 
   addDoc, 
@@ -15,10 +14,8 @@ import {
   onSnapshot, 
   query, 
   orderBy, 
-  increment, 
   getDocs, 
-  where,
-  runTransaction
+  where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { 
@@ -55,115 +52,75 @@ const auth = getAuth(app);
 /* ---------- Globals ---------- */
 let currentUser = null;
 
-/* ===============================
-   🔔 Notification Helpers
-================================= */
+/* =========================================================
+   🔔 UNIVERSAL NOTIFICATIONS (Top-Level Collection)
+========================================================= */
+
+/* ---------- Push a Notification ---------- */
 async function pushNotification(userId, message) {
   if (!userId) return console.warn("⚠️ No userId provided for pushNotification");
-  
-  const notifRef = doc(collection(db, "notifications"));
-  await setDoc(notifRef, {
+  await addDoc(collection(db, "notifications"), {
     userId,
     message,
-    timestamp: serverTimestamp(),
     read: false,
+    timestamp: serverTimestamp(),
   });
 }
 
-function pushNotificationTx(tx, userId, message) {
-  const notifRef = doc(collection(db, "notifications"));
-  tx.set(notifRef, {
-    userId,
-    message,
-    timestamp: serverTimestamp(),
-    read: false,
-  });
-}
+/* ---------- Listen + Render ---------- */
+function loadNotifications(user) {
+  const notifContainer = document.getElementById("notificationsList");
+  if (!notifContainer) return console.warn("⚠️ #notificationsList not found");
 
-/* ---------- Auth State Watcher (Stable + Lazy Notifications) ---------- */
-onAuthStateChanged(auth, async (user) => {
-  currentUser = user;
-
-  if (!user) {
-    console.warn("⚠️ No logged-in user found");
-    localStorage.removeItem("userId");
-    return;
-  }
-
-  console.log("✅ Logged in as:", user.uid);
-  localStorage.setItem("userId", user.uid);
-
-  const notifRef = collection(db, "notifications");
-  const notifQuery = query(
-    notifRef,
-    where("userId", "==", currentUser.uid),
+  const q = query(
+    collection(db, "notifications"),
+    where("userId", "==", user.email),
     orderBy("timestamp", "desc")
   );
 
-  let unsubscribe = null;
-
-  async function initNotificationsListener() {
-    const notificationsList = document.getElementById("notificationsList");
-    if (!notificationsList) {
-      console.warn("⚠️ #notificationsList not found yet — retrying...");
-      setTimeout(initNotificationsListener, 500);
+  onSnapshot(q, (snapshot) => {
+    if (snapshot.empty) {
+      notifContainer.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
       return;
     }
 
-    if (unsubscribe) unsubscribe();
+    const html = snapshot.docs.map((docSnap) => {
+      const n = docSnap.data();
+      const time = n.timestamp?.seconds
+        ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : "--:--";
 
-    console.log("🔔 Setting up live notification listener...");
-    unsubscribe = onSnapshot(notifQuery, (snapshot) => {
-      if (snapshot.empty) {
-        notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-        return;
-      }
+      return `
+        <div class="notif-item ${n.read ? "read" : "unread"}" data-id="${docSnap.id}">
+          <span>${n.message}</span>
+          <span class="notif-time">${time}</span>
+        </div>
+      `;
+    }).join("");
 
-      const items = snapshot.docs.map((docSnap) => {
-        const n = docSnap.data();
-        const time = n.timestamp?.seconds
-          ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : "--:--";
+    notifContainer.innerHTML = html;
+  });
+}
 
-        return `
-          <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
-            <span>${n.message || "(no message)"}</span>
-            <span class="notification-time">${time}</span>
-          </div>
-        `;
-      });
-
-      notificationsList.innerHTML = items.join("");
-    });
+/* ---------- Mark All Read ---------- */
+document.getElementById("markAllRead")?.addEventListener("click", async () => {
+  if (!currentUser?.email) return;
+  const q = query(collection(db, "notifications"), where("userId", "==", currentUser.email));
+  const snap = await getDocs(q);
+  for (const docSnap of snap.docs) {
+    await updateDoc(doc(db, "notifications", docSnap.id), { read: true });
   }
+  alert("✅ All notifications marked as read.");
+});
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initNotificationsListener);
+/* ---------- Auth Watcher ---------- */
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+  if (user) {
+    console.log("✅ Logged in as:", user.email);
+    loadNotifications(user);
   } else {
-    initNotificationsListener();
-  }
-
-  const notifTabBtn = document.querySelector('.tab-btn[data-tab="notificationsTab"]');
-  if (notifTabBtn) {
-    notifTabBtn.addEventListener("click", () => {
-      setTimeout(initNotificationsListener, 150);
-    });
-  }
-
-  const markAllBtn = document.getElementById("markAllRead");
-  if (markAllBtn) {
-    markAllBtn.addEventListener("click", async () => {
-      console.log("🟡 Marking all notifications as read...");
-      const snapshot = await getDocs(query(notifRef, where("userId", "==", currentUser.uid)));
-      for (const docSnap of snapshot.docs) {
-        const ref = doc(db, "notifications", docSnap.id);
-        await updateDoc(ref, { read: true });
-      }
-      alert("✅ All notifications marked as read.");
-    });
+    console.log("🚫 Logged out");
   }
 });
 
