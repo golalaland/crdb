@@ -15,7 +15,7 @@ import {
   query, 
   orderBy, 
   getDocs, 
-  where 
+  where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { 
@@ -42,79 +42,105 @@ const auth = getAuth(app);
 /* ---------- Globals ---------- */
 let currentUser = null;
 
-/* =========================================================
-   🔔 UNIVERSAL NOTIFICATIONS (Top-Level Collection)
-========================================================= */
+/* =====================================================
+   🔔 NOTIFICATIONS (Top-Level Collection, UID-Based)
+===================================================== */
 
-/* ---------- Push a Notification ---------- */
+/* ---------- Push Notification ---------- */
 async function pushNotification(userId, message) {
   if (!userId) return console.warn("⚠️ No userId provided for pushNotification");
-  await addDoc(collection(db, "notifications"), {
+  
+  const notifRef = doc(collection(db, "notifications"));
+  await setDoc(notifRef, {
     userId,
     message,
-    read: false,
     timestamp: serverTimestamp(),
+    read: false,
   });
+
+  console.log(`📩 Notification pushed for ${userId}:`, message);
 }
 
-/* ---------- Render Notifications ---------- */
-function loadNotifications(userId) {
-  const notifContainer = document.getElementById("notificationsList");
-  if (!notifContainer) return console.warn("⚠️ #notificationsList not found");
+/* ---------- Listen for Notifications ---------- */
+function listenForNotifications(userId, userEmailSanitized) {
+  const notificationsList = document.getElementById("notificationsList");
+  if (!notificationsList) {
+    console.warn("⚠️ #notificationsList not found — retrying...");
+    setTimeout(() => listenForNotifications(userId, userEmailSanitized), 500);
+    return;
+  }
 
-  const q = query(
-    collection(db, "notifications"),
-    where("userId", "==", userId),
+  console.log("🔔 Setting up live listener for notifications...");
+
+  const notifRef = collection(db, "notifications");
+  const notifQuery = query(
+    notifRef,
+    where("userId", "in", [userId, userEmailSanitized].filter(Boolean)),
     orderBy("timestamp", "desc")
   );
 
-  onSnapshot(q, (snapshot) => {
+  onSnapshot(notifQuery, (snapshot) => {
     if (snapshot.empty) {
-      notifContainer.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+      notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
       return;
     }
 
     const html = snapshot.docs.map((docSnap) => {
       const n = docSnap.data();
       const time = n.timestamp?.seconds
-        ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
         : "--:--";
 
       return `
-        <div class="notif-item ${n.read ? "read" : "unread"}" data-id="${docSnap.id}">
-          <span>${n.message}</span>
-          <span class="notif-time">${time}</span>
+        <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
+          <span>${n.message || "(no message)"}</span>
+          <span class="notification-time">${time}</span>
         </div>
       `;
     }).join("");
 
-    notifContainer.innerHTML = html;
+    notificationsList.innerHTML = html;
   });
 }
 
-/* ---------- Mark All Read ---------- */
-document.getElementById("markAllRead")?.addEventListener("click", async () => {
-  if (!currentUser) return;
-  const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
+/* ---------- Mark All as Read ---------- */
+async function markAllAsRead(userId) {
+  const q = query(collection(db, "notifications"), where("userId", "==", userId));
   const snap = await getDocs(q);
   for (const docSnap of snap.docs) {
     await updateDoc(doc(db, "notifications", docSnap.id), { read: true });
   }
   alert("✅ All notifications marked as read.");
-});
+}
 
-/* ---------- Auth Watcher ---------- */
+/* ---------- Auth State Watcher ---------- */
 onAuthStateChanged(auth, (user) => {
   if (!user) {
-    console.warn("⚠️ User not logged in.");
+    console.warn("⚠️ No logged-in user found");
+    localStorage.removeItem("userId");
     return;
   }
 
   currentUser = user;
   console.log("✅ Logged in as:", user.uid);
+  localStorage.setItem("userId", user.uid);
 
-  // Use UID as the consistent identifier
-  loadNotifications(user.uid);
+  // Create sanitized email (for backward compatibility)
+  const sanitizedEmail = user.email
+    ? user.email.replace(/[.#$[\]@]/g, "_")
+    : null;
+
+  // Start listening for notifications
+  listenForNotifications(user.uid, sanitizedEmail);
+
+  // Hook up “Mark All Read” button
+  const markAllBtn = document.getElementById("markAllRead");
+  if (markAllBtn) {
+    markAllBtn.onclick = () => markAllAsRead(user.uid);
+  }
 });
 
 /* ---------- Helper: Get current user ID ---------- */
