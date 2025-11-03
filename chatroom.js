@@ -457,19 +457,24 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
         // remove any existing modal first
         document.querySelectorAll(".tap-modal").forEach(mod => mod.remove());
 
-        const modal = document.createElement("div");
-        modal.className = "tap-modal";
-        modal.style.position = "absolute";
-        modal.style.padding = "6px 10px";
-        modal.style.background = "#333";
-        modal.style.color = "#fff";
-        modal.style.borderRadius = "6px";
-        modal.style.fontSize = "12px";
-        modal.style.top = `${e.offsetY}px`;
-        modal.style.left = `${e.offsetX}px`;
-        modal.style.zIndex = 1000;
-        modal.style.display = "flex";
-        modal.style.gap = "6px";
+const modal = document.createElement("div");
+modal.className = "tap-modal";
+modal.style.position = "absolute";
+modal.style.padding = "6px 10px";
+modal.style.background = "#333";
+modal.style.color = "#fff";
+modal.style.borderRadius = "6px";
+modal.style.fontSize = "12px";
+
+const rect = wrapper.getBoundingClientRect();
+const chatRect = refs.messagesEl.getBoundingClientRect();
+
+modal.style.top = `${rect.top - chatRect.top - 36}px`; // slightly above message
+modal.style.left = `${rect.left - chatRect.left + 10}px`; // small left offset
+
+modal.style.zIndex = 1000;
+modal.style.display = "flex";
+modal.style.gap = "6px";
 
         // --- Reply button in modal ---
         const replyOption = document.createElement("button");
