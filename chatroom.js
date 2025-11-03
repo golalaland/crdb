@@ -15,16 +15,8 @@ import {
   query, 
   orderBy, 
   getDocs, 
-  where
+  where 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-import { 
-  getDatabase, 
-  ref as rtdbRef, 
-  set as rtdbSet, 
-  onDisconnect, 
-  onValue 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 import { 
   getAuth, 
@@ -39,14 +31,12 @@ const firebaseConfig = {
   storageBucket: "metaverse-1010.appspot.com",
   messagingSenderId: "1044064238233",
   appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
-  measurementId: "G-S77BMC266C",
-  databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
+  measurementId: "G-S77BMC266C"
 };
 
 /* ---------- Firebase Setup ---------- */
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const rtdb = getDatabase(app);
 const auth = getAuth(app);
 
 /* ---------- Globals ---------- */
@@ -67,14 +57,14 @@ async function pushNotification(userId, message) {
   });
 }
 
-/* ---------- Listen + Render ---------- */
-function loadNotifications(user) {
+/* ---------- Render Notifications ---------- */
+function loadNotifications(userId) {
   const notifContainer = document.getElementById("notificationsList");
   if (!notifContainer) return console.warn("⚠️ #notificationsList not found");
 
   const q = query(
     collection(db, "notifications"),
-    where("userId", "==", user.email),
+    where("userId", "==", userId),
     orderBy("timestamp", "desc")
   );
 
@@ -104,8 +94,8 @@ function loadNotifications(user) {
 
 /* ---------- Mark All Read ---------- */
 document.getElementById("markAllRead")?.addEventListener("click", async () => {
-  if (!currentUser?.email) return;
-  const q = query(collection(db, "notifications"), where("userId", "==", currentUser.email));
+  if (!currentUser) return;
+  const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
   const snap = await getDocs(q);
   for (const docSnap of snap.docs) {
     await updateDoc(doc(db, "notifications", docSnap.id), { read: true });
@@ -115,13 +105,16 @@ document.getElementById("markAllRead")?.addEventListener("click", async () => {
 
 /* ---------- Auth Watcher ---------- */
 onAuthStateChanged(auth, (user) => {
-  currentUser = user;
-  if (user) {
-    console.log("✅ Logged in as:", user.email);
-    loadNotifications(user);
-  } else {
-    console.log("🚫 Logged out");
+  if (!user) {
+    console.warn("⚠️ User not logged in.");
+    return;
   }
+
+  currentUser = user;
+  console.log("✅ Logged in as:", user.uid);
+
+  // Use UID as the consistent identifier
+  loadNotifications(user.uid);
 });
 
 /* ---------- Helper: Get current user ID ---------- */
