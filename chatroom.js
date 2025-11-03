@@ -450,68 +450,69 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       }
       wrapper.appendChild(contentEl);
 
-// --- Tap-to-reply modal ---
-wrapper.addEventListener("click", (e) => {
-  e.stopPropagation();
+      // --- Tap-to-reply modal ---
+      wrapper.addEventListener("click", (e) => {
+        e.stopPropagation();
 
-  // Remove any existing modal first
-  document.querySelectorAll(".tap-modal").forEach(mod => mod.remove());
+        // remove any existing modal first
+        document.querySelectorAll(".tap-modal").forEach(mod => mod.remove());
 
-  const modal = document.createElement("div");
-  modal.className = "tap-modal";
-  modal.style.position = "absolute";
-  modal.style.padding = "6px 10px";
-  modal.style.background = "#333";
-  modal.style.color = "#fff";
-  modal.style.borderRadius = "6px";
-  modal.style.fontSize = "12px";
-  modal.style.display = "flex";
-  modal.style.gap = "6px";
-  modal.style.zIndex = 1000;
-  modal.style.boxShadow = "0 0 6px rgba(0,0,0,0.4)";
+        const modal = document.createElement("div");
+        modal.className = "tap-modal";
+        modal.style.position = "absolute";
+        modal.style.padding = "6px 10px";
+        modal.style.background = "#333";
+        modal.style.color = "#fff";
+        modal.style.borderRadius = "6px";
+        modal.style.fontSize = "12px";
+        modal.style.top = `${e.offsetY}px`;
+        modal.style.left = `${e.offsetX}px`;
+        modal.style.zIndex = 1000;
+        modal.style.display = "flex";
+        modal.style.gap = "6px";
 
-  // Position near message
-  const rect = wrapper.getBoundingClientRect();
-  const chatRect = refs.messagesEl.getBoundingClientRect();
-  modal.style.top = `${rect.top - chatRect.top - 36}px`; // slightly above message
-  modal.style.left = `${rect.left - chatRect.left}px`;
+        // --- Reply button in modal ---
+        const replyOption = document.createElement("button");
+        replyOption.textContent = "Reply";
+        replyOption.style.cursor = "pointer";
+        replyOption.onclick = () => {
+          currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
+          refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
+          refs.messageInputEl.focus();
+          modal.remove();
+        };
+        modal.appendChild(replyOption);
 
-  // --- Reply button ---
-  const replyBtn = document.createElement("button");
-  replyBtn.textContent = "Reply";
-  replyBtn.style.cursor = "pointer";
-  replyBtn.onclick = () => {
-    currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
-    refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
-    refs.messageInputEl.focus();
-    modal.remove();
-  };
-  modal.appendChild(replyBtn);
+        // --- Report button ---
+        const reportOption = document.createElement("button");
+        reportOption.textContent = "Report";
+        reportOption.style.cursor = "pointer";
+        reportOption.onclick = () => {
+          alert(`Reported message from ${m.chatId}`);
+          modal.remove();
+        };
+        modal.appendChild(reportOption);
 
-  // --- Report button ---
-  const reportBtn = document.createElement("button");
-  reportBtn.textContent = "Report";
-  reportBtn.style.cursor = "pointer";
-  reportBtn.onclick = () => {
-    alert(`Reported message from ${m.chatId}`);
-    modal.remove();
-  };
-  modal.appendChild(reportBtn);
+        // --- Cancel button ---
+        const cancelOption = document.createElement("button");
+        cancelOption.textContent = "✕";
+        cancelOption.style.cursor = "pointer";
+        cancelOption.onclick = () => {
+          modal.remove();
+        };
+        modal.appendChild(cancelOption);
 
-  // --- Cancel button ---
-  const cancelBtn = document.createElement("span");
-  cancelBtn.textContent = "×";
-  cancelBtn.style.marginLeft = "6px";
-  cancelBtn.style.cursor = "pointer";
-  cancelBtn.onclick = () => modal.remove();
-  modal.appendChild(cancelBtn);
+        wrapper.appendChild(modal);
 
-  // Append modal to chat container
-  refs.messagesEl.appendChild(modal);
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+          modal.remove();
+        }, 3000);
+      });
+    }
 
-  // Auto-hide after 3 seconds
-  setTimeout(() => { modal.remove(); }, 3000);
-});
+    refs.messagesEl.appendChild(wrapper);
+  });
 
   // --- Auto-scroll to bottom ---
   if (!scrollPending) {
