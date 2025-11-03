@@ -471,9 +471,9 @@ const rect = wrapper.getBoundingClientRect();
 const chatRect = refs.messagesEl.getBoundingClientRect();
 const scrollOffset = refs.messagesEl.scrollTop;
 
-// Calculate position inside the scrollable chat container
-const modalTop = rect.top - chatRect.top + scrollOffset - 10; // small offset above bubble
-const modalLeft = rect.left - chatRect.left + 20; // small left offset from bubble start
+// Adjusted position — slightly to the right & a bit below
+const modalTop = rect.top - chatRect.top + scrollOffset + 6; // 6px below bubble
+const modalLeft = rect.left - chatRect.left + rect.width + 12; // 12px to the right
 
 modal.style.top = `${modalTop}px`;
 modal.style.left = `${modalLeft}px`;
