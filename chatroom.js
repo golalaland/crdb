@@ -556,120 +556,62 @@ modal.style.gap = "6px";
     refs.messagesEl.appendChild(wrapper);
   });
   
-    // --- Auto-scroll to bottom ---
-  if (!scrollPending) {
-    scrollPending = true;
-    requestAnimationFrame(() => {
-      refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
-      scrollPending = false;
+  // --- Intelligent auto-scroll with "scroll to bottom" indicator ---
+  if (!refs.messagesEl.querySelector("#scrollToBottomBtn")) {
+    // Create arrow button if it doesn’t exist
+    const scrollBtn = document.createElement("div");
+    scrollBtn.id = "scrollToBottomBtn";
+    scrollBtn.textContent = "↓";
+    scrollBtn.style.cssText = `
+      position: absolute;
+      bottom: 80px;
+      right: 20px;
+      padding: 6px 12px;
+      background: rgba(255,20,147,0.9);
+      color: #fff;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      z-index: 999;
+    `;
+    refs.messagesEl.appendChild(scrollBtn);
+
+    scrollBtn.addEventListener("click", () => {
+      refs.messagesEl.scrollTo({
+        top: refs.messagesEl.scrollHeight,
+        behavior: "smooth",
+      });
+      scrollBtn.style.opacity = 0;
+      scrollBtn.style.pointerEvents = "none";
     });
   }
-}
 
-/* =======================================================
-   💬 Smart Chat Scroller — Telegram Style (NNAMDI build)
-======================================================= */
-const chatContainer = document.getElementById("messages");
+  const scrollBtn = refs.messagesEl.querySelector("#scrollToBottomBtn");
 
-// Create floating “New Messages” bubble
-const newMsgBtn = document.createElement("div");
-newMsgBtn.id = "newMessagesIndicator";
-newMsgBtn.textContent = "New messages ↓";
-newMsgBtn.style.cssText = `
-  position: absolute;
-  bottom: 80px;
-  right: 20px;
-  padding: 7px 14px;
-  background: rgba(255,20,147,0.9);
-  color: #fff;
-  border-radius: 16px;
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transition: all 0.3s ease;
-  z-index: 9999;
-`;
-chatContainer.appendChild(newMsgBtn);
-
-let autoScrollEnabled = true;
-let lastMessageCount = 0;
-
-/* 🧠 Watch scroll position */
-chatContainer.addEventListener("scroll", () => {
   const distanceFromBottom =
-    chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight;
+    refs.messagesEl.scrollHeight -
+    refs.messagesEl.scrollTop -
+    refs.messagesEl.clientHeight;
 
+  // Show/hide arrow
   if (distanceFromBottom > 150) {
-    autoScrollEnabled = false;
+    scrollBtn.style.opacity = 1;
+    scrollBtn.style.pointerEvents = "auto";
   } else {
-    autoScrollEnabled = true;
-    hideNewMsgIndicator();
-  }
-});
-
-/* 🎯 Scroll to bottom */
-function scrollToBottom(smooth = true) {
-  chatContainer.scrollTo({
-    top: chatContainer.scrollHeight,
-    behavior: smooth ? "smooth" : "auto",
-  });
-  hideNewMsgIndicator();
-}
-
-/* 👇 Click handler */
-newMsgBtn.addEventListener("click", () => {
-  scrollToBottom(true);
-});
-
-/* ✨ Show/hide indicator */
-function showNewMsgIndicator() {
-  newMsgBtn.style.opacity = 1;
-  newMsgBtn.style.pointerEvents = "auto";
-}
-
-function hideNewMsgIndicator() {
-  newMsgBtn.style.opacity = 0;
-  newMsgBtn.style.pointerEvents = "none";
-}
-
-/* 🧩 Integrate into your renderMessages function */
-function renderMessages(messages) {
-  const messagesContainer = document.getElementById("messages");
-  if (!messagesContainer) return;
-
-  // Render all messages
-  messagesContainer.innerHTML = messages
-    .map(
-      (msg) => `
-      <div class="msg ${msg.userId === currentUser?.uid ? "me" : ""}">
-        <span class="meta">${msg.username || "Anon"}:</span>
-        <span class="content">${msg.text}</span>
-      </div>`
-    )
-    .join("");
-
-  // Scrolling logic
-  if (autoScrollEnabled) {
-    scrollToBottom(false);
-  } else if (messages.length > lastMessageCount) {
-    showNewMsgIndicator();
-    // Gentle pulse animation
-    newMsgBtn.animate(
-      [
-        { transform: "scale(1)" },
-        { transform: "scale(1.1)" },
-        { transform: "scale(1)" },
-      ],
-      { duration: 400 }
-    );
+    scrollBtn.style.opacity = 0;
+    scrollBtn.style.pointerEvents = "none";
   }
 
-  lastMessageCount = messages.length;
+  // Auto-scroll only if user is near bottom
+  if (distanceFromBottom < 150) {
+    refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
+  }
 }
-  
+
 
 /* ---------- Animations ---------- */
 const style = document.createElement("style");
