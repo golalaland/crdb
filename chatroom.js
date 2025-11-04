@@ -553,11 +553,12 @@ modal.style.gap = "6px";
       });
     }
 
-    refs.messagesEl.appendChild(wrapper);
+// --- inside your message rendering (after modal remove etc.) ---
+refs.messagesEl.appendChild(wrapper);
 
-    // ✅ Call the scroller AFTER messages render
-    handleChatAutoScroll();
-  }); // <-- closes your Firestore onSnapshot or map()
+// ✅ Call the scroller AFTER messages render
+handleChatAutoScroll();
+}); // <-- closes your Firestore onSnapshot or map()
 }
 
 // --- Smart scroll + "new messages" arrow ---
@@ -616,6 +617,25 @@ function handleChatAutoScroll() {
     refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
   }
 }
+
+// --- Watch scroll events on the chat ---
+refs.messagesEl.addEventListener("scroll", () => {
+  const scrollBtn = document.getElementById("scrollToBottomBtn");
+  if (!scrollBtn) return;
+
+  const distanceFromBottom =
+    refs.messagesEl.scrollHeight -
+    refs.messagesEl.scrollTop -
+    refs.messagesEl.clientHeight;
+
+  if (distanceFromBottom > 150) {
+    scrollBtn.style.opacity = 1;
+    scrollBtn.style.pointerEvents = "auto";
+  } else {
+    scrollBtn.style.opacity = 0;
+    scrollBtn.style.pointerEvents = "none";
+  }
+});
 
 
 /* ---------- Animations ---------- */
