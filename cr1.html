@@ -1651,7 +1651,24 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     <button id="chatIDConfirmBtn" class="small-btn" style="width:100%;padding:10px;">Confirm</button>
   </div>
 </div>
-  <div id="messages"></div>
+<!-- Chat messages container -->
+<div id="messages"></div>
+
+<!-- Downward arrow indicator -->
+<div id="scrollToBottomBtn" style="
+  display:none;
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: #ff1493;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 1000;
+  font-size: 16px;
+">
+  ⬇
 </div>
 
 <div class="send-area" id="sendArea" style="display:none;">
@@ -1935,8 +1952,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
 
 
-<!-- Scroll-to-Bottom Arrow -->
-<div id="scrollArrow">&#x2193;</div>
+
 
 <!-- Gift Alert -->
 <div id="giftAlert" class="gift-alert"></div>
