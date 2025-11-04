@@ -554,61 +554,67 @@ modal.style.gap = "6px";
     }
 
     refs.messagesEl.appendChild(wrapper);
-  });
-  
-// --- Intelligent auto-scroll with "scroll to bottom" indicator ---
-if (!document.getElementById("scrollToBottomBtn")) {
-  // Create arrow button once
-  const scrollBtn = document.createElement("div");
-  scrollBtn.id = "scrollToBottomBtn";
-  scrollBtn.textContent = "↓";
-  scrollBtn.style.cssText = `
-    position: fixed;       /* <-- fixed to viewport, not inside scrollable chat */
-    bottom: 90px;
-    right: 20px;
-    padding: 6px 12px;
-    background: rgba(255,20,147,0.9);
-    color: #fff;
-    border-radius: 14px;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    opacity: 0;
-    pointer-events: none;
-    transition: all 0.3s ease;
-    z-index: 9999;
-  `;
-  document.body.appendChild(scrollBtn);
 
-  scrollBtn.addEventListener("click", () => {
-    refs.messagesEl.scrollTo({
-      top: refs.messagesEl.scrollHeight,
-      behavior: "smooth",
+    // ✅ Call the scroller AFTER messages render
+    handleChatAutoScroll();
+  }); // <-- closes your Firestore onSnapshot or map()
+}
+
+// --- Smart scroll + "new messages" arrow ---
+function handleChatAutoScroll() {
+  if (!refs.messagesEl) return;
+
+  // Create arrow once
+  let scrollBtn = document.getElementById("scrollToBottomBtn");
+  if (!scrollBtn) {
+    scrollBtn = document.createElement("div");
+    scrollBtn.id = "scrollToBottomBtn";
+    scrollBtn.textContent = "↓";
+    scrollBtn.style.cssText = `
+      position: fixed;
+      bottom: 90px;
+      right: 20px;
+      padding: 6px 12px;
+      background: rgba(255,20,147,0.9);
+      color: #fff;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      z-index: 9999;
+    `;
+    document.body.appendChild(scrollBtn);
+
+    scrollBtn.addEventListener("click", () => {
+      refs.messagesEl.scrollTo({
+        top: refs.messagesEl.scrollHeight,
+        behavior: "smooth",
+      });
+      scrollBtn.style.opacity = 0;
+      scrollBtn.style.pointerEvents = "none";
     });
+  }
+
+  // Check scroll position
+  const distanceFromBottom =
+    refs.messagesEl.scrollHeight -
+    refs.messagesEl.scrollTop -
+    refs.messagesEl.clientHeight;
+
+  // Show arrow if user scrolled up
+  if (distanceFromBottom > 150) {
+    scrollBtn.style.opacity = 1;
+    scrollBtn.style.pointerEvents = "auto";
+  } else {
     scrollBtn.style.opacity = 0;
     scrollBtn.style.pointerEvents = "none";
-  });
-}
 
-const scrollBtn = document.getElementById("scrollToBottomBtn");
-
-const distanceFromBottom =
-  refs.messagesEl.scrollHeight -
-  refs.messagesEl.scrollTop -
-  refs.messagesEl.clientHeight;
-
-// Show/hide arrow
-if (distanceFromBottom > 150) {
-  scrollBtn.style.opacity = 1;
-  scrollBtn.style.pointerEvents = "auto";
-} else {
-  scrollBtn.style.opacity = 0;
-  scrollBtn.style.pointerEvents = "none";
-}
-
-// Auto-scroll only if user is near bottom
-if (distanceFromBottom < 150) {
-  refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
+    // Auto-scroll if near bottom
+    refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
+  }
 }
 
 
