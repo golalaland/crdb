@@ -481,105 +481,123 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       }
       wrapper.appendChild(contentEl);
 
-// --- Tap-to-reply modal ---
-      wrapper.addEventListener("click", (e) => {
-        e.stopPropagation();
+// --- 💬 Tap-to-Reply Modal ---
+wrapper.addEventListener("click", (e) => {
+  e.stopPropagation();
 
-        // remove any existing modal first
-        document.querySelectorAll(".tap-modal").forEach(mod => mod.remove());
+  // Remove any open modals first
+  document.querySelectorAll(".tap-modal").forEach(mod => mod.remove());
 
-const modal = document.createElement("div");
-modal.className = "tap-modal";
-modal.style.position = "absolute";
-modal.style.padding = "6px 10px";
-modal.style.background = "#333";
-modal.style.color = "#fff";
-modal.style.borderRadius = "6px";
-modal.style.fontSize = "12px";
+  const modal = document.createElement("div");
+  modal.className = "tap-modal";
+  modal.style.cssText = `
+    position: absolute;
+    background: rgba(30,30,30,0.95);
+    color: #fff;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    display: flex;
+    gap: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    transition: opacity 0.3s ease;
+    opacity: 0;
+    z-index: 1000;
+  `;
 
-// get message position relative to messages container
-const rect = wrapper.getBoundingClientRect();
-const chatRect = refs.messagesEl.getBoundingClientRect();
-const scrollOffset = refs.messagesEl.scrollTop;
+  // 🧭 Calculate accurate position
+  const rect = wrapper.getBoundingClientRect();
+  const chatRect = refs.messagesEl.getBoundingClientRect();
+  const scrollOffset = refs.messagesEl.scrollTop;
+  let modalTop = rect.top - chatRect.top + scrollOffset - 20;
+  let modalLeft = rect.left - chatRect.left + 60;
 
-// Calculate position inside the scrollable chat container
-const modalTop = rect.top - chatRect.top + scrollOffset - 10; // small offset above bubble
-const modalLeft = rect.left - chatRect.left + 20; // small left offset from bubble start
+  // Prevent it from going outside edges
+  if (modalLeft < 10) modalLeft = 10;
+  if (modalTop < 10) modalTop = 10;
 
-modal.style.top = `${modalTop - 20}px`;   // move it slightly lower / closer to message
-modal.style.left = `${modalLeft + 80}px`; // shift a bit to the right so it doesn’t cover text
+  modal.style.top = `${modalTop}px`;
+  modal.style.left = `${modalLeft}px`;
 
-modal.style.zIndex = 1000;
-modal.style.display = "flex";
-modal.style.gap = "6px";
+  // --- Create modal buttons ---
+  const makeBtn = (label, color = "#fff") => {
+    const btn = document.createElement("button");
+    btn.textContent = label;
+    btn.style.cssText = `
+      background: transparent;
+      border: 1px solid ${color};
+      color: ${color};
+      border-radius: 6px;
+      padding: 3px 8px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s ease;
+    `;
+    btn.addEventListener("mouseenter", () => btn.style.background = color);
+    btn.addEventListener("mouseleave", () => btn.style.background = "transparent");
+    btn.addEventListener("mouseleave", () => btn.style.color = "#fff");
+    return btn;
+  };
 
-        // --- Reply button in modal ---
-        const replyOption = document.createElement("button");
-        replyOption.textContent = "Reply";
-        replyOption.style.cursor = "pointer";
-        replyOption.onclick = () => {
-          currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
-          refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
-          refs.messageInputEl.focus();
-          modal.remove();
-        };
-        modal.appendChild(replyOption);
+  // 🟢 Reply
+  const replyBtn = makeBtn("Reply", "#00e6b8");
+  replyBtn.onclick = () => {
+    currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
+    refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
+    refs.messageInputEl.focus();
+    modal.remove();
+  };
 
-        // --- Report button ---
-        const reportOption = document.createElement("button");
-        reportOption.textContent = "Report";
-        reportOption.style.cursor = "pointer";
-        reportOption.onclick = () => {
-          alert(`Reported message from ${m.chatId}`);
-          modal.remove();
-        };
-        modal.appendChild(reportOption);
+  // 🟡 Report
+  const reportBtn = makeBtn("Report", "#ffcc00");
+  reportBtn.onclick = () => {
+    alert(`Reported message from ${m.chatId}`);
+    modal.remove();
+  };
 
-        // --- Cancel button ---
-        const cancelOption = document.createElement("button");
-        cancelOption.textContent = "✕";
-        cancelOption.style.cursor = "pointer";
-        cancelOption.onclick = () => {
-          modal.remove();
-        };
-        modal.appendChild(cancelOption);
+  // 🔴 Cancel
+  const cancelBtn = makeBtn("✕", "#ff4d4d");
+  cancelBtn.onclick = () => modal.remove();
 
-        wrapper.appendChild(modal);
+  modal.append(replyBtn, reportBtn, cancelBtn);
+  wrapper.appendChild(modal);
 
-        // Auto-hide after 3 seconds
-        setTimeout(() => {
-          modal.remove();
-        }, 3000);
-      });
-    }
+  // Fade-in effect
+  requestAnimationFrame(() => (modal.style.opacity = 1));
 
-// --- inside your message rendering (after modal remove etc.) ---
+  // Auto-hide after 3 seconds
+  setTimeout(() => {
+    modal.style.opacity = 0;
+    setTimeout(() => modal.remove(), 300);
+  }, 3000);
+});
+
+
+// --- 🧭 Append message & scroll handler ---
 refs.messagesEl.appendChild(wrapper);
-
-// ✅ Call the scroller AFTER messages render
 handleChatAutoScroll();
-}); // <-- closes your Firestore onSnapshot or map()
-}
 
-// --- Smart scroll + "new messages" arrow ---
+
+// --- ⚡ Smart scroll & "new messages" arrow ---
 function handleChatAutoScroll() {
-  if (!refs.messagesEl) return;
+  if (!refs?.messagesEl) return;
 
-  // Create arrow once
   let scrollBtn = document.getElementById("scrollToBottomBtn");
+
+  // Create scroll button once
   if (!scrollBtn) {
     scrollBtn = document.createElement("div");
     scrollBtn.id = "scrollToBottomBtn";
     scrollBtn.textContent = "↓";
     scrollBtn.style.cssText = `
       position: fixed;
-      bottom: 90px;
+      bottom: 80px;
       right: 20px;
-      padding: 6px 12px;
+      padding: 8px 12px;
       background: rgba(255,20,147,0.9);
       color: #fff;
-      border-radius: 14px;
-      font-size: 16px;
+      border-radius: 50%;
+      font-size: 18px;
       font-weight: 700;
       cursor: pointer;
       opacity: 0;
@@ -589,54 +607,55 @@ function handleChatAutoScroll() {
     `;
     document.body.appendChild(scrollBtn);
 
+    // Scroll to bottom on click
     scrollBtn.addEventListener("click", () => {
       refs.messagesEl.scrollTo({
         top: refs.messagesEl.scrollHeight,
         behavior: "smooth",
       });
-      scrollBtn.style.opacity = 0;
-      scrollBtn.style.pointerEvents = "none";
+      hideBtn();
     });
   }
 
-  // Check scroll position
-  const distanceFromBottom =
+  const showBtn = () => {
+    scrollBtn.style.opacity = 1;
+    scrollBtn.style.pointerEvents = "auto";
+  };
+
+  const hideBtn = () => {
+    scrollBtn.style.opacity = 0;
+    scrollBtn.style.pointerEvents = "none";
+  };
+
+  const checkScroll = () => {
+    const distance =
+      refs.messagesEl.scrollHeight -
+      refs.messagesEl.scrollTop -
+      refs.messagesEl.clientHeight;
+
+    if (distance > 150) showBtn();
+    else hideBtn();
+  };
+
+  // Attach listener only once
+  if (!refs.messagesEl.hasScrollWatcher) {
+    refs.messagesEl.addEventListener("scroll", checkScroll);
+    refs.messagesEl.hasScrollWatcher = true;
+  }
+
+  // Check immediately on new message
+  checkScroll();
+
+  // Auto-scroll if near bottom
+  const distance =
     refs.messagesEl.scrollHeight -
     refs.messagesEl.scrollTop -
     refs.messagesEl.clientHeight;
 
-  // Show arrow if user scrolled up
-  if (distanceFromBottom > 150) {
-    scrollBtn.style.opacity = 1;
-    scrollBtn.style.pointerEvents = "auto";
-  } else {
-    scrollBtn.style.opacity = 0;
-    scrollBtn.style.pointerEvents = "none";
-
-    // Auto-scroll if near bottom
+  if (distance < 150) {
     refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
   }
 }
-
-// --- Watch scroll events on the chat ---
-refs.messagesEl.addEventListener("scroll", () => {
-  const scrollBtn = document.getElementById("scrollToBottomBtn");
-  if (!scrollBtn) return;
-
-  const distanceFromBottom =
-    refs.messagesEl.scrollHeight -
-    refs.messagesEl.scrollTop -
-    refs.messagesEl.clientHeight;
-
-  if (distanceFromBottom > 150) {
-    scrollBtn.style.opacity = 1;
-    scrollBtn.style.pointerEvents = "auto";
-  } else {
-    scrollBtn.style.opacity = 0;
-    scrollBtn.style.pointerEvents = "none";
-  }
-});
-
 
 /* ---------- Animations ---------- */
 const style = document.createElement("style");
