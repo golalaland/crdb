@@ -555,6 +555,24 @@ modal.style.gap = "6px";
 
     refs.messagesEl.appendChild(wrapper);
   });
+  
+  // --- Smart auto-scroll ---
+if (autoScrollEnabled) {
+  scrollToBottom(false);
+} else if (messages.length > lastMessageCount) {
+  showNewMsgIndicator();
+  // optional gentle bounce
+  newMsgBtn.animate(
+    [
+      { transform: "scale(1)" },
+      { transform: "scale(1.1)" },
+      { transform: "scale(1)" },
+    ],
+    { duration: 400 }
+  );
+}
+
+lastMessageCount = messages.length;
 
 /* =======================================================
    💬 Smart Chat Scroller — Telegram Style (NNAMDI build)
