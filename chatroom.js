@@ -455,37 +455,37 @@ function showTapModal(targetEl, msgData) {
 }
 
 // Banner effect: Glow + confined confetti (runs once per banner)
-function triggerBannerEffect(wrapper, itemId) {
-  // Only run once per banner
-  if (localStorage.getItem(`banner_${itemId}`)) return;
-  localStorage.setItem(`banner_${itemId}`, "played");
+function triggerBannerEffect(wrapper, bannerId) {
+  // Run only once per session
+  if (sessionStorage.getItem(`bannerConfetti_${bannerId}`)) return;
+  sessionStorage.setItem(`bannerConfetti_${bannerId}`, "played");
 
-  // Glow
+  // Glow animation
   wrapper.style.animation = "pulseGlow 2s";
 
-  // Confetti container
+  // Confetti container confined to the banner
   const confettiContainer = document.createElement("div");
   confettiContainer.style.position = "absolute";
   confettiContainer.style.inset = "0";
   confettiContainer.style.pointerEvents = "none";
   wrapper.appendChild(confettiContainer);
 
-  // Add confetti pieces
+  // Generate confetti pieces
   for (let i = 0; i < 30; i++) {
     const piece = document.createElement("div");
     piece.style.position = "absolute";
     piece.style.width = "6px";
     piece.style.height = "6px";
     piece.style.borderRadius = "50%";
-    piece.style.background = randomColor(); // your old randomColor function
-    piece.style.left = Math.random() * 100 + "%";
-    piece.style.top = Math.random() * 100 + "%";
+    piece.style.background = randomColor(); // keep your randomColor() function
+    piece.style.left = `${Math.random() * 100}%`;
+    piece.style.top = `${Math.random() * 100}%`;
     piece.style.opacity = 0.8;
     piece.style.animation = `floatConfetti ${3 + Math.random() * 3}s ease-in-out`;
     confettiContainer.appendChild(piece);
   }
 
-  // Remove confetti and stop glow after 6 seconds
+  // Remove confetti and glow after 6s
   setTimeout(() => {
     confettiContainer.remove();
     wrapper.style.animation = "";
