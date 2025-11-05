@@ -1561,44 +1561,43 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   background: rgba(255,255,255,0.2);
   border-radius: 4px;
 }
-#sessionBar {
+/* Glow effect */
+.sessionGlow {
+  animation: sessionGlowAnim 1s infinite alternate;
+}
+
+@keyframes sessionGlowAnim {
+  from { box-shadow: 0 0 6px #ffcc00; }
+  to { box-shadow: 0 0 20px #ff33cc; }
+}
+
+/* Active tab styling */
+.sessionTabs button.active, .ballerTabs button.active {
+  background: #fff;
+  color: #000;
+}
+
+/* Baller items */
+.ballerItem {
   display: flex;
-  justify-content: space-around;
-  background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(6px);
-  border-radius: 12px;
-  padding: 6px 0;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255,255,255,0.1);
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+}
+
+.ballerBtns button {
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
   cursor: pointer;
-}
-
-#sessionModal {
-  position: fixed;
-  bottom: -100%;
-  left: 0; right: 0;
-  height: 65%;
-  background: rgba(15,15,15,0.95);
+  border: none;
+  font-weight: 700;
+  background: rgba(255,255,255,0.2);
   color: #fff;
-  border-radius: 20px 20px 0 0;
-  transition: bottom 0.4s ease;
-  z-index: 1000;
-  overflow-y: auto;
 }
-#sessionModal.active { bottom: 0; }
-
-.sessionTabs button {
-  background: none; border: none;
-  color: #aaa; padding: 10px 16px;
-  font-weight: 700; cursor: pointer;
-}
-.sessionTabs button.active { color: #fff; border-bottom: 2px solid #ff33cc; }
-
-.ballerTabs button.active { color: #fff; border-bottom: 2px solid #ffcc00; }
-
-.baller-card {
-  display: flex; align-items: center;
-  padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-.baller-card img { width: 32px; height: 32px; border-radius: 50%; margin-right: 10px; }
 </style>
 </head>
 <body>
