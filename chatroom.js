@@ -530,58 +530,39 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
-if (m.replyTo) {
-  const replyPreview = document.createElement("div");
-  replyPreview.className = "reply-preview";
-  replyPreview.textContent = m.replyToContent || "Original message";
-  replyPreview.style.fontSize = "12px";
-  replyPreview.style.opacity = 0.7;
-  replyPreview.style.borderLeft = "2px solid #FFD700";
-  replyPreview.style.paddingLeft = "4px";
-  replyPreview.style.marginBottom = "2px";
-  replyPreview.style.cursor = "pointer";
+      if (m.replyTo) {
+        const replyPreview = document.createElement("div");
+        replyPreview.className = "reply-preview";
+        replyPreview.textContent = m.replyToContent || "Original message";
+        replyPreview.style.fontSize = "12px";
+        replyPreview.style.opacity = 0.7;
+        replyPreview.style.borderLeft = "2px solid #FFD700";
+        replyPreview.style.paddingLeft = "4px";
+        replyPreview.style.marginBottom = "2px";
+        wrapper.appendChild(replyPreview);
+      }
 
-  // 🔹 Safe scroll to original message
-  replyPreview.addEventListener("click", (e) => {
-    e.stopPropagation(); // prevents tap modal
-    const originalMsgEl = document.getElementById(m.replyTo);
-    if (!originalMsgEl) return;
+      const contentEl = document.createElement("span");
+      contentEl.className = "content";
+      contentEl.textContent = " " + (m.content || "");
+      wrapper.appendChild(contentEl);
 
-    // Smooth scroll
-    originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      wrapper.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showTapModal(wrapper, {
+          id: item.id,
+          chatId: m.chatId,
+          uid: m.uid,
+          content: m.content,
+          replyTo: m.replyTo,
+          replyToContent: m.replyToContent
+        });
+      });
+    }
 
-    // Flash highlight
-    const prevBg = originalMsgEl.style.background;
-    originalMsgEl.style.transition = "background 0.5s";
-    originalMsgEl.style.background = "#FFD70033";
-    setTimeout(() => {
-      originalMsgEl.style.background = prevBg;
-    }, 1000);
+    refs.messagesEl.appendChild(wrapper);
   });
 
-  wrapper.appendChild(replyPreview);
-}
-
-// --- Message content ---
-const contentEl = document.createElement("span");
-contentEl.className = "content";
-contentEl.textContent = " " + (m.content || "");
-wrapper.appendChild(contentEl);
-
-// ⚡ Tap modal trigger (click wrapper)
-wrapper.addEventListener("click", (e) => {
-  e.stopPropagation();
-  showTapModal(wrapper, {
-    id: item.id,
-    chatId: m.chatId,
-    uid: m.uid,
-    content: m.content,
-    replyTo: m.replyTo,
-    replyToContent: m.replyToContent
-  });
-});
-
-refs.messagesEl.appendChild(wrapper);
   // Auto-scroll
   if (!scrollPending) {
     scrollPending = true;
