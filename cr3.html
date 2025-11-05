@@ -199,6 +199,9 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   word-break: break-word;
 }
 
+#messages {
+  position: relative; /* ensures modal positions correctly within chat */
+}
 /* 🔥 Keypad (chat input) - always at bottom */
 .send-area {
   position: fixed;       
@@ -1531,6 +1534,71 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   0%,100% { box-shadow: 0 0 12px rgba(255,255,255,0.2); }
   50% { box-shadow: 0 0 24px rgba(255,255,255,0.8); }
 }
+/* ---------- Chat Tap Modal ---------- */
+.tap-modal {
+  position: absolute;
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 9999;
+  pointer-events: auto;
+}
+
+.tap-modal button {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 2px 6px;
+}
+
+.tap-modal button:hover {
+  background: rgba(255,255,255,0.2);
+  border-radius: 4px;
+}
+#sessionBar {
+  display: flex;
+  justify-content: space-around;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(6px);
+  border-radius: 12px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+#sessionModal {
+  position: fixed;
+  bottom: -100%;
+  left: 0; right: 0;
+  height: 65%;
+  background: rgba(15,15,15,0.95);
+  color: #fff;
+  border-radius: 20px 20px 0 0;
+  transition: bottom 0.4s ease;
+  z-index: 1000;
+  overflow-y: auto;
+}
+#sessionModal.active { bottom: 0; }
+
+.sessionTabs button {
+  background: none; border: none;
+  color: #aaa; padding: 10px 16px;
+  font-weight: 700; cursor: pointer;
+}
+.sessionTabs button.active { color: #fff; border-bottom: 2px solid #ff33cc; }
+
+.ballerTabs button.active { color: #fff; border-bottom: 2px solid #ffcc00; }
+
+.baller-card {
+  display: flex; align-items: center;
+  padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.baller-card img { width: 32px; height: 32px; border-radius: 50%; margin-right: 10px; }
 </style>
 </head>
 <body>
@@ -1567,7 +1635,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
             <circle cx="12" cy="12" r="3"/>
         </svg>
         <span id="onlineCount">…</span>
-        <span>people are interacting in this room</span>
+        <span>people are interacting in chatrooms</span>
     </div>
 
     <button id="openHostsBtn" class="featured-btn" style="display:none;">🌟 Star Hosts 🌟</button>
@@ -1617,8 +1685,34 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     <button id="chatIDConfirmBtn" class="small-btn" style="width:100%;padding:10px;">Confirm</button>
   </div>
 </div>
-  <div id="messages"></div>
+
+<div id="sessionBar">
+  <button class="sessionTab">💎 Top Ballers</button>
+  <button class="sessionTab">🔥 Highlights</button>
 </div>
+
+<div id="sessionModal" style="display:none;">
+  <div class="sessionTabs">
+    <button class="active" data-tab="ballers">Top Ballers</button>
+    <button data-tab="extras">Highlights</button>
+  </div>
+
+  <div class="sessionContent active" id="tabBallers">
+    <div class="ballerTabs">
+      <button class="active" data-period="week">This Week</button>
+      <button data-period="month">This Month</button>
+      <button data-period="all">All Time</button>
+    </div>
+    <div id="ballerList"></div>
+  </div>
+
+  <div class="sessionContent" id="tabExtras">
+    <p>Coming soon — session stats or custom content.</p>
+  </div>
+</div>
+<!-- Chat messages container -->
+<div id="messages"></div>
+
 
 <div class="send-area" id="sendArea" style="display:none;">
   <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" />
@@ -1734,7 +1828,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
       <hr class="divider" style="margin:20px 0;">
 
       <!-- Socials Section -->
-      <h4 style="text-align:center; margin-bottom:10px;">Socials</h4>
+      <h4 style="text-align:center; margin-bottom:10px;">Socials 🫱🏽‍🫲🏼</h4>
 
       <label>WhatsApp</label>
       <input type="text" id="whatsapp" placeholder="Enter WhatsApp number">
@@ -1832,11 +1926,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
 </div>
 
-  <textarea id="chatInput"></textarea>
-
-
-      <hr class="divider" style="margin:12px 0;">
-
       <!-- Messages / Additional Info -->
       <div id="hostMessagesContainer" style="padding:6px 0;">
         <!-- Messages or host-specific info will be dynamically loaded here -->
@@ -1844,16 +1933,14 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     </div>
   </div>
 </div>
-    <!-- 🔔 NOTIFICATIONS TAB -->
-    <div id="notificationsTab" class="tab-content" style="display:none; max-height:400px; overflow-y:auto;">
-      <div class="notifications-header">
-        <h3>Notifications</h3>
-        <button id="markAllRead" class="themed-btn small">Mark all as read</button>
-      </div>
-<div id="notificationsList" class="notifications-list">
-  <p style="opacity:0.7;">No new notifications yet.</p>
-</div>
-    </div>
+<!-- 🔔 NOTIFICATIONS TAB -->
+<div id="notificationsTab" class="tab-content" style="display:none; max-height:400px; overflow-y:auto;">
+  <div class="notifications-header">
+    <h3>Notifications</h3>
+    <button id="markAllRead" class="themed-btn small">Mark all as read</button>
+  </div>
+  <div id="notificationsList" class="notifications-list">
+    <p style="opacity:0.7;">No new notifications yet.</p>
   </div>
 </div>
 
@@ -1908,8 +1995,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
 
 
-<!-- Scroll-to-Bottom Arrow -->
-<div id="scrollArrow">&#x2193;</div>
+
 
 <!-- Gift Alert -->
 <div id="giftAlert" class="gift-alert"></div>
