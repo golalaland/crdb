@@ -1166,6 +1166,14 @@ let localPendingMsgs = JSON.parse(localStorage.getItem("localPendingMsgs") || "{
 /* ----------------------------
    💬 Send Message Handler (Instant + No Double Render)
 ----------------------------- */
+
+// ✅ Helper: Fully clear reply UI after message send
+function clearReplyAfterSend() {
+  if (typeof cancelReply === "function") cancelReply(); // hides reply UI if exists
+  currentReplyTarget = null;
+  refs.messageInputEl.placeholder = "Type a message...";
+}
+
 refs.sendBtn?.addEventListener("click", async () => {
   try {
     if (!currentUser) return showStarPopup("Sign in to chat.");
@@ -1174,12 +1182,14 @@ refs.sendBtn?.addEventListener("click", async () => {
     if ((currentUser.stars || 0) < SEND_COST)
       return showStarPopup("Not enough stars to send message.");
 
-    // Deduct stars locally + in Firestore
+    // 💫 Deduct stars locally + in Firestore
     currentUser.stars -= SEND_COST;
     refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-    await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-SEND_COST) });
+    await updateDoc(doc(db, "users", currentUser.uid), {
+      stars: increment(-SEND_COST)
+    });
 
-    // Create temp message (local echo)
+    // 🕓 Create temp message (local echo)
     const tempId = "temp_" + Date.now();
     const newMsg = {
       content: txt,
@@ -1193,24 +1203,25 @@ refs.sendBtn?.addEventListener("click", async () => {
       tempId
     };
 
-    // 💾 Store temp message reference
+    // 💾 Store temp message reference locally
     let localPendingMsgs = JSON.parse(localStorage.getItem("localPendingMsgs") || "{}");
     localPendingMsgs[tempId] = { ...newMsg, createdAt: Date.now() };
     localStorage.setItem("localPendingMsgs", JSON.stringify(localPendingMsgs));
 
-    // Reset input
+    // 🧹 Reset input instantly
     refs.messageInputEl.value = "";
-    currentReplyTarget = null;
-    refs.messageInputEl.placeholder = "Type a message...";
 
     scrollToBottom(refs.messagesEl);
 
     // 🚀 Send to Firestore
     const msgRef = await addDoc(collection(db, CHAT_COLLECTION), {
       ...newMsg,
-      tempId: null, // remove temp flag for the actual Firestore entry
+      tempId: null, // remove temp flag for actual Firestore entry
       timestamp: serverTimestamp()
     });
+
+    // ✅ Clear reply UI + placeholder after successful send
+    clearReplyAfterSend();
 
     console.log("✅ Message sent:", msgRef.id);
   } catch (err) {
