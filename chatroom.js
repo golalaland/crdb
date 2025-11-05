@@ -454,10 +454,11 @@ function showTapModal(targetEl, msgData) {
   setTimeout(() => tapModalEl?.remove(), 3000);
 }
 
-// Banner effect: Glow + confined confetti (runs once per session)
-function triggerBannerEffect(wrapper, item) {
-  if (sessionStorage.getItem(`banner_${item.id}`)) return;
-  sessionStorage.setItem(`banner_${item.id}`, "played");
+// Banner effect: Glow + confined confetti (runs once per banner)
+function triggerBannerEffect(wrapper, itemId) {
+  // Only run once per banner
+  if (localStorage.getItem(`banner_${itemId}`)) return;
+  localStorage.setItem(`banner_${itemId}`, "played");
 
   // Glow
   wrapper.style.animation = "pulseGlow 2s";
@@ -469,13 +470,14 @@ function triggerBannerEffect(wrapper, item) {
   confettiContainer.style.pointerEvents = "none";
   wrapper.appendChild(confettiContainer);
 
+  // Add confetti pieces
   for (let i = 0; i < 30; i++) {
     const piece = document.createElement("div");
     piece.style.position = "absolute";
     piece.style.width = "6px";
     piece.style.height = "6px";
     piece.style.borderRadius = "50%";
-    piece.style.background = randomColor();
+    piece.style.background = randomColor(); // your old randomColor function
     piece.style.left = Math.random() * 100 + "%";
     piece.style.top = Math.random() * 100 + "%";
     piece.style.opacity = 0.8;
@@ -483,17 +485,13 @@ function triggerBannerEffect(wrapper, item) {
     confettiContainer.appendChild(piece);
   }
 
+  // Remove confetti and stop glow after 6 seconds
   setTimeout(() => {
     confettiContainer.remove();
     wrapper.style.animation = "";
   }, 6000);
 }
 
-// Helper to pick random color for confetti
-function randomColor() {
-  const colors = ["#FFD700","#FF69B4","#00FFFF","#FF4500","#ADFF2F","#FF00FF"];
-  return colors[Math.floor(Math.random() * colors.length)];
-}
 
 // Render messages
 function renderMessagesFromArray(messages) {
