@@ -346,7 +346,7 @@ let scrollPending = false;
 let tapModalEl = null;
 let currentReplyTarget = null;
 
-// Cancel current reply
+// Cancel reply
 function cancelReply() {
   currentReplyTarget = null;
   refs.messageInputEl.placeholder = "Type a message...";
@@ -356,7 +356,7 @@ function cancelReply() {
   }
 }
 
-// Show reply cancel button
+// Show the little cancel reply button
 function showReplyCancelButton() {
   if (!refs.cancelReplyBtn) {
     const btn = document.createElement("button");
@@ -369,7 +369,7 @@ function showReplyCancelButton() {
   }
 }
 
-// Report message
+// Report a message
 async function reportMessage(msgData) {
   try {
     const reportRef = doc(db, "reportedmsgs", msgData.id);
@@ -379,8 +379,9 @@ async function reportMessage(msgData) {
 
     if (reportSnap.exists()) {
       const data = reportSnap.data();
-      const already = (data.reportedBy || []).includes(reporterChatId);
-      if (already) return alert("You’ve already reported this message.");
+      if ((data.reportedBy || []).includes(reporterChatId)) {
+        return alert("You’ve already reported this message.");
+      }
       await updateDoc(reportRef, {
         reportCount: increment(1),
         reportedBy: arrayUnion(reporterChatId),
@@ -402,13 +403,13 @@ async function reportMessage(msgData) {
     }
     alert("✅ Report submitted!");
   } catch (err) {
-    console.error("Report failed:", err);
-    alert("❌ Error reporting message. Try again.");
+    console.error(err);
+    alert("❌ Error reporting message.");
   }
 }
 
-// Tap modal (reply + report)
-function showTapModal(targetMsgEl, messageData) {
+// Tap modal for Reply / Report
+function showTapModal(targetEl, msgData) {
   tapModalEl?.remove();
   tapModalEl = document.createElement("div");
   tapModalEl.className = "tap-modal";
@@ -416,12 +417,8 @@ function showTapModal(targetMsgEl, messageData) {
   const replyBtn = document.createElement("button");
   replyBtn.textContent = "↩ Reply";
   replyBtn.onclick = () => {
-    currentReplyTarget = {
-      id: messageData.id,
-      chatId: messageData.chatId,
-      content: messageData.content
-    };
-    refs.messageInputEl.placeholder = `Replying to ${messageData.chatId}: ${messageData.content.substring(0, 30)}...`;
+    currentReplyTarget = { id: msgData.id, chatId: msgData.chatId, content: msgData.content };
+    refs.messageInputEl.placeholder = `Replying to ${msgData.chatId}: ${msgData.content.substring(0, 30)}...`;
     refs.messageInputEl.focus();
     showReplyCancelButton();
     tapModalEl.remove();
@@ -430,15 +427,18 @@ function showTapModal(targetMsgEl, messageData) {
   const reportBtn = document.createElement("button");
   reportBtn.textContent = "⚠ Report";
   reportBtn.onclick = async () => {
-    await reportMessage(messageData);
+    await reportMessage(msgData);
     tapModalEl.remove();
   };
 
-  tapModalEl.appendChild(replyBtn);
-  tapModalEl.appendChild(reportBtn);
+  const cancelBtn = document.createElement("button");
+  cancelBtn.textContent = "✕";
+  cancelBtn.onclick = () => tapModalEl.remove();
+
+  tapModalEl.append(replyBtn, reportBtn, cancelBtn);
   document.body.appendChild(tapModalEl);
 
-  const rect = targetMsgEl.getBoundingClientRect();
+  const rect = targetEl.getBoundingClientRect();
   tapModalEl.style.position = "absolute";
   tapModalEl.style.top = rect.top - 40 + window.scrollY + "px";
   tapModalEl.style.left = rect.left + "px";
@@ -448,33 +448,32 @@ function showTapModal(targetMsgEl, messageData) {
   tapModalEl.style.borderRadius = "8px";
   tapModalEl.style.fontSize = "12px";
   tapModalEl.style.display = "flex";
-  tapModalEl.style.gap = "8px";
+  tapModalEl.style.gap = "6px";
   tapModalEl.style.zIndex = 9999;
 
-  // auto-close
-  const closeModal = (e) => {
-    if (!tapModalEl.contains(e.target)) {
-      tapModalEl.remove();
-      document.removeEventListener("click", closeModal);
-    }
-  };
-  setTimeout(() => document.addEventListener("click", closeModal), 0);
-
-  setTimeout(() => {
-    if (document.body.contains(tapModalEl)) tapModalEl.remove();
-  }, 3000);
+  setTimeout(() => tapModalEl?.remove(), 3000);
 }
 
-// Random color helper for confetti
-function randomColor() {
-  const colors = ["#ff0","#f0f","#0ff","#0f0","#f00","#00f","#ffa500"];
-  return colors[Math.floor(Math.random() * colors.length)];
+// Confetti / glow for banners
+function triggerBannerEffect(bannerEl) {
+  bannerEl.style.animation = "bannerGlow 1s ease-in-out infinite alternate";
+  // Optional: simple confetti particles
+  const confetti = document.createElement("div");
+  confetti.className = "confetti";
+  confetti.style.position = "absolute";
+  confetti.style.top = "-4px";
+  confetti.style.left = "50%";
+  confetti.style.width = "6px";
+  confetti.style.height = "6px";
+  confetti.style.background = "#fff";
+  confetti.style.borderRadius = "50%";
+  bannerEl.appendChild(confetti);
+  setTimeout(() => confetti.remove(), 1500);
 }
 
 // Render messages
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
-
   messages.forEach(item => {
     if (!item.id) return;
     if (document.getElementById(item.id)) return;
@@ -484,90 +483,45 @@ function renderMessagesFromArray(messages) {
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    // --- Banner / system message ---
+    // Banner
     if (m.systemBanner || m.isBanner || m.type === "banner") {
       wrapper.classList.add("chat-banner");
-      wrapper.style.cssText = `
-        display:block;
-        width:100%;
-        text-align:center;
-        padding:4px 0;
-        margin:4px 0;
-        border-radius:8px;
-        background:${m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)"};
-        box-shadow:0 0 16px rgba(255,255,255,0.3);
-        position:relative;
-        overflow:hidden;
-      `;
+      wrapper.style.textAlign = "center";
+      wrapper.style.padding = "4px 0";
+      wrapper.style.margin = "4px 0";
+      wrapper.style.borderRadius = "8px";
+      wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
+      wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
       const innerPanel = document.createElement("div");
-      innerPanel.style.cssText = `
-        display:inline-block;
-        padding:6px 14px;
-        border-radius:6px;
-        background:rgba(255,255,255,0.35);
-        backdrop-filter:blur(6px);
-        color:#000;
-        font-weight:700;
-      `;
+      innerPanel.style.display = "inline-block";
+      innerPanel.style.padding = "6px 14px";
+      innerPanel.style.borderRadius = "6px";
+      innerPanel.style.background = "rgba(255,255,255,0.35)";
+      innerPanel.style.backdropFilter = "blur(6px)";
+      innerPanel.style.color = "#000";
+      innerPanel.style.fontWeight = "700";
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
+
+      triggerBannerEffect(wrapper);
 
       if (window.currentUser?.isAdmin) {
         const delBtn = document.createElement("button");
         delBtn.textContent = "🗑";
         delBtn.title = "Delete Banner";
-        delBtn.style.cssText = `
-          position:absolute;
-          right:6px;
-          top:3px;
-          background:rgba(255,255,255,0.5);
-          border:none;
-          border-radius:4px;
-          cursor:pointer;
-          font-size:14px;
-        `;
+        delBtn.style.position = "absolute";
+        delBtn.style.right = "6px";
+        delBtn.style.top = "3px";
+        delBtn.style.cursor = "pointer";
         delBtn.onclick = async () => {
           await deleteDoc(doc(db, "messages", item.id));
           wrapper.remove();
         };
         wrapper.appendChild(delBtn);
       }
-
-      // 🎉 Confetti + Glow
-      if (!sessionStorage.getItem(`confetti_${item.id}`)) {
-        wrapper.style.animation = "pulseGlow 2s";
-        sessionStorage.setItem(`confetti_${item.id}`, "played");
-
-        const confettiContainer = document.createElement("div");
-        confettiContainer.style.cssText = "position:absolute;inset:0;pointer-events:none;";
-        wrapper.appendChild(confettiContainer);
-
-        for (let i=0;i<30;i++) {
-          const piece = document.createElement("div");
-          piece.style.cssText = `
-            position:absolute;
-            width:6px;
-            height:6px;
-            border-radius:50%;
-            background:${randomColor()};
-            left:${Math.random()*100}%;
-            top:${Math.random()*100}%;
-            opacity:0.8;
-            animation: floatConfetti ${3 + Math.random()*3}s ease-in-out;
-          `;
-          confettiContainer.appendChild(piece);
-        }
-
-        setTimeout(() => {
-          confettiContainer.remove();
-          wrapper.style.animation = "";
-        }, 6000);
-      }
-    }
-
-    // --- Regular message ---
-    else {
+    } else {
+      // Regular message
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -575,17 +529,20 @@ function renderMessagesFromArray(messages) {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
+      // Reply preview
       if (m.replyTo) {
         const replyPreview = document.createElement("div");
         replyPreview.className = "reply-preview";
         replyPreview.textContent = m.replyToContent || "Original message";
-        replyPreview.style.cssText = `
-          font-size:12px;
-          opacity:0.7;
-          border-left:2px solid #FFD700;
-          padding-left:4px;
-          margin-bottom:2px;
-        `;
+        replyPreview.style.cursor = "pointer";
+        replyPreview.onclick = () => {
+          const originalMsg = document.getElementById(m.replyTo);
+          if (originalMsg) {
+            originalMsg.scrollIntoView({ behavior: "smooth", block: "center" });
+            originalMsg.style.outline = "2px solid #FFD700";
+            setTimeout(() => originalMsg.style.outline = "", 1000);
+          }
+        };
         wrapper.appendChild(replyPreview);
       }
 
@@ -594,11 +551,15 @@ function renderMessagesFromArray(messages) {
       contentEl.textContent = " " + (m.content || "");
       wrapper.appendChild(contentEl);
 
-      wrapper.addEventListener("click", e => {
+      wrapper.addEventListener("click", (e) => {
         e.stopPropagation();
         showTapModal(wrapper, {
-          id:item.id, chatId:m.chatId, uid:m.uid, content:m.content,
-          replyTo:m.replyTo, replyToContent:m.replyToContent
+          id: item.id,
+          chatId: m.chatId,
+          uid: m.uid,
+          content: m.content,
+          replyTo: m.replyTo,
+          replyToContent: m.replyToContent
         });
       });
     }
@@ -616,7 +577,7 @@ function renderMessagesFromArray(messages) {
   }
 }
 
-// --- Scroll-to-bottom button ---
+// Auto-scroll + scroll-to-bottom button
 function handleChatAutoScroll() {
   if (!refs.messagesEl) return;
 
@@ -626,42 +587,40 @@ function handleChatAutoScroll() {
     scrollBtn.id = "scrollToBottomBtn";
     scrollBtn.textContent = "↓";
     scrollBtn.style.cssText = `
-      position:fixed;
-      bottom:90px;
-      right:20px;
-      padding:6px 12px;
-      background:rgba(255,20,147,0.9);
-      color:#fff;
-      border-radius:14px;
-      font-size:16px;
-      font-weight:700;
-      cursor:pointer;
-      opacity:0;
-      pointer-events:none;
-      transition:all 0.3s ease;
-      z-index:9999;
+      position: fixed;
+      bottom: 90px;
+      right: 20px;
+      padding: 6px 12px;
+      background: rgba(255,20,147,0.9);
+      color: #fff;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      z-index: 9999;
     `;
     document.body.appendChild(scrollBtn);
-
     scrollBtn.addEventListener("click", () => {
-      refs.messagesEl.scrollTo({ top: refs.messagesEl.scrollHeight, behavior:"smooth" });
+      refs.messagesEl.scrollTo({ top: refs.messagesEl.scrollHeight, behavior: "smooth" });
       scrollBtn.style.opacity = 0;
       scrollBtn.style.pointerEvents = "none";
     });
   }
 
-  const distanceFromBottom = refs.messagesEl.scrollHeight - refs.messagesEl.scrollTop - refs.messagesEl.clientHeight;
-  if (distanceFromBottom > 150) {
-    scrollBtn.style.opacity = 1;
-    scrollBtn.style.pointerEvents = "auto";
-  } else {
-    scrollBtn.style.opacity = 0;
-    scrollBtn.style.pointerEvents = "none";
-    refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
-  }
+  refs.messagesEl.addEventListener("scroll", () => {
+    const distance = refs.messagesEl.scrollHeight - refs.messagesEl.scrollTop - refs.messagesEl.clientHeight;
+    if (distance > 150) {
+      scrollBtn.style.opacity = 1;
+      scrollBtn.style.pointerEvents = "auto";
+    } else {
+      scrollBtn.style.opacity = 0;
+      scrollBtn.style.pointerEvents = "none";
+    }
+  });
 }
-
-refs.messagesEl.addEventListener("scroll", handleChatAutoScroll);
 
 /* ---------- 🔔 Messages Listener (Final Optimized Version) ---------- */
 function attachMessagesListener() {
