@@ -52,6 +52,13 @@ const db = getFirestore(app);
 const rtdb = getDatabase(app);
 const auth = getAuth(app);
 
+// Make Firebase objects available globally (for debugging or reuse)
+window.app = app;
+window.db = db;
+window.auth = auth;
+window.rtdb = rtdb;
+
+
 /* ---------- Globals ---------- */
 let currentUser = null;
 
