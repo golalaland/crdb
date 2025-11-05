@@ -1638,9 +1638,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
         <span>people are interacting in chatrooms</span>
     </div>
 
-    <button id="openHostsBtn" class="featured-btn" style="display:none;">🌟 Star Hosts 🌟</button>
-</div>
-
  <div id="guestMsg"></div>
 <div id="authBox">
 
@@ -1686,17 +1683,16 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   </div>
 </div>
 
-<div id="sessionBar" style="display:flex; gap:8px;">
-  <button class="sessionTab">💎 Top Ballers</button>
+<div id="sessionBar" style="display:flex; gap:4px; justify-content:center;">
+  <button class="sessionTab" data-target="ballers">💎 Top Ballers</button>
 
-  <!-- Existing working button inserted in the middle -->
- 
-    <button id="openHostsBtn" class="featured-btn" style="display:none;">🌟 Star Hosts 🌟</button>
+  <!-- Middle button (Star Hosts) -->
+  <button id="openHostsBtn" class="featured-btn">🌟 Star Hosts 🌟</button>
+
+  <button class="sessionTab" data-target="extras">🔥 Highlights</button>
 </div>
 
-  <button class="sessionTab">🔥 Highlights</button>
-</div>
-
+<!-- Session Modal (unchanged) -->
 <div id="sessionModal" style="display:none;">
   <div class="sessionTabs">
     <button class="active" data-tab="ballers">Top Ballers</button>
