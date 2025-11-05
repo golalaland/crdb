@@ -542,20 +542,18 @@ if (m.replyTo) {
   replyPreview.style.marginBottom = "2px";
   replyPreview.style.cursor = "pointer";
 
-  // Scroll to original message on click with highlight
+  // Scroll to original message safely
   replyPreview.addEventListener("click", (e) => {
-    e.stopPropagation(); // prevent tap modal from opening
-    setTimeout(() => { // slight delay to ensure messages are rendered
-      const originalMsgEl = document.getElementById(m.replyTo);
-      if (!originalMsgEl) return;
-      originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
-      const originalBg = originalMsgEl.style.background;
-      originalMsgEl.style.transition = "background 0.5s";
-      originalMsgEl.style.background = "#FFD70033"; // highlight
-      setTimeout(() => {
-        originalMsgEl.style.background = originalBg;
-      }, 1000);
-    }, 50);
+    e.stopPropagation(); // stop tap modal
+    const originalMsgEl = document.getElementById(m.replyTo);
+    if (!originalMsgEl) return;
+    originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    const originalBg = originalMsgEl.style.background;
+    originalMsgEl.style.transition = "background 0.5s";
+    originalMsgEl.style.background = "#FFD70033"; // flash highlight
+    setTimeout(() => {
+      originalMsgEl.style.background = originalBg;
+    }, 1000);
   });
 
   wrapper.appendChild(replyPreview);
@@ -581,7 +579,6 @@ wrapper.addEventListener("click", (e) => {
 });
 
 refs.messagesEl.appendChild(wrapper);
-}); // <-- closes the messages.forEach
 
   // Auto-scroll
   if (!scrollPending) {
