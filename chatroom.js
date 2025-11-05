@@ -528,7 +528,8 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
-     if (m.replyTo) {
+// --- Reply preview with safe scroll ---
+if (m.replyTo) {
   const replyPreview = document.createElement("div");
   replyPreview.className = "reply-preview";
   replyPreview.textContent = m.replyToContent || "Original message";
@@ -542,17 +543,22 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
   // 🔹 Safe scroll to original message
   replyPreview.addEventListener("click", (e) => {
     e.stopPropagation(); // prevent triggering tap modal
-    setTimeout(() => {
+
+    const tryScroll = () => {
       const originalMsgEl = document.getElementById(m.replyTo);
-      if (!originalMsgEl) return;
+      if (!originalMsgEl) return; // element not yet rendered, bail
       originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
       const originalBg = originalMsgEl.style.background;
       originalMsgEl.style.transition = "background 0.5s";
-      originalMsgEl.style.background = "#FFD70033"; // highlight flash
+      originalMsgEl.style.background = "#FFD70033"; // flash highlight
       setTimeout(() => {
         originalMsgEl.style.background = originalBg;
       }, 1000);
-    }, 50);
+    };
+
+    // attempt scroll immediately, fallback 50ms later
+    tryScroll();
+    setTimeout(tryScroll, 50);
   });
 
   wrapper.appendChild(replyPreview);
@@ -574,7 +580,6 @@ wrapper.addEventListener("click", (e) => {
     content: m.content
   });
 });
-
   // --- 🌀 Auto-scroll down
   if (!scrollPending) {
     scrollPending = true;
