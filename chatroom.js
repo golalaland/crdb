@@ -438,34 +438,40 @@ function showTapModal(targetMsgEl, messageData) {
   tapModalEl.appendChild(reportBtn);
   document.body.appendChild(tapModalEl);
 
-  // 🧭 Get message position
   const rect = targetMsgEl.getBoundingClientRect();
 
-  // 🎯 Position to the right of the message (mid-level)
+  // Default position (to the right of message)
+  let leftPos = rect.right + 12;
+  const topPos = rect.top + window.scrollY + rect.height / 2 - tapModalEl.offsetHeight / 2;
+
+  // 💡 If it would overflow right edge, flip to left side
+  if (leftPos + 160 > window.innerWidth) {
+    leftPos = rect.left - tapModalEl.offsetWidth - 12;
+  }
+
+  // 🧭 Final styling
   tapModalEl.style.position = "absolute";
-  tapModalEl.style.top = `${rect.top + window.scrollY + rect.height / 2 - 15}px`;
-  tapModalEl.style.left = `${rect.right + 10}px`;
-  tapModalEl.style.transform = "translateY(-50%)";
-  tapModalEl.style.background = "rgba(0, 0, 0, 0.85)";
+  tapModalEl.style.top = `${topPos}px`;
+  tapModalEl.style.left = `${leftPos}px`;
+  tapModalEl.style.background = "rgba(0,0,0,0.88)";
   tapModalEl.style.color = "#fff";
   tapModalEl.style.padding = "6px 10px";
   tapModalEl.style.borderRadius = "8px";
   tapModalEl.style.fontSize = "12px";
   tapModalEl.style.display = "flex";
   tapModalEl.style.flexDirection = "column";
-  tapModalEl.style.gap = "4px";
+  tapModalEl.style.gap = "6px";
   tapModalEl.style.boxShadow = "0 4px 12px rgba(0,0,0,0.4)";
-  tapModalEl.style.transition = "opacity 0.2s ease, transform 0.2s ease";
   tapModalEl.style.opacity = "0";
+  tapModalEl.style.transition = "opacity 0.15s ease";
   tapModalEl.style.zIndex = 9999;
 
-  // ✨ Small fade-in animation
+  // ✨ Fade-in animation
   requestAnimationFrame(() => {
     tapModalEl.style.opacity = "1";
-    tapModalEl.style.transform = "translateY(-50%) scale(1)";
   });
 
-  // 🧨 Auto-close if clicked elsewhere
+  // 🧨 Close if click elsewhere
   const closeModal = (e) => {
     if (!tapModalEl.contains(e.target)) {
       tapModalEl.remove();
@@ -474,7 +480,7 @@ function showTapModal(targetMsgEl, messageData) {
   };
   setTimeout(() => document.addEventListener("click", closeModal), 0);
 
-  // ⏳ Auto-hide after 3s
+  // ⏳ Auto-hide after 3s if untouched
   setTimeout(() => {
     if (document.body.contains(tapModalEl)) tapModalEl.remove();
   }, 3000);
