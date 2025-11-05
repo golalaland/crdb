@@ -621,63 +621,6 @@ function handleChatAutoScroll() {
   });
 }
 
-// --- Inject CSS for banner glow + confetti ---
-const styleEl = document.createElement("style");
-styleEl.textContent = `
-@keyframes bannerGlow {
-  0% { box-shadow: 0 0 8px rgba(255,255,255,0.2); }
-  50% { box-shadow: 0 0 20px rgba(255,255,255,0.6); }
-  100% { box-shadow: 0 0 8px rgba(255,255,255,0.2); }
-}
-
-@keyframes confettiFall {
-  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(120px) rotate(360deg); opacity: 0; }
-}
-
-.confetti {
-  position: absolute;
-  width: 6px;
-  height: 6px;
-  background: #fff;
-  border-radius: 50%;
-  opacity: 0;
-  pointer-events: none;
-  animation: confettiFall 1.2s linear forwards;
-}
-`;
-document.head.appendChild(styleEl);
-
-
-// 🎉 Banner glow + confetti
-function triggerBannerEffect(bannerEl) {
-  bannerEl.style.animation = "bannerGlow 1s ease-in-out infinite alternate";
-
-  // Emit multiple confetti particles
-  for (let i = 0; i < 12; i++) {
-    const confetti = document.createElement("div");
-    confetti.className = "confetti";
-
-    // Random horizontal position inside the banner
-    const leftOffset = Math.random() * (bannerEl.offsetWidth - 6);
-    confetti.style.left = leftOffset + "px";
-    confetti.style.top = "-10px";
-
-    // Random color
-    const colors = ["#FFDD00", "#FF33CC", "#00FFDD", "#FF5555", "#55FF55"];
-    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-
-    // Random animation duration
-    confetti.style.animationDuration = (0.8 + Math.random() * 0.6) + "s";
-
-    bannerEl.appendChild(confetti);
-
-    // Remove after animation
-    confetti.addEventListener("animationend", () => confetti.remove());
-  }
-}
-
-
 
 /* ---------- 🔔 Messages Listener (Final Optimized Version) ---------- */
 function attachMessagesListener() {
