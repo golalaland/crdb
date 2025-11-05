@@ -1565,29 +1565,37 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   background: rgba(255,20,147,1);
   transform: translateY(-2px);
 }
-/* Banner Glow */
-.banner-glow {
-  animation: bannerGlow 1s ease-in-out 0s 9 alternate; /* 9 iterations = ~9s */
-  box-shadow: 0 0 12px 4px #ff0, 0 0 24px 8px #ff33cc, 0 0 48px 12px #ff66ff;
-}
-
+/* Banner glow animation */
 @keyframes bannerGlow {
-  from { box-shadow: 0 0 8px 2px #ff0, 0 0 16px 4px #ff33cc, 0 0 32px 8px #ff66ff; }
-  to { box-shadow: 0 0 16px 4px #ff0, 0 0 32px 8px #ff33cc, 0 0 64px 12px #ff66ff; }
+  0% { box-shadow: 0 0 8px #fff; }
+  50% { box-shadow: 0 0 20px #ff0, 0 0 30px #f0f; }
+  100% { box-shadow: 0 0 8px #fff; }
+}
+.banner-glow {
+  animation: bannerGlow 1s ease-in-out infinite alternate;
 }
 
-/* Confetti canvas (optional if you use canvas) */
-.confetti-canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 9999; }
+/* Confetti pieces */
+.confetti {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #FFD700;
+  position: absolute;
+  animation: confettiFall 1.5s ease-out forwards;
+}
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
+}
 
-/* Flash highlight for replied-to message */
+/* Highlight jump to replied message */
 .flash-highlight {
-  animation: flashHighlight 1s ease-in-out 0s 2;
-  background: rgba(255, 255, 0, 0.4);
+  animation: flashOutline 1.2s ease-in-out;
 }
-
-@keyframes flashHighlight {
-  from { background: rgba(255, 255, 0, 0.4); }
-  to { background: transparent; }
+@keyframes flashOutline {
+  0% { outline: 2px solid #FFD700; }
+  100% { outline: none; }
 }
 
 /* Middle chat scroller */
