@@ -342,10 +342,17 @@ function setupUsersListener() {
 setupUsersListener();
 
 /* ---------- 💬 Render Messages (with tap modal + reply support) ---------- */
+// ============================
+// 🔹 Chat Helpers & Globals
+// ============================
 let scrollPending = false;
 let tapModalEl = null;
 let currentReplyTarget = null; // ✅ reply target tracker
+const glowedBanners = new Set(); // banners that have already glowed
 
+// ----------------------------
+// Cancel / reply UI
+// ----------------------------
 function cancelReply() {
   currentReplyTarget = null;
   refs.messageInputEl.placeholder = "Type a message...";
@@ -367,7 +374,9 @@ function showReplyCancelButton() {
   }
 }
 
-// 🧾 Report handler
+// ----------------------------
+// Report handler
+// ----------------------------
 async function reportMessage(msgData) {
   try {
     const reportRef = doc(db, "reportedmsgs", msgData.id);
@@ -377,7 +386,9 @@ async function reportMessage(msgData) {
 
     if (reportSnap.exists()) {
       const data = reportSnap.data();
-      if ((data.reportedBy || []).includes(reporterChatId)) return alert("Already reported.");
+      const already = (data.reportedBy || []).includes(reporterChatId);
+      if (already) return alert("You’ve already reported this message.");
+
       await updateDoc(reportRef, {
         reportCount: increment(1),
         reportedBy: arrayUnion(reporterChatId),
@@ -405,7 +416,9 @@ async function reportMessage(msgData) {
   }
 }
 
-// 💬 Tap modal (reply + report)
+// ----------------------------
+// Tap modal (reply + report)
+// ----------------------------
 function showTapModal(targetMsgEl, messageData) {
   tapModalEl?.remove();
   tapModalEl = document.createElement("div");
@@ -449,6 +462,7 @@ function showTapModal(targetMsgEl, messageData) {
   tapModalEl.style.gap = "8px";
   tapModalEl.style.zIndex = 9999;
 
+  // auto-close after outside click
   const closeModal = (e) => {
     if (!tapModalEl.contains(e.target)) {
       tapModalEl.remove();
@@ -462,7 +476,9 @@ function showTapModal(targetMsgEl, messageData) {
   }, 3000);
 }
 
-// 🧩 Render messages (banners + glow + confetti + reply jumps)
+// ============================
+// 🧩 Render Messages + Banners
+// ============================
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
 
@@ -475,7 +491,9 @@ function renderMessagesFromArray(messages) {
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    // --- Banner / system message ---
+    // --------------------------
+    // Banner / system message
+    // --------------------------
     if (m.systemBanner || m.isBanner || m.type === "banner") {
       wrapper.classList.add("chat-banner");
       wrapper.style.display = "block";
@@ -498,17 +516,21 @@ function renderMessagesFromArray(messages) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
-      // ✅ Glow & confetti for new banner
-      if (!m.hasGlowed) {
+      // Banner glow + confetti
+      if (!glowedBanners.has(item.id)) {
         wrapper.classList.add("banner-glow");
+        // trigger confetti
+        confetti({
+          particleCount: 60,
+          spread: 120,
+          origin: { y: 0.3 }
+        });
+        glowedBanners.add(item.id);
+
+        // stop glowing after 9s
         setTimeout(() => wrapper.classList.remove("banner-glow"), 9000);
-        if (typeof confetti === "function") {
-          confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
-        }
-        m.hasGlowed = true;
       }
 
-      // Admin delete button
       if (window.currentUser?.isAdmin) {
         const delBtn = document.createElement("button");
         delBtn.textContent = "🗑";
@@ -528,7 +550,10 @@ function renderMessagesFromArray(messages) {
         wrapper.appendChild(delBtn);
       }
     }
-    // --- Regular message ---
+
+    // --------------------------
+    // Regular message
+    // --------------------------
     else {
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
@@ -537,7 +562,6 @@ function renderMessagesFromArray(messages) {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
-      // Reply preview
       if (m.replyTo) {
         const replyPreview = document.createElement("div");
         replyPreview.className = "reply-preview";
@@ -547,12 +571,16 @@ function renderMessagesFromArray(messages) {
         replyPreview.style.borderLeft = "2px solid #FFD700";
         replyPreview.style.paddingLeft = "4px";
         replyPreview.style.marginBottom = "2px";
-
-        // Scroll to original message on click
         replyPreview.style.cursor = "pointer";
+
+        // jump to original message on click
         replyPreview.onclick = () => {
-          const orig = document.getElementById(m.replyTo);
-          if (orig) orig.scrollIntoView({ behavior: "smooth", block: "center" });
+          const original = document.getElementById(m.replyTo);
+          if (original) {
+            original.scrollIntoView({ behavior: "smooth", block: "center" });
+            original.classList.add("flash-highlight");
+            setTimeout(() => original.classList.remove("flash-highlight"), 1200);
+          }
         };
 
         wrapper.appendChild(replyPreview);
@@ -579,7 +607,9 @@ function renderMessagesFromArray(messages) {
     refs.messagesEl.appendChild(wrapper);
   });
 
+  // --------------------------
   // Auto-scroll
+  // --------------------------
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
@@ -587,6 +617,66 @@ function renderMessagesFromArray(messages) {
       scrollPending = false;
     });
   }
+
+  // --------------------------
+  // Scroll to bottom button
+  // --------------------------
+  setupScrollToBottomBtn();
+}
+
+// --------------------------
+// Middle Chat Scroller
+// --------------------------
+function setupScrollToBottomBtn() {
+  if (!refs.messagesEl) return;
+  let scrollBtn = document.getElementById("scrollToBottomBtn");
+
+  if (!scrollBtn) {
+    scrollBtn = document.createElement("div");
+    scrollBtn.id = "scrollToBottomBtn";
+    scrollBtn.textContent = "↓";
+    scrollBtn.style.cssText = `
+      position: fixed;
+      bottom: 90px;
+      right: 20px;
+      padding: 6px 12px;
+      background: rgba(255,20,147,0.9);
+      color: #fff;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      z-index: 9999;
+    `;
+    document.body.appendChild(scrollBtn);
+
+    scrollBtn.addEventListener("click", () => {
+      refs.messagesEl.scrollTo({
+        top: refs.messagesEl.scrollHeight,
+        behavior: "smooth",
+      });
+      scrollBtn.style.opacity = 0;
+      scrollBtn.style.pointerEvents = "none";
+    });
+  }
+
+  refs.messagesEl.addEventListener("scroll", () => {
+    const distanceFromBottom =
+      refs.messagesEl.scrollHeight -
+      refs.messagesEl.scrollTop -
+      refs.messagesEl.clientHeight;
+
+    if (distanceFromBottom > 150) {
+      scrollBtn.style.opacity = 1;
+      scrollBtn.style.pointerEvents = "auto";
+    } else {
+      scrollBtn.style.opacity = 0;
+      scrollBtn.style.pointerEvents = "none";
+    }
+  });
 }
 
 /* ---------- 🔔 Messages Listener (Final Optimized Version) ---------- */
