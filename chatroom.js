@@ -502,29 +502,30 @@ modal.style.fontSize = "12px";
 // get message position relative to messages container
 const rect = wrapper.getBoundingClientRect();
 const chatRect = refs.messagesEl.getBoundingClientRect();
-
-// account for container scroll
 const scrollOffset = refs.messagesEl.scrollTop;
 
-modal.style.top = `${rect.top - chatRect.top + scrollOffset - 36}px`; // slightly above message
-modal.style.left = `${rect.left - chatRect.left + 10}px`; // small left offset
+// Calculate position inside the scrollable chat container
+const modalTop = rect.top - chatRect.top + scrollOffset - 10; // small offset above bubble
+const modalLeft = rect.left - chatRect.left + 20; // small left offset from bubble start
+
+modal.style.top = `${modalTop}px`;
+modal.style.left = `${modalLeft}px`;
 
 modal.style.zIndex = 1000;
 modal.style.display = "flex";
 modal.style.gap = "6px";
 
         // --- Reply button in modal ---
-const replyOption = document.createElement("button");
-replyOption.textContent = "Reply";
-replyOption.style.cursor = "pointer";
-replyOption.onclick = () => {
-  console.log("Reply clicked for:", m.chatId, m);
-  currentReplyTarget = { id: m.id || m.messageId, chatId: m.chatId, content: m.content };
-  refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
-  refs.messageInputEl.focus();
-  modal.remove();
-};
-modal.appendChild(replyOption);
+        const replyOption = document.createElement("button");
+        replyOption.textContent = "Reply";
+        replyOption.style.cursor = "pointer";
+        replyOption.onclick = () => {
+          currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
+          refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
+          refs.messageInputEl.focus();
+          modal.remove();
+        };
+        modal.appendChild(replyOption);
 
         // --- Report button ---
         const reportOption = document.createElement("button");
@@ -556,6 +557,7 @@ modal.appendChild(replyOption);
 
     refs.messagesEl.appendChild(wrapper);
   });
+
   
   // --- Auto-scroll to bottom ---
   if (!scrollPending) {
