@@ -470,13 +470,15 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
   if (!refs.messagesEl) return;
 
   messages.forEach(item => {
+    if (!item.id) return; // skip invalid messages
     if (document.getElementById(item.id)) return;
-    const m = item.data;
+
+    const m = item.data || item; // fallback in case item.data doesn't exist
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    // --- 🎉 Banner messages ---
+    // --- Banner / system message ---
     if (m.systemBanner || m.isBanner || m.type === "banner") {
       wrapper.classList.add("chat-banner");
       wrapper.style.display = "block";
@@ -519,7 +521,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       }
     }
 
-    // --- 🗣 Regular message ---
+    // --- Regular message ---
     else {
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
@@ -528,7 +530,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
- if (m.replyTo) {
+      if (m.replyTo) {
         const replyPreview = document.createElement("div");
         replyPreview.className = "reply-preview";
         replyPreview.textContent = m.replyToContent || "Original message";
@@ -545,14 +547,15 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       contentEl.textContent = " " + (m.content || "");
       wrapper.appendChild(contentEl);
 
-      // ⚡ Tap modal trigger
       wrapper.addEventListener("click", (e) => {
         e.stopPropagation();
         showTapModal(wrapper, {
           id: item.id,
           chatId: m.chatId,
           uid: m.uid,
-          content: m.content
+          content: m.content,
+          replyTo: m.replyTo,
+          replyToContent: m.replyToContent
         });
       });
     }
@@ -560,23 +563,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
     refs.messagesEl.appendChild(wrapper);
   });
 
-// --- Message content ---
-const contentEl = document.createElement("span");
-contentEl.className = "content";
-contentEl.textContent = " " + (m.content || "");
-wrapper.appendChild(contentEl);
-
-// ⚡ Tap modal trigger
-wrapper.addEventListener("click", (e) => {
-  e.stopPropagation();
-  showTapModal(wrapper, {
-    id: item.id,
-    chatId: m.chatId,
-    uid: m.uid,
-    content: m.content
-  });
-});
-  // --- 🌀 Auto-scroll down
+  // Auto-scroll
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
