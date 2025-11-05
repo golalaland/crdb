@@ -837,6 +837,101 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
   };
 });
 
+
+async function initSessionBar(currentUser) {
+  if (!currentUser) return; // Only show for logged-in users
+
+  const sessionContainer = document.getElementById("sessionContainer");
+  const sessionBar = document.getElementById("sessionBar");
+  const sessionModal = document.getElementById("sessionModal");
+  const ballerList = document.getElementById("ballerList");
+
+  sessionContainer.style.display = "block"; // show bar
+
+  // Fetch top users dynamically from your DB
+  // Example Firebase structure: collection "topUsers" with {username, social, period, score}
+  const topUsersData = [];
+  const topUsersSnap = await getDocs(collection(db, "topUsers"));
+  topUsersSnap.forEach(docSnap => topUsersData.push(docSnap.data()));
+
+  // Render Top Ballers
+  function renderBallers(period = "week") {
+    ballerList.innerHTML = "";
+    const filtered = topUsersData.filter(u => u.period === period || period === "all");
+    filtered.forEach(user => {
+      const userEl = document.createElement("div");
+      userEl.className = "ballerItem";
+      userEl.innerHTML = `
+        <span>${user.username} (${user.social || "No handle"})</span>
+        <div class="ballerBtns">
+          <button class="followBtn" data-username="${user.username}">Follow</button>
+          <button class="watchBtn" data-username="${user.username}">Watch</button>
+        </div>
+      `;
+      ballerList.appendChild(userEl);
+    });
+
+    // Stars reward actions
+    ballerList.querySelectorAll(".followBtn").forEach(btn => {
+      btn.onclick = async () => {
+        const username = btn.dataset.username;
+        console.log(`Follow ${username} clicked`);
+        // TODO: Give stars to currentUser
+      };
+    });
+
+    ballerList.querySelectorAll(".watchBtn").forEach(btn => {
+      btn.onclick = async () => {
+        const username = btn.dataset.username;
+        console.log(`Watch ${username} clicked`);
+        // TODO: Give stars to currentUser
+      };
+    });
+  }
+
+  renderBallers("week"); // default
+
+  // Toggle session modal visibility
+  sessionBar.querySelectorAll(".sessionTab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      sessionModal.style.display = sessionModal.style.display === "block" ? "none" : "block";
+    });
+  });
+
+  // Main tab switching
+  const mainTabs = sessionModal.querySelectorAll(".sessionTabs button");
+  const contentTabs = sessionModal.querySelectorAll(".sessionContent");
+  mainTabs.forEach(tabBtn => {
+    tabBtn.addEventListener("click", () => {
+      const target = tabBtn.dataset.tab;
+      mainTabs.forEach(b => b.classList.remove("active"));
+      tabBtn.classList.add("active");
+      contentTabs.forEach(c => c.classList.remove("active"));
+      document.getElementById(target === "ballers" ? "tabBallers" : "tabExtras").classList.add("active");
+    });
+  });
+
+  // Sub-tabs for periods
+  const subTabs = sessionModal.querySelectorAll(".ballerTabs button");
+  subTabs.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const period = btn.dataset.period;
+      subTabs.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      renderBallers(period);
+    });
+  });
+
+  // Glow for updates or new highlights
+  function showGlow() {
+    sessionBar.classList.add("sessionGlow");
+    setTimeout(() => sessionBar.classList.remove("sessionGlow"), 3000);
+  }
+
+  // Example: trigger glow if new data is detected
+  // showGlow();
+}
+
 /* ---------- 🆔 ChatID Modal ---------- */
 async function promptForChatID(userRef, userData) {
   if (!refs.chatIDModal || !refs.chatIDInput || !refs.chatIDConfirmBtn)
