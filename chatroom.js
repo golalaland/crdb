@@ -344,8 +344,7 @@ setupUsersListener();
 /* ---------- 💬 Render Messages (with tap modal + reply support) ---------- */
 let scrollPending = false;
 let tapModalEl = null;
-let currentReplyTarget = null; 
-let tapModalTimeout = null; // ⏱️ Auto-dismiss timer
+let currentReplyTarget = null; // ✅ reply target tracker
 
 function cancelReply() {
   currentReplyTarget = null;
@@ -356,7 +355,6 @@ function cancelReply() {
   }
 }
 
-// ✖ Button beside input when replying
 function showReplyCancelButton() {
   if (!refs.cancelReplyBtn) {
     const btn = document.createElement("button");
@@ -369,7 +367,46 @@ function showReplyCancelButton() {
   }
 }
 
-// 🧊 Tap modal (Reply / Report)
+async function reportMessage(msgData) {
+  try {
+    const reportsRef = collection(db, "reportedmsgs");
+    const q = query(reportsRef, where("messageId", "==", msgData.id));
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      const docRef = snapshot.docs[0].ref;
+      const docData = snapshot.docs[0].data();
+
+      const alreadyReported = (docData.reportedBy || []).includes(currentUser?.chatId);
+      if (!alreadyReported) {
+        await updateDoc(docRef, {
+          reportCount: increment(1),
+          reportedBy: arrayUnion(currentUser?.chatId),
+          reporterUids: arrayUnion(currentUser?.uid)
+        });
+        alert("Report submitted ✅");
+      } else {
+        alert("You’ve already reported this message.");
+      }
+    } else {
+      await addDoc(reportsRef, {
+        messageId: msgData.id,
+        messageText: msgData.content,
+        offenderChatId: msgData.chatId,
+        offenderUid: msgData.uid || null,
+        reportedBy: [currentUser?.chatId],
+        reporterUids: [currentUser?.uid],
+        reportCount: 1,
+        createdAt: serverTimestamp()
+      });
+      alert("Report submitted ✅");
+    }
+  } catch (err) {
+    console.error("Report failed:", err);
+    alert("Error reporting message. Try again.");
+  }
+}
+
 function showTapModal(targetMsgEl, messageData) {
   tapModalEl?.remove();
   tapModalEl = document.createElement("div");
@@ -379,7 +416,6 @@ function showTapModal(targetMsgEl, messageData) {
   const replyBtn = document.createElement("button");
   replyBtn.textContent = "↩ Reply";
   replyBtn.onclick = () => {
-    clearTimeout(tapModalTimeout);
     currentReplyTarget = {
       id: messageData.id,
       chatId: messageData.chatId,
@@ -394,24 +430,8 @@ function showTapModal(targetMsgEl, messageData) {
   // --- Report button ---
   const reportBtn = document.createElement("button");
   reportBtn.textContent = "⚠ Report";
-  reportBtn.onclick = async (e) => {
-    e.stopPropagation();
-    clearTimeout(tapModalTimeout);
-    try {
-      await addDoc(collection(db, "reportedmsgs"), {
-        messageId: messageData.id,
-        messageContent: messageData.content,
-        messageAuthor: messageData.chatId,
-        reportedBy: currentUser?.chatId || currentUser?.email || "unknown",
-        reportedByUid: currentUser?.uid || null,
-        status: "pending",
-        reportedAt: serverTimestamp()
-      });
-      alert("✅ Message reported!");
-    } catch (err) {
-      console.error("Report failed:", err);
-      alert("❌ Failed to report message.");
-    }
+  reportBtn.onclick = async () => {
+    await reportMessage(messageData);
     tapModalEl.remove();
   };
 
@@ -419,10 +439,9 @@ function showTapModal(targetMsgEl, messageData) {
   tapModalEl.appendChild(reportBtn);
   document.body.appendChild(tapModalEl);
 
-  // --- Modal styling ---
   const rect = targetMsgEl.getBoundingClientRect();
   tapModalEl.style.position = "absolute";
-  tapModalEl.style.top = rect.top - 40 + window.scrollY + "px";
+  tapModalEl.style.top = rect.top - tapModalEl.offsetHeight - 4 + window.scrollY + "px";
   tapModalEl.style.left = rect.left + "px";
   tapModalEl.style.background = "rgba(0,0,0,0.85)";
   tapModalEl.style.color = "#fff";
@@ -433,7 +452,7 @@ function showTapModal(targetMsgEl, messageData) {
   tapModalEl.style.gap = "8px";
   tapModalEl.style.zIndex = 9999;
 
-  // --- Auto-close when clicking outside ---
+  // --- Auto-close if user doesn’t act ---
   const closeModal = (e) => {
     if (!tapModalEl.contains(e.target)) {
       tapModalEl.remove();
@@ -442,161 +461,65 @@ function showTapModal(targetMsgEl, messageData) {
   };
   setTimeout(() => document.addEventListener("click", closeModal), 0);
 
-  // --- Auto-dismiss after 3 seconds ---
-  clearTimeout(tapModalTimeout);
-  tapModalTimeout = setTimeout(() => {
-    if (tapModalEl) {
-      tapModalEl.remove();
-      tapModalEl = null;
-    }
+  // --- Auto-hide after 3s if untouched ---
+  setTimeout(() => {
+    if (document.body.contains(tapModalEl)) tapModalEl.remove();
   }, 3000);
 }
 
-// 🎨 Render messages (unchanged, with click-to-reply)
 function renderMessagesFromArray(messages, isBannerFeed = false) {
   if (!refs.messagesEl) return;
 
   messages.forEach(item => {
-    if (document.getElementById(item.id)) return;
+    if (document.getElementById(item.id)) return; // avoid duplicates
     const m = item.data;
 
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    // --- Banners ---
-    if (m.systemBanner || m.isBanner || m.type === "banner") {
-      wrapper.classList.add("chat-banner");
-      wrapper.style.display = "block";
-      wrapper.style.width = "100%";
-      wrapper.style.textAlign = "center";
-      wrapper.style.padding = "4px 0";
-      wrapper.style.margin = "4px 0";
-      wrapper.style.borderRadius = "8px";
-      wrapper.style.position = "relative";
-      wrapper.style.overflow = "hidden";
-      wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
-      wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
+    // --- Regular message ---
+    const usernameEl = document.createElement("span");
+    usernameEl.className = "meta";
+    usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
+    usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
+    usernameEl.style.marginRight = "4px";
+    wrapper.appendChild(usernameEl);
 
-      const innerPanel = document.createElement("div");
-      innerPanel.style.display = "inline-block";
-      innerPanel.style.padding = "6px 14px";
-      innerPanel.style.borderRadius = "6px";
-      innerPanel.style.background = "rgba(255,255,255,0.35)";
-      innerPanel.style.backdropFilter = "blur(6px)";
-      innerPanel.style.color = "#000";
-      innerPanel.style.fontWeight = "700";
-      innerPanel.textContent = m.content || "";
-      wrapper.appendChild(innerPanel);
-
-      if (window.currentUser?.isAdmin) {
-        const delBtn = document.createElement("button");
-        delBtn.textContent = "🗑";
-        delBtn.title = "Delete Banner";
-        delBtn.style.position = "absolute";
-        delBtn.style.right = "6px";
-        delBtn.style.top = "3px";
-        delBtn.style.background = "rgba(255,255,255,0.5)";
-        delBtn.style.border = "none";
-        delBtn.style.borderRadius = "4px";
-        delBtn.style.cursor = "pointer";
-        delBtn.style.fontSize = "14px";
-        delBtn.onclick = async () => {
-          await deleteDoc(doc(db, "messages", item.id));
-          wrapper.remove();
-        };
-        wrapper.appendChild(delBtn);
-      }
-
-      if (!sessionStorage.getItem(`confetti_${item.id}`)) {
-        wrapper.style.animation = "pulseGlow 2s";
-        sessionStorage.setItem(`confetti_${item.id}`, "played");
-        const confettiContainer = document.createElement("div");
-        confettiContainer.style.position = "absolute";
-        confettiContainer.style.inset = "0";
-        confettiContainer.style.pointerEvents = "none";
-        wrapper.appendChild(confettiContainer);
-
-        for (let i = 0; i < 30; i++) {
-          const piece = document.createElement("div");
-          piece.style.position = "absolute";
-          piece.style.width = "6px";
-          piece.style.height = "6px";
-          piece.style.borderRadius = "50%";
-          piece.style.background = randomColor();
-          piece.style.left = Math.random() * 100 + "%";
-          piece.style.top = Math.random() * 100 + "%";
-          piece.style.opacity = 0.8;
-          piece.style.animation = `floatConfetti ${3 + Math.random() * 3}s ease-in-out`;
-          confettiContainer.appendChild(piece);
-        }
-
-        setTimeout(() => {
-          confettiContainer.remove();
-          wrapper.style.animation = "";
-        }, 6000);
-      }
-    } else {
-      // --- Regular messages ---
-      const usernameEl = document.createElement("span");
-      usernameEl.className = "meta";
-      usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
-      usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
-      usernameEl.style.marginRight = "4px";
-      wrapper.appendChild(usernameEl);
-
-      // --- Reply preview ---
-      if (m.replyTo) {
-        const originalMsgEl = document.getElementById(m.replyTo);
-        const replyPreview = document.createElement("div");
-        replyPreview.className = "reply-preview";
-        replyPreview.textContent =
-          (originalMsgEl?.querySelector(".content, .buzz-content")?.textContent) ||
-          m.replyToContent ||
-          "Original message";
-        replyPreview.style.fontSize = "12px";
-        replyPreview.style.opacity = 0.7;
-        replyPreview.style.borderLeft = "2px solid #FFD700";
-        replyPreview.style.paddingLeft = "4px";
-        replyPreview.style.marginBottom = "2px";
-        replyPreview.style.cursor = "pointer";
-
-        replyPreview.addEventListener("click", () => {
-          if (originalMsgEl) {
-            originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
-            const originalBg = originalMsgEl.style.background;
-            originalMsgEl.style.transition = "background 0.5s";
-            originalMsgEl.style.background = "#FFD70033";
-            setTimeout(() => {
-              originalMsgEl.style.background = originalBg;
-            }, 1000);
-          }
-        });
-        wrapper.appendChild(replyPreview);
-      }
-
-      // --- Content ---
-      const contentEl = document.createElement("span");
-      contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
-      contentEl.textContent = " " + (m.content || "");
-      if (m.buzzColor) contentEl.style.background = m.buzzColor;
-      if (m.highlight) {
-        contentEl.style.color = "#000";
-        contentEl.style.fontWeight = "700";
-      }
-      wrapper.appendChild(contentEl);
-
-      // --- Tap modal trigger ---
-      wrapper.addEventListener("click", (e) => {
-        e.stopPropagation();
-        showTapModal(wrapper, { id: item.id, chatId: m.chatId, content: m.content });
-      });
+    // --- Reply preview ---
+    if (m.replyTo) {
+      const replyPreview = document.createElement("div");
+      replyPreview.className = "reply-preview";
+      replyPreview.textContent = m.replyToContent || "Original message";
+      replyPreview.style.fontSize = "12px";
+      replyPreview.style.opacity = 0.7;
+      replyPreview.style.borderLeft = "2px solid #FFD700";
+      replyPreview.style.paddingLeft = "4px";
+      replyPreview.style.marginBottom = "2px";
+      wrapper.appendChild(replyPreview);
     }
+
+    // --- Message content ---
+    const contentEl = document.createElement("span");
+    contentEl.className = "content";
+    contentEl.textContent = " " + (m.content || "");
+    wrapper.appendChild(contentEl);
+
+    // --- Tap to show reply/report modal ---
+    wrapper.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showTapModal(wrapper, {
+        id: item.id,
+        chatId: m.chatId,
+        uid: m.uid,
+        content: m.content
+      });
+    });
 
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // --- Scroll down ---
+  // --- Auto-scroll ---
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
