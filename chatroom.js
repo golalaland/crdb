@@ -7,7 +7,7 @@ import {
   getFirestore, 
   doc, 
   setDoc, 
-  getDoc, 
+  getDocs,
   updateDoc, 
   collection, 
   addDoc, 
@@ -15,19 +15,8 @@ import {
   onSnapshot, 
   query, 
   orderBy, 
-  increment, 
-  getDocs, 
-  where,
-  runTransaction
+  where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-import { 
-  getDatabase, 
-  ref as rtdbRef, 
-  set as rtdbSet, 
-  onDisconnect, 
-  onValue 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 import { 
   getAuth, 
@@ -49,7 +38,6 @@ const firebaseConfig = {
 /* ---------- Firebase Setup ---------- */
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const rtdb = getDatabase(app);
 const auth = getAuth(app);
 
 /* ---------- Globals ---------- */
@@ -60,53 +48,42 @@ let currentUser = null;
 ================================= */
 async function pushNotification(userId, message) {
   if (!userId) return console.warn("⚠️ No userId provided for pushNotification");
-  
-  const notifRef = doc(collection(db, "notifications"));
-  await setDoc(notifRef, {
-    userId,
-    message,
-    timestamp: serverTimestamp(),
-    read: false,
-  });
+
+  try {
+    const notifRef = collection(db, "notifications");
+    await addDoc(notifRef, {
+      userId, // e.g. "jennifertash51@gmail,com"
+      message,
+      timestamp: serverTimestamp(),
+      read: false,
+    });
+    console.log(`✅ Notification added for ${userId}`);
+  } catch (err) {
+    console.error("❌ Error adding notification:", err);
+  }
 }
 
-function pushNotificationTx(tx, userId, message) {
-  const notifRef = doc(collection(db, "notifications"));
-  tx.set(notifRef, {
-    userId,
-    message,
-    timestamp: serverTimestamp(),
-    read: false,
-  });
-}
-
-/* ---------- Auth State Watcher (Stable + Lazy Notifications) ---------- */
+/* ---------- Auth State Watcher ---------- */
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
 
   if (!user) {
-    console.warn("⚠️ No logged-in user found");
+    console.warn("⚠️ No logged-in user");
     localStorage.removeItem("userId");
     return;
   }
 
-  // 1. Define the sanitization helper
-  // This must match exactly how the 'userId' field is stored in Firestore.
+  // 🔹 IMPORTANT: use same sanitization that your Firestore uses
   const sanitizeEmail = (email) => email.replace(/\./g, ",");
-  
-  // 2. Generate the ID used for querying
-  const userQueryId = sanitizeEmail(currentUser.email); 
+  const userQueryId = sanitizeEmail(user.email); // e.g. "jennifertash51@gmail,com"
 
-  console.log("✅ Logged in as Sanitized ID:", userQueryId);
+  console.log("✅ Logged in as:", userQueryId);
   localStorage.setItem("userId", userQueryId);
 
-  // Reference the top-level 'notifications' collection
   const notifRef = collection(db, "notifications");
-  
-  // 3. Define the query using the sanitized email ID
   const notifQuery = query(
     notifRef,
-    where("userId", "==", userQueryId), // Filters notifications belonging to this user
+    where("userId", "==", userQueryId),
     orderBy("timestamp", "desc")
   );
 
@@ -115,79 +92,70 @@ onAuthStateChanged(auth, async (user) => {
   async function initNotificationsListener() {
     const notificationsList = document.getElementById("notificationsList");
     if (!notificationsList) {
-      // Use setTimeout for resilience if the DOM element loads slowly
       console.warn("⚠️ #notificationsList not found yet — retrying...");
       setTimeout(initNotificationsListener, 500);
       return;
     }
 
-    // Unsubscribe any previous listener to prevent duplicates
     if (unsubscribe) unsubscribe();
 
-    console.log("🔔 Setting up live notification listener for ID:", userQueryId);
-    unsubscribe = onSnapshot(notifQuery, (snapshot) => {
-      console.log(`✅ Received ${snapshot.docs.length} notifications.`);
-      if (snapshot.empty) {
-        notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-        return;
-      }
+    console.log("🔔 Listening to notifications for:", userQueryId);
+    unsubscribe = onSnapshot(
+      notifQuery,
+      (snapshot) => {
+        console.log(`📬 ${snapshot.docs.length} notifications loaded.`);
+        if (snapshot.empty) {
+          notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+          return;
+        }
 
-      const items = snapshot.docs.map((docSnap) => {
-        const n = docSnap.data();
-        const time = n.timestamp?.seconds
-          ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : "--:--";
+        const items = snapshot.docs.map((docSnap) => {
+          const n = docSnap.data();
+          const time = n.timestamp?.seconds
+            ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "--:--";
 
-        return `
-          <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
-            <span>${n.message || "(no message)"}</span>
-            <span class="notification-time">${time}</span>
-          </div>
-        `;
-      });
+          return `
+            <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
+              <span>${n.message || "(no message)"}</span>
+              <span class="notification-time">${time}</span>
+            </div>
+          `;
+        });
 
-      notificationsList.innerHTML = items.join("");
-    }, (error) => {
-        // Essential error handler for catching permission/index issues
+        notificationsList.innerHTML = items.join("");
+      },
+      (error) => {
         console.error("🔴 Firestore Listener Error:", error);
-    });
+      }
+    );
   }
 
-  // Initialize listener based on DOM state
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initNotificationsListener);
   } else {
     initNotificationsListener();
   }
 
-  // Open-tab listener
-  const notifTabBtn = document.querySelector('.tab-btn[data-tab="notificationsTab"]');
-  if (notifTabBtn) {
-    notifTabBtn.addEventListener("click", () => {
-      // Small delay to ensure the tab content is visible before re-running listener
-      setTimeout(initNotificationsListener, 150);
-    });
-  }
-
-  // Mark All As Read Logic
+  // "Mark all as read"
   const markAllBtn = document.getElementById("markAllRead");
   if (markAllBtn) {
     markAllBtn.addEventListener("click", async () => {
       console.log("🟡 Marking all notifications as read...");
-      // Use the same consistent query ID for fetching documents to update
-      const snapshot = await getDocs(query(notifRef, where("userId", "==", userQueryId)));
-      
+      const snapshot = await getDocs(
+        query(notifRef, where("userId", "==", userQueryId))
+      );
       for (const docSnap of snapshot.docs) {
-        const ref = doc(db, "notifications", docSnap.id);
-        await updateDoc(ref, { read: true });
+        await updateDoc(docSnap.ref, { read: true });
       }
       alert("✅ All notifications marked as read.");
     });
   }
 });
+
 
 
 
