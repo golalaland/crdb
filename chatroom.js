@@ -885,6 +885,11 @@ async function loginWhitelist(email, phone) {
       isHost: !!data.isHost
     };
 
+    // ✅ Store user ID for notifications system
+    const userId = currentUser.chatId || currentUser.email || currentUser.phone;
+    localStorage.setItem("userId", userId);
+    console.log("✅ Stored userId for notifications:", userId);
+
     // 🧠 Setup post-login systems
     updateRedeemLink();
     updateTipLink();
@@ -892,6 +897,7 @@ async function loginWhitelist(email, phone) {
     attachMessagesListener();
     startStarEarning(currentUser.uid);
 
+    // Store VIP user in local storage (existing)
     localStorage.setItem("vipUser", JSON.stringify({ email, phone }));
 
     // Prompt guests for a permanent chatID
@@ -912,6 +918,7 @@ async function loginWhitelist(email, phone) {
     if (loader) loader.style.display = "none";
   }
 }
+
 
 /* ----------------------------
    🔁 Auto Login Session
