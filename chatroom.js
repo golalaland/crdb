@@ -541,19 +541,21 @@ if (m.replyTo) {
   replyPreview.style.marginBottom = "2px";
   replyPreview.style.cursor = "pointer";
 
-  // 🔹 Scroll to original message safely
+  // 🔹 Safe scroll to original message
   replyPreview.addEventListener("click", (e) => {
-    e.stopPropagation(); // Prevent triggering wrapper click (tap modal)
+    e.stopPropagation(); // prevents tap modal
     const originalMsgEl = document.getElementById(m.replyTo);
     if (!originalMsgEl) return;
+
+    // Smooth scroll
     originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
 
-    // temporary highlight flash
-    const originalBg = originalMsgEl.style.background;
+    // Flash highlight
+    const prevBg = originalMsgEl.style.background;
     originalMsgEl.style.transition = "background 0.5s";
     originalMsgEl.style.background = "#FFD70033";
     setTimeout(() => {
-      originalMsgEl.style.background = originalBg;
+      originalMsgEl.style.background = prevBg;
     }, 1000);
   });
 
@@ -566,7 +568,7 @@ contentEl.className = "content";
 contentEl.textContent = " " + (m.content || "");
 wrapper.appendChild(contentEl);
 
-// ⚡ Tap modal trigger
+// ⚡ Tap modal trigger (click wrapper)
 wrapper.addEventListener("click", (e) => {
   e.stopPropagation();
   showTapModal(wrapper, {
@@ -580,8 +582,6 @@ wrapper.addEventListener("click", (e) => {
 });
 
 refs.messagesEl.appendChild(wrapper);
-
-
   // Auto-scroll
   if (!scrollPending) {
     scrollPending = true;
