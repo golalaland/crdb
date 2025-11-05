@@ -2472,6 +2472,28 @@ document.addEventListener("DOMContentLoaded", () => {
   transition: 'opacity .18s ease, transform .18s ease'
 });
 
+// --- Small Close (×) Button ---
+const closeBtn = document.createElement('div');
+closeBtn.innerHTML = '&times;'; // × symbol
+Object.assign(closeBtn.style, {
+  position: 'absolute',
+  top: '6px',
+  right: '10px',
+  fontSize: '16px',
+  fontWeight: '700',
+  color: '#fff',
+  cursor: 'pointer',
+  opacity: '0.6',
+  transition: 'opacity 0.2s ease'
+});
+closeBtn.onmouseenter = () => closeBtn.style.opacity = '1';
+closeBtn.onmouseleave = () => closeBtn.style.opacity = '0.6';
+closeBtn.onclick = (e) => {
+  e.stopPropagation(); // prevent triggering outside-close
+  card.remove();
+};
+card.appendChild(closeBtn);
+
     // --- Header ---
     const chatIdDisplay = user.chatId ? user.chatId.charAt(0).toUpperCase() + user.chatId.slice(1) : 'Unknown';
     const color = user.isHost ? '#ff6600' : user.isVIP ? '#ff0099' : '#cccccc';
