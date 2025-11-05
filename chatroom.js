@@ -1,4 +1,4 @@
-/* ---------- Imports (Firebase v10) ---------- */
+(/* ---------- Imports (Firebase v10) ---------- */
 import { 
   initializeApp 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -541,76 +541,15 @@ wrapper.addEventListener("click", (e) => {
 
 refs.messagesEl.appendChild(wrapper);
 
-
-// === SCROLL BUTTON + AUTO SCROLL ===
-function initScrollButton() {
-  if (!refs.messagesEl) return;
-
-  let scrollBtn = document.getElementById("scrollToBottomBtn");
-  if (!scrollBtn) {
-    scrollBtn = document.createElement("div");
-    scrollBtn.id = "scrollToBottomBtn";
-    scrollBtn.textContent = "↓";
-    scrollBtn.style.cssText = `
-      position: fixed;
-      bottom: 90px;
-      right: 20px;
-      padding: 6px 12px;
-      background: rgba(255,20,147,0.9);
-      color: #fff;
-      border-radius: 14px;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-      opacity: 0;
-      pointer-events: none;
-      transition: all 0.3s ease;
-      z-index: 9999;
-    `;
-    document.body.appendChild(scrollBtn);
-
-    scrollBtn.addEventListener("click", () => {
-      refs.messagesEl.scrollTo({
-        top: refs.messagesEl.scrollHeight,
-        behavior: "smooth",
-      });
-      scrollBtn.style.opacity = 0;
-      scrollBtn.style.pointerEvents = "none";
+  // --- Auto-scroll to bottom ---
+  if (!scrollPending) {
+    scrollPending = true;
+    requestAnimationFrame(() => {
+      refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
+      scrollPending = false;
     });
   }
-
-  refs.messagesEl.addEventListener("scroll", () => {
-    const dist =
-      refs.messagesEl.scrollHeight -
-      refs.messagesEl.scrollTop -
-      refs.messagesEl.clientHeight;
-
-    if (dist > 150) {
-      scrollBtn.style.opacity = 1;
-      scrollBtn.style.pointerEvents = "auto";
-    } else {
-      scrollBtn.style.opacity = 0;
-      scrollBtn.style.pointerEvents = "none";
-    }
-  });
 }
-
-// Call once after snapshot loads
-initScrollButton();
-
-/* ---------- Animations ---------- */
-const style = document.createElement("style");
-style.textContent = `
-@keyframes floatConfetti {
-  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
-}
-@keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 12px rgba(255,255,255,0.2); }
-  50% { box-shadow: 0 0 24px rgba(255,255,255,0.6); }
-}`;
-document.head.appendChild(style);
-
 
 /* ---------- 🔔 Messages Listener ---------- */
 function attachMessagesListener() {
