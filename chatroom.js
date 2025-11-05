@@ -845,7 +845,7 @@ async function initSessionBar(currentUser) {
   const sessionModal = document.getElementById("sessionModal");
   const ballerList = document.getElementById("ballerList");
 
-  // Show the session bar and hide modal initially
+  // Show the session bar
   sessionBar.style.display = "flex";
   sessionModal.style.display = "none";
 
@@ -854,7 +854,7 @@ async function initSessionBar(currentUser) {
   const topUsersSnap = await getDocs(collection(db, "topUsers"));
   topUsersSnap.forEach(docSnap => topUsersData.push(docSnap.data()));
 
-  // Render Top Ballers for selected period
+  // Render Top Ballers for a period
   function renderBallers(period = "week") {
     ballerList.innerHTML = "";
     const filtered = topUsersData.filter(u => u.period === period || period === "all");
@@ -872,25 +872,16 @@ async function initSessionBar(currentUser) {
       ballerList.appendChild(userEl);
     });
 
-    // Stars reward actions
+    // Actions for follow/watch buttons
     ballerList.querySelectorAll(".followBtn").forEach(btn => {
-      btn.onclick = async () => {
-        const username = btn.dataset.username;
-        console.log(`Follow ${username} clicked`);
-        // TODO: Award stars to currentUser
-      };
+      btn.onclick = () => console.log(`Follow ${btn.dataset.username} clicked`);
     });
-
     ballerList.querySelectorAll(".watchBtn").forEach(btn => {
-      btn.onclick = async () => {
-        const username = btn.dataset.username;
-        console.log(`Watch ${username} clicked`);
-        // TODO: Award stars to currentUser
-      };
+      btn.onclick = () => console.log(`Watch ${btn.dataset.username} clicked`);
     });
   }
 
-  renderBallers("week"); // Default render
+  renderBallers("week"); // default render
 
   // Toggle modal when clicking sessionBar tabs
   sessionBar.querySelectorAll(".sessionTab").forEach(tab => {
@@ -900,7 +891,7 @@ async function initSessionBar(currentUser) {
       } else {
         sessionModal.style.display = "block";
 
-        // Position modal just below the sessionBar
+        // Position modal below sessionBar
         const rect = sessionBar.getBoundingClientRect();
         sessionModal.style.position = "absolute";
         sessionModal.style.top = rect.bottom + window.scrollY + "px";
@@ -915,7 +906,7 @@ async function initSessionBar(currentUser) {
     });
   });
 
-  // Close modal if clicked outside
+  // Close modal if clicking outside
   document.addEventListener("click", (e) => {
     if (!sessionModal.contains(e.target) && !sessionBar.contains(e.target)) {
       sessionModal.style.display = "none";
@@ -930,7 +921,6 @@ async function initSessionBar(currentUser) {
       const target = tabBtn.dataset.tab;
       mainTabs.forEach(b => b.classList.remove("active"));
       tabBtn.classList.add("active");
-
       contentTabs.forEach(c => c.classList.remove("active"));
       document.getElementById(target === "ballers" ? "tabBallers" : "tabExtras").classList.add("active");
     });
@@ -946,15 +936,6 @@ async function initSessionBar(currentUser) {
       renderBallers(period);
     });
   });
-
-  // Optional: glow effect for updates
-  function showGlow() {
-    sessionBar.classList.add("sessionGlow");
-    setTimeout(() => sessionBar.classList.remove("sessionGlow"), 3000);
-  }
-
-  // Example: trigger glow if new highlights arrive
-  // showGlow();
 }
 
 
