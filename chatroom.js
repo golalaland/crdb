@@ -439,41 +439,19 @@ function showTapModal(targetMsgEl, messageData) {
   document.body.appendChild(tapModalEl);
 
   const rect = targetMsgEl.getBoundingClientRect();
-  const modalWidth = tapModalEl.offsetWidth || 120; // fallback width
-  const modalHeight = tapModalEl.offsetHeight || 60; // fallback height
-
-  // 🔹 Position it near the message, slightly right but not off-screen
-  let leftPos = rect.right + 8; // small gap
-  const topPos = rect.top + window.scrollY + rect.height / 2 - modalHeight / 2;
-
-  // 🔹 If overflowing right, put it on the left
-  if (leftPos + modalWidth > window.innerWidth - 8) {
-    leftPos = rect.left - modalWidth - 8;
-  }
-
-  // 🔹 If still off left, clamp it
-  leftPos = Math.max(8, leftPos);
-
   tapModalEl.style.position = "absolute";
-  tapModalEl.style.top = `${topPos}px`;
-  tapModalEl.style.left = `${leftPos}px`;
-  tapModalEl.style.background = "rgba(0,0,0,0.88)";
+  tapModalEl.style.top = rect.top - 40 + window.scrollY + "px";
+  tapModalEl.style.left = rect.left + "px";
+  tapModalEl.style.background = "rgba(0,0,0,0.85)";
   tapModalEl.style.color = "#fff";
   tapModalEl.style.padding = "6px 10px";
   tapModalEl.style.borderRadius = "8px";
   tapModalEl.style.fontSize = "12px";
   tapModalEl.style.display = "flex";
-  tapModalEl.style.flexDirection = "column";
-  tapModalEl.style.gap = "6px";
-  tapModalEl.style.boxShadow = "0 4px 12px rgba(0,0,0,0.4)";
-  tapModalEl.style.opacity = "0";
-  tapModalEl.style.transition = "opacity 0.15s ease";
+  tapModalEl.style.gap = "8px";
   tapModalEl.style.zIndex = 9999;
 
-  // ✨ Fade-in
-  requestAnimationFrame(() => (tapModalEl.style.opacity = "1"));
-
-  // 🧨 Close if click elsewhere
+  // auto-close
   const closeModal = (e) => {
     if (!tapModalEl.contains(e.target)) {
       tapModalEl.remove();
@@ -482,7 +460,6 @@ function showTapModal(targetMsgEl, messageData) {
   };
   setTimeout(() => document.addEventListener("click", closeModal), 0);
 
-  // ⏳ Auto-hide after 3s if untouched
   setTimeout(() => {
     if (document.body.contains(tapModalEl)) tapModalEl.remove();
   }, 3000);
@@ -551,54 +528,37 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
-   if (m.replyTo) {
-  const replyPreview = document.createElement("div");
-  replyPreview.className = "reply-preview";
-  replyPreview.textContent = m.replyToContent || "Original message";
-  replyPreview.style.fontSize = "12px";
-  replyPreview.style.opacity = 0.7;
-  replyPreview.style.borderLeft = "2px solid #FFD700";
-  replyPreview.style.paddingLeft = "4px";
-  replyPreview.style.marginBottom = "2px";
-  replyPreview.style.cursor = "pointer";
+      if (m.replyTo) {
+        const replyPreview = document.createElement("div");
+        replyPreview.className = "reply-preview";
+        replyPreview.textContent = m.replyToContent || "Original message";
+        replyPreview.style.fontSize = "12px";
+        replyPreview.style.opacity = 0.7;
+        replyPreview.style.borderLeft = "2px solid #FFD700";
+        replyPreview.style.paddingLeft = "4px";
+        replyPreview.style.marginBottom = "2px";
+        wrapper.appendChild(replyPreview);
+      }
 
-  // 🔹 Safe scroll to original message
-  replyPreview.addEventListener("click", () => {
-    // Delay slightly to ensure all messages are rendered
-    setTimeout(() => {
-      const originalMsgEl = document.getElementById(m.replyTo);
-      if (!originalMsgEl) return; // bail if it doesn’t exist
-      originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
-      const originalBg = originalMsgEl.style.background;
-      originalMsgEl.style.transition = "background 0.5s";
-      originalMsgEl.style.background = "#FFD70033"; // highlight flash
-      setTimeout(() => {
-        originalMsgEl.style.background = originalBg;
-      }, 1000);
-    }, 50); // 50ms delay
+      const contentEl = document.createElement("span");
+      contentEl.className = "content";
+      contentEl.textContent = " " + (m.content || "");
+      wrapper.appendChild(contentEl);
+
+      // ⚡ Tap modal trigger
+      wrapper.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showTapModal(wrapper, {
+          id: item.id,
+          chatId: m.chatId,
+          uid: m.uid,
+          content: m.content
+        });
+      });
+    }
+
+    refs.messagesEl.appendChild(wrapper);
   });
-
-  wrapper.appendChild(replyPreview);
-}
-
-// --- Message content ---
-const contentEl = document.createElement("span");
-contentEl.className = "content";
-contentEl.textContent = " " + (m.content || "");
-wrapper.appendChild(contentEl);
-
-// ⚡ Tap modal trigger
-wrapper.addEventListener("click", (e) => {
-  e.stopPropagation();
-  showTapModal(wrapper, {
-    id: item.id,
-    chatId: m.chatId,
-    uid: m.uid,
-    content: m.content
-  });
-});
-
-refs.messagesEl.appendChild(wrapper);
 
   // --- 🌀 Auto-scroll down
   if (!scrollPending) {
