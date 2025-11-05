@@ -528,37 +528,52 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
-      if (m.replyTo) {
-        const replyPreview = document.createElement("div");
-        replyPreview.className = "reply-preview";
-        replyPreview.textContent = m.replyToContent || "Original message";
-        replyPreview.style.fontSize = "12px";
-        replyPreview.style.opacity = 0.7;
-        replyPreview.style.borderLeft = "2px solid #FFD700";
-        replyPreview.style.paddingLeft = "4px";
-        replyPreview.style.marginBottom = "2px";
-        wrapper.appendChild(replyPreview);
-      }
+     if (m.replyTo) {
+  const replyPreview = document.createElement("div");
+  replyPreview.className = "reply-preview";
+  replyPreview.textContent = m.replyToContent || "Original message";
+  replyPreview.style.fontSize = "12px";
+  replyPreview.style.opacity = 0.7;
+  replyPreview.style.borderLeft = "2px solid #FFD700";
+  replyPreview.style.paddingLeft = "4px";
+  replyPreview.style.marginBottom = "2px";
+  replyPreview.style.cursor = "pointer";
 
-      const contentEl = document.createElement("span");
-      contentEl.className = "content";
-      contentEl.textContent = " " + (m.content || "");
-      wrapper.appendChild(contentEl);
-
-      // ⚡ Tap modal trigger
-      wrapper.addEventListener("click", (e) => {
-        e.stopPropagation();
-        showTapModal(wrapper, {
-          id: item.id,
-          chatId: m.chatId,
-          uid: m.uid,
-          content: m.content
-        });
-      });
-    }
-
-    refs.messagesEl.appendChild(wrapper);
+  // 🔹 Safe scroll to original message
+  replyPreview.addEventListener("click", (e) => {
+    e.stopPropagation(); // prevent triggering tap modal
+    setTimeout(() => {
+      const originalMsgEl = document.getElementById(m.replyTo);
+      if (!originalMsgEl) return;
+      originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      const originalBg = originalMsgEl.style.background;
+      originalMsgEl.style.transition = "background 0.5s";
+      originalMsgEl.style.background = "#FFD70033"; // highlight flash
+      setTimeout(() => {
+        originalMsgEl.style.background = originalBg;
+      }, 1000);
+    }, 50);
   });
+
+  wrapper.appendChild(replyPreview);
+}
+
+// --- Message content ---
+const contentEl = document.createElement("span");
+contentEl.className = "content";
+contentEl.textContent = " " + (m.content || "");
+wrapper.appendChild(contentEl);
+
+// ⚡ Tap modal trigger
+wrapper.addEventListener("click", (e) => {
+  e.stopPropagation();
+  showTapModal(wrapper, {
+    id: item.id,
+    chatId: m.chatId,
+    uid: m.uid,
+    content: m.content
+  });
+});
 
   // --- 🌀 Auto-scroll down
   if (!scrollPending) {
