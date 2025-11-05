@@ -281,11 +281,13 @@ async function startNotificationsFor(userEmail) {
 
 
 
+
 /* ---------- Helper: Get current user ID ---------- */
-export function getCurrentUserId() {
+function getCurrentUserId() {
   return currentUser ? currentUser.uid : localStorage.getItem("userId");
 }
-window.currentUser = currentUser;
+window.getCurrentUserId = getCurrentUserId; // make it globally accessible
+
 
 /* ---------- Exports for other scripts ---------- */
 export { app, db, rtdb, auth };
