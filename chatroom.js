@@ -341,9 +341,8 @@ function setupUsersListener() {
 }
 setupUsersListener();
 
-/* ---------- Render Messages ---------- */
+/* ---------- Render Messages (full-width banners + one-time confetti/glow) ---------- */
 let scrollPending = false;
-let currentReplyTarget = null; // holds info about the message being replied to
 
 function renderMessagesFromArray(messages, isBannerFeed = false) {
   if (!refs.messagesEl) return;
@@ -370,6 +369,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
       wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
+      // --- Inner text panel ---
       const innerPanel = document.createElement("div");
       innerPanel.style.display = "inline-block";
       innerPanel.style.padding = "6px 14px";
@@ -381,6 +381,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
+      // --- 🗑 Optional Delete Button (Admin only) ---
       if (window.currentUser?.isAdmin) {
         const delBtn = document.createElement("button");
         delBtn.textContent = "🗑";
@@ -396,11 +397,12 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
         delBtn.onclick = async () => {
           await deleteDoc(doc(db, "messages", item.id));
           wrapper.remove();
+          console.log(`🗑 Banner ${item.id} deleted by admin`);
         };
         wrapper.appendChild(delBtn);
       }
 
-      // Confetti + Glow once per session
+      // --- 🎊 Confetti + Glow (only once per session) ---
       if (!sessionStorage.getItem(`confetti_${item.id}`)) {
         wrapper.style.animation = "pulseGlow 2s";
         sessionStorage.setItem(`confetti_${item.id}`, "played");
@@ -440,37 +442,6 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
-      // --- REPLY PREVIEW ---
-      if (m.replyTo) {
-        const originalMsgEl = document.getElementById(m.replyTo);
-        if (originalMsgEl) {
-          const replyPreview = document.createElement("div");
-          replyPreview.className = "reply-preview";
-          replyPreview.textContent = originalMsgEl.querySelector(".content, .buzz-content")?.textContent || m.replyToContent || "Original message";
-          replyPreview.style.fontSize = "12px";
-          replyPreview.style.opacity = 0.7;
-          replyPreview.style.borderLeft = "2px solid #FFD700";
-          replyPreview.style.paddingLeft = "4px";
-          replyPreview.style.marginBottom = "2px";
-          replyPreview.style.cursor = "pointer";
-
-          replyPreview.addEventListener("click", () => {
-            if (originalMsgEl) {
-              originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
-              const originalBg = originalMsgEl.style.background;
-              originalMsgEl.style.transition = "background 0.5s";
-              originalMsgEl.style.background = "#FFD70033";
-              setTimeout(() => {
-                originalMsgEl.style.background = originalBg;
-              }, 1000);
-            }
-          });
-
-          wrapper.appendChild(replyPreview);
-        }
-      }
-
-      // --- Message content ---
       const contentEl = document.createElement("span");
       contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
       contentEl.textContent = " " + (m.content || "");
@@ -480,66 +451,10 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
         contentEl.style.fontWeight = "700";
       }
       wrapper.appendChild(contentEl);
+    }
 
-// === TAP-TO-REPLY POPUP ===
-wrapper.addEventListener("click", (e) => {
-  e.stopPropagation();
-
-  // Remove any other open popups first
-  document.querySelectorAll(".tap-modal").forEach((mod) => mod.remove());
-
-  const modal = document.createElement("div");
-  modal.className = "tap-modal";
-  modal.style.position = "absolute";
-  modal.style.padding = "6px 10px";
-  modal.style.background = "#333";
-  modal.style.color = "#fff";
-  modal.style.borderRadius = "6px";
-  modal.style.fontSize = "12px";
-  modal.style.zIndex = 1000;
-  modal.style.display = "flex";
-  modal.style.gap = "6px";
-
-  // Correctly position inside scroll container
-  const rect = wrapper.getBoundingClientRect();
-  const chatRect = refs.messagesEl.getBoundingClientRect();
-  const scrollOffset = refs.messagesEl.scrollTop;
-  modal.style.top = `${rect.top - chatRect.top + scrollOffset - 10}px`;
-  modal.style.left = `${rect.left - chatRect.left + 70}px`;
-
-  // --- Reply ---
-  const replyBtn = document.createElement("button");
-  replyBtn.textContent = "Reply";
-  replyBtn.onclick = () => {
-    currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
-    refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 25)}...`;
-    refs.messageInputEl.focus();
-    modal.remove();
-  };
-  modal.appendChild(replyBtn);
-
-  // --- Report ---
-  const reportBtn = document.createElement("button");
-  reportBtn.textContent = "Report";
-  reportBtn.onclick = () => {
-    alert(`Reported message from ${m.chatId}`);
-    modal.remove();
-  };
-  modal.appendChild(reportBtn);
-
-  // --- Cancel ---
-  const cancelBtn = document.createElement("button");
-  cancelBtn.textContent = "✕";
-  cancelBtn.onclick = () => modal.remove();
-  modal.appendChild(cancelBtn);
-
-  wrapper.appendChild(modal);
-
-  // Hide after 3s
-  setTimeout(() => modal.remove(), 3000);
-});
-
-refs.messagesEl.appendChild(wrapper);
+    refs.messagesEl.appendChild(wrapper);
+  });
 
   // --- Auto-scroll to bottom ---
   if (!scrollPending) {
