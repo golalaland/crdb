@@ -845,11 +845,11 @@ async function initSessionBar(currentUser) {
   const sessionModal = document.getElementById("sessionModal");
   const ballerList = document.getElementById("ballerList");
 
-  // Show the session bar
+  // Show the session bar and hide modal initially
   sessionBar.style.display = "flex";
   sessionModal.style.display = "none";
 
-  // Fetch top users dynamically
+  // Fetch top users dynamically from Firestore
   const topUsersData = [];
   const topUsersSnap = await getDocs(collection(db, "topUsers"));
   topUsersSnap.forEach(docSnap => topUsersData.push(docSnap.data()));
@@ -872,7 +872,7 @@ async function initSessionBar(currentUser) {
       ballerList.appendChild(userEl);
     });
 
-    // Attach stars reward buttons
+    // Stars reward actions
     ballerList.querySelectorAll(".followBtn").forEach(btn => {
       btn.onclick = async () => {
         const username = btn.dataset.username;
@@ -890,20 +890,41 @@ async function initSessionBar(currentUser) {
     });
   }
 
-  // Initial render
-  renderBallers("week");
+  renderBallers("week"); // Default render
 
   // Toggle modal when clicking sessionBar tabs
   sessionBar.querySelectorAll(".sessionTab").forEach(tab => {
     tab.addEventListener("click", () => {
-      sessionModal.style.display = sessionModal.style.display === "block" ? "none" : "block";
+      if (sessionModal.style.display === "block") {
+        sessionModal.style.display = "none";
+      } else {
+        sessionModal.style.display = "block";
+
+        // Position modal just below the sessionBar
+        const rect = sessionBar.getBoundingClientRect();
+        sessionModal.style.position = "absolute";
+        sessionModal.style.top = rect.bottom + window.scrollY + "px";
+        sessionModal.style.left = rect.left + "px";
+        sessionModal.style.width = rect.width + "px";
+        sessionModal.style.zIndex = 9999;
+        sessionModal.style.background = "#111";
+        sessionModal.style.border = "1px solid #333";
+        sessionModal.style.borderRadius = "8px";
+        sessionModal.style.padding = "12px";
+      }
     });
+  });
+
+  // Close modal if clicked outside
+  document.addEventListener("click", (e) => {
+    if (!sessionModal.contains(e.target) && !sessionBar.contains(e.target)) {
+      sessionModal.style.display = "none";
+    }
   });
 
   // Main tab switching inside modal
   const mainTabs = sessionModal.querySelectorAll(".sessionTabs button");
   const contentTabs = sessionModal.querySelectorAll(".sessionContent");
-
   mainTabs.forEach(tabBtn => {
     tabBtn.addEventListener("click", () => {
       const target = tabBtn.dataset.tab;
@@ -932,8 +953,10 @@ async function initSessionBar(currentUser) {
     setTimeout(() => sessionBar.classList.remove("sessionGlow"), 3000);
   }
 
-  // Example trigger: showGlow(); when new highlights arrive
+  // Example: trigger glow if new highlights arrive
+  // showGlow();
 }
+
 
 /* ---------- 🆔 ChatID Modal ---------- */
 async function promptForChatID(userRef, userData) {
