@@ -551,8 +551,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
-    if (m.replyTo) {
-  const originalMsgEl = document.getElementById(m.replyTo);
+   if (m.replyTo) {
   const replyPreview = document.createElement("div");
   replyPreview.className = "reply-preview";
   replyPreview.textContent = m.replyToContent || "Original message";
@@ -563,9 +562,12 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
   replyPreview.style.marginBottom = "2px";
   replyPreview.style.cursor = "pointer";
 
-  // 🔹 Scroll to original message on click
+  // 🔹 Safe scroll to original message
   replyPreview.addEventListener("click", () => {
-    if (originalMsgEl) {
+    // Delay slightly to ensure all messages are rendered
+    setTimeout(() => {
+      const originalMsgEl = document.getElementById(m.replyTo);
+      if (!originalMsgEl) return; // bail if it doesn’t exist
       originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
       const originalBg = originalMsgEl.style.background;
       originalMsgEl.style.transition = "background 0.5s";
@@ -573,7 +575,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       setTimeout(() => {
         originalMsgEl.style.background = originalBg;
       }, 1000);
-    }
+    }, 50); // 50ms delay
   });
 
   wrapper.appendChild(replyPreview);
