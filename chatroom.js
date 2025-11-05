@@ -2117,12 +2117,17 @@ if (!window.verifyHandlersInitialized) {
       transform: "translate(-50%, -50%)",
       background: "linear-gradient(90deg, #ffcc00, #ff9900)",
       color: "#111",
-      padding: "12px 20px",
+      padding: "12px 24px",
       borderRadius: "10px",
       fontWeight: "600",
       zIndex: "999999",
       boxShadow: "0 0 12px rgba(255, 215, 0, 0.5)",
       animation: "slideFade 0.4s ease-out",
+      maxWidth: "90vw",
+      textAlign: "center",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
     });
     alertEl.innerHTML = message;
 
@@ -2138,14 +2143,13 @@ if (!window.verifyHandlersInitialized) {
     setTimeout(() => alertEl.remove(), duration);
   };
 
-  // ---------- 🌍 PHONE NORMALIZER (for backend only) ----------
-  function normalizePhoneForSearch(number) {
-    number = number.replace(/\D/g, "");
-    if (number.startsWith("0")) number = number.slice(1);
+  // ---------- PHONE FORMAT NORMALIZER ----------
+  function normalizePhone(number) {
+    number = number.replace(/\D/g, ""); // remove non-digits
     return number;
   }
 
-  // ---------- 🔘 CLICK HANDLER ----------
+  // ---------- CLICK HANDLER ----------
   document.addEventListener("click", (e) => {
     if (e.target.id === "verifyNumberBtn") {
       const numberInput = document.getElementById("verifyNumberInput");
@@ -2155,13 +2159,13 @@ if (!window.verifyHandlersInitialized) {
       if (!currentUser?.uid) return showGoldAlert("⚠️ Please log in first.");
       if (!numberRaw) return showGoldAlert("⚠️ Please enter a phone number.");
 
-      const normalized = normalizePhoneForSearch(numberRaw);
-      showConfirmModal(numberRaw, normalized, COST);
+      const normalized = normalizePhone(numberRaw);
+      showConfirmModal(numberRaw, normalized, COST); // raw = show to user, normalized = backend
     }
   });
 
-  // ---------- 🟡 CONFIRM MODAL ----------
-  window.showConfirmModal = function (displayNumber, normalizedNumber, cost) {
+  // ---------- CONFIRM MODAL ----------
+  window.showConfirmModal = function (displayNumber, backendNumber, cost) {
     let modal = document.getElementById("verifyConfirmModal");
     if (modal) modal.remove();
 
@@ -2182,10 +2186,10 @@ if (!window.verifyHandlersInitialized) {
     });
 
     modal.innerHTML = `
-      <div style="background:#111;padding:16px 18px;border-radius:10px;text-align:center;color:#fff;max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
+      <div style="background:#111;padding:16px 18px;border-radius:10px;text-align:center;color:#fff;max-width:90vw;box-shadow:0 0 12px rgba(0,0,0,0.5);">
         <h3 style="margin-bottom:10px;font-weight:600;">Verification</h3>
         <p>Scan phone number <b>${displayNumber}</b> for <b>${cost} stars ⭐</b>?</p>
-        <div style="display:flex;justify-content:center;gap:10px;margin-top:12px;">
+        <div style="display:flex;justify-content:center;gap:10px;margin-top:12px;flex-wrap:wrap;">
           <button id="cancelVerify" style="padding:6px 12px;border:none;border-radius:6px;background:#333;color:#fff;font-weight:600;cursor:pointer;">Cancel</button>
           <button id="confirmVerify" style="padding:6px 12px;border:none;border-radius:6px;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">Yes</button>
         </div>
@@ -2196,46 +2200,43 @@ if (!window.verifyHandlersInitialized) {
     modal.querySelector("#cancelVerify").onclick = () => modal.remove();
     modal.querySelector("#confirmVerify").onclick = async () => {
       modal.remove();
-      await runNumberVerification(normalizedNumber, cost);
+      await runNumberVerification(backendNumber, displayNumber, cost);
     };
   };
 
-  // ---------- 🔍 RUN VERIFICATION ----------
-  async function runNumberVerification(number, cost) {
+  // ---------- RUN VERIFICATION ----------
+  async function runNumberVerification(number, displayNumber, cost) {
     try {
       // Deduct stars
       currentUser.stars -= cost;
       if (refs?.starCountEl)
         refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-
       await updateDoc(doc(db, "users", currentUser.uid), {
         stars: increment(-cost),
       }).catch(console.error);
 
-      const cleanInput = number.replace(/\D/g, "");
-      const lastDigits = cleanInput.slice(-10);
+      const cleanInput = number.replace(/\D/g, "").slice(-10);
 
+      // 🔎 Fetch all users & match last 10 digits
       const usersRef = collection(db, "users");
       const qSnap = await getDocs(usersRef);
 
       let verifiedUser = null;
       qSnap.forEach((docSnap) => {
         const data = docSnap.data();
-        if (data.whatsapp) {
-          const storedDigits = data.whatsapp.replace(/\D/g, "").slice(-10);
-          if (storedDigits === lastDigits) verifiedUser = data;
-        }
+        const stored = data.whatsapp?.toString().trim().replace(/\D/g, "").slice(-10);
+        if (stored === cleanInput) verifiedUser = data;
       });
 
-      showVerificationModal(verifiedUser);
+      showVerificationModal(verifiedUser, displayNumber);
     } catch (err) {
       console.error("Error verifying number:", err);
       showGoldAlert("❌ Verification failed, please retry!");
     }
   }
 
-  // ---------- 🧾 RESULT MODAL ----------
-  function showVerificationModal(user) {
+  // ---------- VERIFICATION MODAL ----------
+  function showVerificationModal(user, displayNumber) {
     let modal = document.getElementById("verifyModal");
     if (modal) modal.remove();
 
@@ -2256,7 +2257,7 @@ if (!window.verifyHandlersInitialized) {
     });
 
     modal.innerHTML = `
-      <div id="verifyModalContent" style="background:#111;padding:14px 16px;border-radius:10px;text-align:center;color:#fff;max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
+      <div id="verifyModalContent" style="background:#111;padding:14px 16px;border-radius:10px;text-align:center;color:#fff;max-width:90vw;box-shadow:0 0 12px rgba(0,0,0,0.5);">
         <p id="stageMsg" style="margin-top:12px;font-weight:500;"></p>
       </div>
     `;
@@ -2265,12 +2266,7 @@ if (!window.verifyHandlersInitialized) {
     const modalContent = modal.querySelector("#verifyModalContent");
     const stageMsgEl = modalContent.querySelector("#stageMsg");
 
-    // ---------- 🌟 Dynamic Stage Messages ----------
-    const fixedStages = [
-      "Gathering information…",
-      "Checking phone number validity…"
-    ];
-
+    const fixedStages = ["Gathering information…", "Checking phone number validity…"];
     const playfulMessages = [
       "Always meet in public spaces for the first time..",
       "Known hotels are safer for meetups 😉",
@@ -2310,34 +2306,27 @@ if (!window.verifyHandlersInitialized) {
 
       setTimeout(() => {
         stageMsgEl.textContent = stage;
+
         if (index === stages.length - 1) {
           setTimeout(() => {
             modalContent.innerHTML = user
               ? `<h3>Number Verified! ✅</h3>
-                 <p>This number belongs to <b>${user.fullName}</b></p>
-                 <button id="closeVerifyModal"
-                   style="margin-top:12px;padding:6px 14px;border:none;
-                   border-radius:8px;background:linear-gradient(90deg,#ff0099,#ff6600);
-                   color:#fff;font-weight:600;cursor:pointer;">Close</button>`
+                 <p>This number <b>${displayNumber}</b> belongs to <b>${user.fullName}</b></p>
+                 <button id="closeVerifyModal" style="margin-top:12px;padding:6px 14px;border:none;border-radius:8px;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">Close</button>`
               : `<h3>Number Not Verified! ❌</h3>
-                 <p>This number doesn’t exist on verified records — be careful!</p>
-                 <button id="closeVerifyModal"
-                   style="margin-top:12px;padding:6px 14px;border:none;
-                   border-radius:8px;background:linear-gradient(90deg,#ff0099,#ff6600);
-                   color:#fff;font-weight:600;cursor:pointer;">Close</button>`;
+                 <p>The number <b>${displayNumber}</b> does not exist on verified records — be careful!</p>
+                 <button id="closeVerifyModal" style="margin-top:12px;padding:6px 14px;border:none;border-radius:8px;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">Close</button>`;
 
-            modal
-              .querySelector("#closeVerifyModal")
-              .addEventListener("click", () => modal.remove());
+            modal.querySelector("#closeVerifyModal").onclick = () => modal.remove();
 
-            if (user)
-              setTimeout(() => modal.remove(), 8000 + Math.random() * 1000);
+            if (user) setTimeout(() => modal.remove(), 8000 + Math.random() * 1000);
           }, 500);
         }
       }, totalTime);
     });
   }
 }
+
   // --- Initial random values for first load ---
 (function() {
   const onlineCountEl = document.getElementById('onlineCount');
