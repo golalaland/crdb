@@ -1144,7 +1144,13 @@ autoLogin();
 
 
 /* ----------------------------
-   💬 Send Message Handler (Instant + Smooth)
+   ⚡ Global setup for local message tracking
+----------------------------- */
+let localPendingMsgs = JSON.parse(localStorage.getItem("localPendingMsgs") || "{}"); 
+// structure: { tempId: { content, uid, chatId, createdAt } }
+
+/* ----------------------------
+   💬 Send Message Handler (WhatsApp-style)
 ----------------------------- */
 refs.sendBtn?.addEventListener("click", async () => {
   try {
@@ -1152,53 +1158,60 @@ refs.sendBtn?.addEventListener("click", async () => {
 
     const txt = refs.messageInputEl?.value.trim();
     if (!txt) return showStarPopup("Type a message first.");
-
     if ((currentUser.stars || 0) < SEND_COST)
       return showStarPopup("Not enough stars to send message.");
 
-    // Deduct stars
+    // Deduct stars locally & remotely
     currentUser.stars -= SEND_COST;
     refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-    await updateDoc(doc(db, "users", currentUser.uid), {
-      stars: increment(-SEND_COST)
-    });
+    await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-SEND_COST) });
 
-    // Temporary local ID and instant timestamp
-    const localId = "local_" + Date.now();
+    // 🌀 Create temporary message (local echo)
+    const tempId = "temp_" + Date.now();
     const localMsg = {
       content: txt,
-      uid: currentUser.uid || "unknown",
-      chatId: currentUser.chatId || "anon",
-      timestamp: new Date(), // 👈 instant local time
+      uid: currentUser.uid,
+      chatId: currentUser.chatId,
+      timestamp: new Date(),
       highlight: false,
       buzzColor: null,
       replyTo: currentReplyTarget?.id || null,
       replyToContent: currentReplyTarget?.content || null,
-      pending: true
+      tempId
     };
 
-    // 👇 Instantly render (local echo)
-    renderMessagesFromArray([{ id: localId, data: localMsg }], true);
+    // Store in local memory + localStorage
+    localPendingMsgs[tempId] = {
+      content: txt,
+      uid: currentUser.uid,
+      chatId: currentUser.chatId,
+      createdAt: Date.now()
+    };
+    localStorage.setItem("localPendingMsgs", JSON.stringify(localPendingMsgs));
+
+    // Render immediately
+    renderMessagesFromArray([{ id: tempId, data: localMsg }], true);
     scrollToBottom(refs.messagesEl);
 
-    // Clear input + reset reply
+    // Reset input
     refs.messageInputEl.value = "";
     currentReplyTarget = null;
     refs.messageInputEl.placeholder = "Type a message...";
 
-    // 🔥 Send actual message to Firestore
+    // ✅ Add to Firestore
     const msgRef = await addDoc(collection(db, CHAT_COLLECTION), {
       ...localMsg,
       timestamp: serverTimestamp(),
-      pending: false
+      tempId: null // actual saved message
     });
 
-    console.log("✅ Message sent:", msgRef.id);
-
-    // Remove temporary local version once Firestore delivers the real one
-    const tempEl = document.getElementById(localId);
+    // 🧹 Remove local echo once confirmed
+    const tempEl = document.getElementById(tempId);
     if (tempEl) tempEl.remove();
+    delete localPendingMsgs[tempId];
+    localStorage.setItem("localPendingMsgs", JSON.stringify(localPendingMsgs));
 
+    console.log("✅ Message sent successfully:", msgRef.id);
   } catch (err) {
     console.error("❌ Message send error:", err);
     showStarPopup("Message failed: " + (err.message || err));
