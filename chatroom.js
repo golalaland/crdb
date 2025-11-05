@@ -466,7 +466,10 @@ function triggerBannerEffect(wrapper, bannerId) {
   // Confetti container confined to the banner
   const confettiContainer = document.createElement("div");
   confettiContainer.style.position = "absolute";
-  confettiContainer.style.inset = "0";
+  confettiContainer.style.top = "0";
+  confettiContainer.style.left = "0";
+  confettiContainer.style.width = "100%";
+  confettiContainer.style.height = "100%";
   confettiContainer.style.pointerEvents = "none";
   wrapper.appendChild(confettiContainer);
 
@@ -492,7 +495,6 @@ function triggerBannerEffect(wrapper, bannerId) {
   }, 6000);
 }
 
-
 // Render messages
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
@@ -506,46 +508,46 @@ function renderMessagesFromArray(messages) {
     wrapper.className = "msg";
     wrapper.id = item.id;
 
- // Banner
-if (m.systemBanner || m.isBanner || m.type === "banner") {
-  wrapper.classList.add("chat-banner");
-  wrapper.style.position = "relative"; // <-- ADD THIS
-  wrapper.style.textAlign = "center";
-  wrapper.style.padding = "4px 0";
-  wrapper.style.margin = "4px 0";
-  wrapper.style.borderRadius = "8px";
-  wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
-  wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
+    // Banner
+    if (m.systemBanner || m.isBanner || m.type === "banner") {
+      wrapper.classList.add("chat-banner");
+      wrapper.style.position = "relative"; // <<< CRUCIAL: keeps confetti inside banner
+      wrapper.style.textAlign = "center";
+      wrapper.style.padding = "4px 0";
+      wrapper.style.margin = "4px 0";
+      wrapper.style.borderRadius = "8px";
+      wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
+      wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-  const innerPanel = document.createElement("div");
-  innerPanel.style.display = "inline-block";
-  innerPanel.style.padding = "6px 14px";
-  innerPanel.style.borderRadius = "6px";
-  innerPanel.style.background = "rgba(255,255,255,0.35)";
-  innerPanel.style.backdropFilter = "blur(6px)";
-  innerPanel.style.color = "#000";
-  innerPanel.style.fontWeight = "700";
-  innerPanel.textContent = m.content || "";
-  wrapper.appendChild(innerPanel);
+      const innerPanel = document.createElement("div");
+      innerPanel.style.display = "inline-block";
+      innerPanel.style.padding = "6px 14px";
+      innerPanel.style.borderRadius = "6px";
+      innerPanel.style.background = "rgba(255,255,255,0.35)";
+      innerPanel.style.backdropFilter = "blur(6px)";
+      innerPanel.style.color = "#000";
+      innerPanel.style.fontWeight = "700";
+      innerPanel.textContent = m.content || "";
+      wrapper.appendChild(innerPanel);
 
-  triggerBannerEffect(wrapper, item.id);
+      // Trigger glow + confined confetti
+      triggerBannerEffect(wrapper, item.id);
 
-  // Admin delete
-  if (window.currentUser?.isAdmin) {
-    const delBtn = document.createElement("button");
-    delBtn.textContent = "🗑";
-    delBtn.title = "Delete Banner";
-    delBtn.style.position = "absolute";
-    delBtn.style.right = "6px";
-    delBtn.style.top = "3px";
-    delBtn.style.cursor = "pointer";
-    delBtn.onclick = async () => {
-      await deleteDoc(doc(db, "messages", item.id));
-      wrapper.remove();
-    };
-    wrapper.appendChild(delBtn);
-  }
-}
+      // Admin delete button
+      if (window.currentUser?.isAdmin) {
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "🗑";
+        delBtn.title = "Delete Banner";
+        delBtn.style.position = "absolute";
+        delBtn.style.right = "6px";
+        delBtn.style.top = "3px";
+        delBtn.style.cursor = "pointer";
+        delBtn.onclick = async () => {
+          await deleteDoc(doc(db, "messages", item.id));
+          wrapper.remove();
+        };
+        wrapper.appendChild(delBtn);
+      }
     } else {
       // Regular message
       const usernameEl = document.createElement("span");
@@ -555,43 +557,15 @@ if (m.systemBanner || m.isBanner || m.type === "banner") {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
-      // Reply preview
-      if (m.replyTo) {
-        const replyPreview = document.createElement("div");
-        replyPreview.className = "reply-preview";
-        replyPreview.textContent = m.replyToContent || "Original message";
-        replyPreview.style.cursor = "pointer";
-        replyPreview.onclick = () => {
-          const originalMsg = document.getElementById(m.replyTo);
-          if (originalMsg) {
-            originalMsg.scrollIntoView({ behavior: "smooth", block: "center" });
-            originalMsg.style.outline = "2px solid #FFD700";
-            setTimeout(() => originalMsg.style.outline = "", 1000);
-          }
-        };
-        wrapper.appendChild(replyPreview);
-      }
-
       const contentEl = document.createElement("span");
       contentEl.className = "content";
       contentEl.textContent = " " + (m.content || "");
       wrapper.appendChild(contentEl);
-
-      wrapper.addEventListener("click", (e) => {
-        e.stopPropagation();
-        showTapModal(wrapper, {
-          id: item.id,
-          chatId: m.chatId,
-          uid: m.uid,
-          content: m.content,
-          replyTo: m.replyTo,
-          replyToContent: m.replyToContent
-        });
-      });
     }
 
     refs.messagesEl.appendChild(wrapper);
   });
+}
 
   // Auto-scroll
   if (!scrollPending) {
