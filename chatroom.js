@@ -541,22 +541,20 @@ if (m.replyTo) {
   replyPreview.style.marginBottom = "2px";
   replyPreview.style.cursor = "pointer";
 
-  // 🔹 Scroll to original message on click
+  // 🔹 Scroll to original message safely
   replyPreview.addEventListener("click", (e) => {
-    e.stopPropagation(); // prevent triggering tap modal
-    setTimeout(() => {
-      const originalMsgEl = document.getElementById(m.replyTo);
-      if (!originalMsgEl) return;
-      originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    e.stopPropagation(); // Prevent triggering wrapper click (tap modal)
+    const originalMsgEl = document.getElementById(m.replyTo);
+    if (!originalMsgEl) return;
+    originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
 
-      // temporary highlight flash
-      const originalBg = originalMsgEl.style.background;
-      originalMsgEl.style.transition = "background 0.5s";
-      originalMsgEl.style.background = "#FFD70033";
-      setTimeout(() => {
-        originalMsgEl.style.background = originalBg;
-      }, 1000);
-    }, 50); // short delay to ensure element exists
+    // temporary highlight flash
+    const originalBg = originalMsgEl.style.background;
+    originalMsgEl.style.transition = "background 0.5s";
+    originalMsgEl.style.background = "#FFD70033";
+    setTimeout(() => {
+      originalMsgEl.style.background = originalBg;
+    }, 1000);
   });
 
   wrapper.appendChild(replyPreview);
@@ -582,6 +580,8 @@ wrapper.addEventListener("click", (e) => {
 });
 
 refs.messagesEl.appendChild(wrapper);
+
+
   // Auto-scroll
   if (!scrollPending) {
     scrollPending = true;
