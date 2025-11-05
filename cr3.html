@@ -1646,6 +1646,33 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
         <span id="onlineCount">…</span>
         <span>people are interacting in chatrooms</span>
     </div>
+    <div id="sessionBar" style="display:flex; gap:8px; justify-content:center;">
+  <!-- Star Hosts button -->
+  <button id="openHostsBtn" class="featured-btn">🌟 Star Hosts 🌟</button>
+
+  <!-- Secondary button (Top Ballers or Highlights) -->
+  <button class="sessionTab" id="secondaryBtn">💎 Top Ballers</button>
+</div>
+
+<div id="sessionModal" style="display:none;">
+  <div class="sessionTabs">
+    <button class="active" data-tab="ballers">Top Ballers</button>
+    <button data-tab="extras">Highlights</button>
+  </div>
+
+  <div class="sessionContent active" id="tabBallers">
+    <div class="ballerTabs">
+      <button class="active" data-period="week">This Week</button>
+      <button data-period="month">This Month</button>
+      <button data-period="all">All Time</button>
+    </div>
+    <div id="ballerList"></div>
+  </div>
+
+  <div class="sessionContent" id="tabExtras">
+    <p>Coming soon — session stats or custom content.</p>
+  </div>
+</div>
 
  <div id="guestMsg"></div>
 <div id="authBox">
@@ -1692,33 +1719,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   </div>
 </div>
 
-<div id="sessionBar" style="display:flex; gap:8px; justify-content:center;">
-  <!-- Star Hosts button -->
-  <button id="openHostsBtn" class="featured-btn">🌟 Star Hosts 🌟</button>
 
-  <!-- Secondary button (Top Ballers or Highlights) -->
-  <button class="sessionTab" id="secondaryBtn">💎 Top Ballers</button>
-</div>
-
-<div id="sessionModal" style="display:none;">
-  <div class="sessionTabs">
-    <button class="active" data-tab="ballers">Top Ballers</button>
-    <button data-tab="extras">Highlights</button>
-  </div>
-
-  <div class="sessionContent active" id="tabBallers">
-    <div class="ballerTabs">
-      <button class="active" data-period="week">This Week</button>
-      <button data-period="month">This Month</button>
-      <button data-period="all">All Time</button>
-    </div>
-    <div id="ballerList"></div>
-  </div>
-
-  <div class="sessionContent" id="tabExtras">
-    <p>Coming soon — session stats or custom content.</p>
-  </div>
-</div>
 <!-- Chat messages container -->
 <div id="messages"></div>
 
