@@ -341,9 +341,10 @@ function setupUsersListener() {
 }
 setupUsersListener();
 
-/* ---------- Render Messages (with tap modal + reply support) ---------- */
+/* ---------- 💬 Render Messages (with tap modal + reply support) ---------- */
 let scrollPending = false;
 let tapModalEl = null;
+let currentReplyTarget = null; // ✅ Added: global reply target tracker
 
 function cancelReply() {
   currentReplyTarget = null;
@@ -367,19 +368,17 @@ function showReplyCancelButton() {
 }
 
 function showTapModal(targetMsgEl, messageData) {
-  // remove existing modal if any
   tapModalEl?.remove();
   tapModalEl = document.createElement("div");
   tapModalEl.className = "tap-modal";
 
-  // --- Reply button ---
   const replyBtn = document.createElement("button");
   replyBtn.textContent = "↩ Reply";
   replyBtn.onclick = () => {
     currentReplyTarget = {
       id: messageData.id,
       chatId: messageData.chatId,
-      content: messageData.content,
+      content: messageData.content
     };
     refs.messageInputEl.placeholder = `Replying to ${messageData.chatId}: ${messageData.content.substring(0, 30)}...`;
     refs.messageInputEl.focus();
@@ -387,11 +386,10 @@ function showTapModal(targetMsgEl, messageData) {
     tapModalEl.remove();
   };
 
-  // --- Report button ---
   const reportBtn = document.createElement("button");
   reportBtn.textContent = "⚠ Report";
   reportBtn.onclick = () => {
-    alert(`Reported message from ${messageData.chatId}`); // placeholder logic
+    alert("Reported message!"); // replace with your report logic
     tapModalEl.remove();
   };
 
@@ -399,10 +397,9 @@ function showTapModal(targetMsgEl, messageData) {
   tapModalEl.appendChild(reportBtn);
   document.body.appendChild(tapModalEl);
 
-  // --- Modal positioning ---
   const rect = targetMsgEl.getBoundingClientRect();
   tapModalEl.style.position = "absolute";
-  tapModalEl.style.top = rect.top + window.scrollY - 36 + "px";
+  tapModalEl.style.top = rect.top - tapModalEl.offsetHeight - 4 + window.scrollY + "px";
   tapModalEl.style.left = rect.left + "px";
   tapModalEl.style.background = "rgba(0,0,0,0.85)";
   tapModalEl.style.color = "#fff";
@@ -413,7 +410,6 @@ function showTapModal(targetMsgEl, messageData) {
   tapModalEl.style.gap = "8px";
   tapModalEl.style.zIndex = 9999;
 
-  // --- Auto-close when clicking outside ---
   const closeModal = (e) => {
     if (!tapModalEl.contains(e.target)) {
       tapModalEl.remove();
@@ -426,7 +422,7 @@ function showTapModal(targetMsgEl, messageData) {
 function renderMessagesFromArray(messages, isBannerFeed = false) {
   if (!refs.messagesEl) return;
 
-  messages.forEach((item) => {
+  messages.forEach(item => {
     if (document.getElementById(item.id)) return; // avoid duplicates
     const m = item.data;
 
@@ -434,7 +430,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    /* ---------- 🟣 Banners ---------- */
+    // --- Banner handling ---
     if (m.systemBanner || m.isBanner || m.type === "banner") {
       wrapper.classList.add("chat-banner");
       wrapper.style.display = "block";
@@ -463,16 +459,14 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
         const delBtn = document.createElement("button");
         delBtn.textContent = "🗑";
         delBtn.title = "Delete Banner";
-        Object.assign(delBtn.style, {
-          position: "absolute",
-          right: "6px",
-          top: "3px",
-          background: "rgba(255,255,255,0.5)",
-          border: "none",
-          borderRadius: "4px",
-          cursor: "pointer",
-          fontSize: "14px",
-        });
+        delBtn.style.position = "absolute";
+        delBtn.style.right = "6px";
+        delBtn.style.top = "3px";
+        delBtn.style.background = "rgba(255,255,255,0.5)";
+        delBtn.style.border = "none";
+        delBtn.style.borderRadius = "4px";
+        delBtn.style.cursor = "pointer";
+        delBtn.style.fontSize = "14px";
         delBtn.onclick = async () => {
           await deleteDoc(doc(db, "messages", item.id));
           wrapper.remove();
@@ -480,32 +474,26 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
         wrapper.appendChild(delBtn);
       }
 
-      // confetti animation (only once)
       if (!sessionStorage.getItem(`confetti_${item.id}`)) {
         wrapper.style.animation = "pulseGlow 2s";
         sessionStorage.setItem(`confetti_${item.id}`, "played");
-
         const confettiContainer = document.createElement("div");
-        Object.assign(confettiContainer.style, {
-          position: "absolute",
-          inset: "0",
-          pointerEvents: "none",
-        });
+        confettiContainer.style.position = "absolute";
+        confettiContainer.style.inset = "0";
+        confettiContainer.style.pointerEvents = "none";
         wrapper.appendChild(confettiContainer);
 
         for (let i = 0; i < 30; i++) {
           const piece = document.createElement("div");
-          Object.assign(piece.style, {
-            position: "absolute",
-            width: "6px",
-            height: "6px",
-            borderRadius: "50%",
-            background: randomColor(),
-            left: Math.random() * 100 + "%",
-            top: Math.random() * 100 + "%",
-            opacity: 0.8,
-            animation: `floatConfetti ${3 + Math.random() * 3}s ease-in-out`,
-          });
+          piece.style.position = "absolute";
+          piece.style.width = "6px";
+          piece.style.height = "6px";
+          piece.style.borderRadius = "50%";
+          piece.style.background = randomColor();
+          piece.style.left = Math.random() * 100 + "%";
+          piece.style.top = Math.random() * 100 + "%";
+          piece.style.opacity = 0.8;
+          piece.style.animation = `floatConfetti ${3 + Math.random() * 3}s ease-in-out`;
           confettiContainer.appendChild(piece);
         }
 
@@ -515,7 +503,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
         }, 6000);
       }
     } else {
-      /* ---------- 💬 Regular Messages ---------- */
+      // --- Regular message ---
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -526,35 +514,34 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       // --- Reply preview ---
       if (m.replyTo) {
         const originalMsgEl = document.getElementById(m.replyTo);
-        if (originalMsgEl) {
-          const replyPreview = document.createElement("div");
-          replyPreview.className = "reply-preview";
-          replyPreview.textContent =
-            originalMsgEl.querySelector(".content, .buzz-content")?.textContent ||
-            m.replyToContent ||
-            "Original message";
-          Object.assign(replyPreview.style, {
-            fontSize: "12px",
-            opacity: 0.7,
-            borderLeft: "2px solid #FFD700",
-            paddingLeft: "4px",
-            marginBottom: "2px",
-            cursor: "pointer",
-          });
+        const replyPreview = document.createElement("div");
+        replyPreview.className = "reply-preview";
+        replyPreview.textContent =
+          (originalMsgEl?.querySelector(".content, .buzz-content")?.textContent) ||
+          m.replyToContent ||
+          "Original message";
+        replyPreview.style.fontSize = "12px";
+        replyPreview.style.opacity = 0.7;
+        replyPreview.style.borderLeft = "2px solid #FFD700";
+        replyPreview.style.paddingLeft = "4px";
+        replyPreview.style.marginBottom = "2px";
+        replyPreview.style.cursor = "pointer";
 
-          replyPreview.addEventListener("click", () => {
+        replyPreview.addEventListener("click", () => {
+          if (originalMsgEl) {
             originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
             const originalBg = originalMsgEl.style.background;
             originalMsgEl.style.transition = "background 0.5s";
             originalMsgEl.style.background = "#FFD70033";
-            setTimeout(() => (originalMsgEl.style.background = originalBg), 1000);
-          });
-
-          wrapper.appendChild(replyPreview);
-        }
+            setTimeout(() => {
+              originalMsgEl.style.background = originalBg;
+            }, 1000);
+          }
+        });
+        wrapper.appendChild(replyPreview);
       }
 
-      // --- Message text ---
+      // --- Message content ---
       const contentEl = document.createElement("span");
       contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
       contentEl.textContent = " " + (m.content || "");
@@ -565,8 +552,9 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       }
       wrapper.appendChild(contentEl);
 
-      // --- Tap modal trigger (no propagation blocker) ---
-      wrapper.addEventListener("click", () => {
+      // --- Tap to show modal ---
+      wrapper.addEventListener("click", (e) => {
+        e.stopPropagation();
         showTapModal(wrapper, { id: item.id, chatId: m.chatId, content: m.content });
       });
     }
@@ -574,7 +562,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
     refs.messagesEl.appendChild(wrapper);
   });
 
-  /* ---------- Auto-scroll ---------- */
+  // --- Auto-scroll ---
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
