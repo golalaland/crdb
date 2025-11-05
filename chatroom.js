@@ -471,7 +471,7 @@ function showTapModal(targetEl, msgData) {
   tapModalEl.className = "tap-modal";
 
   const replyBtn = document.createElement("button");
-  replyBtn.textContent = "↩︎ Reply";
+  replyBtn.textContent = "⏎ Reply";
   replyBtn.onclick = () => {
     currentReplyTarget = { id: msgData.id, chatId: msgData.chatId, content: msgData.content };
     refs.messageInputEl.placeholder = `Replying to ${msgData.chatId}: ${msgData.content.substring(0, 30)}...`;
