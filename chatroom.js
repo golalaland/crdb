@@ -573,18 +573,19 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
 }
 
 
-/* ---------- 🔔 Messages Listener ---------- */
+/* ---------- 🔔 Messages Listener (No Double Render + Gift Alerts) ---------- */
 function attachMessagesListener() {
   const q = query(collection(db, CHAT_COLLECTION), orderBy("timestamp", "asc"));
 
-  // 💾 Load previously shown gift IDs from localStorage
+  // 💾 Track shown gift alerts
   const shownGiftAlerts = new Set(JSON.parse(localStorage.getItem("shownGiftAlerts") || "[]"));
-
-  // 💾 Save helper
   function saveShownGift(id) {
     shownGiftAlerts.add(id);
     localStorage.setItem("shownGiftAlerts", JSON.stringify([...shownGiftAlerts]));
   }
+
+  // 💾 Track locally sent messages to prevent double renders
+  let localPendingMsgs = JSON.parse(localStorage.getItem("localPendingMsgs") || "{}");
 
   onSnapshot(q, snapshot => {
     snapshot.docChanges().forEach(change => {
@@ -593,36 +594,50 @@ function attachMessagesListener() {
       const msg = change.doc.data();
       const msgId = change.doc.id;
 
-      // Prevent duplicate render
+      // --- Skip duplicates from local echoes ---
+      if (msg.tempId && msg.tempId.startsWith("temp_")) return;
+
+      // --- Skip already rendered messages ---
       if (document.getElementById(msgId)) return;
 
-      // Add to memory + render
+      // --- Match Firestore-confirmed message to any local echo ---
+      for (const [tempId, pending] of Object.entries(localPendingMsgs)) {
+        const sameUser = pending.uid === msg.uid;
+        const sameText = pending.content === msg.content;
+        const timeDiff = Math.abs((msg.timestamp?.toMillis?.() || 0) - (pending.createdAt || 0));
+        if (sameUser && sameText && timeDiff < 5000) {
+          const tempEl = document.getElementById(tempId);
+          if (tempEl) tempEl.remove();
+          delete localPendingMsgs[tempId];
+          localStorage.setItem("localPendingMsgs", JSON.stringify(localPendingMsgs));
+          break;
+        }
+      }
+
+      // --- Store new message and render it ---
       lastMessagesArray.push({ id: msgId, data: msg });
       renderMessagesFromArray([{ id: msgId, data: msg }]);
 
-/* 💝 Detect personalized gift messages */
-if (msg.highlight && msg.content?.includes("gifted")) {
-  const myId = currentUser?.chatId?.toLowerCase();
-  if (!myId) return;
+      /* 💝 Detect personalized gift messages */
+      if (msg.highlight && msg.content?.includes("gifted")) {
+        const myId = currentUser?.chatId?.toLowerCase();
+        if (!myId) return;
 
-  const parts = msg.content.split(" ");
-  const sender = parts[0];
-  const receiver = parts[2];
-  const amount = parts[3];
+        const parts = msg.content.split(" ");
+        const sender = parts[0];
+        const receiver = parts[2];
+        const amount = parts[3];
 
-  if (!sender || !receiver || !amount) return;
+        if (!sender || !receiver || !amount) return;
 
-  // 🎯 Only receiver sees it once
-  if (receiver.toLowerCase() === myId) {
-    if (shownGiftAlerts.has(msgId)) return; // skip if seen before
+        // 🎯 Only receiver sees it once
+        if (receiver.toLowerCase() === myId) {
+          if (shownGiftAlerts.has(msgId)) return; // skip if seen before
+          showGiftAlert(`${sender} gifted you ${amount} stars ⭐️`);
+          saveShownGift(msgId);
+        }
+      }
 
-    showGiftAlert(`${sender} gifted you ${amount} stars ⭐️`);
-    saveShownGift(msgId);
-  }
-
-  // ❌ Remove any extra popups for gifting since showGiftAlert already covers it
-  // (No need to trigger showStarPopup or similar)
-}
       // 🌀 Keep scroll for your own messages
       if (refs.messagesEl && msg.uid === currentUser?.uid) {
         refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
