@@ -961,8 +961,9 @@ async function loginWhitelist(email, phone) {
     }
 
     // 🎨 Update UI
-    showChatUI(currentUser);
-    startNotificationsFor(email);
+  showChatUI(currentUser);
+console.log("🚀 Starting notifications for:", email);
+startNotificationsFor(email);
 
 
     return true;
