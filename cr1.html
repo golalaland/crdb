@@ -1561,6 +1561,44 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   background: rgba(255,255,255,0.2);
   border-radius: 4px;
 }
+#sessionBar {
+  display: flex;
+  justify-content: space-around;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(6px);
+  border-radius: 12px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+#sessionModal {
+  position: fixed;
+  bottom: -100%;
+  left: 0; right: 0;
+  height: 65%;
+  background: rgba(15,15,15,0.95);
+  color: #fff;
+  border-radius: 20px 20px 0 0;
+  transition: bottom 0.4s ease;
+  z-index: 1000;
+  overflow-y: auto;
+}
+#sessionModal.active { bottom: 0; }
+
+.sessionTabs button {
+  background: none; border: none;
+  color: #aaa; padding: 10px 16px;
+  font-weight: 700; cursor: pointer;
+}
+.sessionTabs button.active { color: #fff; border-bottom: 2px solid #ff33cc; }
+
+.ballerTabs button.active { color: #fff; border-bottom: 2px solid #ffcc00; }
+
+.baller-card {
+  display: flex; align-items: center;
+  padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.baller-card img { width: 32px; height: 32px; border-radius: 50%; margin-right: 10px; }
 </style>
 </head>
 <body>
@@ -1645,6 +1683,31 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     <h3 style="margin-bottom:12px;color:var(--accent);">Choose your Chat ID</h3>
     <input id="chatIDInput" type="text" placeholder="Your chat ID" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);margin-bottom:12px;font-size:16px;color:#fff;background:#111;outline:none;" />
     <button id="chatIDConfirmBtn" class="small-btn" style="width:100%;padding:10px;">Confirm</button>
+  </div>
+</div>
+
+<div id="sessionBar">
+  <div class="sessionTab">💎 Top Ballers</div>
+  <div class="sessionTab">🔥 Highlights</div>
+</div>
+
+<div id="sessionModal">
+  <div class="sessionTabs">
+    <button class="active" data-tab="ballers">Top Ballers</button>
+    <button data-tab="extras">Highlights</button>
+  </div>
+
+  <div class="sessionContent active" id="tabBallers">
+    <div class="ballerTabs">
+      <button class="active" data-period="week">This Week</button>
+      <button data-period="month">This Month</button>
+      <button data-period="all">All Time</button>
+    </div>
+    <div id="ballerList"></div>
+  </div>
+
+  <div class="sessionContent" id="tabExtras">
+    <p>Coming soon — session stats or custom content.</p>
   </div>
 </div>
 <!-- Chat messages container -->
