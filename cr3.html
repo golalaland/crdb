@@ -1599,22 +1599,30 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 .baller-card img { width: 32px; height: 32px; border-radius: 50%; margin-right: 10px; }
-/* Compact Star Hosts button to match session tabs */
-.star-hosts-btn {
-  background: linear-gradient(90deg, #ff007a, #ffa500); /* retain original color */
+/* Unified compact session buttons */
+.session-btn {
+  background: #222;             /* default for Top Ballers & Highlights */
   color: #fff;
   border: none;
-  border-radius: 12px; /* smaller radius than featured-btn */
-  padding: 6px 12px;   /* smaller padding */
-  font-size: 14px;     /* smaller font */
+  border-radius: 10px;
+  padding: 4px 10px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   display: inline-block;
-  box-shadow: 0 0 6px rgba(255, 0, 122, 0.4); /* smaller shadow */
-  transition: transform 0.2s;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s, background 0.2s;
 }
-.star-hosts-btn:hover {
+
+.session-btn:hover {
   transform: scale(1.05);
+  background: #333;             /* subtle hover effect */
+}
+
+/* Star Hosts gets the gradient */
+.star-hosts-btn {
+  background: linear-gradient(90deg, #ff007a, #ffa500);
+  box-shadow: 0 0 4px rgba(255, 0, 122, 0.3);
 }
 </style>
 </head>
@@ -1704,12 +1712,12 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 </div>
 
 <div id="sessionBar" style="display:flex; gap:8px; justify-content:center;">
-  <button class="sessionTab" id="topBallersBtn">💎 Top Ballers</button>
+  <button class="session-btn" id="topBallersBtn">💎 Top Ballers</button>
 
   <!-- Middle button (Star Hosts) -->
-  <button id="openHostsBtn" class="star-hosts-btn">🌟 Star Hosts 🌟</button>
+  <button id="openHostsBtn" class="session-btn star-hosts-btn">🌟 Star Hosts 🌟</button>
 
-  <button class="sessionTab" id="highlightsBtn">🔥 Highlights</button>
+  <button class="session-btn" id="highlightsBtn">🔥 Highlights</button>
 </div>
 
 <div id="sessionModal" style="display:none;">
