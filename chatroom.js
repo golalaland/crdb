@@ -1843,13 +1843,13 @@ function showMeetModal(host) {
     const COST = 21;
 
       if (!currentUser?.uid) {
-    showGoldAlert("⚠️ Please log in to request meets");
+    showGiftAlert("⚠️ Please log in to request meets");
     modal.remove();
     return;
   }
 
   if ((currentUser.stars || 0) < COST) {
-    showGoldAlert("🥺 Uh oh, not enough stars ⭐");
+    showGiftAlert("🥺 Uh oh, not enough stars ⭐");
     modal.remove();
     return;
   }
@@ -2342,6 +2342,7 @@ confirmBtn.onclick = async () => {
             modalContent.innerHTML = user
               ? `<h3>Number Verified! ✅</h3>
                  <p>This number belongs to <b>${user.fullName}</b></p>
+                 <p style="margin-top:8px; font-size:13px; color:#ccc;">You’re free to chat — they’re legit 😌</p>
                  <button id="closeVerifyModal" style="margin-top:12px;padding:6px 14px;border:none;border-radius:8px;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">Close</button>`
               : `<h3>Number Not Verified! ❌</h3>
                  <p>The number <b>${inputNumber}</b> does not exist on verified records — be careful!</p>
@@ -2856,8 +2857,9 @@ await updateDoc(toRef, {
 });
 
 // --- 6.5️⃣ Create notification for receiver ---
-const notifRef = collection(db, "users", targetUser._docId, "notifications");
+const notifRef = collection(db, "notifications");
 await addDoc(notifRef, {
+  userId: targetUser._docId, // 🔥 link the notification to the receiver
   message: `💫 ${currentUser.chatId} gifted you ${amt} ⭐!`,
   read: false,
   timestamp: serverTimestamp(),
