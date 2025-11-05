@@ -1842,8 +1842,18 @@ function showMeetModal(host) {
   confirmBtn.onclick = async () => {
     const COST = 21;
 
-    if (!currentUser?.uid) { alert("Please log in to request meets"); modal.remove(); return; }
-    if ((currentUser.stars || 0) < COST) { alert("Uh oh, not enough stars ⭐"); modal.remove(); return; }
+      if (!currentUser?.uid) {
+    showGoldAlert("⚠️ Please log in to request meets");
+    modal.remove();
+    return;
+  }
+
+  if ((currentUser.stars || 0) < COST) {
+    showGoldAlert("🥺 Uh oh, not enough stars ⭐");
+    modal.remove();
+    return;
+  }
+
 
     confirmBtn.disabled = true;
     confirmBtn.style.opacity = 0.6;
