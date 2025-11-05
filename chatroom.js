@@ -514,16 +514,17 @@ modal.style.display = "flex";
 modal.style.gap = "6px";
 
         // --- Reply button in modal ---
-        const replyOption = document.createElement("button");
-        replyOption.textContent = "Reply";
-        replyOption.style.cursor = "pointer";
-        replyOption.onclick = () => {
-          currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
-          refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
-          refs.messageInputEl.focus();
-          modal.remove();
-        };
-        modal.appendChild(replyOption);
+const replyOption = document.createElement("button");
+replyOption.textContent = "Reply";
+replyOption.style.cursor = "pointer";
+replyOption.onclick = () => {
+  console.log("Reply clicked for:", m.chatId, m);
+  currentReplyTarget = { id: m.id || m.messageId, chatId: m.chatId, content: m.content };
+  refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
+  refs.messageInputEl.focus();
+  modal.remove();
+};
+modal.appendChild(replyOption);
 
         // --- Report button ---
         const reportOption = document.createElement("button");
