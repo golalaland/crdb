@@ -442,6 +442,37 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
+      // --- REPLY PREVIEW ---
+      if (m.replyTo) {
+        const originalMsgEl = document.getElementById(m.replyTo);
+        if (originalMsgEl) {
+          const replyPreview = document.createElement("div");
+          replyPreview.className = "reply-preview";
+          replyPreview.textContent = originalMsgEl.querySelector(".content, .buzz-content")?.textContent || m.replyToContent || "Original message";
+          replyPreview.style.fontSize = "12px";
+          replyPreview.style.opacity = 0.7;
+          replyPreview.style.borderLeft = "2px solid #FFD700";
+          replyPreview.style.paddingLeft = "4px";
+          replyPreview.style.marginBottom = "2px";
+          replyPreview.style.cursor = "pointer";
+
+          replyPreview.addEventListener("click", () => {
+            if (originalMsgEl) {
+              originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
+              const originalBg = originalMsgEl.style.background;
+              originalMsgEl.style.transition = "background 0.5s";
+              originalMsgEl.style.background = "#FFD70033";
+              setTimeout(() => {
+                originalMsgEl.style.background = originalBg;
+              }, 1000);
+            }
+          });
+
+          wrapper.appendChild(replyPreview);
+        }
+      }
+
+      // --- Message content ---
       const contentEl = document.createElement("span");
       contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
       contentEl.textContent = " " + (m.content || "");
@@ -451,11 +482,82 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
         contentEl.style.fontWeight = "700";
       }
       wrapper.appendChild(contentEl);
+
+// --- Tap-to-reply modal ---
+      wrapper.addEventListener("click", (e) => {
+        e.stopPropagation();
+
+        // remove any existing modal first
+        document.querySelectorAll(".tap-modal").forEach(mod => mod.remove());
+
+const modal = document.createElement("div");
+modal.className = "tap-modal";
+modal.style.position = "absolute";
+modal.style.padding = "6px 10px";
+modal.style.background = "#333";
+modal.style.color = "#fff";
+modal.style.borderRadius = "6px";
+modal.style.fontSize = "12px";
+
+// get message position relative to messages container
+const rect = wrapper.getBoundingClientRect();
+const chatRect = refs.messagesEl.getBoundingClientRect();
+const scrollOffset = refs.messagesEl.scrollTop;
+
+// Calculate position inside the scrollable chat container
+const modalTop = rect.top - chatRect.top + scrollOffset - 10; // small offset above bubble
+const modalLeft = rect.left - chatRect.left + 20; // small left offset from bubble start
+
+modal.style.top = `${modalTop - 20}px`;   // move it slightly lower / closer to message
+modal.style.left = `${modalLeft + 80}px`; // shift a bit to the right so it doesn’t cover text
+
+modal.style.zIndex = 1000;
+modal.style.display = "flex";
+modal.style.gap = "6px";
+
+        // --- Reply button in modal ---
+        const replyOption = document.createElement("button");
+        replyOption.textContent = "Reply";
+        replyOption.style.cursor = "pointer";
+        replyOption.onclick = () => {
+          currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
+          refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
+          refs.messageInputEl.focus();
+          modal.remove();
+        };
+        modal.appendChild(replyOption);
+
+        // --- Report button ---
+        const reportOption = document.createElement("button");
+        reportOption.textContent = "Report";
+        reportOption.style.cursor = "pointer";
+        reportOption.onclick = () => {
+          alert(`Reported message from ${m.chatId}`);
+          modal.remove();
+        };
+        modal.appendChild(reportOption);
+
+        // --- Cancel button ---
+        const cancelOption = document.createElement("button");
+        cancelOption.textContent = "✕";
+        cancelOption.style.cursor = "pointer";
+        cancelOption.onclick = () => {
+          modal.remove();
+        };
+        modal.appendChild(cancelOption);
+
+        wrapper.appendChild(modal);
+
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+          modal.remove();
+        }, 3000);
+      });
     }
 
     refs.messagesEl.appendChild(wrapper);
   });
-
+  
   // --- Auto-scroll to bottom ---
   if (!scrollPending) {
     scrollPending = true;
@@ -465,6 +567,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
     });
   }
 }
+
 
 /* ---------- 🔔 Messages Listener ---------- */
 function attachMessagesListener() {
