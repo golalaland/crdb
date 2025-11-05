@@ -506,44 +506,46 @@ function renderMessagesFromArray(messages) {
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    // Banner
-    if (m.systemBanner || m.isBanner || m.type === "banner") {
-      wrapper.classList.add("chat-banner");
-      wrapper.style.textAlign = "center";
-      wrapper.style.padding = "4px 0";
-      wrapper.style.margin = "4px 0";
-      wrapper.style.borderRadius = "8px";
-      wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
-      wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
+ // Banner
+if (m.systemBanner || m.isBanner || m.type === "banner") {
+  wrapper.classList.add("chat-banner");
+  wrapper.style.position = "relative"; // <-- ADD THIS
+  wrapper.style.textAlign = "center";
+  wrapper.style.padding = "4px 0";
+  wrapper.style.margin = "4px 0";
+  wrapper.style.borderRadius = "8px";
+  wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
+  wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-      const innerPanel = document.createElement("div");
-      innerPanel.style.display = "inline-block";
-      innerPanel.style.padding = "6px 14px";
-      innerPanel.style.borderRadius = "6px";
-      innerPanel.style.background = "rgba(255,255,255,0.35)";
-      innerPanel.style.backdropFilter = "blur(6px)";
-      innerPanel.style.color = "#000";
-      innerPanel.style.fontWeight = "700";
-      innerPanel.textContent = m.content || "";
-      wrapper.appendChild(innerPanel);
+  const innerPanel = document.createElement("div");
+  innerPanel.style.display = "inline-block";
+  innerPanel.style.padding = "6px 14px";
+  innerPanel.style.borderRadius = "6px";
+  innerPanel.style.background = "rgba(255,255,255,0.35)";
+  innerPanel.style.backdropFilter = "blur(6px)";
+  innerPanel.style.color = "#000";
+  innerPanel.style.fontWeight = "700";
+  innerPanel.textContent = m.content || "";
+  wrapper.appendChild(innerPanel);
 
-      triggerBannerEffect(wrapper, item.id);
+  triggerBannerEffect(wrapper, item.id);
 
-      // Admin delete
-      if (window.currentUser?.isAdmin) {
-        const delBtn = document.createElement("button");
-        delBtn.textContent = "🗑";
-        delBtn.title = "Delete Banner";
-        delBtn.style.position = "absolute";
-        delBtn.style.right = "6px";
-        delBtn.style.top = "3px";
-        delBtn.style.cursor = "pointer";
-        delBtn.onclick = async () => {
-          await deleteDoc(doc(db, "messages", item.id));
-          wrapper.remove();
-        };
-        wrapper.appendChild(delBtn);
-      }
+  // Admin delete
+  if (window.currentUser?.isAdmin) {
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "🗑";
+    delBtn.title = "Delete Banner";
+    delBtn.style.position = "absolute";
+    delBtn.style.right = "6px";
+    delBtn.style.top = "3px";
+    delBtn.style.cursor = "pointer";
+    delBtn.onclick = async () => {
+      await deleteDoc(doc(db, "messages", item.id));
+      wrapper.remove();
+    };
+    wrapper.appendChild(delBtn);
+  }
+}
     } else {
       // Regular message
       const usernameEl = document.createElement("span");
