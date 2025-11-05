@@ -652,29 +652,42 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 .video-controls svg {
   pointer-events: none;
 }
-/* ====== Featured Hosts Styles ====== */
+/* ====== Featured Hosts Styles (Compact Version) ====== */
 .featured-btn {
   background: linear-gradient(90deg, #ff007a, #ffa500);
   color: #fff;
   border: none;
-  border-radius: 25px;
-  padding: 10px 20px;
-  font-size: 16px;
+  border-radius: 20px;
+  padding: 6px 14px;      /* reduced padding */
+  font-size: 13.5px;       /* smaller text */
   font-weight: 600;
   cursor: pointer;
   display: block;
-  margin: 20px auto;
-  box-shadow: 0 0 10px rgba(255, 0, 122, 0.6);
-  transition: transform 0.2s;
-}
-.featured-btn:hover { transform: scale(1.05); }
-/* ====== Adjusted Featured Hosts Button Size ====== */
-#openHostsBtn.featured-btn {
-  padding: 6px 12px;      /* smaller size to match session tabs */
-  font-size: 14px;         /* smaller font to align with session buttons */
-  margin: 0 8px;           /* optional: spacing between buttons */
+  margin: 10px auto;       /* less spacing */
+  box-shadow: 0 0 6px rgba(255, 0, 122, 0.5);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
+.featured-btn:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 10px rgba(255, 0, 122, 0.7);
+}
+
+/* Keep session tab buttons in similar size */
+.sessionTab {
+  background: #222;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.sessionTab:hover {
+  transform: scale(1.05);
+}
 /* 🌟 Featured Hosts Modal (Compact Mobile Layout) */
 .featured-modal {
   display: none;
@@ -1569,7 +1582,8 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 }
 #sessionBar {
   display: flex;
-  justify-content: space-around;
+ justify-content: center;
+gap: 4px;
   background: rgba(255,255,255,0.08);
   backdrop-filter: blur(6px);
   border-radius: 12px;
