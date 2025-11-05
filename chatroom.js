@@ -454,43 +454,45 @@ function showTapModal(targetEl, msgData) {
   setTimeout(() => tapModalEl?.remove(), 3000);
 }
 
-// Banner effect: Glow + Confetti (runs once per banner)
-function triggerBannerEffect(bannerEl, bannerId) {
-  if (localStorage.getItem(`bannerSeen-${bannerId}`)) return;
-  localStorage.setItem(`bannerSeen-${bannerId}`, "true");
+// Banner effect: Glow + confined confetti (runs once per session)
+function triggerBannerEffect(wrapper, item) {
+  if (sessionStorage.getItem(`banner_${item.id}`)) return;
+  sessionStorage.setItem(`banner_${item.id}`, "played");
 
   // Glow
-  bannerEl.style.animation = "bannerGlow 1s ease-in-out infinite alternate";
+  wrapper.style.animation = "pulseGlow 2s";
 
-  // Confetti
-  const confettiCount = 15;
-  for (let i = 0; i < confettiCount; i++) {
-    const confetti = document.createElement("div");
-    confetti.className = "confetti";
-    confetti.style.position = "absolute";
-    confetti.style.top = "0px";
-    confetti.style.left = `${Math.random() * 100}%`;
-    confetti.style.width = "6px";
-    confetti.style.height = "6px";
-    confetti.style.background = `hsl(${Math.random() * 360}, 100%, 60%)`;
-    confetti.style.borderRadius = "50%";
-    bannerEl.appendChild(confetti);
+  // Confetti container
+  const confettiContainer = document.createElement("div");
+  confettiContainer.style.position = "absolute";
+  confettiContainer.style.inset = "0";
+  confettiContainer.style.pointerEvents = "none";
+  wrapper.appendChild(confettiContainer);
 
-    // Animate confetti falling
-    confetti.animate([
-      { transform: `translateY(0px) rotate(0deg)` },
-      { transform: `translateY(40px) rotate(${Math.random() * 360}deg)` }
-    ], {
-      duration: 1000 + Math.random() * 500,
-      easing: "ease-out",
-      fill: "forwards"
-    });
-
-    setTimeout(() => confetti.remove(), 1500);
+  for (let i = 0; i < 30; i++) {
+    const piece = document.createElement("div");
+    piece.style.position = "absolute";
+    piece.style.width = "6px";
+    piece.style.height = "6px";
+    piece.style.borderRadius = "50%";
+    piece.style.background = randomColor();
+    piece.style.left = Math.random() * 100 + "%";
+    piece.style.top = Math.random() * 100 + "%";
+    piece.style.opacity = 0.8;
+    piece.style.animation = `floatConfetti ${3 + Math.random() * 3}s ease-in-out`;
+    confettiContainer.appendChild(piece);
   }
 
-  // Stop glow after 9s
-  setTimeout(() => bannerEl.style.animation = "", 9000);
+  setTimeout(() => {
+    confettiContainer.remove();
+    wrapper.style.animation = "";
+  }, 6000);
+}
+
+// Helper to pick random color for confetti
+function randomColor() {
+  const colors = ["#FFD700","#FF69B4","#00FFFF","#FF4500","#ADFF2F","#FF00FF"];
+  return colors[Math.floor(Math.random() * colors.length)];
 }
 
 // Render messages
