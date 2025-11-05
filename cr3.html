@@ -1583,15 +1583,14 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 .baller-card img { width: 32px; height: 32px; border-radius: 50%; margin-right: 10px; }
-/* Session bar buttons - compact & hidden by default */
 .sessionTab,
 #openHostsBtn {
-  padding: 6px 12px;       /* compact */
+  padding: 6px 12px;
   font-size: 14px;
   border-radius: 20px;
   min-width: auto;
   flex: none;
-  display: none;           /* hidden initially */
+  display: none; /* hidden initially */
   cursor: pointer;
   transition: transform 0.2s;
 }
@@ -1601,7 +1600,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   transform: scale(1.05);
 }
 
-/* Star Hosts button keeps its gradient */
+/* Star Hosts gradient stays */
 .featured-btn {
   background: linear-gradient(90deg, #ff007a, #ffa500);
   color: #fff;
@@ -1694,12 +1693,11 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 </div>
 
 <div id="sessionBar" style="display:flex; gap:8px; justify-content:center;">
-  <button class="sessionTab" id="topBallersBtn">💎 Top Ballers</button>
-
-  <!-- Middle button (Star Hosts) -->
+  <!-- Star Hosts button -->
   <button id="openHostsBtn" class="featured-btn">🌟 Star Hosts 🌟</button>
 
-  <button class="sessionTab" id="highlightsBtn">🔥 Highlights</button>
+  <!-- Secondary button (Top Ballers or Highlights) -->
+  <button class="sessionTab" id="secondaryBtn">💎 Top Ballers</button>
 </div>
 
 <div id="sessionModal" style="display:none;">
