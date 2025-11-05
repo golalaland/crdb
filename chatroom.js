@@ -178,20 +178,52 @@ onAuthStateChanged(auth, async (user) => {
     });
   }
 
-  // ✅ 8. Mark All As Read
-  const markAllBtn = document.getElementById("markAllRead");
-  if (markAllBtn) {
-    markAllBtn.addEventListener("click", async () => {
-      console.log("🟡 Marking all notifications as read...");
-      const snapshot = await getDocs(query(notifRef, where("userId", "==", userQueryId)));
-      for (const docSnap of snapshot.docs) {
-        const ref = doc(db, "notifications", docSnap.id);
-        await updateDoc(ref, { read: true });
-      }
-      alert("✅ All notifications marked as read.");
+// ✅ 8. Mark All As Read + Smooth Fade Effect
+const markAllBtn = document.getElementById("markAllRead");
+if (markAllBtn) {
+  markAllBtn.addEventListener("click", async () => {
+    console.log("🟡 Marking all notifications as read...");
+
+    const q = query(notifRef, where("userId", "==", userQueryId));
+    const snapshot = await getDocs(q);
+    console.log(`📦 Found ${snapshot.docs.length} notifications to mark as read.`);
+
+    if (snapshot.empty) {
+      console.log("⚪ No notifications found.");
+      return;
+    }
+
+    // ✅ Batch update Firestore (faster + safer)
+    const batch = writeBatch(db);
+    snapshot.docs.forEach((docSnap) => {
+      batch.update(doc(db, "notifications", docSnap.id), { read: true });
     });
-  }
-});
+    await batch.commit();
+    console.log("✅ All notifications marked as read in Firestore.");
+
+    // ✅ FADE OUT EFFECT for each notification item
+    const notificationsList = document.getElementById("notificationsList");
+    if (notificationsList) {
+      const items = notificationsList.querySelectorAll(".notification-item");
+      items.forEach((el, i) => {
+        // delay each one slightly for cascade effect
+        el.style.transition = "opacity 0.4s ease, transform 0.4s ease";
+        el.style.transitionDelay = `${i * 0.05}s`;
+        el.style.opacity = "0";
+        el.style.transform = "translateY(-5px)";
+        setTimeout(() => el.remove(), 400 + i * 50);
+      });
+
+      // replace with “all read” message after fade
+      setTimeout(() => {
+        notificationsList.innerHTML = `<p style="opacity:0.7;">All notifications read ✅</p>`;
+      }, 500 + items.length * 50);
+    }
+
+    console.log("🧹 Cleared notifications visually with fade.");
+  });
+}
+
 
 /* ===============================
    🔔 Manual Notification Starter (for whitelist login)
