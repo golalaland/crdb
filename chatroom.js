@@ -44,42 +44,23 @@ const auth = getAuth(app);
 let currentUser = null;
 
 /* ===============================
-   🔔 Notification Helpers
+   🔔 Notification System (Standalone Main Collection)
 ================================= */
-async function pushNotification(userId, message) {
-  if (!userId) return console.warn("⚠️ No userId provided for pushNotification");
 
-  try {
-    const notifRef = collection(db, "notifications");
-    await addDoc(notifRef, {
-      userId, // e.g. "jennifertash51@gmail,com"
-      message,
-      timestamp: serverTimestamp(),
-      read: false,
-    });
-    console.log(`✅ Notification added for ${userId}`);
-  } catch (err) {
-    console.error("❌ Error adding notification:", err);
-  }
-}
-
-/* ---------- Auth State Watcher ---------- */
 onAuthStateChanged(auth, async (user) => {
-  currentUser = user;
-
   if (!user) {
-    console.warn("⚠️ No logged-in user");
+    console.warn("⚠️ No logged-in user found");
     localStorage.removeItem("userId");
     return;
   }
 
-  // 🔹 IMPORTANT: use same sanitization that your Firestore uses
+  // 🔹 Sanitize email for Firestore-safe ID match
   const sanitizeEmail = (email) => email.replace(/\./g, ",");
-  const userQueryId = sanitizeEmail(user.email); // e.g. "jennifertash51@gmail,com"
-
-  console.log("✅ Logged in as:", userQueryId);
+  const userQueryId = sanitizeEmail(user.email);
   localStorage.setItem("userId", userQueryId);
+  console.log("✅ Logged in as:", userQueryId);
 
+  // 🔹 Reference top-level 'notifications' collection
   const notifRef = collection(db, "notifications");
   const notifQuery = query(
     notifRef,
@@ -87,9 +68,8 @@ onAuthStateChanged(auth, async (user) => {
     orderBy("timestamp", "desc")
   );
 
-  let unsubscribe = null;
-
-  async function initNotificationsListener() {
+  // 🔹 Initialize live listener (wait until DOM ready)
+  function initNotificationsListener() {
     const notificationsList = document.getElementById("notificationsList");
     if (!notificationsList) {
       console.warn("⚠️ #notificationsList not found yet — retrying...");
@@ -97,15 +77,14 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
 
-    if (unsubscribe) unsubscribe();
+    console.log("🔔 Setting up notifications listener for:", userQueryId);
 
-    console.log("🔔 Listening to notifications for:", userQueryId);
-    unsubscribe = onSnapshot(
+    onSnapshot(
       notifQuery,
       (snapshot) => {
-        console.log(`📬 ${snapshot.docs.length} notifications loaded.`);
         if (snapshot.empty) {
-          notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+          notificationsList.innerHTML =
+            `<p style="opacity:0.7;">No new notifications yet.</p>`;
           return;
         }
 
@@ -134,13 +113,14 @@ onAuthStateChanged(auth, async (user) => {
     );
   }
 
+  // 🔹 Auto-run listener once page is loaded
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initNotificationsListener);
   } else {
     initNotificationsListener();
   }
 
-  // "Mark all as read"
+  // 🔹 “Mark All As Read” logic
   const markAllBtn = document.getElementById("markAllRead");
   if (markAllBtn) {
     markAllBtn.addEventListener("click", async () => {
@@ -148,14 +128,29 @@ onAuthStateChanged(auth, async (user) => {
       const snapshot = await getDocs(
         query(notifRef, where("userId", "==", userQueryId))
       );
+
       for (const docSnap of snapshot.docs) {
-        await updateDoc(docSnap.ref, { read: true });
+        await updateDoc(doc(db, "notifications", docSnap.id), { read: true });
       }
+
       alert("✅ All notifications marked as read.");
     });
   }
 });
 
+/* ===============================
+   📤 Push Notification Helper
+================================= */
+async function pushNotification(userId, message) {
+  if (!userId) return console.warn("⚠️ No userId provided for pushNotification");
+  const notifRef = doc(collection(db, "notifications"));
+  await setDoc(notifRef, {
+    userId,
+    message,
+    timestamp: serverTimestamp(),
+    read: false,
+  });
+}
 
 
 
