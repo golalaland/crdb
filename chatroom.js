@@ -454,11 +454,17 @@ function showTapModal(targetEl, msgData) {
   setTimeout(() => tapModalEl?.remove(), 3000);
 }
 
-function triggerBannerEffect(bannerEl) {
-  // Add glow animation
+function triggerBannerEffect(bannerEl, bannerId) {
+  // Check if this banner has already been shown
+  if (window.shownBanners?.has(bannerId)) return;
+
+  window.shownBanners = window.shownBanners || new Set();
+  window.shownBanners.add(bannerId);
+
+  // Glow animation
   bannerEl.classList.add("banner-glow");
 
-  // Spawn multiple confetti pieces
+  // Confetti
   for (let i = 0; i < 15; i++) {
     const confetti = document.createElement("div");
     confetti.className = "confetti";
@@ -505,7 +511,7 @@ function renderMessagesFromArray(messages) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
-      triggerBannerEffect(wrapper);
+     triggerBannerEffect(wrapper, item.id);
 
       if (window.currentUser?.isAdmin) {
         const delBtn = document.createElement("button");
