@@ -838,27 +838,17 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 });
 
 
-async function initSessionBar(currentUser) {
+function initSessionBar(currentUser, topUsersData = []) {
   if (!currentUser) return; // Only show for logged-in users
 
-  const sessionContainer = document.getElementById("sessionContainer");
   const sessionBar = document.getElementById("sessionBar");
   const sessionModal = document.getElementById("sessionModal");
   const ballerList = document.getElementById("ballerList");
 
-  // Show the session bar
-  sessionContainer.style.display = "block";
-
-  // Fetch top users dynamically
-  const topUsersData = [];
-  const topUsersSnap = await getDocs(collection(db, "topUsers"));
-  topUsersSnap.forEach(docSnap => topUsersData.push(docSnap.data()));
-
-  // Render top ballers for a given period
+  // Populate Top Ballers
   function renderBallers(period = "week") {
     ballerList.innerHTML = "";
     const filtered = topUsersData.filter(u => u.period === period || period === "all");
-
     filtered.forEach(user => {
       const userEl = document.createElement("div");
       userEl.className = "ballerItem";
@@ -872,35 +862,35 @@ async function initSessionBar(currentUser) {
       ballerList.appendChild(userEl);
     });
 
-    // Attach button actions
+    // Add click listeners for reward actions
     ballerList.querySelectorAll(".followBtn").forEach(btn => {
-      btn.onclick = async () => {
+      btn.addEventListener("click", () => {
         const username = btn.dataset.username;
-        console.log(`Follow ${username} clicked`);
-        // TODO: Award stars to currentUser
-      };
+        console.log(`Follow ${username} clicked — reward stars`);
+        // TODO: Add your stars reward logic here
+      });
     });
 
     ballerList.querySelectorAll(".watchBtn").forEach(btn => {
-      btn.onclick = async () => {
+      btn.addEventListener("click", () => {
         const username = btn.dataset.username;
-        console.log(`Watch ${username} clicked`);
-        // TODO: Award stars to currentUser
-      };
+        console.log(`Watch ${username} clicked — reward stars`);
+        // TODO: Add your stars reward logic here
+      });
     });
   }
 
-  // Initial render
+  // Default render
   renderBallers("week");
 
-  // Toggle modal visibility when top bar tabs clicked
-  sessionBar.querySelectorAll(".sessionTab").forEach(tab => {
+  // Toggle session modal
+  sessionBar.querySelectorAll(".sessionTab").forEach((tab, idx) => {
     tab.addEventListener("click", () => {
       sessionModal.style.display = sessionModal.style.display === "block" ? "none" : "block";
     });
   });
 
-  // Main tab switching (Top Ballers / Highlights)
+  // Main tabs switching
   const mainTabs = sessionModal.querySelectorAll(".sessionTabs button");
   const contentTabs = sessionModal.querySelectorAll(".sessionContent");
 
@@ -909,13 +899,12 @@ async function initSessionBar(currentUser) {
       const target = tabBtn.dataset.tab;
       mainTabs.forEach(b => b.classList.remove("active"));
       tabBtn.classList.add("active");
-
       contentTabs.forEach(c => c.classList.remove("active"));
       document.getElementById(target === "ballers" ? "tabBallers" : "tabExtras").classList.add("active");
     });
   });
 
-  // Sub-tabs for period selection
+  // Sub-tabs for Top Ballers period
   const subTabs = sessionModal.querySelectorAll(".ballerTabs button");
   subTabs.forEach(btn => {
     btn.addEventListener("click", () => {
@@ -926,13 +915,13 @@ async function initSessionBar(currentUser) {
     });
   });
 
-  // Glow effect for notifications or new highlights
+  // Glow effect for new highlights or updates
   function showGlow() {
     sessionBar.classList.add("sessionGlow");
     setTimeout(() => sessionBar.classList.remove("sessionGlow"), 3000);
   }
 
-  // Example usage: call showGlow() when new ballers or highlights are added
+  // Example: call showGlow() when a new user joins or new top baller appears
   // showGlow();
 }
 
