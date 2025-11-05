@@ -1201,9 +1201,6 @@ refs.sendBtn?.addEventListener("click", async () => {
     localPendingMsgs[tempId] = { ...newMsg, createdAt: Date.now() };
     localStorage.setItem("localPendingMsgs", JSON.stringify(localPendingMsgs));
 
-    // ⚡ Show immediately
-    renderMessagesFromArray([{ id: tempId, data: newMsg }], true);
-
     // Reset input
     refs.messageInputEl.value = "";
     currentReplyTarget = null;
