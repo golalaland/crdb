@@ -502,14 +502,12 @@ modal.style.fontSize = "12px";
 // get message position relative to messages container
 const rect = wrapper.getBoundingClientRect();
 const chatRect = refs.messagesEl.getBoundingClientRect();
+
+// account for container scroll
 const scrollOffset = refs.messagesEl.scrollTop;
 
-// Calculate position inside the scrollable chat container
-const modalTop = rect.top - chatRect.top + scrollOffset - 10; // small offset above bubble
-const modalLeft = rect.left - chatRect.left + 20; // small left offset from bubble start
-
-modal.style.top = `${modalTop - 20}px`;   // move it slightly lower / closer to message
-modal.style.left = `${modalLeft + 80}px`; // shift a bit to the right so it doesn’t cover text
+modal.style.top = `${rect.top - chatRect.top + scrollOffset - 36}px`; // slightly above message
+modal.style.left = `${rect.left - chatRect.left + 10}px`; // small left offset
 
 modal.style.zIndex = 1000;
 modal.style.display = "flex";
