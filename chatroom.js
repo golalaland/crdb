@@ -342,17 +342,11 @@ function setupUsersListener() {
 setupUsersListener();
 
 /* ---------- 💬 Render Messages (with tap modal + reply support) ---------- */
-// ============================
-// 🔹 Chat Helpers & Globals
-// ============================
 let scrollPending = false;
 let tapModalEl = null;
-let currentReplyTarget = null; // ✅ reply target tracker
-const glowedBanners = new Set(); // banners that have already glowed
+let currentReplyTarget = null;
 
-// ----------------------------
-// Cancel / reply UI
-// ----------------------------
+// Cancel reply
 function cancelReply() {
   currentReplyTarget = null;
   refs.messageInputEl.placeholder = "Type a message...";
@@ -362,6 +356,7 @@ function cancelReply() {
   }
 }
 
+// Show the little cancel reply button
 function showReplyCancelButton() {
   if (!refs.cancelReplyBtn) {
     const btn = document.createElement("button");
@@ -374,9 +369,7 @@ function showReplyCancelButton() {
   }
 }
 
-// ----------------------------
-// Report handler
-// ----------------------------
+// Report a message
 async function reportMessage(msgData) {
   try {
     const reportRef = doc(db, "reportedmsgs", msgData.id);
@@ -386,9 +379,9 @@ async function reportMessage(msgData) {
 
     if (reportSnap.exists()) {
       const data = reportSnap.data();
-      const already = (data.reportedBy || []).includes(reporterChatId);
-      if (already) return alert("You’ve already reported this message.");
-
+      if ((data.reportedBy || []).includes(reporterChatId)) {
+        return alert("You’ve already reported this message.");
+      }
       await updateDoc(reportRef, {
         reportCount: increment(1),
         reportedBy: arrayUnion(reporterChatId),
@@ -408,18 +401,15 @@ async function reportMessage(msgData) {
         status: "pending"
       });
     }
-
     alert("✅ Report submitted!");
   } catch (err) {
-    console.error("Report failed:", err);
-    alert("❌ Error reporting message. Try again.");
+    console.error(err);
+    alert("❌ Error reporting message.");
   }
 }
 
-// ----------------------------
-// Tap modal (reply + report)
-// ----------------------------
-function showTapModal(targetMsgEl, messageData) {
+// Tap modal for Reply / Report
+function showTapModal(targetEl, msgData) {
   tapModalEl?.remove();
   tapModalEl = document.createElement("div");
   tapModalEl.className = "tap-modal";
@@ -427,12 +417,8 @@ function showTapModal(targetMsgEl, messageData) {
   const replyBtn = document.createElement("button");
   replyBtn.textContent = "↩ Reply";
   replyBtn.onclick = () => {
-    currentReplyTarget = {
-      id: messageData.id,
-      chatId: messageData.chatId,
-      content: messageData.content
-    };
-    refs.messageInputEl.placeholder = `Replying to ${messageData.chatId}: ${messageData.content.substring(0, 30)}...`;
+    currentReplyTarget = { id: msgData.id, chatId: msgData.chatId, content: msgData.content };
+    refs.messageInputEl.placeholder = `Replying to ${msgData.chatId}: ${msgData.content.substring(0, 30)}...`;
     refs.messageInputEl.focus();
     showReplyCancelButton();
     tapModalEl.remove();
@@ -441,15 +427,18 @@ function showTapModal(targetMsgEl, messageData) {
   const reportBtn = document.createElement("button");
   reportBtn.textContent = "⚠ Report";
   reportBtn.onclick = async () => {
-    await reportMessage(messageData);
+    await reportMessage(msgData);
     tapModalEl.remove();
   };
 
-  tapModalEl.appendChild(replyBtn);
-  tapModalEl.appendChild(reportBtn);
+  const cancelBtn = document.createElement("button");
+  cancelBtn.textContent = "✕";
+  cancelBtn.onclick = () => tapModalEl.remove();
+
+  tapModalEl.append(replyBtn, reportBtn, cancelBtn);
   document.body.appendChild(tapModalEl);
 
-  const rect = targetMsgEl.getBoundingClientRect();
+  const rect = targetEl.getBoundingClientRect();
   tapModalEl.style.position = "absolute";
   tapModalEl.style.top = rect.top - 40 + window.scrollY + "px";
   tapModalEl.style.left = rect.left + "px";
@@ -459,29 +448,32 @@ function showTapModal(targetMsgEl, messageData) {
   tapModalEl.style.borderRadius = "8px";
   tapModalEl.style.fontSize = "12px";
   tapModalEl.style.display = "flex";
-  tapModalEl.style.gap = "8px";
+  tapModalEl.style.gap = "6px";
   tapModalEl.style.zIndex = 9999;
 
-  // auto-close after outside click
-  const closeModal = (e) => {
-    if (!tapModalEl.contains(e.target)) {
-      tapModalEl.remove();
-      document.removeEventListener("click", closeModal);
-    }
-  };
-  setTimeout(() => document.addEventListener("click", closeModal), 0);
-
-  setTimeout(() => {
-    if (document.body.contains(tapModalEl)) tapModalEl.remove();
-  }, 3000);
+  setTimeout(() => tapModalEl?.remove(), 3000);
 }
 
-// ============================
-// 🧩 Render Messages + Banners
-// ============================
+// Confetti / glow for banners
+function triggerBannerEffect(bannerEl) {
+  bannerEl.style.animation = "bannerGlow 1s ease-in-out infinite alternate";
+  // Optional: simple confetti particles
+  const confetti = document.createElement("div");
+  confetti.className = "confetti";
+  confetti.style.position = "absolute";
+  confetti.style.top = "-4px";
+  confetti.style.left = "50%";
+  confetti.style.width = "6px";
+  confetti.style.height = "6px";
+  confetti.style.background = "#fff";
+  confetti.style.borderRadius = "50%";
+  bannerEl.appendChild(confetti);
+  setTimeout(() => confetti.remove(), 1500);
+}
+
+// Render messages
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
-
   messages.forEach(item => {
     if (!item.id) return;
     if (document.getElementById(item.id)) return;
@@ -491,13 +483,9 @@ function renderMessagesFromArray(messages) {
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    // --------------------------
-    // Banner / system message
-    // --------------------------
+    // Banner
     if (m.systemBanner || m.isBanner || m.type === "banner") {
       wrapper.classList.add("chat-banner");
-      wrapper.style.display = "block";
-      wrapper.style.width = "100%";
       wrapper.style.textAlign = "center";
       wrapper.style.padding = "4px 0";
       wrapper.style.margin = "4px 0";
@@ -516,20 +504,7 @@ function renderMessagesFromArray(messages) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
-      // Banner glow + confetti
-      if (!glowedBanners.has(item.id)) {
-        wrapper.classList.add("banner-glow");
-        // trigger confetti
-        confetti({
-          particleCount: 60,
-          spread: 120,
-          origin: { y: 0.3 }
-        });
-        glowedBanners.add(item.id);
-
-        // stop glowing after 9s
-        setTimeout(() => wrapper.classList.remove("banner-glow"), 9000);
-      }
+      triggerBannerEffect(wrapper);
 
       if (window.currentUser?.isAdmin) {
         const delBtn = document.createElement("button");
@@ -538,23 +513,15 @@ function renderMessagesFromArray(messages) {
         delBtn.style.position = "absolute";
         delBtn.style.right = "6px";
         delBtn.style.top = "3px";
-        delBtn.style.background = "rgba(255,255,255,0.5)";
-        delBtn.style.border = "none";
-        delBtn.style.borderRadius = "4px";
         delBtn.style.cursor = "pointer";
-        delBtn.style.fontSize = "14px";
         delBtn.onclick = async () => {
           await deleteDoc(doc(db, "messages", item.id));
           wrapper.remove();
         };
         wrapper.appendChild(delBtn);
       }
-    }
-
-    // --------------------------
-    // Regular message
-    // --------------------------
-    else {
+    } else {
+      // Regular message
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -562,27 +529,20 @@ function renderMessagesFromArray(messages) {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
+      // Reply preview
       if (m.replyTo) {
         const replyPreview = document.createElement("div");
         replyPreview.className = "reply-preview";
         replyPreview.textContent = m.replyToContent || "Original message";
-        replyPreview.style.fontSize = "12px";
-        replyPreview.style.opacity = 0.7;
-        replyPreview.style.borderLeft = "2px solid #FFD700";
-        replyPreview.style.paddingLeft = "4px";
-        replyPreview.style.marginBottom = "2px";
         replyPreview.style.cursor = "pointer";
-
-        // jump to original message on click
         replyPreview.onclick = () => {
-          const original = document.getElementById(m.replyTo);
-          if (original) {
-            original.scrollIntoView({ behavior: "smooth", block: "center" });
-            original.classList.add("flash-highlight");
-            setTimeout(() => original.classList.remove("flash-highlight"), 1200);
+          const originalMsg = document.getElementById(m.replyTo);
+          if (originalMsg) {
+            originalMsg.scrollIntoView({ behavior: "smooth", block: "center" });
+            originalMsg.style.outline = "2px solid #FFD700";
+            setTimeout(() => originalMsg.style.outline = "", 1000);
           }
         };
-
         wrapper.appendChild(replyPreview);
       }
 
@@ -607,9 +567,7 @@ function renderMessagesFromArray(messages) {
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // --------------------------
   // Auto-scroll
-  // --------------------------
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
@@ -617,20 +575,13 @@ function renderMessagesFromArray(messages) {
       scrollPending = false;
     });
   }
-
-  // --------------------------
-  // Scroll to bottom button
-  // --------------------------
-  setupScrollToBottomBtn();
 }
 
-// --------------------------
-// Middle Chat Scroller
-// --------------------------
-function setupScrollToBottomBtn() {
+// Auto-scroll + scroll-to-bottom button
+function handleChatAutoScroll() {
   if (!refs.messagesEl) return;
-  let scrollBtn = document.getElementById("scrollToBottomBtn");
 
+  let scrollBtn = document.getElementById("scrollToBottomBtn");
   if (!scrollBtn) {
     scrollBtn = document.createElement("div");
     scrollBtn.id = "scrollToBottomBtn";
@@ -652,24 +603,16 @@ function setupScrollToBottomBtn() {
       z-index: 9999;
     `;
     document.body.appendChild(scrollBtn);
-
     scrollBtn.addEventListener("click", () => {
-      refs.messagesEl.scrollTo({
-        top: refs.messagesEl.scrollHeight,
-        behavior: "smooth",
-      });
+      refs.messagesEl.scrollTo({ top: refs.messagesEl.scrollHeight, behavior: "smooth" });
       scrollBtn.style.opacity = 0;
       scrollBtn.style.pointerEvents = "none";
     });
   }
 
   refs.messagesEl.addEventListener("scroll", () => {
-    const distanceFromBottom =
-      refs.messagesEl.scrollHeight -
-      refs.messagesEl.scrollTop -
-      refs.messagesEl.clientHeight;
-
-    if (distanceFromBottom > 150) {
+    const distance = refs.messagesEl.scrollHeight - refs.messagesEl.scrollTop - refs.messagesEl.clientHeight;
+    if (distance > 150) {
       scrollBtn.style.opacity = 1;
       scrollBtn.style.pointerEvents = "auto";
     } else {
@@ -678,6 +621,7 @@ function setupScrollToBottomBtn() {
     }
   });
 }
+
 
 /* ---------- 🔔 Messages Listener (Final Optimized Version) ---------- */
 function attachMessagesListener() {
