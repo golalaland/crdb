@@ -2185,7 +2185,7 @@ if (!window.verifyHandlersInitialized) {
       backdropFilter: "blur(2px)",
     });
 
-    modal.innerHTML = `
+  modal.innerHTML = `
       <div style="background:#111;padding:16px 18px;border-radius:10px;text-align:center;color:#fff;max-width:90vw;box-shadow:0 0 12px rgba(0,0,0,0.5);">
         <h3 style="margin-bottom:10px;font-weight:600;">Verification</h3>
         <p>Scan phone number <b>${displayNumber}</b> for <b>${cost} stars ⭐</b>?</p>
@@ -2204,36 +2204,40 @@ if (!window.verifyHandlersInitialized) {
     };
   };
 
-  // ---------- RUN VERIFICATION ----------
-  async function runNumberVerification(number, displayNumber, cost) {
-    try {
-      // Deduct stars
-      currentUser.stars -= cost;
-      if (refs?.starCountEl)
-        refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-      await updateDoc(doc(db, "users", currentUser.uid), {
-        stars: increment(-cost),
-      }).catch(console.error);
+// ---------- RUN VERIFICATION (Universal Country Code Compatible) ----------
+async function runNumberVerification(number, cost) {
+  try {
+    // Deduct stars
+    currentUser.stars -= cost;
+    if (refs?.starCountEl)
+      refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+    await updateDoc(doc(db, "users", currentUser.uid), {
+      stars: increment(-cost),
+    }).catch(console.error);
 
-      const cleanInput = number.replace(/\D/g, "").slice(-10);
+    // 🔍 Normalize input (remove all non-digits)
+    const cleanInput = number.replace(/\D/g, "");
+    const lastDigits = cleanInput.slice(-10); // Compare last 10 digits globally
 
-      // 🔎 Fetch all users & match last 10 digits
-      const usersRef = collection(db, "users");
-      const qSnap = await getDocs(usersRef);
+    // 🔎 Lookup all users and compare last digits
+    const usersRef = collection(db, "users");
+    const qSnap = await getDocs(usersRef);
 
-      let verifiedUser = null;
-      qSnap.forEach((docSnap) => {
-        const data = docSnap.data();
-        const stored = data.whatsapp?.toString().trim().replace(/\D/g, "").slice(-10);
-        if (stored === cleanInput) verifiedUser = data;
-      });
+    let verifiedUser = null;
+    qSnap.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data.phone) { // <-- changed from whatsapp to phone
+        const storedDigits = data.phone.toString().trim().replace(/\D/g, "").slice(-10);
+        if (storedDigits === lastDigits) verifiedUser = data;
+      }
+    });
 
-      showVerificationModal(verifiedUser, displayNumber);
-    } catch (err) {
-      console.error("Error verifying number:", err);
-      showGoldAlert("❌ Verification failed, please retry!");
-    }
+    showVerificationModal(verifiedUser, number); // number = inputted number
+  } catch (err) {
+    console.error("Error verifying number:", err);
+    showGoldAlert("❌ Verification failed, please retry!");
   }
+}
 
   // ---------- VERIFICATION MODAL ----------
   function showVerificationModal(user, displayNumber) {
