@@ -1,4 +1,4 @@
-  /* ---------- Imports (Firebase v10) ---------- */
+/* ---------- Imports (Firebase v10) ---------- */
 import { 
   initializeApp 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -59,9 +59,11 @@ let currentUser = null;
    🔔 Notification Helpers
 ================================= */
 async function pushNotification(userId, message) {
-  if (!userId) return;
-  const notifRef = doc(collection(db, "users", userId, "notifications"));
+  if (!userId) return console.warn("⚠️ No userId provided for pushNotification");
+  
+  const notifRef = doc(collection(db, "notifications"));
   await setDoc(notifRef, {
+    userId,
     message,
     timestamp: serverTimestamp(),
     read: false,
@@ -69,8 +71,9 @@ async function pushNotification(userId, message) {
 }
 
 function pushNotificationTx(tx, userId, message) {
-  const notifRef = doc(collection(db, "users", userId, "notifications"));
+  const notifRef = doc(collection(db, "notifications"));
   tx.set(notifRef, {
+    userId,
     message,
     timestamp: serverTimestamp(),
     read: false,
@@ -87,22 +90,43 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  console.log("✅ Logged in as:", user.uid);
-  localStorage.setItem("userId", user.uid);
+  // 1. Define the sanitization helper
+  // This must match exactly how the 'userId' field is stored in Firestore.
+  const sanitizeEmail = (email) => email.replace(/\./g, ",");
+  
+  // 2. Generate the ID used for querying
+  const userQueryId = sanitizeEmail(currentUser.email); 
 
-  const notifRef = collection(db, "users", currentUser.uid, "notifications");
-  const notifQuery = query(notifRef, orderBy("timestamp", "desc"));
+  console.log("✅ Logged in as Sanitized ID:", userQueryId);
+  localStorage.setItem("userId", userQueryId);
+
+  // Reference the top-level 'notifications' collection
+  const notifRef = collection(db, "notifications");
+  
+  // 3. Define the query using the sanitized email ID
+  const notifQuery = query(
+    notifRef,
+    where("userId", "==", userQueryId), // Filters notifications belonging to this user
+    orderBy("timestamp", "desc")
+  );
 
   let unsubscribe = null;
 
   async function initNotificationsListener() {
     const notificationsList = document.getElementById("notificationsList");
-    if (!notificationsList) return console.warn("⚠️ #notificationsList not found yet");
+    if (!notificationsList) {
+      // Use setTimeout for resilience if the DOM element loads slowly
+      console.warn("⚠️ #notificationsList not found yet — retrying...");
+      setTimeout(initNotificationsListener, 500);
+      return;
+    }
 
+    // Unsubscribe any previous listener to prevent duplicates
     if (unsubscribe) unsubscribe();
 
-    console.log("🔔 Setting up live notification listener...");
+    console.log("🔔 Setting up live notification listener for ID:", userQueryId);
     unsubscribe = onSnapshot(notifQuery, (snapshot) => {
+      console.log(`✅ Received ${snapshot.docs.length} notifications.`);
       if (snapshot.empty) {
         notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
         return;
@@ -126,25 +150,38 @@ onAuthStateChanged(auth, async (user) => {
       });
 
       notificationsList.innerHTML = items.join("");
+    }, (error) => {
+        // Essential error handler for catching permission/index issues
+        console.error("🔴 Firestore Listener Error:", error);
     });
   }
 
-  document.addEventListener("DOMContentLoaded", initNotificationsListener);
+  // Initialize listener based on DOM state
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initNotificationsListener);
+  } else {
+    initNotificationsListener();
+  }
 
+  // Open-tab listener
   const notifTabBtn = document.querySelector('.tab-btn[data-tab="notificationsTab"]');
   if (notifTabBtn) {
     notifTabBtn.addEventListener("click", () => {
+      // Small delay to ensure the tab content is visible before re-running listener
       setTimeout(initNotificationsListener, 150);
     });
   }
 
+  // Mark All As Read Logic
   const markAllBtn = document.getElementById("markAllRead");
   if (markAllBtn) {
     markAllBtn.addEventListener("click", async () => {
       console.log("🟡 Marking all notifications as read...");
-      const snapshot = await getDocs(notifRef);
+      // Use the same consistent query ID for fetching documents to update
+      const snapshot = await getDocs(query(notifRef, where("userId", "==", userQueryId)));
+      
       for (const docSnap of snapshot.docs) {
-        const ref = doc(db, "users", currentUser.uid, "notifications", docSnap.id);
+        const ref = doc(db, "notifications", docSnap.id);
         await updateDoc(ref, { read: true });
       }
       alert("✅ All notifications marked as read.");
@@ -304,22 +341,130 @@ function setupUsersListener() {
 }
 setupUsersListener();
 
-/* ---------- Render Messages ---------- */
+/* ---------- 💬 Render Messages (with tap modal + reply support) ---------- */
 let scrollPending = false;
-let currentReplyTarget = null; // holds info about the message being replied to
+let tapModalEl = null;
+let currentReplyTarget = null; 
+let tapModalTimeout = null; // ⏱️ Auto-dismiss timer
 
+function cancelReply() {
+  currentReplyTarget = null;
+  refs.messageInputEl.placeholder = "Type a message...";
+  if (refs.cancelReplyBtn) {
+    refs.cancelReplyBtn.remove();
+    refs.cancelReplyBtn = null;
+  }
+}
+
+// ✖ Button beside input when replying
+function showReplyCancelButton() {
+  if (!refs.cancelReplyBtn) {
+    const btn = document.createElement("button");
+    btn.textContent = "✖";
+    btn.style.marginLeft = "6px";
+    btn.style.fontSize = "12px";
+    btn.onclick = cancelReply;
+    refs.cancelReplyBtn = btn;
+    refs.messageInputEl.parentElement.appendChild(btn);
+  }
+}
+
+// 🧊 Tap modal (Reply / Report)
+function showTapModal(targetMsgEl, messageData) {
+  tapModalEl?.remove();
+  tapModalEl = document.createElement("div");
+  tapModalEl.className = "tap-modal";
+
+  // --- Reply button ---
+  const replyBtn = document.createElement("button");
+  replyBtn.textContent = "↩ Reply";
+  replyBtn.onclick = () => {
+    clearTimeout(tapModalTimeout);
+    currentReplyTarget = {
+      id: messageData.id,
+      chatId: messageData.chatId,
+      content: messageData.content
+    };
+    refs.messageInputEl.placeholder = `Replying to ${messageData.chatId}: ${messageData.content.substring(0, 30)}...`;
+    refs.messageInputEl.focus();
+    showReplyCancelButton();
+    tapModalEl.remove();
+  };
+
+  // --- Report button ---
+  const reportBtn = document.createElement("button");
+  reportBtn.textContent = "⚠ Report";
+  reportBtn.onclick = async (e) => {
+    e.stopPropagation();
+    clearTimeout(tapModalTimeout);
+    try {
+      await addDoc(collection(db, "reportedmsgs"), {
+        messageId: messageData.id,
+        messageContent: messageData.content,
+        messageAuthor: messageData.chatId,
+        reportedBy: currentUser?.chatId || currentUser?.email || "unknown",
+        reportedByUid: currentUser?.uid || null,
+        status: "pending",
+        reportedAt: serverTimestamp()
+      });
+      alert("✅ Message reported!");
+    } catch (err) {
+      console.error("Report failed:", err);
+      alert("❌ Failed to report message.");
+    }
+    tapModalEl.remove();
+  };
+
+  tapModalEl.appendChild(replyBtn);
+  tapModalEl.appendChild(reportBtn);
+  document.body.appendChild(tapModalEl);
+
+  // --- Modal styling ---
+  const rect = targetMsgEl.getBoundingClientRect();
+  tapModalEl.style.position = "absolute";
+  tapModalEl.style.top = rect.top - 40 + window.scrollY + "px";
+  tapModalEl.style.left = rect.left + "px";
+  tapModalEl.style.background = "rgba(0,0,0,0.85)";
+  tapModalEl.style.color = "#fff";
+  tapModalEl.style.padding = "6px 10px";
+  tapModalEl.style.borderRadius = "8px";
+  tapModalEl.style.fontSize = "12px";
+  tapModalEl.style.display = "flex";
+  tapModalEl.style.gap = "8px";
+  tapModalEl.style.zIndex = 9999;
+
+  // --- Auto-close when clicking outside ---
+  const closeModal = (e) => {
+    if (!tapModalEl.contains(e.target)) {
+      tapModalEl.remove();
+      document.removeEventListener("click", closeModal);
+    }
+  };
+  setTimeout(() => document.addEventListener("click", closeModal), 0);
+
+  // --- Auto-dismiss after 3 seconds ---
+  clearTimeout(tapModalTimeout);
+  tapModalTimeout = setTimeout(() => {
+    if (tapModalEl) {
+      tapModalEl.remove();
+      tapModalEl = null;
+    }
+  }, 3000);
+}
+
+// 🎨 Render messages (unchanged, with click-to-reply)
 function renderMessagesFromArray(messages, isBannerFeed = false) {
   if (!refs.messagesEl) return;
 
   messages.forEach(item => {
-    if (document.getElementById(item.id)) return; // avoid duplicates
-
+    if (document.getElementById(item.id)) return;
     const m = item.data;
+
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    // --- 🎁 Banner Detection ---
+    // --- Banners ---
     if (m.systemBanner || m.isBanner || m.type === "banner") {
       wrapper.classList.add("chat-banner");
       wrapper.style.display = "block";
@@ -363,11 +508,9 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
         wrapper.appendChild(delBtn);
       }
 
-      // Confetti + Glow once per session
       if (!sessionStorage.getItem(`confetti_${item.id}`)) {
         wrapper.style.animation = "pulseGlow 2s";
         sessionStorage.setItem(`confetti_${item.id}`, "played");
-
         const confettiContainer = document.createElement("div");
         confettiContainer.style.position = "absolute";
         confettiContainer.style.inset = "0";
@@ -393,9 +536,8 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
           wrapper.style.animation = "";
         }, 6000);
       }
-
     } else {
-      // --- 💬 Regular message ---
+      // --- Regular messages ---
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -403,37 +545,37 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
-      // --- REPLY PREVIEW ---
+      // --- Reply preview ---
       if (m.replyTo) {
         const originalMsgEl = document.getElementById(m.replyTo);
-        if (originalMsgEl) {
-          const replyPreview = document.createElement("div");
-          replyPreview.className = "reply-preview";
-          replyPreview.textContent = originalMsgEl.querySelector(".content, .buzz-content")?.textContent || m.replyToContent || "Original message";
-          replyPreview.style.fontSize = "12px";
-          replyPreview.style.opacity = 0.7;
-          replyPreview.style.borderLeft = "2px solid #FFD700";
-          replyPreview.style.paddingLeft = "4px";
-          replyPreview.style.marginBottom = "2px";
-          replyPreview.style.cursor = "pointer";
+        const replyPreview = document.createElement("div");
+        replyPreview.className = "reply-preview";
+        replyPreview.textContent =
+          (originalMsgEl?.querySelector(".content, .buzz-content")?.textContent) ||
+          m.replyToContent ||
+          "Original message";
+        replyPreview.style.fontSize = "12px";
+        replyPreview.style.opacity = 0.7;
+        replyPreview.style.borderLeft = "2px solid #FFD700";
+        replyPreview.style.paddingLeft = "4px";
+        replyPreview.style.marginBottom = "2px";
+        replyPreview.style.cursor = "pointer";
 
-          replyPreview.addEventListener("click", () => {
-            if (originalMsgEl) {
-              originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
-              const originalBg = originalMsgEl.style.background;
-              originalMsgEl.style.transition = "background 0.5s";
-              originalMsgEl.style.background = "#FFD70033";
-              setTimeout(() => {
-                originalMsgEl.style.background = originalBg;
-              }, 1000);
-            }
-          });
-
-          wrapper.appendChild(replyPreview);
-        }
+        replyPreview.addEventListener("click", () => {
+          if (originalMsgEl) {
+            originalMsgEl.scrollIntoView({ behavior: "smooth", block: "center" });
+            const originalBg = originalMsgEl.style.background;
+            originalMsgEl.style.transition = "background 0.5s";
+            originalMsgEl.style.background = "#FFD70033";
+            setTimeout(() => {
+              originalMsgEl.style.background = originalBg;
+            }, 1000);
+          }
+        });
+        wrapper.appendChild(replyPreview);
       }
 
-      // --- Message content ---
+      // --- Content ---
       const contentEl = document.createElement("span");
       contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
       contentEl.textContent = " " + (m.content || "");
@@ -444,82 +586,17 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       }
       wrapper.appendChild(contentEl);
 
-// --- Tap-to-reply modal ---
+      // --- Tap modal trigger ---
       wrapper.addEventListener("click", (e) => {
         e.stopPropagation();
-
-        // remove any existing modal first
-        document.querySelectorAll(".tap-modal").forEach(mod => mod.remove());
-
-const modal = document.createElement("div");
-modal.className = "tap-modal";
-modal.style.position = "absolute";
-modal.style.padding = "6px 10px";
-modal.style.background = "#333";
-modal.style.color = "#fff";
-modal.style.borderRadius = "6px";
-modal.style.fontSize = "12px";
-
-// get message position relative to messages container
-const rect = wrapper.getBoundingClientRect();
-const chatRect = refs.messagesEl.getBoundingClientRect();
-const scrollOffset = refs.messagesEl.scrollTop;
-
-// Calculate position inside the scrollable chat container
-const modalTop = rect.top - chatRect.top + scrollOffset - 10; // small offset above bubble
-const modalLeft = rect.left - chatRect.left + 20; // small left offset from bubble start
-
-modal.style.top = `${modalTop - 20}px`;   // move it slightly lower / closer to message
-modal.style.left = `${modalLeft + 80}px`; // shift a bit to the right so it doesn’t cover text
-
-modal.style.zIndex = 1000;
-modal.style.display = "flex";
-modal.style.gap = "6px";
-
-        // --- Reply button in modal ---
-        const replyOption = document.createElement("button");
-        replyOption.textContent = "Reply";
-        replyOption.style.cursor = "pointer";
-        replyOption.onclick = () => {
-          currentReplyTarget = { id: item.id, chatId: m.chatId, content: m.content };
-          refs.messageInputEl.placeholder = `Replying to ${m.chatId}: ${m.content.substring(0, 30)}...`;
-          refs.messageInputEl.focus();
-          modal.remove();
-        };
-        modal.appendChild(replyOption);
-
-        // --- Report button ---
-        const reportOption = document.createElement("button");
-        reportOption.textContent = "Report";
-        reportOption.style.cursor = "pointer";
-        reportOption.onclick = () => {
-          alert(`Reported message from ${m.chatId}`);
-          modal.remove();
-        };
-        modal.appendChild(reportOption);
-
-        // --- Cancel button ---
-        const cancelOption = document.createElement("button");
-        cancelOption.textContent = "✕";
-        cancelOption.style.cursor = "pointer";
-        cancelOption.onclick = () => {
-          modal.remove();
-        };
-        modal.appendChild(cancelOption);
-
-        wrapper.appendChild(modal);
-
-        // Auto-hide after 3 seconds
-        setTimeout(() => {
-          modal.remove();
-        }, 3000);
+        showTapModal(wrapper, { id: item.id, chatId: m.chatId, content: m.content });
       });
     }
 
     refs.messagesEl.appendChild(wrapper);
   });
-  
-  // --- Auto-scroll to bottom ---
+
+  // --- Scroll down ---
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
@@ -529,32 +606,25 @@ modal.style.gap = "6px";
   }
 }
 
-/* ---------- Animations ---------- */
-const style = document.createElement("style");
-style.textContent = `
-@keyframes floatConfetti {
-  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
+// ✅ Auto-clear reply state after sending a message
+function clearReplyAfterSend() {
+  if (currentReplyTarget) cancelReply();
 }
-@keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 12px rgba(255,255,255,0.2); }
-  50% { box-shadow: 0 0 24px rgba(255,255,255,0.6); }
-}`;
-document.head.appendChild(style);
 
 
-/* ---------- 🔔 Messages Listener ---------- */
+/* ---------- 🔔 Messages Listener (Final Optimized Version) ---------- */
 function attachMessagesListener() {
   const q = query(collection(db, CHAT_COLLECTION), orderBy("timestamp", "asc"));
 
-  // 💾 Load previously shown gift IDs from localStorage
+  // 💾 Track shown gift alerts
   const shownGiftAlerts = new Set(JSON.parse(localStorage.getItem("shownGiftAlerts") || "[]"));
-
-  // 💾 Save helper
   function saveShownGift(id) {
     shownGiftAlerts.add(id);
     localStorage.setItem("shownGiftAlerts", JSON.stringify([...shownGiftAlerts]));
   }
+
+  // 💾 Track local pending messages to prevent double rendering
+  let localPendingMsgs = JSON.parse(localStorage.getItem("localPendingMsgs") || "{}");
 
   onSnapshot(q, snapshot => {
     snapshot.docChanges().forEach(change => {
@@ -563,37 +633,53 @@ function attachMessagesListener() {
       const msg = change.doc.data();
       const msgId = change.doc.id;
 
-      // Prevent duplicate render
+      // 🛑 Skip messages that look like local temp echoes
+      if (msg.tempId && msg.tempId.startsWith("temp_")) return;
+
+      // 🛑 Skip already rendered messages
       if (document.getElementById(msgId)) return;
 
-      // Add to memory + render
-      lastMessagesArray.push({ id: msgId, data: msg });
+      // ✅ Match Firestore-confirmed message to a locally sent one
+      for (const [tempId, pending] of Object.entries(localPendingMsgs)) {
+        const sameUser = pending.uid === msg.uid;
+        const sameText = pending.content === msg.content;
+        const createdAt = pending.createdAt || 0;
+        const msgTime = msg.timestamp?.toMillis?.() || 0;
+        const timeDiff = Math.abs(msgTime - createdAt);
+
+        if (sameUser && sameText && timeDiff < 7000) {
+          // 🔥 Remove local temp bubble
+          const tempEl = document.getElementById(tempId);
+          if (tempEl) tempEl.remove();
+
+          // 🧹 Clean up memory + storage
+          delete localPendingMsgs[tempId];
+          localStorage.setItem("localPendingMsgs", JSON.stringify(localPendingMsgs));
+          break;
+        }
+      }
+
+      // ✅ Render message
       renderMessagesFromArray([{ id: msgId, data: msg }]);
 
-/* 💝 Detect personalized gift messages */
-if (msg.highlight && msg.content?.includes("gifted")) {
-  const myId = currentUser?.chatId?.toLowerCase();
-  if (!myId) return;
+      /* 💝 Gift Alert Logic */
+      if (msg.highlight && msg.content?.includes("gifted")) {
+        const myId = currentUser?.chatId?.toLowerCase();
+        if (!myId) return;
 
-  const parts = msg.content.split(" ");
-  const sender = parts[0];
-  const receiver = parts[2];
-  const amount = parts[3];
+        const parts = msg.content.split(" ");
+        const sender = parts[0];
+        const receiver = parts[2];
+        const amount = parts[3];
+        if (!sender || !receiver || !amount) return;
 
-  if (!sender || !receiver || !amount) return;
+        if (receiver.toLowerCase() === myId && !shownGiftAlerts.has(msgId)) {
+          showGiftAlert(`${sender} gifted you ${amount} stars ⭐️`);
+          saveShownGift(msgId);
+        }
+      }
 
-  // 🎯 Only receiver sees it once
-  if (receiver.toLowerCase() === myId) {
-    if (shownGiftAlerts.has(msgId)) return; // skip if seen before
-
-    showGiftAlert(`${sender} gifted you ${amount} stars ⭐️`);
-    saveShownGift(msgId);
-  }
-
-  // ❌ Remove any extra popups for gifting since showGiftAlert already covers it
-  // (No need to trigger showStarPopup or similar)
-}
-      // 🌀 Keep scroll for your own messages
+      // 🌀 Keep scroll locked for your messages
       if (refs.messagesEl && msg.uid === currentUser?.uid) {
         refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
       }
@@ -1114,44 +1200,65 @@ autoLogin();
 
 
 /* ----------------------------
-   💬 Send Message Handler
+   ⚡ Global setup for local message tracking
+----------------------------- */
+let localPendingMsgs = JSON.parse(localStorage.getItem("localPendingMsgs") || "{}"); 
+// structure: { tempId: { content, uid, chatId, createdAt } }
+
+/* ----------------------------
+   💬 Send Message Handler (Instant + No Double Render)
 ----------------------------- */
 refs.sendBtn?.addEventListener("click", async () => {
-  if (!currentUser) return showStarPopup("Sign in to chat.");
-  const txt = refs.messageInputEl?.value.trim();
-  if (!txt) return showStarPopup("Type a message first.");
-  if ((currentUser.stars || 0) < SEND_COST)
-    return showStarPopup("Not enough stars to send message.");
+  try {
+    if (!currentUser) return showStarPopup("Sign in to chat.");
+    const txt = refs.messageInputEl?.value.trim();
+    if (!txt) return showStarPopup("Type a message first.");
+    if ((currentUser.stars || 0) < SEND_COST)
+      return showStarPopup("Not enough stars to send message.");
 
-  // Deduct stars
-  currentUser.stars -= SEND_COST;
-  refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-  await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-SEND_COST) });
+    // Deduct stars locally + in Firestore
+    currentUser.stars -= SEND_COST;
+    refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+    await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-SEND_COST) });
 
-  // Create new message
-  const newMsg = {
-    content: txt,
-    uid: currentUser.uid,
-    chatId: currentUser.chatId,
-    timestamp: serverTimestamp(),
-    highlight: false,
-    buzzColor: null,
-    replyTo: currentReplyTarget?.id || null,
-    replyToContent: currentReplyTarget?.content || null
-  };
+    // Create temp message (local echo)
+    const tempId = "temp_" + Date.now();
+    const newMsg = {
+      content: txt,
+      uid: currentUser.uid || "unknown",
+      chatId: currentUser.chatId || "anon",
+      timestamp: { toMillis: () => Date.now() }, // fake for local display
+      highlight: false,
+      buzzColor: null,
+      replyTo: currentReplyTarget?.id || null,
+      replyToContent: currentReplyTarget?.content || null,
+      tempId
+    };
 
-  // Add to Firestore
-  const docRef = await addDoc(collection(db, CHAT_COLLECTION), newMsg);
+    // 💾 Store temp message reference
+    let localPendingMsgs = JSON.parse(localStorage.getItem("localPendingMsgs") || "{}");
+    localPendingMsgs[tempId] = { ...newMsg, createdAt: Date.now() };
+    localStorage.setItem("localPendingMsgs", JSON.stringify(localPendingMsgs));
 
-  // Render immediately
-  refs.messageInputEl.value = "";
-  renderMessagesFromArray([{ id: docRef.id, data: newMsg }], true);
+    // Reset input
+    refs.messageInputEl.value = "";
+    currentReplyTarget = null;
+    refs.messageInputEl.placeholder = "Type a message...";
 
-  // Reset reply target
-  currentReplyTarget = null;
-  refs.messageInputEl.placeholder = "Type a message...";
+    scrollToBottom(refs.messagesEl);
 
-  scrollToBottom(refs.messagesEl);
+    // 🚀 Send to Firestore
+    const msgRef = await addDoc(collection(db, CHAT_COLLECTION), {
+      ...newMsg,
+      tempId: null, // remove temp flag for the actual Firestore entry
+      timestamp: serverTimestamp()
+    });
+
+    console.log("✅ Message sent:", msgRef.id);
+  } catch (err) {
+    console.error("❌ Message send error:", err);
+    showStarPopup("Message failed: " + (err.message || err));
+  }
 });
 
   /* ----------------------------
