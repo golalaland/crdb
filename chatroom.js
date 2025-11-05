@@ -455,27 +455,46 @@ function showTapModal(targetEl, msgData) {
 }
 
 function triggerBannerEffect(bannerEl, bannerId) {
-  // Check if this banner has already been shown
-  if (window.shownBanners?.has(bannerId)) return;
+  // Check if this banner has already been seen
+  if (localStorage.getItem(`bannerSeen-${bannerId}`)) return;
 
-  window.shownBanners = window.shownBanners || new Set();
-  window.shownBanners.add(bannerId);
+  // Mark as seen
+  localStorage.setItem(`bannerSeen-${bannerId}`, "true");
 
   // Glow animation
-  bannerEl.classList.add("banner-glow");
+  bannerEl.style.animation = "bannerGlow 1s ease-in-out infinite alternate";
 
   // Confetti
-  for (let i = 0; i < 15; i++) {
+  const confettiCount = 15;
+  for (let i = 0; i < confettiCount; i++) {
     const confetti = document.createElement("div");
     confetti.className = "confetti";
+    confetti.style.position = "absolute";
+    confetti.style.top = "0px";
     confetti.style.left = `${Math.random() * 100}%`;
-    confetti.style.background = `hsl(${Math.random() * 360}, 100%, 50%)`;
+    confetti.style.width = "6px";
+    confetti.style.height = "6px";
+    confetti.style.background = `hsl(${Math.random() * 360}, 100%, 60%)`;
+    confetti.style.borderRadius = "50%";
     bannerEl.appendChild(confetti);
+
+    // Animate confetti falling
+    confetti.animate([
+      { transform: `translateY(0px) rotate(0deg)` },
+      { transform: `translateY(40px) rotate(${Math.random() * 360}deg)` }
+    ], {
+      duration: 1000 + Math.random() * 500,
+      easing: "ease-out",
+      fill: "forwards"
+    });
+
     setTimeout(() => confetti.remove(), 1500);
   }
 
   // Stop glow after 9 seconds
-  setTimeout(() => bannerEl.classList.remove("banner-glow"), 9000);
+  setTimeout(() => {
+    bannerEl.style.animation = "";
+  }, 9000);
 }
 
 // Render messages
