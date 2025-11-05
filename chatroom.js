@@ -289,8 +289,11 @@ function getCurrentUserId() {
 window.getCurrentUserId = getCurrentUserId; // make it globally accessible
 
 
-/* ---------- Exports for other scripts ---------- */
-export { app, db, rtdb, auth };
+/* ---------- Expose Firebase objects globally ---------- */
+window.app = app;
+window.db = db;
+window.rtdb = rtdb;
+window.auth = auth;
 
 /* ---------- Global State ---------- */
 const ROOM_ID = "room5";
