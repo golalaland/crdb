@@ -341,7 +341,6 @@ function setupUsersListener() {
 }
 setupUsersListener();
 
-/* ---------- 💬 Full Chat Renderer with Reply, Banner, Confetti, Scroll ---------- */
 let scrollPending = false;
 let tapModalEl = null;
 let currentReplyTarget = null;
@@ -454,51 +453,26 @@ function showTapModal(targetEl, msgData) {
   setTimeout(() => tapModalEl?.remove(), 3000);
 }
 
-// Banner effect: Glow + confined confetti (runs once per banner)
-function triggerBannerEffect(wrapper, bannerId) {
-  // Run only once per session
-  if (sessionStorage.getItem(`bannerConfetti_${bannerId}`)) return;
-  sessionStorage.setItem(`bannerConfetti_${bannerId}`, "played");
-
-  // Glow animation
-  wrapper.style.animation = "pulseGlow 2s";
-
-  // Confetti container confined to the banner
-  const confettiContainer = document.createElement("div");
-  confettiContainer.style.position = "absolute";
-  confettiContainer.style.top = "0";
-  confettiContainer.style.left = "0";
-  confettiContainer.style.width = "100%";
-  confettiContainer.style.height = "100%";
-  confettiContainer.style.pointerEvents = "none";
-  wrapper.appendChild(confettiContainer);
-
-  // Generate confetti pieces
-  for (let i = 0; i < 30; i++) {
-    const piece = document.createElement("div");
-    piece.style.position = "absolute";
-    piece.style.width = "6px";
-    piece.style.height = "6px";
-    piece.style.borderRadius = "50%";
-    piece.style.background = randomColor(); // keep your randomColor() function
-    piece.style.left = `${Math.random() * 100}%`;
-    piece.style.top = `${Math.random() * 100}%`;
-    piece.style.opacity = 0.8;
-    piece.style.animation = `floatConfetti ${3 + Math.random() * 3}s ease-in-out`;
-    confettiContainer.appendChild(piece);
-  }
-
-  // Remove confetti and glow after 6s
-  setTimeout(() => {
-    confettiContainer.remove();
-    wrapper.style.animation = "";
-  }, 6000);
+// Confetti / glow for banners
+function triggerBannerEffect(bannerEl) {
+  bannerEl.style.animation = "bannerGlow 1s ease-in-out infinite alternate";
+  // Optional: simple confetti particles
+  const confetti = document.createElement("div");
+  confetti.className = "confetti";
+  confetti.style.position = "absolute";
+  confetti.style.top = "-4px";
+  confetti.style.left = "50%";
+  confetti.style.width = "6px";
+  confetti.style.height = "6px";
+  confetti.style.background = "#fff";
+  confetti.style.borderRadius = "50%";
+  bannerEl.appendChild(confetti);
+  setTimeout(() => confetti.remove(), 1500);
 }
 
 // Render messages
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
-
   messages.forEach(item => {
     if (!item.id) return;
     if (document.getElementById(item.id)) return;
@@ -511,7 +485,6 @@ function renderMessagesFromArray(messages) {
     // Banner
     if (m.systemBanner || m.isBanner || m.type === "banner") {
       wrapper.classList.add("chat-banner");
-      wrapper.style.position = "relative"; // <<< CRUCIAL: keeps confetti inside banner
       wrapper.style.textAlign = "center";
       wrapper.style.padding = "4px 0";
       wrapper.style.margin = "4px 0";
@@ -530,10 +503,8 @@ function renderMessagesFromArray(messages) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
-      // Trigger glow + confined confetti
-      triggerBannerEffect(wrapper, item.id);
+      triggerBannerEffect(wrapper);
 
-      // Admin delete button
       if (window.currentUser?.isAdmin) {
         const delBtn = document.createElement("button");
         delBtn.textContent = "🗑";
@@ -557,15 +528,43 @@ function renderMessagesFromArray(messages) {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
+      // Reply preview
+      if (m.replyTo) {
+        const replyPreview = document.createElement("div");
+        replyPreview.className = "reply-preview";
+        replyPreview.textContent = m.replyToContent || "Original message";
+        replyPreview.style.cursor = "pointer";
+        replyPreview.onclick = () => {
+          const originalMsg = document.getElementById(m.replyTo);
+          if (originalMsg) {
+            originalMsg.scrollIntoView({ behavior: "smooth", block: "center" });
+            originalMsg.style.outline = "2px solid #FFD700";
+            setTimeout(() => originalMsg.style.outline = "", 1000);
+          }
+        };
+        wrapper.appendChild(replyPreview);
+      }
+
       const contentEl = document.createElement("span");
       contentEl.className = "content";
       contentEl.textContent = " " + (m.content || "");
       wrapper.appendChild(contentEl);
+
+      wrapper.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showTapModal(wrapper, {
+          id: item.id,
+          chatId: m.chatId,
+          uid: m.uid,
+          content: m.content,
+          replyTo: m.replyTo,
+          replyToContent: m.replyToContent
+        });
+      });
     }
 
     refs.messagesEl.appendChild(wrapper);
   });
-}
 
   // Auto-scroll
   if (!scrollPending) {
