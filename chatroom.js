@@ -344,7 +344,8 @@ setupUsersListener();
 /* ---------- 💬 Render Messages (with tap modal + reply support) ---------- */
 let scrollPending = false;
 let tapModalEl = null;
-let currentReplyTarget = null; // ✅ Added: global reply target tracker
+let currentReplyTarget = null; 
+let tapModalTimeout = null; // ⏱️ Auto-dismiss timer
 
 function cancelReply() {
   currentReplyTarget = null;
@@ -355,6 +356,7 @@ function cancelReply() {
   }
 }
 
+// ✖ Button beside input when replying
 function showReplyCancelButton() {
   if (!refs.cancelReplyBtn) {
     const btn = document.createElement("button");
@@ -367,14 +369,17 @@ function showReplyCancelButton() {
   }
 }
 
+// 🧊 Tap modal (Reply / Report)
 function showTapModal(targetMsgEl, messageData) {
   tapModalEl?.remove();
   tapModalEl = document.createElement("div");
   tapModalEl.className = "tap-modal";
 
+  // --- Reply button ---
   const replyBtn = document.createElement("button");
   replyBtn.textContent = "↩ Reply";
   replyBtn.onclick = () => {
+    clearTimeout(tapModalTimeout);
     currentReplyTarget = {
       id: messageData.id,
       chatId: messageData.chatId,
@@ -386,10 +391,27 @@ function showTapModal(targetMsgEl, messageData) {
     tapModalEl.remove();
   };
 
+  // --- Report button ---
   const reportBtn = document.createElement("button");
   reportBtn.textContent = "⚠ Report";
-  reportBtn.onclick = () => {
-    alert("Reported message!"); // replace with your report logic
+  reportBtn.onclick = async (e) => {
+    e.stopPropagation();
+    clearTimeout(tapModalTimeout);
+    try {
+      await addDoc(collection(db, "reportedmsgs"), {
+        messageId: messageData.id,
+        messageContent: messageData.content,
+        messageAuthor: messageData.chatId,
+        reportedBy: currentUser?.chatId || currentUser?.email || "unknown",
+        reportedByUid: currentUser?.uid || null,
+        status: "pending",
+        reportedAt: serverTimestamp()
+      });
+      alert("✅ Message reported!");
+    } catch (err) {
+      console.error("Report failed:", err);
+      alert("❌ Failed to report message.");
+    }
     tapModalEl.remove();
   };
 
@@ -397,9 +419,10 @@ function showTapModal(targetMsgEl, messageData) {
   tapModalEl.appendChild(reportBtn);
   document.body.appendChild(tapModalEl);
 
+  // --- Modal styling ---
   const rect = targetMsgEl.getBoundingClientRect();
   tapModalEl.style.position = "absolute";
-  tapModalEl.style.top = rect.top - tapModalEl.offsetHeight - 4 + window.scrollY + "px";
+  tapModalEl.style.top = rect.top - 40 + window.scrollY + "px";
   tapModalEl.style.left = rect.left + "px";
   tapModalEl.style.background = "rgba(0,0,0,0.85)";
   tapModalEl.style.color = "#fff";
@@ -410,6 +433,7 @@ function showTapModal(targetMsgEl, messageData) {
   tapModalEl.style.gap = "8px";
   tapModalEl.style.zIndex = 9999;
 
+  // --- Auto-close when clicking outside ---
   const closeModal = (e) => {
     if (!tapModalEl.contains(e.target)) {
       tapModalEl.remove();
@@ -417,20 +441,30 @@ function showTapModal(targetMsgEl, messageData) {
     }
   };
   setTimeout(() => document.addEventListener("click", closeModal), 0);
+
+  // --- Auto-dismiss after 3 seconds ---
+  clearTimeout(tapModalTimeout);
+  tapModalTimeout = setTimeout(() => {
+    if (tapModalEl) {
+      tapModalEl.remove();
+      tapModalEl = null;
+    }
+  }, 3000);
 }
 
+// 🎨 Render messages (unchanged, with click-to-reply)
 function renderMessagesFromArray(messages, isBannerFeed = false) {
   if (!refs.messagesEl) return;
 
   messages.forEach(item => {
-    if (document.getElementById(item.id)) return; // avoid duplicates
+    if (document.getElementById(item.id)) return;
     const m = item.data;
 
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    // --- Banner handling ---
+    // --- Banners ---
     if (m.systemBanner || m.isBanner || m.type === "banner") {
       wrapper.classList.add("chat-banner");
       wrapper.style.display = "block";
@@ -503,7 +537,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
         }, 6000);
       }
     } else {
-      // --- Regular message ---
+      // --- Regular messages ---
       const usernameEl = document.createElement("span");
       usernameEl.className = "meta";
       usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
@@ -541,7 +575,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
         wrapper.appendChild(replyPreview);
       }
 
-      // --- Message content ---
+      // --- Content ---
       const contentEl = document.createElement("span");
       contentEl.className = m.highlight || m.buzzColor ? "buzz-content content" : "content";
       contentEl.textContent = " " + (m.content || "");
@@ -552,7 +586,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       }
       wrapper.appendChild(contentEl);
 
-      // --- Tap to show modal ---
+      // --- Tap modal trigger ---
       wrapper.addEventListener("click", (e) => {
         e.stopPropagation();
         showTapModal(wrapper, { id: item.id, chatId: m.chatId, content: m.content });
@@ -562,7 +596,7 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // --- Auto-scroll ---
+  // --- Scroll down ---
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
@@ -570,6 +604,11 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       scrollPending = false;
     });
   }
+}
+
+// ✅ Auto-clear reply state after sending a message
+function clearReplyAfterSend() {
+  if (currentReplyTarget) cancelReply();
 }
 
 
