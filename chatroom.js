@@ -2207,32 +2207,34 @@ if (!window.verifyHandlersInitialized) {
 // ---------- RUN VERIFICATION (Universal Country Code Compatible) ----------
 async function runNumberVerification(number, cost) {
   try {
-    // Deduct stars
-    currentUser.stars -= cost;
-    if (refs?.starCountEl)
-      refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+    // Deduct stars safely (update Firestore first)
     await updateDoc(doc(db, "users", currentUser.uid), {
       stars: increment(-cost),
-    }).catch(console.error);
+    });
 
-    // 🔍 Normalize input (remove all non-digits)
+    // Update local copy after Firestore update
+    currentUser.stars = (currentUser.stars || 0) - cost;
+    if (refs?.starCountEl)
+      refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+
+    // Normalize input
     const cleanInput = number.replace(/\D/g, "");
-    const lastDigits = cleanInput.slice(-10); // Compare last 10 digits globally
+    const lastDigits = cleanInput.slice(-10);
 
-    // 🔎 Lookup all users and compare last digits
+    // Get all users
     const usersRef = collection(db, "users");
     const qSnap = await getDocs(usersRef);
 
     let verifiedUser = null;
     qSnap.forEach((docSnap) => {
       const data = docSnap.data();
-      if (data.phone) { // <-- changed from whatsapp to phone
-        const storedDigits = data.phone.toString().trim().replace(/\D/g, "").slice(-10);
+      if (data.phone) { // <-- use 'phone' if that’s your field
+        const storedDigits = data.phone.replace(/\D/g, "").slice(-10);
         if (storedDigits === lastDigits) verifiedUser = data;
       }
     });
 
-    showVerificationModal(verifiedUser, number); // number = inputted number
+    showVerificationModal(verifiedUser);
   } catch (err) {
     console.error("Error verifying number:", err);
     showGoldAlert("❌ Verification failed, please retry!");
