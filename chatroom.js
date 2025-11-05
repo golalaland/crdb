@@ -367,52 +367,52 @@ function showReplyCancelButton() {
   }
 }
 
+// 🧾 Report handler (with merge + count)
 async function reportMessage(msgData) {
   try {
-    const reportsRef = collection(db, "reportedmsgs");
-    const q = query(reportsRef, where("messageId", "==", msgData.id));
-    const snapshot = await getDocs(q);
+    const reportRef = doc(db, "reportedmsgs", msgData.id);
+    const reportSnap = await getDoc(reportRef);
+    const reporterChatId = currentUser?.chatId || "unknown";
+    const reporterUid = currentUser?.uid || null;
 
-    if (!snapshot.empty) {
-      const docRef = snapshot.docs[0].ref;
-      const docData = snapshot.docs[0].data();
+    if (reportSnap.exists()) {
+      const data = reportSnap.data();
+      const already = (data.reportedBy || []).includes(reporterChatId);
+      if (already) return alert("You’ve already reported this message.");
 
-      const alreadyReported = (docData.reportedBy || []).includes(currentUser?.chatId);
-      if (!alreadyReported) {
-        await updateDoc(docRef, {
-          reportCount: increment(1),
-          reportedBy: arrayUnion(currentUser?.chatId),
-          reporterUids: arrayUnion(currentUser?.uid)
-        });
-        alert("Report submitted ✅");
-      } else {
-        alert("You’ve already reported this message.");
-      }
+      await updateDoc(reportRef, {
+        reportCount: increment(1),
+        reportedBy: arrayUnion(reporterChatId),
+        reporterUids: arrayUnion(reporterUid),
+        lastReportedAt: serverTimestamp()
+      });
     } else {
-      await addDoc(reportsRef, {
+      await setDoc(reportRef, {
         messageId: msgData.id,
         messageText: msgData.content,
         offenderChatId: msgData.chatId,
         offenderUid: msgData.uid || null,
-        reportedBy: [currentUser?.chatId],
-        reporterUids: [currentUser?.uid],
+        reportedBy: [reporterChatId],
+        reporterUids: [reporterUid],
         reportCount: 1,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        status: "pending"
       });
-      alert("Report submitted ✅");
     }
+
+    alert("✅ Report submitted!");
   } catch (err) {
     console.error("Report failed:", err);
-    alert("Error reporting message. Try again.");
+    alert("❌ Error reporting message. Try again.");
   }
 }
 
+// 💬 Tap modal (reply + report)
 function showTapModal(targetMsgEl, messageData) {
   tapModalEl?.remove();
   tapModalEl = document.createElement("div");
   tapModalEl.className = "tap-modal";
 
-  // --- Reply button ---
   const replyBtn = document.createElement("button");
   replyBtn.textContent = "↩ Reply";
   replyBtn.onclick = () => {
@@ -427,7 +427,6 @@ function showTapModal(targetMsgEl, messageData) {
     tapModalEl.remove();
   };
 
-  // --- Report button ---
   const reportBtn = document.createElement("button");
   reportBtn.textContent = "⚠ Report";
   reportBtn.onclick = async () => {
@@ -441,7 +440,7 @@ function showTapModal(targetMsgEl, messageData) {
 
   const rect = targetMsgEl.getBoundingClientRect();
   tapModalEl.style.position = "absolute";
-  tapModalEl.style.top = rect.top - tapModalEl.offsetHeight - 4 + window.scrollY + "px";
+  tapModalEl.style.top = rect.top - 40 + window.scrollY + "px";
   tapModalEl.style.left = rect.left + "px";
   tapModalEl.style.background = "rgba(0,0,0,0.85)";
   tapModalEl.style.color = "#fff";
@@ -452,7 +451,7 @@ function showTapModal(targetMsgEl, messageData) {
   tapModalEl.style.gap = "8px";
   tapModalEl.style.zIndex = 9999;
 
-  // --- Auto-close if user doesn’t act ---
+  // auto-close
   const closeModal = (e) => {
     if (!tapModalEl.contains(e.target)) {
       tapModalEl.remove();
@@ -461,65 +460,107 @@ function showTapModal(targetMsgEl, messageData) {
   };
   setTimeout(() => document.addEventListener("click", closeModal), 0);
 
-  // --- Auto-hide after 3s if untouched ---
   setTimeout(() => {
     if (document.body.contains(tapModalEl)) tapModalEl.remove();
   }, 3000);
 }
 
+// 🧩 Render messages (with banners restored)
 function renderMessagesFromArray(messages, isBannerFeed = false) {
   if (!refs.messagesEl) return;
 
   messages.forEach(item => {
-    if (document.getElementById(item.id)) return; // avoid duplicates
+    if (document.getElementById(item.id)) return;
     const m = item.data;
-
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
     wrapper.id = item.id;
 
-    // --- Regular message ---
-    const usernameEl = document.createElement("span");
-    usernameEl.className = "meta";
-    usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
-    usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
-    usernameEl.style.marginRight = "4px";
-    wrapper.appendChild(usernameEl);
+    // --- 🎉 Banner messages ---
+    if (m.systemBanner || m.isBanner || m.type === "banner") {
+      wrapper.classList.add("chat-banner");
+      wrapper.style.display = "block";
+      wrapper.style.width = "100%";
+      wrapper.style.textAlign = "center";
+      wrapper.style.padding = "4px 0";
+      wrapper.style.margin = "4px 0";
+      wrapper.style.borderRadius = "8px";
+      wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
+      wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
 
-    // --- Reply preview ---
-    if (m.replyTo) {
-      const replyPreview = document.createElement("div");
-      replyPreview.className = "reply-preview";
-      replyPreview.textContent = m.replyToContent || "Original message";
-      replyPreview.style.fontSize = "12px";
-      replyPreview.style.opacity = 0.7;
-      replyPreview.style.borderLeft = "2px solid #FFD700";
-      replyPreview.style.paddingLeft = "4px";
-      replyPreview.style.marginBottom = "2px";
-      wrapper.appendChild(replyPreview);
+      const innerPanel = document.createElement("div");
+      innerPanel.style.display = "inline-block";
+      innerPanel.style.padding = "6px 14px";
+      innerPanel.style.borderRadius = "6px";
+      innerPanel.style.background = "rgba(255,255,255,0.35)";
+      innerPanel.style.backdropFilter = "blur(6px)";
+      innerPanel.style.color = "#000";
+      innerPanel.style.fontWeight = "700";
+      innerPanel.textContent = m.content || "";
+      wrapper.appendChild(innerPanel);
+
+      if (window.currentUser?.isAdmin) {
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "🗑";
+        delBtn.title = "Delete Banner";
+        delBtn.style.position = "absolute";
+        delBtn.style.right = "6px";
+        delBtn.style.top = "3px";
+        delBtn.style.background = "rgba(255,255,255,0.5)";
+        delBtn.style.border = "none";
+        delBtn.style.borderRadius = "4px";
+        delBtn.style.cursor = "pointer";
+        delBtn.style.fontSize = "14px";
+        delBtn.onclick = async () => {
+          await deleteDoc(doc(db, "messages", item.id));
+          wrapper.remove();
+        };
+        wrapper.appendChild(delBtn);
+      }
     }
 
-    // --- Message content ---
-    const contentEl = document.createElement("span");
-    contentEl.className = "content";
-    contentEl.textContent = " " + (m.content || "");
-    wrapper.appendChild(contentEl);
+    // --- 🗣 Regular message ---
+    else {
+      const usernameEl = document.createElement("span");
+      usernameEl.className = "meta";
+      usernameEl.innerHTML = `<span class="chat-username" data-username="${m.uid}">${m.chatId || "Guest"}</span>:`;
+      usernameEl.style.color = (m.uid && refs.userColors?.[m.uid]) ? refs.userColors[m.uid] : "#fff";
+      usernameEl.style.marginRight = "4px";
+      wrapper.appendChild(usernameEl);
 
-    // --- Tap to show reply/report modal ---
-    wrapper.addEventListener("click", (e) => {
-      e.stopPropagation();
-      showTapModal(wrapper, {
-        id: item.id,
-        chatId: m.chatId,
-        uid: m.uid,
-        content: m.content
+      if (m.replyTo) {
+        const replyPreview = document.createElement("div");
+        replyPreview.className = "reply-preview";
+        replyPreview.textContent = m.replyToContent || "Original message";
+        replyPreview.style.fontSize = "12px";
+        replyPreview.style.opacity = 0.7;
+        replyPreview.style.borderLeft = "2px solid #FFD700";
+        replyPreview.style.paddingLeft = "4px";
+        replyPreview.style.marginBottom = "2px";
+        wrapper.appendChild(replyPreview);
+      }
+
+      const contentEl = document.createElement("span");
+      contentEl.className = "content";
+      contentEl.textContent = " " + (m.content || "");
+      wrapper.appendChild(contentEl);
+
+      // ⚡ Tap modal trigger
+      wrapper.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showTapModal(wrapper, {
+          id: item.id,
+          chatId: m.chatId,
+          uid: m.uid,
+          content: m.content
+        });
       });
-    });
+    }
 
     refs.messagesEl.appendChild(wrapper);
   });
 
-  // --- Auto-scroll ---
+  // --- 🌀 Auto-scroll down
   if (!scrollPending) {
     scrollPending = true;
     requestAnimationFrame(() => {
@@ -528,12 +569,6 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
     });
   }
 }
-
-// ✅ Auto-clear reply state after sending a message
-function clearReplyAfterSend() {
-  if (currentReplyTarget) cancelReply();
-}
-
 
 /* ---------- 🔔 Messages Listener (Final Optimized Version) ---------- */
 function attachMessagesListener() {
