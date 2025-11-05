@@ -2198,17 +2198,18 @@ if (!window.verifyHandlersInitialized) {
 
     cancelBtn.onclick = () => modal.remove();
 
-    confirmBtn.onclick = async () => {
-      if (!currentUser?.uid) {
-        alert("⚠️ Please log in first");
-        modal.remove();
-        return;
-      }
-      if ((currentUser.stars || 0) < cost) {
-        alert("⚠️ Not enough stars ⭐");
-        modal.remove();
-        return;
-      }
+confirmBtn.onclick = async () => {
+  if (!currentUser?.uid) {
+    showGoldAlert("⚠️ Please log in first");
+    modal.remove();
+    return;
+  }
+
+  if ((currentUser.stars || 0) < cost) {
+    showGoldAlert("⚠️ Not enough stars ⭐");
+    modal.remove();
+    return;
+  }
 
       confirmBtn.disabled = true;
       confirmBtn.style.opacity = 0.6;
