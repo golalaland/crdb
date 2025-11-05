@@ -178,38 +178,20 @@ onAuthStateChanged(auth, async (user) => {
     });
   }
 
-// ----------------------------
-// ✅ 8. Mark All As Read + Smooth Fade Effect
-// ----------------------------
-const markAllBtn = document.getElementById("markAllRead");
-if (markAllBtn) {
-  markAllBtn.addEventListener("click", async () => {
-    console.log("🟡 Marking all notifications as read...");
-
-    try {
+  // ✅ 8. Mark All As Read
+  const markAllBtn = document.getElementById("markAllRead");
+  if (markAllBtn) {
+    markAllBtn.addEventListener("click", async () => {
+      console.log("🟡 Marking all notifications as read...");
       const snapshot = await getDocs(query(notifRef, where("userId", "==", userQueryId)));
-      if (snapshot.empty) return;
-
-      // Batch update Firestore
-      const batch = writeBatch(db);
-      snapshot.docs.forEach((docSnap) => {
-        batch.update(doc(db, "notifications", docSnap.id), { read: true });
-      });
-      await batch.commit();
-
-      // Update UI
-      const notificationsList = document.getElementById("notificationsList");
-      if (notificationsList) {
-        notificationsList.innerHTML = `<p style="opacity:0.7;">All notifications read ✅</p>`;
+      for (const docSnap of snapshot.docs) {
+        const ref = doc(db, "notifications", docSnap.id);
+        await updateDoc(ref, { read: true });
       }
-
-      console.log("✅ All notifications marked as read in Firestore and UI updated.");
-    } catch (err) {
-      console.error("🔴 Error marking notifications as read:", err);
-    }
-  });
-}
-
+      alert("✅ All notifications marked as read.");
+    });
+  }
+});
 
 /* ===============================
    🔔 Manual Notification Starter (for whitelist login)
