@@ -2821,27 +2821,27 @@ async function sendStarsToUser(targetUser, amt) {
       }, 21000);
     }, 80);
 
-    // --- 5️⃣ Sender popup ---
-    showGiftAlert(`✅ You sent ${amt} ⭐ to ${targetUser.chatId}!`, 4000);
+// --- 5️⃣ Sender popup (using Gold Alert for consistency) ---
+showGoldAlert(`✅ You sent ${amt} ⭐ to ${targetUser.chatId}!`, 4000);
 
-    // --- 6️⃣ Receiver quick sync marker ---
-    await updateDoc(toRef, {
-      lastGift: {
-        from: currentUser.chatId,
-        amt,
-        at: Date.now()
-      }
-    });
+// --- 6️⃣ Receiver quick sync marker ---
+await updateDoc(toRef, {
+  lastGift: {
+    from: currentUser.chatId,
+    amt,
+    at: Date.now(),
+  },
+});
 
-    // --- 6.5️⃣ Create notification for receiver ---
-    const notifRef = collection(db, "users", targetUser._docId, "notifications");
-    await addDoc(notifRef, {
-      message: `💫 ${currentUser.chatId} gifted you ${amt} ⭐!`,
-      read: false,
-      timestamp: serverTimestamp(),
-      type: "starGift",
-      fromUserId: currentUser.uid
-    });
+// --- 6.5️⃣ Create notification for receiver ---
+const notifRef = collection(db, "users", targetUser._docId, "notifications");
+await addDoc(notifRef, {
+  message: `💫 ${currentUser.chatId} gifted you ${amt} ⭐!`,
+  read: false,
+  timestamp: serverTimestamp(),
+  type: "starGift",
+  fromUserId: currentUser.uid,
+});
 
     // --- 7️⃣ Mark banner as shown ---
     await updateDoc(doc(db, "messages_room5", docRef.id), {
