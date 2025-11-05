@@ -344,8 +344,9 @@ setupUsersListener();
 /* ---------- 💬 Render Messages (with tap modal + reply support) ---------- */
 let scrollPending = false;
 let tapModalEl = null;
-let currentReplyTarget = null; // ✅ reply target tracker
+let currentReplyTarget = null;
 
+// Cancel current reply
 function cancelReply() {
   currentReplyTarget = null;
   refs.messageInputEl.placeholder = "Type a message...";
@@ -355,6 +356,7 @@ function cancelReply() {
   }
 }
 
+// Show reply cancel button
 function showReplyCancelButton() {
   if (!refs.cancelReplyBtn) {
     const btn = document.createElement("button");
@@ -367,7 +369,7 @@ function showReplyCancelButton() {
   }
 }
 
-// 🧾 Report handler (with merge + count)
+// Report message
 async function reportMessage(msgData) {
   try {
     const reportRef = doc(db, "reportedmsgs", msgData.id);
@@ -379,7 +381,6 @@ async function reportMessage(msgData) {
       const data = reportSnap.data();
       const already = (data.reportedBy || []).includes(reporterChatId);
       if (already) return alert("You’ve already reported this message.");
-
       await updateDoc(reportRef, {
         reportCount: increment(1),
         reportedBy: arrayUnion(reporterChatId),
@@ -399,7 +400,6 @@ async function reportMessage(msgData) {
         status: "pending"
       });
     }
-
     alert("✅ Report submitted!");
   } catch (err) {
     console.error("Report failed:", err);
@@ -407,7 +407,7 @@ async function reportMessage(msgData) {
   }
 }
 
-// 💬 Tap modal (reply + report)
+// Tap modal (reply + report)
 function showTapModal(targetMsgEl, messageData) {
   tapModalEl?.remove();
   tapModalEl = document.createElement("div");
@@ -465,15 +465,21 @@ function showTapModal(targetMsgEl, messageData) {
   }, 3000);
 }
 
-// 🧩 Render messages (with banners restored)
-function renderMessagesFromArray(messages, isBannerFeed = false) {
+// Random color helper for confetti
+function randomColor() {
+  const colors = ["#ff0","#f0f","#0ff","#0f0","#f00","#00f","#ffa500"];
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
+// Render messages
+function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
 
   messages.forEach(item => {
-    if (!item.id) return; // skip invalid messages
+    if (!item.id) return;
     if (document.getElementById(item.id)) return;
 
-    const m = item.data || item; // fallback in case item.data doesn't exist
+    const m = item.data || item;
     const wrapper = document.createElement("div");
     wrapper.className = "msg";
     wrapper.id = item.id;
@@ -481,23 +487,29 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
     // --- Banner / system message ---
     if (m.systemBanner || m.isBanner || m.type === "banner") {
       wrapper.classList.add("chat-banner");
-      wrapper.style.display = "block";
-      wrapper.style.width = "100%";
-      wrapper.style.textAlign = "center";
-      wrapper.style.padding = "4px 0";
-      wrapper.style.margin = "4px 0";
-      wrapper.style.borderRadius = "8px";
-      wrapper.style.background = m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)";
-      wrapper.style.boxShadow = "0 0 16px rgba(255,255,255,0.3)";
+      wrapper.style.cssText = `
+        display:block;
+        width:100%;
+        text-align:center;
+        padding:4px 0;
+        margin:4px 0;
+        border-radius:8px;
+        background:${m.buzzColor || "linear-gradient(90deg,#ffcc00,#ff33cc)"};
+        box-shadow:0 0 16px rgba(255,255,255,0.3);
+        position:relative;
+        overflow:hidden;
+      `;
 
       const innerPanel = document.createElement("div");
-      innerPanel.style.display = "inline-block";
-      innerPanel.style.padding = "6px 14px";
-      innerPanel.style.borderRadius = "6px";
-      innerPanel.style.background = "rgba(255,255,255,0.35)";
-      innerPanel.style.backdropFilter = "blur(6px)";
-      innerPanel.style.color = "#000";
-      innerPanel.style.fontWeight = "700";
+      innerPanel.style.cssText = `
+        display:inline-block;
+        padding:6px 14px;
+        border-radius:6px;
+        background:rgba(255,255,255,0.35);
+        backdrop-filter:blur(6px);
+        color:#000;
+        font-weight:700;
+      `;
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
@@ -505,19 +517,52 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
         const delBtn = document.createElement("button");
         delBtn.textContent = "🗑";
         delBtn.title = "Delete Banner";
-        delBtn.style.position = "absolute";
-        delBtn.style.right = "6px";
-        delBtn.style.top = "3px";
-        delBtn.style.background = "rgba(255,255,255,0.5)";
-        delBtn.style.border = "none";
-        delBtn.style.borderRadius = "4px";
-        delBtn.style.cursor = "pointer";
-        delBtn.style.fontSize = "14px";
+        delBtn.style.cssText = `
+          position:absolute;
+          right:6px;
+          top:3px;
+          background:rgba(255,255,255,0.5);
+          border:none;
+          border-radius:4px;
+          cursor:pointer;
+          font-size:14px;
+        `;
         delBtn.onclick = async () => {
           await deleteDoc(doc(db, "messages", item.id));
           wrapper.remove();
         };
         wrapper.appendChild(delBtn);
+      }
+
+      // 🎉 Confetti + Glow
+      if (!sessionStorage.getItem(`confetti_${item.id}`)) {
+        wrapper.style.animation = "pulseGlow 2s";
+        sessionStorage.setItem(`confetti_${item.id}`, "played");
+
+        const confettiContainer = document.createElement("div");
+        confettiContainer.style.cssText = "position:absolute;inset:0;pointer-events:none;";
+        wrapper.appendChild(confettiContainer);
+
+        for (let i=0;i<30;i++) {
+          const piece = document.createElement("div");
+          piece.style.cssText = `
+            position:absolute;
+            width:6px;
+            height:6px;
+            border-radius:50%;
+            background:${randomColor()};
+            left:${Math.random()*100}%;
+            top:${Math.random()*100}%;
+            opacity:0.8;
+            animation: floatConfetti ${3 + Math.random()*3}s ease-in-out;
+          `;
+          confettiContainer.appendChild(piece);
+        }
+
+        setTimeout(() => {
+          confettiContainer.remove();
+          wrapper.style.animation = "";
+        }, 6000);
       }
     }
 
@@ -530,16 +575,17 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       usernameEl.style.marginRight = "4px";
       wrapper.appendChild(usernameEl);
 
-
       if (m.replyTo) {
         const replyPreview = document.createElement("div");
         replyPreview.className = "reply-preview";
         replyPreview.textContent = m.replyToContent || "Original message";
-        replyPreview.style.fontSize = "12px";
-        replyPreview.style.opacity = 0.7;
-        replyPreview.style.borderLeft = "2px solid #FFD700";
-        replyPreview.style.paddingLeft = "4px";
-        replyPreview.style.marginBottom = "2px";
+        replyPreview.style.cssText = `
+          font-size:12px;
+          opacity:0.7;
+          border-left:2px solid #FFD700;
+          padding-left:4px;
+          margin-bottom:2px;
+        `;
         wrapper.appendChild(replyPreview);
       }
 
@@ -548,22 +594,18 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
       contentEl.textContent = " " + (m.content || "");
       wrapper.appendChild(contentEl);
 
-      wrapper.addEventListener("click", (e) => {
+      wrapper.addEventListener("click", e => {
         e.stopPropagation();
         showTapModal(wrapper, {
-          id: item.id,
-          chatId: m.chatId,
-          uid: m.uid,
-          content: m.content,
-          replyTo: m.replyTo,
-          replyToContent: m.replyToContent
+          id:item.id, chatId:m.chatId, uid:m.uid, content:m.content,
+          replyTo:m.replyTo, replyToContent:m.replyToContent
         });
       });
     }
 
     refs.messagesEl.appendChild(wrapper);
   });
-  
+
   // Auto-scroll
   if (!scrollPending) {
     scrollPending = true;
@@ -573,6 +615,53 @@ function renderMessagesFromArray(messages, isBannerFeed = false) {
     });
   }
 }
+
+// --- Scroll-to-bottom button ---
+function handleChatAutoScroll() {
+  if (!refs.messagesEl) return;
+
+  let scrollBtn = document.getElementById("scrollToBottomBtn");
+  if (!scrollBtn) {
+    scrollBtn = document.createElement("div");
+    scrollBtn.id = "scrollToBottomBtn";
+    scrollBtn.textContent = "↓";
+    scrollBtn.style.cssText = `
+      position:fixed;
+      bottom:90px;
+      right:20px;
+      padding:6px 12px;
+      background:rgba(255,20,147,0.9);
+      color:#fff;
+      border-radius:14px;
+      font-size:16px;
+      font-weight:700;
+      cursor:pointer;
+      opacity:0;
+      pointer-events:none;
+      transition:all 0.3s ease;
+      z-index:9999;
+    `;
+    document.body.appendChild(scrollBtn);
+
+    scrollBtn.addEventListener("click", () => {
+      refs.messagesEl.scrollTo({ top: refs.messagesEl.scrollHeight, behavior:"smooth" });
+      scrollBtn.style.opacity = 0;
+      scrollBtn.style.pointerEvents = "none";
+    });
+  }
+
+  const distanceFromBottom = refs.messagesEl.scrollHeight - refs.messagesEl.scrollTop - refs.messagesEl.clientHeight;
+  if (distanceFromBottom > 150) {
+    scrollBtn.style.opacity = 1;
+    scrollBtn.style.pointerEvents = "auto";
+  } else {
+    scrollBtn.style.opacity = 0;
+    scrollBtn.style.pointerEvents = "none";
+    refs.messagesEl.scrollTop = refs.messagesEl.scrollHeight;
+  }
+}
+
+refs.messagesEl.addEventListener("scroll", handleChatAutoScroll);
 
 /* ---------- 🔔 Messages Listener (Final Optimized Version) ---------- */
 function attachMessagesListener() {
