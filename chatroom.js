@@ -837,7 +837,6 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
   };
 });
 
-
 async function initSessionBar(currentUser) {
   if (!currentUser) return; // Only show for logged-in users
 
@@ -845,16 +844,16 @@ async function initSessionBar(currentUser) {
   const sessionModal = document.getElementById("sessionModal");
   const ballerList = document.getElementById("ballerList");
 
-  // Show the session bar
   sessionBar.style.display = "flex";
-  sessionModal.style.display = "none";
+  sessionBar.style.gap = "8px"; 
+  sessionBar.style.marginBottom = "6px";
 
-  // Fetch top users dynamically from Firestore
+  // Fetch top users dynamically
   const topUsersData = [];
   const topUsersSnap = await getDocs(collection(db, "topUsers"));
   topUsersSnap.forEach(docSnap => topUsersData.push(docSnap.data()));
 
-  // Render Top Ballers for a period
+  // Render Top Ballers
   function renderBallers(period = "week") {
     ballerList.innerHTML = "";
     const filtered = topUsersData.filter(u => u.period === period || period === "all");
@@ -862,9 +861,10 @@ async function initSessionBar(currentUser) {
     filtered.forEach(user => {
       const userEl = document.createElement("div");
       userEl.className = "ballerItem";
+      userEl.style.marginBottom = "6px";
       userEl.innerHTML = `
         <span>${user.username} (${user.social || "No handle"})</span>
-        <div class="ballerBtns">
+        <div style="margin-top:4px;">
           <button class="followBtn" data-username="${user.username}">Follow</button>
           <button class="watchBtn" data-username="${user.username}">Watch</button>
         </div>
@@ -872,41 +872,39 @@ async function initSessionBar(currentUser) {
       ballerList.appendChild(userEl);
     });
 
-    // Actions for follow/watch buttons
     ballerList.querySelectorAll(".followBtn").forEach(btn => {
-      btn.onclick = () => console.log(`Follow ${btn.dataset.username} clicked`);
+      btn.onclick = () => console.log(`Follow ${btn.dataset.username}`);
     });
+
     ballerList.querySelectorAll(".watchBtn").forEach(btn => {
-      btn.onclick = () => console.log(`Watch ${btn.dataset.username} clicked`);
+      btn.onclick = () => console.log(`Watch ${btn.dataset.username}`);
     });
   }
 
-  renderBallers("week"); // default render
+  renderBallers("week");
 
-  // Toggle modal when clicking sessionBar tabs
-  sessionBar.querySelectorAll(".sessionTab").forEach(tab => {
-    tab.addEventListener("click", () => {
-      if (sessionModal.style.display === "block") {
-        sessionModal.style.display = "none";
-      } else {
-        sessionModal.style.display = "block";
+  // Toggle modal when clicking session buttons
+  sessionBar.querySelectorAll(".sessionTab").forEach(tabBtn => {
+    tabBtn.addEventListener("click", () => {
+      const isVisible = sessionModal.style.display === "block";
+      sessionModal.style.display = isVisible ? "none" : "block";
 
-        // Position modal below sessionBar
-        const rect = sessionBar.getBoundingClientRect();
-        sessionModal.style.position = "absolute";
-        sessionModal.style.top = rect.bottom + window.scrollY + "px";
-        sessionModal.style.left = rect.left + "px";
-        sessionModal.style.width = rect.width + "px";
-        sessionModal.style.zIndex = 9999;
-        sessionModal.style.background = "#111";
-        sessionModal.style.border = "1px solid #333";
-        sessionModal.style.borderRadius = "8px";
-        sessionModal.style.padding = "12px";
-      }
+      // Position modal below sessionBar
+      const rect = sessionBar.getBoundingClientRect();
+      sessionModal.style.position = "absolute";
+      sessionModal.style.top = rect.bottom + window.scrollY + "px";
+      sessionModal.style.left = rect.left + "px";
+      sessionModal.style.width = rect.width + "px";
+      sessionModal.style.zIndex = 9999;
+      sessionModal.style.background = "#111";
+      sessionModal.style.border = "1px solid #333";
+      sessionModal.style.borderRadius = "8px";
+      sessionModal.style.padding = "12px";
+      sessionModal.style.boxShadow = "0 4px 10px rgba(0,0,0,0.5)";
     });
   });
 
-  // Close modal if clicking outside
+  // Close modal if click outside
   document.addEventListener("click", (e) => {
     if (!sessionModal.contains(e.target) && !sessionBar.contains(e.target)) {
       sessionModal.style.display = "none";
@@ -926,7 +924,7 @@ async function initSessionBar(currentUser) {
     });
   });
 
-  // Sub-tabs for periods inside Top Ballers
+  // Sub-tabs for Top Ballers
   const subTabs = sessionModal.querySelectorAll(".ballerTabs button");
   subTabs.forEach(btn => {
     btn.addEventListener("click", () => {
