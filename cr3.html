@@ -1599,6 +1599,23 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 .baller-card img { width: 32px; height: 32px; border-radius: 50%; margin-right: 10px; }
+/* Compact Star Hosts button to match session tabs */
+.star-hosts-btn {
+  background: linear-gradient(90deg, #ff007a, #ffa500); /* retain original color */
+  color: #fff;
+  border: none;
+  border-radius: 12px; /* smaller radius than featured-btn */
+  padding: 6px 12px;   /* smaller padding */
+  font-size: 14px;     /* smaller font */
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-block;
+  box-shadow: 0 0 6px rgba(255, 0, 122, 0.4); /* smaller shadow */
+  transition: transform 0.2s;
+}
+.star-hosts-btn:hover {
+  transform: scale(1.05);
+}
 </style>
 </head>
 <body>
@@ -1638,7 +1655,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
         <span>people are interacting in chatrooms</span>
     </div>
 
-    <button id="openHostsBtn" class="featured-btn" style="display:none;">🌟 Star Hosts 🌟</button>
+    <button id="openHostsBtnz" class="featured-btn" style="display:none;">🌟 Star Hosts 🌟</button>
 </div>
 
  <div id="guestMsg"></div>
@@ -1690,7 +1707,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   <button class="sessionTab" id="topBallersBtn">💎 Top Ballers</button>
 
   <!-- Middle button (Star Hosts) -->
-  <button id="openHostsBtn" class="highlightsBtn">🌟 Star Hosts 🌟</button>
+  <button id="openHostsBtn" class="star-hosts-btn">🌟 Star Hosts 🌟</button>
 
   <button class="sessionTab" id="highlightsBtn">🔥 Highlights</button>
 </div>
