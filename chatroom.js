@@ -342,6 +342,7 @@ function setupUsersListener() {
 setupUsersListener();
 
 /* ---------- 💬 Render Messages (with tap modal + reply support) ---------- */
+/* ---------- 💬 Render Messages + Banner Glow/Confetti + Reply + Scroll ---------- */
 let scrollPending = false;
 let tapModalEl = null;
 let currentReplyTarget = null;
@@ -356,7 +357,7 @@ function cancelReply() {
   }
 }
 
-// Show the little cancel reply button
+// Show little cancel reply button
 function showReplyCancelButton() {
   if (!refs.cancelReplyBtn) {
     const btn = document.createElement("button");
@@ -369,7 +370,7 @@ function showReplyCancelButton() {
   }
 }
 
-// Report a message
+// Report message
 async function reportMessage(msgData) {
   try {
     const reportRef = doc(db, "reportedmsgs", msgData.id);
@@ -379,9 +380,7 @@ async function reportMessage(msgData) {
 
     if (reportSnap.exists()) {
       const data = reportSnap.data();
-      if ((data.reportedBy || []).includes(reporterChatId)) {
-        return alert("You’ve already reported this message.");
-      }
+      if ((data.reportedBy || []).includes(reporterChatId)) return alert("You’ve already reported this message.");
       await updateDoc(reportRef, {
         reportCount: increment(1),
         reportedBy: arrayUnion(reporterChatId),
@@ -408,7 +407,7 @@ async function reportMessage(msgData) {
   }
 }
 
-// Tap modal for Reply / Report
+// Tap modal for reply/report
 function showTapModal(targetEl, msgData) {
   tapModalEl?.remove();
   tapModalEl = document.createElement("div");
@@ -454,52 +453,57 @@ function showTapModal(targetEl, msgData) {
   setTimeout(() => tapModalEl?.remove(), 3000);
 }
 
+// Banner glow + confetti
 function triggerBannerEffect(bannerEl, bannerId) {
-  // Check if this banner has already been seen
-  if (localStorage.getItem(`bannerSeen-${bannerId}`)) return;
+  if (!bannerId) return;
+  if (localStorage.getItem(`bannerSeen-${bannerId}`)) return; // already seen
 
-  // Mark as seen
   localStorage.setItem(`bannerSeen-${bannerId}`, "true");
 
   // Glow animation
-  bannerEl.style.animation = "bannerGlow 1s ease-in-out infinite alternate";
+  bannerEl.classList.add("banner-glow");
 
   // Confetti
-  const confettiCount = 15;
+  const confettiCount = 25;
   for (let i = 0; i < confettiCount; i++) {
     const confetti = document.createElement("div");
     confetti.className = "confetti";
     confetti.style.position = "absolute";
-    confetti.style.top = "0px";
+    confetti.style.top = "0";
     confetti.style.left = `${Math.random() * 100}%`;
-    confetti.style.width = "6px";
-    confetti.style.height = "6px";
-    confetti.style.background = `hsl(${Math.random() * 360}, 100%, 60%)`;
+    confetti.style.width = "8px";
+    confetti.style.height = "8px";
+    confetti.style.background = `hsl(${Math.random() * 360}, 90%, 60%)`;
     confetti.style.borderRadius = "50%";
+    confetti.style.pointerEvents = "none";
+
     bannerEl.appendChild(confetti);
 
-    // Animate confetti falling
+    const duration = 1200 + Math.random() * 800;
+    const translateX = (Math.random() - 0.5) * 60;
+    const translateY = 50 + Math.random() * 50;
+    const rotate = Math.random() * 360;
+
     confetti.animate([
-      { transform: `translateY(0px) rotate(0deg)` },
-      { transform: `translateY(40px) rotate(${Math.random() * 360}deg)` }
+      { transform: `translate(0px,0px) rotate(0deg)`, opacity: 1 },
+      { transform: `translate(${translateX}px, ${translateY}px) rotate(${rotate}deg)`, opacity: 0 }
     ], {
-      duration: 1000 + Math.random() * 500,
+      duration: duration,
       easing: "ease-out",
       fill: "forwards"
     });
 
-    setTimeout(() => confetti.remove(), 1500);
+    setTimeout(() => confetti.remove(), duration);
   }
 
-  // Stop glow after 9 seconds
-  setTimeout(() => {
-    bannerEl.style.animation = "";
-  }, 9000);
+  // Stop glow after 9s
+  setTimeout(() => bannerEl.classList.remove("banner-glow"), 9000);
 }
 
 // Render messages
 function renderMessagesFromArray(messages) {
   if (!refs.messagesEl) return;
+
   messages.forEach(item => {
     if (!item.id) return;
     if (document.getElementById(item.id)) return;
@@ -530,7 +534,7 @@ function renderMessagesFromArray(messages) {
       innerPanel.textContent = m.content || "";
       wrapper.appendChild(innerPanel);
 
-     triggerBannerEffect(wrapper, item.id);
+      triggerBannerEffect(wrapper, item.id);
 
       if (window.currentUser?.isAdmin) {
         const delBtn = document.createElement("button");
@@ -546,6 +550,7 @@ function renderMessagesFromArray(messages) {
         };
         wrapper.appendChild(delBtn);
       }
+
     } else {
       // Regular message
       const usernameEl = document.createElement("span");
@@ -566,7 +571,7 @@ function renderMessagesFromArray(messages) {
           if (originalMsg) {
             originalMsg.scrollIntoView({ behavior: "smooth", block: "center" });
             originalMsg.style.outline = "2px solid #FFD700";
-            setTimeout(() => originalMsg.style.outline = "", 1000);
+            setTimeout(() => originalMsg.style.outline = "", 1200);
           }
         };
         wrapper.appendChild(replyPreview);
@@ -603,7 +608,7 @@ function renderMessagesFromArray(messages) {
   }
 }
 
-// Auto-scroll + scroll-to-bottom button
+// Scroll-to-bottom button
 function handleChatAutoScroll() {
   if (!refs.messagesEl) return;
 
