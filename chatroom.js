@@ -439,17 +439,21 @@ function showTapModal(targetMsgEl, messageData) {
   document.body.appendChild(tapModalEl);
 
   const rect = targetMsgEl.getBoundingClientRect();
+  const modalWidth = tapModalEl.offsetWidth || 120; // fallback width
+  const modalHeight = tapModalEl.offsetHeight || 60; // fallback height
 
-  // Default position (to the right of message)
-  let leftPos = rect.right + 12;
-  const topPos = rect.top + window.scrollY + rect.height / 2 - tapModalEl.offsetHeight / 2;
+  // 🔹 Position it near the message, slightly right but not off-screen
+  let leftPos = rect.right + 8; // small gap
+  const topPos = rect.top + window.scrollY + rect.height / 2 - modalHeight / 2;
 
-  // 💡 If it would overflow right edge, flip to left side
-  if (leftPos + 160 > window.innerWidth) {
-    leftPos = rect.left - tapModalEl.offsetWidth - 12;
+  // 🔹 If overflowing right, put it on the left
+  if (leftPos + modalWidth > window.innerWidth - 8) {
+    leftPos = rect.left - modalWidth - 8;
   }
 
-  // 🧭 Final styling
+  // 🔹 If still off left, clamp it
+  leftPos = Math.max(8, leftPos);
+
   tapModalEl.style.position = "absolute";
   tapModalEl.style.top = `${topPos}px`;
   tapModalEl.style.left = `${leftPos}px`;
@@ -466,10 +470,8 @@ function showTapModal(targetMsgEl, messageData) {
   tapModalEl.style.transition = "opacity 0.15s ease";
   tapModalEl.style.zIndex = 9999;
 
-  // ✨ Fade-in animation
-  requestAnimationFrame(() => {
-    tapModalEl.style.opacity = "1";
-  });
+  // ✨ Fade-in
+  requestAnimationFrame(() => (tapModalEl.style.opacity = "1"));
 
   // 🧨 Close if click elsewhere
   const closeModal = (e) => {
