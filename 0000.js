@@ -52,6 +52,13 @@ const db = getFirestore(app);
 const rtdb = getDatabase(app);
 const auth = getAuth(app);
 
+// Make Firebase objects available globally (for debugging or reuse)
+window.app = app;
+window.db = db;
+window.auth = auth;
+window.rtdb = rtdb;
+
+
 /* ---------- Globals ---------- */
 let currentUser = null;
 
@@ -90,96 +97,93 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  // 1. Define the sanitization helper
-  // This must match exactly how the 'userId' field is stored in Firestore.
+  // ✅ 1. Define the sanitization helper
   const sanitizeEmail = (email) => email.replace(/\./g, ",");
-  
-  // 2. Generate the ID used for querying
-  const userQueryId = sanitizeEmail(currentUser.email); 
 
+  // ✅ 2. Generate and store the ID used for querying
+  const userQueryId = sanitizeEmail(currentUser.email);
   console.log("✅ Logged in as Sanitized ID:", userQueryId);
   localStorage.setItem("userId", userQueryId);
 
-  // Reference the top-level 'notifications' collection
+  // ✅ 3. Reference the top-level 'notifications' collection
   const notifRef = collection(db, "notifications");
-  
-  // 3. Define the query using the sanitized email ID
+
+  // ✅ 4. Define the query using the sanitized email ID
   const notifQuery = query(
     notifRef,
-    where("userId", "==", userQueryId), // Filters notifications belonging to this user
+    where("userId", "==", userQueryId),
     orderBy("timestamp", "desc")
   );
 
   let unsubscribe = null;
 
+  // ✅ 5. Initialize Notifications Listener
   async function initNotificationsListener() {
     const notificationsList = document.getElementById("notificationsList");
     if (!notificationsList) {
-      // Use setTimeout for resilience if the DOM element loads slowly
       console.warn("⚠️ #notificationsList not found yet — retrying...");
       setTimeout(initNotificationsListener, 500);
       return;
     }
 
-    // Unsubscribe any previous listener to prevent duplicates
-    if (unsubscribe) unsubscribe();
+    if (unsubscribe) unsubscribe(); // Prevent duplicate listeners
 
     console.log("🔔 Setting up live notification listener for ID:", userQueryId);
-    unsubscribe = onSnapshot(notifQuery, (snapshot) => {
-      console.log(`✅ Received ${snapshot.docs.length} notifications.`);
-      if (snapshot.empty) {
-        notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-        return;
-      }
+    unsubscribe = onSnapshot(
+      notifQuery,
+      (snapshot) => {
+        console.log(`✅ Received ${snapshot.docs.length} notifications for ${userQueryId}`);
+        if (snapshot.empty) {
+          notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+          return;
+        }
 
-      const items = snapshot.docs.map((docSnap) => {
-        const n = docSnap.data();
-        const time = n.timestamp?.seconds
-          ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : "--:--";
+        const items = snapshot.docs.map((docSnap) => {
+          const n = docSnap.data();
+          const time = n.timestamp?.seconds
+            ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "--:--";
 
-        return `
-          <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
-            <span>${n.message || "(no message)"}</span>
-            <span class="notification-time">${time}</span>
-          </div>
-        `;
-      });
+          return `
+            <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
+              <span>${n.message || "(no message)"}</span>
+              <span class="notification-time">${time}</span>
+            </div>
+          `;
+        });
 
-      notificationsList.innerHTML = items.join("");
-    }, (error) => {
-        // Essential error handler for catching permission/index issues
+        notificationsList.innerHTML = items.join("");
+      },
+      (error) => {
         console.error("🔴 Firestore Listener Error:", error);
-    });
+      }
+    );
   }
 
-  // Initialize listener based on DOM state
+  // ✅ 6. Initialize based on DOM state
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initNotificationsListener);
   } else {
     initNotificationsListener();
   }
 
-  // Open-tab listener
+  // ✅ 7. Re-run listener when user opens Notifications tab
   const notifTabBtn = document.querySelector('.tab-btn[data-tab="notificationsTab"]');
   if (notifTabBtn) {
     notifTabBtn.addEventListener("click", () => {
-      // Small delay to ensure the tab content is visible before re-running listener
       setTimeout(initNotificationsListener, 150);
     });
   }
 
-  // Mark All As Read Logic
+  // ✅ 8. Mark All As Read
   const markAllBtn = document.getElementById("markAllRead");
   if (markAllBtn) {
     markAllBtn.addEventListener("click", async () => {
       console.log("🟡 Marking all notifications as read...");
-      // Use the same consistent query ID for fetching documents to update
       const snapshot = await getDocs(query(notifRef, where("userId", "==", userQueryId)));
-      
       for (const docSnap of snapshot.docs) {
         const ref = doc(db, "notifications", docSnap.id);
         await updateDoc(ref, { read: true });
@@ -189,6 +193,59 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
+/* ===============================
+   🔔 Manual Notification Starter (for whitelist login)
+================================= */
+async function startNotificationsFor(userEmail) {
+  const sanitizeEmail = (email) => email.replace(/\./g, ",");
+  const userQueryId = sanitizeEmail(userEmail);
+  localStorage.setItem("userId", userQueryId);
+
+  const notifRef = collection(db, "notifications");
+  const notifQuery = query(
+    notifRef,
+    where("userId", "==", userQueryId),
+    orderBy("timestamp", "desc")
+  );
+
+  const notificationsList = document.getElementById("notificationsList");
+  if (!notificationsList) {
+    console.warn("⚠️ #notificationsList not found yet — retrying...");
+    setTimeout(() => startNotificationsFor(userEmail), 500);
+    return;
+  }
+
+  console.log("🔔 Listening for notifications for:", userQueryId);
+
+  onSnapshot(
+    notifQuery,
+    (snapshot) => {
+      if (snapshot.empty) {
+        notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+        return;
+      }
+
+      const html = snapshot.docs.map((docSnap) => {
+        const n = docSnap.data();
+        const time = n.timestamp?.seconds
+          ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "--:--";
+        return `
+          <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
+            <span>${n.message}</span>
+            <span class="notification-time">${time}</span>
+          </div>
+        `;
+      }).join("");
+
+      notificationsList.innerHTML = html;
+    },
+    (err) => console.error("🔴 Notification listener error:", err)
+  );
+}
 
 
 
@@ -414,7 +471,7 @@ function showTapModal(targetEl, msgData) {
   tapModalEl.className = "tap-modal";
 
   const replyBtn = document.createElement("button");
-  replyBtn.textContent = "↩ Reply";
+  replyBtn.textContent = "⏎ Reply";
   replyBtn.onclick = () => {
     currentReplyTarget = { id: msgData.id, chatId: msgData.chatId, content: msgData.content };
     refs.messageInputEl.placeholder = `Replying to ${msgData.chatId}: ${msgData.content.substring(0, 30)}...`;
@@ -883,6 +940,11 @@ async function loginWhitelist(email, phone) {
       isHost: !!data.isHost
     };
 
+    // ✅ Store user ID for notifications system
+    const userId = currentUser.chatId || currentUser.email || currentUser.phone;
+    localStorage.setItem("userId", userId);
+    console.log("✅ Stored userId for notifications:", userId);
+
     // 🧠 Setup post-login systems
     updateRedeemLink();
     updateTipLink();
@@ -890,6 +952,7 @@ async function loginWhitelist(email, phone) {
     attachMessagesListener();
     startStarEarning(currentUser.uid);
 
+    // Store VIP user in local storage (existing)
     localStorage.setItem("vipUser", JSON.stringify({ email, phone }));
 
     // Prompt guests for a permanent chatID
@@ -898,7 +961,10 @@ async function loginWhitelist(email, phone) {
     }
 
     // 🎨 Update UI
-    showChatUI(currentUser);
+  showChatUI(currentUser);
+console.log("🚀 Starting notifications for:", email);
+startNotificationsFor(email);
+
 
     return true;
 
@@ -910,6 +976,7 @@ async function loginWhitelist(email, phone) {
     if (loader) loader.style.display = "none";
   }
 }
+
 
 /* ----------------------------
    🔁 Auto Login Session
