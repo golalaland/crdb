@@ -2117,17 +2117,14 @@ if (!window.verifyHandlersInitialized) {
       transform: "translate(-50%, -50%)",
       background: "linear-gradient(90deg, #ffcc00, #ff9900)",
       color: "#111",
-      padding: "12px 24px",
+      padding: "12px 30px", // increased padding for one-liner
       borderRadius: "10px",
       fontWeight: "600",
+      fontSize: "14px",
       zIndex: "999999",
       boxShadow: "0 0 12px rgba(255, 215, 0, 0.5)",
-      animation: "slideFade 0.4s ease-out",
-      maxWidth: "90vw",
-      textAlign: "center",
       whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
+      animation: "slideFade 0.4s ease-out",
     });
     alertEl.innerHTML = message;
 
@@ -2143,29 +2140,27 @@ if (!window.verifyHandlersInitialized) {
     setTimeout(() => alertEl.remove(), duration);
   };
 
-  // ---------- PHONE FORMAT NORMALIZER ----------
+  // ---------- PHONE NORMALIZER (for backend matching) ----------
   function normalizePhone(number) {
-    number = number.replace(/\D/g, ""); // remove non-digits
-    return number;
+    return number.replace(/\D/g, "").slice(-10); // last 10 digits
   }
 
   // ---------- CLICK HANDLER ----------
   document.addEventListener("click", (e) => {
     if (e.target.id === "verifyNumberBtn") {
-      const numberInput = document.getElementById("verifyNumberInput");
-      const numberRaw = numberInput?.value.trim();
+      const input = document.getElementById("verifyNumberInput");
+      const numberRaw = input?.value.trim();
       const COST = 21;
 
       if (!currentUser?.uid) return showGoldAlert("⚠️ Please log in first.");
       if (!numberRaw) return showGoldAlert("⚠️ Please enter a phone number.");
 
-      const normalized = normalizePhone(numberRaw);
-      showConfirmModal(numberRaw, normalized, COST); // raw = show to user, normalized = backend
+      showConfirmModal(numberRaw, COST);
     }
   });
 
   // ---------- CONFIRM MODAL ----------
-  window.showConfirmModal = function (displayNumber, backendNumber, cost) {
+  window.showConfirmModal = function (number, cost = 21) {
     let modal = document.getElementById("verifyConfirmModal");
     if (modal) modal.remove();
 
@@ -2185,64 +2180,83 @@ if (!window.verifyHandlersInitialized) {
       backdropFilter: "blur(2px)",
     });
 
-  modal.innerHTML = `
-      <div style="background:#111;padding:16px 18px;border-radius:10px;text-align:center;color:#fff;max-width:90vw;box-shadow:0 0 12px rgba(0,0,0,0.5);">
+    modal.innerHTML = `
+      <div style="background:#111;padding:16px 18px;border-radius:10px;text-align:center;color:#fff;max-width:280px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
         <h3 style="margin-bottom:10px;font-weight:600;">Verification</h3>
-        <p>Scan phone number <b>${displayNumber}</b> for <b>${cost} stars ⭐</b>?</p>
-        <div style="display:flex;justify-content:center;gap:10px;margin-top:12px;flex-wrap:wrap;">
+        <p>Scan phone number <b>${number}</b> for <b>${cost} stars ⭐</b>?</p>
+        <div style="display:flex;justify-content:center;gap:10px;margin-top:12px;">
           <button id="cancelVerify" style="padding:6px 12px;border:none;border-radius:6px;background:#333;color:#fff;font-weight:600;cursor:pointer;">Cancel</button>
           <button id="confirmVerify" style="padding:6px 12px;border:none;border-radius:6px;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">Yes</button>
         </div>
       </div>
     `;
+
     document.body.appendChild(modal);
 
-    modal.querySelector("#cancelVerify").onclick = () => modal.remove();
-    modal.querySelector("#confirmVerify").onclick = async () => {
-      modal.remove();
-      await runNumberVerification(backendNumber, displayNumber, cost);
+    const cancelBtn = modal.querySelector("#cancelVerify");
+    const confirmBtn = modal.querySelector("#confirmVerify");
+
+    cancelBtn.onclick = () => modal.remove();
+
+    confirmBtn.onclick = async () => {
+      if (!currentUser?.uid) {
+        alert("⚠️ Please log in first");
+        modal.remove();
+        return;
+      }
+      if ((currentUser.stars || 0) < cost) {
+        alert("⚠️ Not enough stars ⭐");
+        modal.remove();
+        return;
+      }
+
+      confirmBtn.disabled = true;
+      confirmBtn.style.opacity = 0.6;
+      confirmBtn.style.cursor = "not-allowed";
+
+      try {
+        // Deduct stars
+        await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-cost) });
+        currentUser.stars -= cost;
+        if (refs?.starCountEl) refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+
+        // Run verification
+        await runNumberVerification(number);
+        modal.remove();
+      } catch (err) {
+        console.error(err);
+        showGoldAlert("❌ Verification failed, please retry!");
+        modal.remove();
+      }
     };
   };
 
-// ---------- RUN VERIFICATION (Universal Country Code Compatible) ----------
-async function runNumberVerification(number, cost) {
-  try {
-    // Deduct stars safely (update Firestore first)
-    await updateDoc(doc(db, "users", currentUser.uid), {
-      stars: increment(-cost),
-    });
+  // ---------- RUN VERIFICATION ----------
+  async function runNumberVerification(number) {
+    try {
+      const lastDigits = normalizePhone(number);
 
-    // Update local copy after Firestore update
-    currentUser.stars = (currentUser.stars || 0) - cost;
-    if (refs?.starCountEl)
-      refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
+      const usersRef = collection(db, "users");
+      const qSnap = await getDocs(usersRef);
 
-    // Normalize input
-    const cleanInput = number.replace(/\D/g, "");
-    const lastDigits = cleanInput.slice(-10);
+      let verifiedUser = null;
+      qSnap.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.phone) {
+          const storedDigits = normalizePhone(data.phone);
+          if (storedDigits === lastDigits) verifiedUser = data;
+        }
+      });
 
-    // Get all users
-    const usersRef = collection(db, "users");
-    const qSnap = await getDocs(usersRef);
-
-    let verifiedUser = null;
-    qSnap.forEach((docSnap) => {
-      const data = docSnap.data();
-      if (data.phone) { // <-- use 'phone' if that’s your field
-        const storedDigits = data.phone.replace(/\D/g, "").slice(-10);
-        if (storedDigits === lastDigits) verifiedUser = data;
-      }
-    });
-
-    showVerificationModal(verifiedUser);
-  } catch (err) {
-    console.error("Error verifying number:", err);
-    showGoldAlert("❌ Verification failed, please retry!");
+      showVerificationModal(verifiedUser, number);
+    } catch (err) {
+      console.error(err);
+      showGoldAlert("❌ Verification failed, please retry!");
+    }
   }
-}
 
   // ---------- VERIFICATION MODAL ----------
-  function showVerificationModal(user, displayNumber) {
+  function showVerificationModal(user, inputNumber) {
     let modal = document.getElementById("verifyModal");
     if (modal) modal.remove();
 
@@ -2263,7 +2277,7 @@ async function runNumberVerification(number, cost) {
     });
 
     modal.innerHTML = `
-      <div id="verifyModalContent" style="background:#111;padding:14px 16px;border-radius:10px;text-align:center;color:#fff;max-width:90vw;box-shadow:0 0 12px rgba(0,0,0,0.5);">
+      <div id="verifyModalContent" style="background:#111;padding:14px 16px;border-radius:10px;text-align:center;color:#fff;max-width:320px;box-shadow:0 0 12px rgba(0,0,0,0.5);">
         <p id="stageMsg" style="margin-top:12px;font-weight:500;"></p>
       </div>
     `;
@@ -2272,6 +2286,7 @@ async function runNumberVerification(number, cost) {
     const modalContent = modal.querySelector("#verifyModalContent");
     const stageMsgEl = modalContent.querySelector("#stageMsg");
 
+    // fixed + random stages
     const fixedStages = ["Gathering information…", "Checking phone number validity…"];
     const playfulMessages = [
       "Always meet in public spaces for the first time..",
@@ -2296,18 +2311,16 @@ async function runNumberVerification(number, cost) {
       "Set boundaries clearly..",
       "Have fun, but stay safe!"
     ];
-
     const randomPlayful = [];
     while (randomPlayful.length < 5) {
       const choice = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
       if (!randomPlayful.includes(choice)) randomPlayful.push(choice);
     }
-
     const stages = [...fixedStages, ...randomPlayful, "Finalizing check…"];
 
     let totalTime = 0;
     stages.forEach((stage, index) => {
-      const duration = 1400 + Math.random() * 600;
+      let duration = 1400 + Math.random() * 600;
       totalTime += duration;
 
       setTimeout(() => {
@@ -2317,10 +2330,10 @@ async function runNumberVerification(number, cost) {
           setTimeout(() => {
             modalContent.innerHTML = user
               ? `<h3>Number Verified! ✅</h3>
-                 <p>This number <b>${displayNumber}</b> belongs to <b>${user.fullName}</b></p>
+                 <p>This number belongs to <b>${user.fullName}</b></p>
                  <button id="closeVerifyModal" style="margin-top:12px;padding:6px 14px;border:none;border-radius:8px;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">Close</button>`
               : `<h3>Number Not Verified! ❌</h3>
-                 <p>The number <b>${displayNumber}</b> does not exist on verified records — be careful!</p>
+                 <p>The number <b>${inputNumber}</b> does not exist on verified records — be careful!</p>
                  <button id="closeVerifyModal" style="margin-top:12px;padding:6px 14px;border:none;border-radius:8px;background:linear-gradient(90deg,#ff0099,#ff6600);color:#fff;font-weight:600;cursor:pointer;">Close</button>`;
 
             modal.querySelector("#closeVerifyModal").onclick = () => modal.remove();
@@ -2332,7 +2345,6 @@ async function runNumberVerification(number, cost) {
     });
   }
 }
-
   // --- Initial random values for first load ---
 (function() {
   const onlineCountEl = document.getElementById('onlineCount');
