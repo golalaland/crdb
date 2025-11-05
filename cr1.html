@@ -1561,27 +1561,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   background: rgba(255,255,255,0.2);
   border-radius: 4px;
 }
-#newMessagesIndicator:hover {
-  background: rgba(255,20,147,1);
-  transform: translateY(-2px);
-}
-/* Middle chat scroller */
-#scrollToBottomBtn {
-  position: fixed;
-  right: 20px;
-  bottom: 90px;
-  padding: 6px 12px;
-  background: rgba(255,20,147,0.9);
-  color: #fff;
-  border-radius: 14px;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transition: all 0.3s ease;
-  z-index: 9999;
-}
 </style>
 </head>
 <body>
@@ -1671,22 +1650,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 <!-- Chat messages container -->
 <div id="messages"></div>
 
-<!-- Downward arrow indicator -->
-<div id="scrollToBottomBtn" style="
-  display:none;
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-  background: #ff1493;
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 50%;
-  cursor: pointer;
-  z-index: 1000;
-  font-size: 16px;
-">
-  ⬇
-</div>
 
 <div class="send-area" id="sendArea" style="display:none;">
   <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" />
