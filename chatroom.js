@@ -1144,46 +1144,61 @@ autoLogin();
 
 
 /* ----------------------------
-   💬 Send Message Handler (with debug)
+   💬 Send Message Handler (Instant + Smooth)
 ----------------------------- */
 refs.sendBtn?.addEventListener("click", async () => {
   try {
     if (!currentUser) return showStarPopup("Sign in to chat.");
+
     const txt = refs.messageInputEl?.value.trim();
     if (!txt) return showStarPopup("Type a message first.");
+
     if ((currentUser.stars || 0) < SEND_COST)
       return showStarPopup("Not enough stars to send message.");
 
     // Deduct stars
     currentUser.stars -= SEND_COST;
     refs.starCountEl.textContent = formatNumberWithCommas(currentUser.stars);
-    await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-SEND_COST) });
+    await updateDoc(doc(db, "users", currentUser.uid), {
+      stars: increment(-SEND_COST)
+    });
 
-    // Create new message safely
-    const newMsg = {
+    // Temporary local ID and instant timestamp
+    const localId = "local_" + Date.now();
+    const localMsg = {
       content: txt,
       uid: currentUser.uid || "unknown",
       chatId: currentUser.chatId || "anon",
-      timestamp: serverTimestamp(),
+      timestamp: new Date(), // 👈 instant local time
       highlight: false,
       buzzColor: null,
       replyTo: currentReplyTarget?.id || null,
-      replyToContent: currentReplyTarget?.content || null
+      replyToContent: currentReplyTarget?.content || null,
+      pending: true
     };
 
-    console.log("💬 Sending message:", newMsg, "to", CHAT_COLLECTION);
+    // 👇 Instantly render (local echo)
+    renderMessagesFromArray([{ id: localId, data: localMsg }], true);
+    scrollToBottom(refs.messagesEl);
 
-    const msgRef = await addDoc(collection(db, CHAT_COLLECTION), newMsg);
-    console.log("✅ Message sent:", msgRef.id);
-
-    // Render immediately
+    // Clear input + reset reply
     refs.messageInputEl.value = "";
-    renderMessagesFromArray([{ id: msgRef.id, data: newMsg }], true);
-
-    // Reset reply target
     currentReplyTarget = null;
     refs.messageInputEl.placeholder = "Type a message...";
-    scrollToBottom(refs.messagesEl);
+
+    // 🔥 Send actual message to Firestore
+    const msgRef = await addDoc(collection(db, CHAT_COLLECTION), {
+      ...localMsg,
+      timestamp: serverTimestamp(),
+      pending: false
+    });
+
+    console.log("✅ Message sent:", msgRef.id);
+
+    // Remove temporary local version once Firestore delivers the real one
+    const tempEl = document.getElementById(localId);
+    if (tempEl) tempEl.remove();
+
   } catch (err) {
     console.error("❌ Message send error:", err);
     showStarPopup("Message failed: " + (err.message || err));
