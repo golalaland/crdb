@@ -196,70 +196,80 @@ onAuthStateChanged(auth, async (user) => {
     });
   }
 
-// ✅ Attach Mark All As Read listener safely
-document.addEventListener("DOMContentLoaded", () => {
-  const markAllBtn = document.getElementById("markAllRead");
+// ✅ Dynamic listener for "Mark All as Read"
+document.body.addEventListener("click", async (e) => {
+  if (!e.target.closest("#markAllRead")) return; // only run when button clicked
+  console.log("🟡 Mark All button clicked!");
 
-  if (!markAllBtn) {
-    console.warn("⚠️ Mark All button not found!");
-    return;
-  }
+  try {
+    const unreadQuery = query(
+      notifRef,
+      where("userId", "==", userQueryId),
+      where("read", "==", false)
+    );
+    const snapshot = await getDocs(unreadQuery);
 
-  markAllBtn.addEventListener("click", async () => {
-    console.log("🟡 Mark All button clicked!");
-
-    try {
-      // Only fetch unread notifications
-      const unreadQuery = query(
-        notifRef,
-        where("userId", "==", userQueryId),
-        where("read", "==", false)
-      );
-      const snapshot = await getDocs(unreadQuery);
-
-      if (snapshot.empty) {
-        console.log("ℹ️ No unread notifications found.");
-        showToast("ℹ️ No unread notifications.", "info");
-        return;
-      }
-
-      console.log(`🔹 Found ${snapshot.docs.length} unread notifications.`);
-
-      // Use batches for efficiency
-      const batchLimit = 500;
-      let batchCount = 0;
-
-      for (let i = 0; i < snapshot.docs.length; i += batchLimit) {
-        const batch = writeBatch(db);
-        const batchDocs = snapshot.docs.slice(i, i + batchLimit);
-
-        batchDocs.forEach(docSnap => {
-          const ref = doc(db, "notifications", docSnap.id);
-          batch.update(ref, { read: true });
-        });
-
-        await batch.commit();
-        batchCount++;
-        console.log(`✅ Batch ${batchCount} committed (${batchDocs.length} notifications).`);
-
-        // Yield to UI thread
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-
-      // Clear notifications UI
-      const notificationsList = document.getElementById("notificationsList");
-      if (notificationsList) {
-        notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-      }
-
-      console.log("✅ All notifications marked as read.");
-      showToast("✅ All notifications marked as read.", "success");
-    } catch (error) {
-      console.error("❌ Error marking notifications as read:", error);
-      showToast("❌ Failed to mark notifications as read.", "error");
+    if (snapshot.empty) {
+      console.log("ℹ️ No unread notifications.");
+      showToast("ℹ️ No unread notifications.", "info");
+      return;
     }
-  });
+
+    console.log(`🔹 Found ${snapshot.docs.length} unread notifications.`);
+
+    const batchLimit = 500;
+    for (let i = 0; i < snapshot.docs.length; i += batchLimit) {
+      const batch = writeBatch(db);
+      const batchDocs = snapshot.docs.slice(i, i + batchLimit);
+
+      batchDocs.forEach(docSnap => {
+        const ref = doc(db, "notifications", docSnap.id);
+        batch.update(ref, { read: true });
+      });
+
+      await batch.commit();
+      console.log(`✅ Batch ${i / batchLimit + 1} committed (${batchDocs.length})`);
+      await new Promise(res => setTimeout(res, 50)); // yield to UI thread
+    }
+
+    // Clear notifications list
+    const notificationsList = document.getElementById("notificationsList");
+    if (notificationsList) {
+      notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+    }
+
+    showToast("✅ All notifications marked as read.", "success");
+    console.log("✅ All notifications marked as read.");
+
+  } catch (error) {
+    console.error("❌ Failed to mark notifications:", error);
+    showToast("❌ Failed to mark notifications.", "error");
+  }
 });
+
+// Toast helper
+function showToast(message, type = "info") {
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  toast.style.position = "fixed";
+  toast.style.bottom = "20px";
+  toast.style.right = "20px";
+  toast.style.background = type === "success" ? "#4CAF50" : type === "error" ? "#F44336" : "#333";
+  toast.style.color = "#fff";
+  toast.style.padding = "10px 20px";
+  toast.style.borderRadius = "6px";
+  toast.style.opacity = "0";
+  toast.style.transition = "opacity 0.3s ease-in-out";
+
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => (toast.style.opacity = "1"));
+
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.addEventListener("transitionend", () => toast.remove());
+  }, 2500);
+}
 
   // ------------------------------
   // 7️⃣ Toast helper
