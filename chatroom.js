@@ -291,53 +291,6 @@ function showStarPopup(text) {
 }
 
 
-/* ===============================
-   🔔 TABS + 
-================================= */
-async function initSessionButtons(currentUser) {
-  if (!currentUser) return; // user not logged in
-
-  const sessionBar = document.getElementById("sessionBar");
-  const topBallersBtn = document.getElementById("topBallersBtn");
-  const highlightsBtn = document.getElementById("highlightsBtn");
-  const sessionModal = document.getElementById("sessionModal");
-
-  // Show panel and buttons
-  sessionBar.style.display = "flex";
-  topBallersBtn.style.display = "inline-block";
-  highlightsBtn.style.display = "inline-block";
-
-  // --- Top Ballers click ---
-  topBallersBtn.addEventListener("click", () => {
-    sessionModal.classList.toggle("active"); // slide modal
-    switchToTab("ballers");
-  });
-
-  // --- Highlights click ---
-  highlightsBtn.addEventListener("click", () => {
-    sessionModal.classList.toggle("active"); // slide modal
-    switchToTab("extras");
-  });
-
-  // Helper: switch tab inside modal
-  function switchToTab(tabId) {
-    const mainTabs = document.querySelectorAll("#sessionModal .sessionTabs button");
-    const contentTabs = document.querySelectorAll("#sessionModal .sessionContent");
-
-    mainTabs.forEach(btn => btn.classList.remove("active"));
-    contentTabs.forEach(c => c.classList.remove("active"));
-
-    if (tabId === "ballers") {
-      document.querySelector("#sessionModal [data-tab='ballers']").classList.add("active");
-      document.getElementById("tabBallers").classList.add("active");
-    } else {
-      document.querySelector("#sessionModal [data-tab='extras']").classList.add("active");
-      document.getElementById("tabExtras").classList.add("active");
-    }
-  }
-}
-
-
 /* ----------------------------
    ⭐ GIFT MODAL / CHAT BANNER ALERT
 ----------------------------- */
@@ -3258,6 +3211,48 @@ hostSettingsBtn.addEventListener("click", () => {
   setGreeting();
 });
 
+/* ===============================
+   🔔 TABS + 
+================================= */
+document.addEventListener("DOMContentLoaded", () => {
+  const topBallersBtn = document.getElementById("topBallersBtn");
+  const highlightsBtn = document.getElementById("highlightsBtn");
+  const sessionModal = document.getElementById("sessionModal");
+
+  // Function to show the modal and switch tab
+  function openModal(tab) {
+    sessionModal.style.display = "block"; // show modal
+    switchTab(tab);
+  }
+
+  // Function to switch the internal modal tabs
+  function switchTab(tab) {
+    const mainTabs = sessionModal.querySelectorAll(".sessionTabs button");
+    const contentTabs = sessionModal.querySelectorAll(".sessionContent");
+
+    mainTabs.forEach(btn => btn.classList.remove("active"));
+    contentTabs.forEach(c => c.classList.remove("active"));
+
+    if (tab === "ballers") {
+      sessionModal.querySelector("[data-tab='ballers']").classList.add("active");
+      document.getElementById("tabBallers").classList.add("active");
+    } else if (tab === "extras") {
+      sessionModal.querySelector("[data-tab='extras']").classList.add("active");
+      document.getElementById("tabExtras").classList.add("active");
+    }
+  }
+
+  // Close modal if clicking outside content
+  sessionModal.addEventListener("click", (e) => {
+    if (e.target === sessionModal) {
+      sessionModal.style.display = "none";
+    }
+  });
+
+  // Button clicks
+  topBallersBtn.addEventListener("click", () => openModal("ballers"));
+  highlightsBtn.addEventListener("click", () => openModal("extras"));
+});
 
 const scrollArrow = document.getElementById('scrollArrow');
   const chatContainer = document.querySelector('#chatContainer'); // your chat wrapper
