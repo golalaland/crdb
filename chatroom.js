@@ -1422,133 +1422,129 @@ refs.sendBtn?.addEventListener("click", async () => {
 });
 
 /* =====================================
-   🎥 Video Navigation & UI Fade Logic
+   🎥 Video Navigation & UI Fade Logic
 ======================================= */
 (() => {
-  const videoPlayer = document.getElementById("videoPlayer");
-  const prevBtn = document.getElementById("prev");
-  const nextBtn = document.getElementById("next");
-  const container = document.querySelector(".video-container");
-  const navButtons = [prevBtn, nextBtn].filter(Boolean);
+  const videoPlayer = document.getElementById("videoPlayer");
+  const prevBtn = document.getElementById("prev");
+  const nextBtn = document.getElementById("next");
+  const container = document.querySelector(".video-container");
+  const navButtons = [prevBtn, nextBtn].filter(Boolean);
 
-  if (!videoPlayer || navButtons.length === 0) return;
+  if (!videoPlayer || navButtons.length === 0) return;
 
-  // Wrap the video in a relative container if not already
-  const videoWrapper = document.createElement("div");
-  videoWrapper.style.position = "relative";
-  videoWrapper.style.display = "inline-block";
-  videoPlayer.parentNode.insertBefore(videoWrapper, videoPlayer);
-  videoWrapper.appendChild(videoPlayer);
+  // Wrap the video in a relative container if not already
+  const videoWrapper = document.createElement("div");
+  videoWrapper.style.position = "relative";
+  videoWrapper.style.display = "inline-block";
+  videoPlayer.parentNode.insertBefore(videoWrapper, videoPlayer);
+  videoWrapper.appendChild(videoPlayer);
 
-  // ---------- Create hint overlay inside video ----------
-  let hint = document.createElement("div");
-hint = document.createElement("div");
-hint.className = "video-hint";
-hint.style.position = "absolute";
-hint.style.bottom = "10%";            // slightly above bottom
-hint.style.left = "50%";
-hint.style.transform = "translateX(-50%)"; // horizontal center
-hint.style.padding = "2px 8px";       // small pill
-hint.style.background = "rgba(0,0,0,0.5)";
-hint.style.color = "#fff";
-hint.style.borderRadius = "12px";     // pill shape
-hint.style.fontSize = "14px";         // readable small font
-hint.style.opacity = "0";
-hint.style.pointerEvents = "none";
-hint.style.transition = "opacity 0.4s";
-// ensure parent is positioned
-videoPlayer.parentElement.style.position = "relative";
-videoPlayer.parentElement.appendChild(hint);
+  // ---------- Create hint overlay inside video ----------
+  const hint = document.createElement("div");
+  hint.className = "video-hint";
+  hint.style.position = "absolute";
+  hint.style.bottom = "10%"; // slightly above bottom
+  hint.style.left = "50%";
+  hint.style.transform = "translateX(-50%)"; // horizontal center
+  hint.style.padding = "2px 8px";
+  hint.style.background = "rgba(0,0,0,0.5)";
+  hint.style.color = "#fff";
+  hint.style.borderRadius = "12px";
+  hint.style.fontSize = "14px";
+  hint.style.opacity = "0";
+  hint.style.pointerEvents = "none";
+  hint.style.transition = "opacity 0.4s";
+  videoWrapper.appendChild(hint);
 
-  const showHint = (msg, timeout = 1500) => {
-    hint.textContent = msg;
-    hint.style.opacity = "1";
-    clearTimeout(hint._t);
-    hint._t = setTimeout(() => (hint.style.opacity = "0"), timeout);
-  };
+  const showHint = (msg, timeout = 1500) => {
+    hint.textContent = msg;
+    hint.style.opacity = "1";
+    clearTimeout(hint._t);
+    hint._t = setTimeout(() => (hint.style.opacity = "0"), timeout);
+  };
 
-// 🎞️ Video list (Shopify video)
-const videos = [
-  "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4",
-  "https://cdn.shopify.com/videos/c/o/v/45c20ba8df2c42d89807c79609fe85ac.mp4"
-  // Add more Shopify videos if needed
-];
+  // 🎞️ Video list (Shopify video)
+  const videos = [
+    "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4",
+    "https://cdn.shopify.com/videos/c/o/v/45c20ba8df2c42d89807c79609fe85ac.mp4"
+  ];
 
-let currentVideo = 0;
-let hideTimeout = null;
+  let currentVideo = 0;
+  let hideTimeout = null;
 
+  /* ----------------------------
+       ▶️ Load & Play Video
+  ----------------------------- */
+  const loadVideo = (index) => {
+    if (index < 0) index = videos.length - 1;
+    if (index >= videos.length) index = 0;
 
-  /* ----------------------------
-     ▶️ Load & Play Video
-  ----------------------------- */
-  const loadVideo = (index) => {
-    if (index < 0) index = videos.length - 1;
-    if (index >= videos.length) index = 0;
+    currentVideo = index;
+    videoPlayer.src = videos[currentVideo];
+    videoPlayer.muted = true;
 
-    currentVideo = index;
-    videoPlayer.src = videos[currentVideo];
-    videoPlayer.muted = true;
+    // Wait for metadata before playing
+    videoPlayer.addEventListener("loadedmetadata", function onMeta() {
+      videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
+      videoPlayer.removeEventListener("loadedmetadata", onMeta);
+    });
+  };
 
-    videoPlayer.addEventListener(
-      "canplay",
-      function onCanPlay() {
-        videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
-        videoPlayer.removeEventListener("canplay", onCanPlay);
-      }
-    );
-  };
+  /* ----------------------------
+       🔊 Toggle Mute on Tap
+  ----------------------------- */
+  videoPlayer.addEventListener("click", () => {
+    videoPlayer.muted = !videoPlayer.muted;
+    showHint(videoPlayer.muted ? "Tap to unmute" : "Sound on");
+  });
 
-  /* ----------------------------
-     🔊 Toggle Mute on Tap
-  ----------------------------- */
-  videoPlayer.addEventListener("click", () => {
-    videoPlayer.muted = !videoPlayer.muted;
-    showHint(videoPlayer.muted ? "Tap to unmute" : "Sound on");
-  });
+  /* ----------------------------
+       ⏪⏩ Navigation Buttons
+  ----------------------------- */
+  prevBtn?.addEventListener("click", () => loadVideo(currentVideo - 1));
+  nextBtn?.addEventListener("click", () => loadVideo(currentVideo + 1));
 
-  /* ----------------------------
-     ⏪⏩ Navigation Buttons
-  ----------------------------- */
-  prevBtn?.addEventListener("click", () => loadVideo(currentVideo - 1));
-  nextBtn?.addEventListener("click", () => loadVideo(currentVideo + 1));
+  /* ----------------------------
+       👀 Auto Hide/Show Buttons
+  ----------------------------- */
+  const showButtons = () => {
+    navButtons.forEach(btn => {
+      btn.style.opacity = "1";
+      btn.style.pointerEvents = "auto";
+    });
+    clearTimeout(hideTimeout);
+    hideTimeout = setTimeout(() => {
+      navButtons.forEach(btn => {
+        btn.style.opacity = "0";
+        btn.style.pointerEvents = "none";
+      });
+    }, 3000);
+  };
 
-  /* ----------------------------
-     👀 Auto Hide/Show Buttons
-  ----------------------------- */
-  const showButtons = () => {
-    navButtons.forEach(btn => {
-      btn.style.opacity = "1";
-      btn.style.pointerEvents = "auto";
-    });
-    clearTimeout(hideTimeout);
-    hideTimeout = setTimeout(() => {
-      navButtons.forEach(btn => {
-        btn.style.opacity = "0";
-        btn.style.pointerEvents = "none";
-      });
-    }, 3000);
-  };
+  navButtons.forEach(btn => {
+    btn.style.transition = "opacity 0.6s ease";
+    btn.style.opacity = "0";
+    btn.style.pointerEvents = "none";
+  });
 
-  navButtons.forEach(btn => {
-    btn.style.transition = "opacity 0.6s ease";
-    btn.style.opacity = "0";
-    btn.style.pointerEvents = "none";
-  });
+  ["mouseenter", "mousemove", "click"].forEach(evt => container?.addEventListener(evt, showButtons));
+  container?.addEventListener("mouseleave", () => {
+    navButtons.forEach(btn => {
+      btn.style.opacity = "0";
+      btn.style.pointerEvents = "none";
+    });
+  });
 
-  ["mouseenter", "mousemove", "click"].forEach(evt => container?.addEventListener(evt, showButtons));
-  container?.addEventListener("mouseleave", () => {
-    navButtons.forEach(btn => {
-      btn.style.opacity = "0";
-      btn.style.pointerEvents = "none";
-    });
-  });
+  // Start with first video
+  loadVideo(0);
 
-  // Start with first video
-  loadVideo(0);
-
-  // Show initial hint inside video
-  showHint("Tap to unmute", 1500);
+  // Show initial hint after video metadata loads
+  videoPlayer.addEventListener("loadedmetadata", () => {
+    showHint("Tap to unmute", 1500);
+  });
 })();
+
 
 // URL of your custom star SVG hosted on Shopify
 const customStarURL = "https://cdn.shopify.com/s/files/1/0962/6648/6067/files/starssvg.svg?v=1761770774";
