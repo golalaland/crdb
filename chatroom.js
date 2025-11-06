@@ -87,7 +87,10 @@ function pushNotificationTx(tx, userId, message) {
   });
 }
 
-/* ---------- Auth State Watcher + Lazy Notifications (Non-blocking + Clears Read) ---------- */
+/* ======================================================
+   🔔 Notifications + Mark All As Read System
+   Fully dynamic & production-ready
+====================================================== */
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
 
@@ -97,17 +100,13 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  // ------------------------------
-  // 1️⃣ Sanitize email for querying
-  // ------------------------------
+  // --- 1️⃣ Sanitize user email for Firestore ---
   const sanitizeEmail = (email) => email.replace(/\./g, ",");
   const userQueryId = sanitizeEmail(currentUser.email);
   console.log("✅ Logged in as Sanitized ID:", userQueryId);
   localStorage.setItem("userId", userQueryId);
 
-  // ------------------------------
-  // 2️⃣ Notifications references
-  // ------------------------------
+  // --- 2️⃣ References ---
   const notifRef = collection(db, "notifications");
   const notifQuery = query(
     notifRef,
@@ -117,9 +116,7 @@ onAuthStateChanged(auth, async (user) => {
 
   let unsubscribe = null;
 
-  // ------------------------------
-  // 3️⃣ Initialize Notifications Listener
-  // ------------------------------
+  // --- 3️⃣ Initialize Notifications Listener ---
   async function initNotificationsListener() {
     const notificationsList = document.getElementById("notificationsList");
     if (!notificationsList) {
@@ -128,27 +125,19 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
 
-    if (unsubscribe) unsubscribe(); // Remove old listener
+    if (unsubscribe) unsubscribe(); // Prevent duplicate listeners
 
     console.log("🔔 Setting up live notification listener for ID:", userQueryId);
     unsubscribe = onSnapshot(
       notifQuery,
       (snapshot) => {
+        console.log(`✅ Received ${snapshot.docs.length} notifications for ${userQueryId}`);
         if (snapshot.empty) {
           notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
           return;
         }
 
-        // Only show unread notifications
-        const unreadDocs = snapshot.docs.filter(docSnap => !docSnap.data().read);
-
-        if (unreadDocs.length === 0) {
-          notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-          return;
-        }
-
-        const fragment = document.createDocumentFragment();
-        unreadDocs.forEach((docSnap) => {
+        const items = snapshot.docs.map((docSnap) => {
           const n = docSnap.data();
           const time = n.timestamp?.seconds
             ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
@@ -157,97 +146,86 @@ onAuthStateChanged(auth, async (user) => {
               })
             : "--:--";
 
-          const item = document.createElement("div");
-          item.className = `notification-item unread`;
-          item.dataset.id = docSnap.id;
-          item.innerHTML = `
-            <span>${n.message || "(no message)"}</span>
-            <span class="notification-time">${time}</span>
+          return `
+            <div class="notification-item ${n.read ? "" : "unread"}" data-id="${docSnap.id}">
+              <span>${n.message || "(no message)"}</span>
+              <span class="notification-time">${time}</span>
+            </div>
           `;
-          fragment.appendChild(item);
         });
 
-        notificationsList.innerHTML = "";
-        notificationsList.appendChild(fragment);
+        notificationsList.innerHTML = items.join("");
       },
-      (error) => {
-        console.error("🔴 Firestore Listener Error:", error);
-        showToast("❌ Notifications failed to load.", "error");
-      }
+      (error) => console.error("🔴 Firestore Listener Error:", error)
     );
   }
 
-  // ------------------------------
-  // 4️⃣ Initialize on DOM ready
-  // ------------------------------
+  // Initialize listener after DOM ready
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initNotificationsListener);
   } else {
     initNotificationsListener();
   }
 
-  // ------------------------------
-  // 5️⃣ Re-run listener on Notifications tab click
-  // ------------------------------
+  // --- 4️⃣ Re-run listener when notifications tab is opened ---
   const notifTabBtn = document.querySelector('.tab-btn[data-tab="notificationsTab"]');
   if (notifTabBtn) {
-    notifTabBtn.addEventListener("click", () => {
-      setTimeout(initNotificationsListener, 150);
-    });
+    notifTabBtn.addEventListener("click", () => setTimeout(initNotificationsListener, 150));
   }
 
-// ✅ Dynamic listener for "Mark All as Read"
-document.body.addEventListener("click", async (e) => {
-  if (!e.target.closest("#markAllRead")) return; // only run when button clicked
-  console.log("🟡 Mark All button clicked!");
+  // --- 5️⃣ Mark All As Read (dynamic, guaranteed) ---
+  document.body.addEventListener("click", async (e) => {
+    if (!e.target.closest("#markAllRead")) return; // Only respond to this button
+    console.log("🟡 Mark All button clicked!");
 
-  try {
-    const unreadQuery = query(
-      notifRef,
-      where("userId", "==", userQueryId),
-      where("read", "==", false)
-    );
-    const snapshot = await getDocs(unreadQuery);
+    try {
+      const unreadQuery = query(
+        notifRef,
+        where("userId", "==", userQueryId),
+        where("read", "==", false)
+      );
+      const snapshot = await getDocs(unreadQuery);
 
-    if (snapshot.empty) {
-      console.log("ℹ️ No unread notifications.");
-      showToast("ℹ️ No unread notifications.", "info");
-      return;
+      if (snapshot.empty) {
+        console.log("ℹ️ No unread notifications.");
+        showToast("ℹ️ No unread notifications.", "info");
+        return;
+      }
+
+      console.log(`🔹 Found ${snapshot.docs.length} unread notifications.`);
+
+      const batchLimit = 500;
+      for (let i = 0; i < snapshot.docs.length; i += batchLimit) {
+        const batch = writeBatch(db);
+        const batchDocs = snapshot.docs.slice(i, i + batchLimit);
+
+        batchDocs.forEach(docSnap => {
+          const ref = doc(db, "notifications", docSnap.id);
+          batch.update(ref, { read: true });
+        });
+
+        await batch.commit();
+        console.log(`✅ Batch ${i / batchLimit + 1} committed (${batchDocs.length})`);
+        await new Promise(res => setTimeout(res, 50)); // Yield UI thread
+      }
+
+      // Clear notifications UI
+      const notificationsList = document.getElementById("notificationsList");
+      if (notificationsList) {
+        notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+      }
+
+      showToast("✅ All notifications marked as read.", "success");
+      console.log("✅ All notifications marked as read.");
+
+    } catch (error) {
+      console.error("❌ Failed to mark notifications:", error);
+      showToast("❌ Failed to mark notifications.", "error");
     }
-
-    console.log(`🔹 Found ${snapshot.docs.length} unread notifications.`);
-
-    const batchLimit = 500;
-    for (let i = 0; i < snapshot.docs.length; i += batchLimit) {
-      const batch = writeBatch(db);
-      const batchDocs = snapshot.docs.slice(i, i + batchLimit);
-
-      batchDocs.forEach(docSnap => {
-        const ref = doc(db, "notifications", docSnap.id);
-        batch.update(ref, { read: true });
-      });
-
-      await batch.commit();
-      console.log(`✅ Batch ${i / batchLimit + 1} committed (${batchDocs.length})`);
-      await new Promise(res => setTimeout(res, 50)); // yield to UI thread
-    }
-
-    // Clear notifications list
-    const notificationsList = document.getElementById("notificationsList");
-    if (notificationsList) {
-      notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-    }
-
-    showToast("✅ All notifications marked as read.", "success");
-    console.log("✅ All notifications marked as read.");
-
-  } catch (error) {
-    console.error("❌ Failed to mark notifications:", error);
-    showToast("❌ Failed to mark notifications.", "error");
-  }
+  });
 });
 
-// Toast helper
+// --- 6️⃣ Toast helper ---
 function showToast(message, type = "info") {
   const toast = document.createElement("div");
   toast.className = `toast toast-${type}`;
@@ -270,33 +248,6 @@ function showToast(message, type = "info") {
     toast.addEventListener("transitionend", () => toast.remove());
   }, 2500);
 }
-
-  // ------------------------------
-  // 7️⃣ Toast helper
-  // ------------------------------
-  function showToast(message, type = "info") {
-    const toast = document.createElement("div");
-    toast.className = `toast toast-${type}`;
-    toast.textContent = message;
-    toast.style.position = "fixed";
-    toast.style.bottom = "20px";
-    toast.style.right = "20px";
-    toast.style.background = type === "success" ? "#4CAF50" : type === "error" ? "#F44336" : "#333";
-    toast.style.color = "#fff";
-    toast.style.padding = "10px 20px";
-    toast.style.borderRadius = "6px";
-    toast.style.opacity = "0";
-    toast.style.transition = "opacity 0.3s ease-in-out";
-
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => (toast.style.opacity = "1"));
-
-    setTimeout(() => {
-      toast.style.opacity = "0";
-      toast.addEventListener("transitionend", () => toast.remove());
-    }, 2500);
-  }
-});
 
 /* ===============================
    🔔 Manual Notification Starter (for whitelist login)
