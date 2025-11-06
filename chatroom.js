@@ -1467,14 +1467,16 @@ videoPlayer.parentElement.appendChild(hint);
     hint._t = setTimeout(() => (hint.style.opacity = "0"), timeout);
   };
 
-  // 🎞️ Video list (Shopify video)
-  const videos = [
-    "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4"
-    "https://cdn.shopify.com/videos/c/o/v/45c20ba8df2c42d89807c79609fe85ac.mp4"
-    // Add more Shopify videos if needed
-  ];
-  let currentVideo = 0;
-  let hideTimeout = null;
+// 🎞️ Video list (Shopify video)
+const videos = [
+  "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4",
+  "https://cdn.shopify.com/videos/c/o/v/45c20ba8df2c42d89807c79609fe85ac.mp4"
+  // Add more Shopify videos if needed
+];
+
+let currentVideo = 0;
+let hideTimeout = null;
+
 
   /* ----------------------------
      ▶️ Load & Play Video
