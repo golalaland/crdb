@@ -186,19 +186,25 @@ if (markAllBtn) {
     
     try {
       const snapshot = await getDocs(query(notifRef, where("userId", "==", userQueryId)));
-
+      
       if (snapshot.empty) {
         alert("ℹ️ No notifications to mark as read.");
         return;
       }
 
-      // Update all notifications in parallel
-      const updatePromises = snapshot.docs.map(docSnap => {
-        const ref = doc(db, "notifications", docSnap.id);
-        return updateDoc(ref, { read: true });
-      });
+      const docs = snapshot.docs;
+      const batchSize = 10; // small batch size to avoid jamming
+      for (let i = 0; i < docs.length; i += batchSize) {
+        const batchDocs = docs.slice(i, i + batchSize);
+        const batchPromises = batchDocs.map(docSnap => {
+          const ref = doc(db, "notifications", docSnap.id);
+          return updateDoc(ref, { read: true });
+        });
 
-      await Promise.all(updatePromises);
+        await Promise.all(batchPromises);
+        // Optional: small delay to keep UI smooth
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
 
       alert("✅ All notifications marked as read.");
       console.log("✅ Done marking all notifications as read.");
