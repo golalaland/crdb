@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heat Spinner</title>
+<style>
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: radial-gradient(circle at center, #1a1a1a, #0d0d0d);
+    color: #fff;
+    font-family: 'Arial', sans-serif;
+    overflow: hidden;
+  }
+
+  h1 {
+    margin-bottom: 20px;
+    color: #ff4c4c;
+    text-shadow: 0 0 10px #ff4c4c, 0 0 20px #ff4c4c;
+  }
+
+  .spinner-container {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    border: 10px solid #ff4c4c;
+    box-shadow: 0 0 30px #ff4c4c, 0 0 60px #ff4c4c inset;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .spinner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: absolute;
+    transform: rotate(0deg);
+    transition: transform 4s cubic-bezier(0.33, 1, 0.68, 1);
+  }
+
+  .spinner div {
+    position: absolute;
+    width: 50%;
+    height: 50%;
+    top: 50%;
+    left: 50%;
+    transform-origin: 0% 0%;
+    font-size: 16px;
+    font-weight: bold;
+    color: #fff;
+    text-align: left;
+    padding-left: 10px;
+    padding-top: 5px;
+  }
+
+  .pointer {
+    width: 0;
+    height: 0;
+    border-left: 20px solid transparent;
+    border-right: 20px solid transparent;
+    border-bottom: 40px solid #ff4c4c;
+    position: absolute;
+    top: -40px;
+    left: calc(50% - 20px);
+    filter: drop-shadow(0 0 10px #ff4c4c);
+  }
+
+  button {
+    padding: 12px 25px;
+    font-size: 18px;
+    background: #ff4c4c;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    color: #fff;
+    box-shadow: 0 0 10px #ff4c4c;
+    transition: transform 0.2s;
+  }
+
+  button:hover {
+    transform: scale(1.05);
+  }
+
+  .history {
+    margin-top: 20px;
+    width: 300px;
+    max-height: 150px;
+    overflow-y: auto;
+    background: rgba(255, 76, 76, 0.1);
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  .history p {
+    margin: 5px 0;
+    font-size: 16px;
+    text-shadow: 0 0 5px #ff4c4c;
+  }
+</style>
+</head>
+<body>
+
+<h1>🔥 Heat Spinner 🔥</h1>
+
+<div class="spinner-container">
+  <div class="spinner" id="spinner"></div>
+  <div class="pointer"></div>
+</div>
+
+<button id="spinBtn">Spin 🔥</button>
+
+<div class="history" id="history"></div>
+
+<script>
+  const spinner = document.getElementById('spinner');
+  const spinBtn = document.getElementById('spinBtn');
+  const historyDiv = document.getElementById('history');
+
+  const numbers = Array.from({length: 12}, (_, i) => i + 1); // 12 numbers
+  const outcomes = [];
+
+  // Create spinner segments
+  numbers.forEach((num, i) => {
+    const segment = document.createElement('div');
+    segment.innerText = num;
+    segment.style.transform = `rotate(${i * (360 / numbers.length)}deg)`;
+    spinner.appendChild(segment);
+  });
+
+  spinBtn.addEventListener('click', () => {
+    const randomNumberIndex = Math.floor(Math.random() * numbers.length);
+    const spins = Math.floor(Math.random() * 5) + 5; // full spins 5-9
+    const degree = 360 * spins + (360 / numbers.length) * randomNumberIndex;
+
+    spinner.style.transition = 'transform 4s cubic-bezier(0.33, 1, 0.68, 1)';
+    spinner.style.transform = `rotate(${degree}deg)`;
+
+    setTimeout(() => {
+      const result = numbers[randomNumberIndex];
+      outcomes.push(result);
+      updateHistory();
+      console.log('Spin result:', result);
+    }, 4000);
+  });
+
+  function updateHistory() {
+    historyDiv.innerHTML = '';
+    outcomes.slice().reverse().forEach((num, idx) => {
+      const p = document.createElement('p');
+      p.innerText = `🔥 Spin ${outcomes.length - idx}: ${num}`;
+      historyDiv.appendChild(p);
+    });
+  }
+</script>
+
+</body>
+</html>
