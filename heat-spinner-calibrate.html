@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Heat Spinner — Calibrate</title>
+<style>
+  :root{--bg1:#070707;--bg2:#111;}
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    gap:18px;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    background:radial-gradient(circle at 30% 10%, #0f0f0f 0%, #070707 40%, #050505 100%);
+    color:#fff;
+    font-family:Inter, system-ui, -apple-system, 'Poppins', sans-serif;
+    padding:20px;
+  }
+
+  h1{margin:0;font-size:20px;letter-spacing:0.6px;color:#ff8a3d}
+
+  .wrap{width:92vw;max-width:420px;display:flex;flex-direction:column;align-items:center}
+
+  .spinner-container{
+    position:relative;
+    width:320px;
+    max-width:86vw;
+    height:320px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin-top:8px;
+  }
+
+  /* wheel image (your SVG hosted on Shopify) */
+  .wheel{
+    width:100%;
+    height:100%;
+    display:block;
+    transform-origin:center center;
+    transition: transform 5s cubic-bezier(.17,.67,.83,.67);
+    will-change:transform;
+    -webkit-backface-visibility:hidden;
+    backface-visibility:hidden;
+  }
+
+  /* pointer top */
+  .pointer{
+    position:absolute;
+    top:-12px; /* nudges pointer slightly above wheel */
+    left:50%;
+    transform:translateX(-50%);
+    width:0;height:0;
+    border-left:14px solid transparent;
+    border-right:14px solid transparent;
+    border-bottom:22px solid #ff3b00;
+    filter:drop-shadow(0 6px 12px rgba(255,59,0,0.12));
+    z-index:20;
+  }
+
+  .controls{
+    display:flex;
+    gap:10px;
+    margin-top:14px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:center;
+  }
+
+  select, button{
+    font-size:15px;
+    padding:10px 12px;
+    border-radius:10px;
+    border:0;
+    outline:0;
+  }
+
+  select{min-width:140px;background:#111;color:#fff}
+  button{background:linear-gradient(90deg,#ff4b2b,#ff9a3f);color:#111;font-weight:700;cursor:pointer;box-shadow:0 8px 24px rgba(255,80,40,0.18)}
+
+  .result{
+    margin-top:14px;
+    font-weight:700;
+    font-size:1.05rem;
+    min-height:30px;
+    color:#ffd8b0;
+  }
+
+  .history{
+    width:100%;
+    max-width:350px;
+    margin-top:12px;
+    background:rgba(255,90,30,0.04);
+    padding:10px;
+    border-radius:10px;
+    min-height:40px;
+    font-size:13px;
+    color:#ffd8b0;
+  }
+  .history .item{padding:4px 6px;border-radius:6px;margin:6px 0;background:linear-gradient(90deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))}
+  .small{font-size:12px;color:#ccc;margin-top:8px}
+  @media (max-width:420px){
+    .pointer{top:-8px;border-left:11px;border-right:11px;border-bottom:18px}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🔥 Heat Spinner — Calibrate & Spin</h1>
+
+    <div class="spinner-container" aria-hidden="false">
+      <div class="pointer" title="Pointer"></div>
+      <!-- your hosted SVG -->
+      <img id="wheel" class="wheel" src="https://cdn.shopify.com/s/files/1/0962/6648/6067/files/heat-spinner.svg?v=1762454435" alt="Heat Spinner">
+    </div>
+
+    <div class="controls" role="region" aria-label="controls">
+      <label for="calSelect" class="small" style="display:none">Calibrate</label>
+      <select id="calSelect" title="Pick the number currently under the pointer"></select>
+      <button id="setTop">Set Top</button>
+      <button id="spinBtn">SPIN 🔥</button>
+    </div>
+
+    <div class="result" id="result">Ready</div>
+
+    <div class="history" id="history">
+      <div style="opacity:.6">History (latest first):</div>
+    </div>
+
+    <div class="small">Tip: open the wheel, see which number sits under the pointer (top), select it and click “Set Top”. Then use Spin.</div>
+  </div>
+
+<script>
+/* ------------------------
+  Heat Spinner — calibrated rotation
+  - Numbers array must reflect the clockwise order starting from the visual top (we will calibrate)
+  - User sets which number is currently under the pointer via dropdown → code computes calibration offset
+-------------------------*/
+
+const wheel = document.getElementById('wheel');
+const spinBtn = document.getElementById('spinBtn');
+const setTopBtn = document.getElementById('setTop');
+const calSelect = document.getElementById('calSelect');
+const resultEl = document.getElementById('result');
+const historyEl = document.getElementById('history');
+
+let currentRotation = 0;
+
+// YOUR wheel order clockwise (starting from 8 at top initially as you provided).
+// We'll allow calibration so this array is the clockwise sequence with 8 near the start.
+const numbers = [
+  8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7,
+  28, 12, 35, 3, 26, 0, 32, 15, 19, 4, 21, 25, 17, 34, 6, 27, 13, 36, 11, 30
+];
+
+// Populate calibration dropdown with these numbers
+(function populateSelect(){
+  numbers.forEach(n=>{
+    const opt = document.createElement('option');
+    opt.value = n;
+    opt.textContent = n;
+    calSelect.appendChild(opt);
+  });
+
+  // restore last calibration if available
+  const saved = localStorage.getItem('heatSpinnerCalibration');
+  if(saved){
+    // saved stores the index that should be at top
+    try{
+      const idx = parseInt(saved,10);
+      if(!isNaN(idx) && idx >=0 && idx < numbers.length){
+        // select the number that index refers to
+        calSelect.value = String(numbers[idx]);
+        calibrationIndex = idx;
+      }
+    }catch(e){}
+  }
+})();
+
+let calibrationIndex = 0; // index in `numbers` which is currently sitting under the pointer (top)
+let calibrated = false;
+
+// setTop will compute calibrationIndex based on which number user selected.
+// The idea: if the dropdown value is N, find its index in array → that index is topIndex
+setTopBtn.addEventListener('click', () => {
+  const val = calSelect.value;
+  const idx = numbers.indexOf(Number(val));
+  if(idx === -1){
+    alert('Selected number not found in wheel array.');
+    return;
+  }
+  calibrationIndex = idx;
+  localStorage.setItem('heatSpinnerCalibration', String(idx));
+  calibrated = true;
+  resultEl.textContent = `Calibrated: top = ${numbers[calibrationIndex]}`;
+  // Visual hint: small nudge so user sees it set (no actual rotation change)
+  wheel.style.transition = 'transform .6s ease';
+  wheel.style.transform = `rotate(${currentRotation}deg)`;
+  setTimeout(()=>{ wheel.style.transition = 'transform 5s cubic-bezier(.17,.67,.83,.67)'; },700);
+});
+
+// spin logic — uses calibrationIndex to compute correct target angle
+spinBtn.addEventListener('click', () => {
+  if(!calibrated){
+    // not strictly required — but recommend calibration for perfect alignment
+    resultEl.textContent = 'Please calibrate top once → select number under pointer & click Set Top';
+    return;
+  }
+  spinBtn.disabled = true;
+  resultEl.textContent = 'Spinning... 🔥';
+  // pick random sector index
+  const sectorIndex = Math.floor(Math.random() * numbers.length); // index in numbers array
+  const chosenNumber = numbers[sectorIndex];
+
+  // degrees per sector
+  const sectorDeg = 360 / numbers.length;
+
+  /* Calculation explanation:
+     - calibrationIndex is the index in `numbers` array currently under the pointer (visual top).
+     - When wheel rotation = 0, numbers[calibrationIndex] is at top.
+     - We want numbers[sectorIndex] to be at top after spin.
+     - The angular offset (clockwise) from calibrationIndex to sectorIndex is:
+         delta = (sectorIndex - calibrationIndex)
+       (positive means rotate wheel so that sectorIndex moves to top)
+     - Since rotating the wheel clockwise increases rotation degrees (positive), and CSS rotate() rotates clockwise for positive values,
+       finalRotation = currentRotation + fullSpins + delta * sectorDeg (but we flip sign because wheel rotates while pointer is fixed).
+       To ensure consistent direction we compute target so that chosen sector ends at top.
+  */
+
+  // compute angular difference from current top to desired sector (clockwise)
+  // we want to rotate wheel so that the desired sector aligns with the pointer.
+  // the wheel's sectors increase clockwise in our `numbers` array.
+  // CSS rotate +deg rotates the wheel clockwise, moving later (higher index) sectors toward top.
+  let deltaSectors = sectorIndex - calibrationIndex;
+  // normalize to range [0, length)
+  deltaSectors = ((deltaSectors % numbers.length) + numbers.length) % numbers.length;
+
+  // how many degrees to rotate (so selected sector arrives at top)
+  const rotateDegreesForTarget = deltaSectors * sectorDeg;
+
+  // add multiple full rotations for flair
+  const fullSpinsDeg = (Math.floor(4 + Math.random()*3)) * 360; // 4-6 full spins randomly
+
+  // final rotation (accumulate so spins continue from current)
+  const finalRotation = currentRotation + fullSpinsDeg + rotateDegreesForTarget;
+
+  // apply transform
+  wheel.style.transition = 'transform 4.6s cubic-bezier(.17,.67,.83,.67)';
+  wheel.style.transform = `rotate(${finalRotation}deg)`;
+
+  // update currentRotation for next spin
+  currentRotation = finalRotation % 360000; // keep number bounded
+
+  // after animation, show result and record history
+  setTimeout(()=>{
+    // show landed number (just use chosenNumber)
+    const ts = new Date();
+    const timeStr = ts.toLocaleTimeString();
+    resultEl.textContent = `🔥 Landed on ${chosenNumber} — ${timeStr}`;
+    addHistory(chosenNumber, timeStr);
+    spinBtn.disabled = false;
+  },4700);
+});
+
+function addHistory(num, timeStr){
+  const div = document.createElement('div');
+  div.className = 'item';
+  div.textContent = `${timeStr} → ${num}`;
+  // prepend to history (first after header)
+  historyEl.insertBefore(div, historyEl.children[1] || null);
+  // keep last 20
+  const items = historyEl.querySelectorAll('.item');
+  if(items.length > 20){
+    items[items.length-1].remove();
+  }
+}
+
+// optional: if there is saved history in localStorage we could restore it (not persisted here for privacy)
+</script>
+</body>
+</html>
