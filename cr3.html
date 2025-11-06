@@ -1625,6 +1625,26 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   box-shadow: 0 0 4px rgba(255, 0, 122, 0.3);
 }
 
+#sessionBar {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.session-btn {
+  display: inline-block; /* visible on start */
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.session-btn:hover {
+  transform: scale(1.05);
+}
+
 </style>
 </head>
 <body>
