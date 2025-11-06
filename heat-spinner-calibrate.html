@@ -1,250 +1,181 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Heat Spinner — Tap Calibrate</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>🔥 Heat Spinner</title>
 <style>
-  :root{--bg:#060606;--accent:#ff5b2b}
-  *{box-sizing:border-box}
-  body{
-    margin:0;
-    min-height:100vh;
+  * {box-sizing:border-box;padding:0;margin:0;}
+  body {
+    background: radial-gradient(circle at center, #0a0a0a 0%, #1a1a1a 100%);
+    color: #fff;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    height:100vh;
+    font-family: "Poppins", sans-serif;
+    overflow:hidden;
+  }
+
+  .spinner-container {
+    position:relative;
+    width:300px;
+    height:300px;
+  }
+
+  .wheel {
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    border:6px solid #222;
+    position:relative;
+    overflow:hidden;
+    transition:transform 4s cubic-bezier(0.25,0.1,0.25,1);
+  }
+
+  .slice {
+    position:absolute;
+    width:50%;
+    height:50%;
+    background:conic-gradient(red, orange);
+    transform-origin:100% 100%;
+    clip-path:polygon(0 0, 100% 0, 100% 100%);
     display:flex;
     align-items:center;
     justify-content:center;
-    flex-direction:column;
-    gap:12px;
-    background:radial-gradient(circle at 20% 10%, #0f0f0f 0%, #070707 40%, #050505 100%);
     color:#fff;
-    font-family:Inter, system-ui, -apple-system, 'Poppins', sans-serif;
-    padding:18px;
+    font-weight:bold;
+    font-size:12px;
   }
-  h1{margin:0;font-weight:600;color:var(--accent);letter-spacing:0.4px}
-  .wrap{width:94vw;max-width:420px;text-align:center}
-  .spinner-container{
-    position:relative;
-    width:320px;max-width:86vw;height:320px;margin:8px auto;
-    display:flex;align-items:center;justify-content:center;
+
+  .pointer {
+    position:absolute;
+    top:-10px;
+    left:50%;
+    transform:translateX(-50%);
+    width:0;
+    height:0;
+    border-left:12px solid transparent;
+    border-right:12px solid transparent;
+    border-bottom:20px solid gold;
+    z-index:10;
   }
-  img#wheel{
-    width:100%;height:100%;display:block;
-    transform-origin:center center;
-    transition: transform 4.6s cubic-bezier(.17,.67,.83,.67);
-    will-change: transform;
-    -webkit-user-drag: none;
-    user-select: none;
+
+  .center {
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    width:70px;
+    height:70px;
+    border-radius:50%;
+    background:#111;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#ffae00;
+    font-size:22px;
+    font-weight:700;
+    border:3px solid #ffae00;
+    z-index:5;
   }
-  /* overlay sits on top and catches taps/clicks */
-  .tap-overlay{
-    position:absolute;inset:0;border-radius:999px;
-    z-index:25; touch-action: manipulation;
+
+  button {
+    margin-top:30px;
+    background:linear-gradient(45deg, #ff5900, #ffb700);
+    color:#fff;
+    border:none;
+    padding:12px 28px;
+    font-size:16px;
+    font-weight:600;
+    border-radius:30px;
+    cursor:pointer;
+    transition:0.3s;
   }
-  .pointer{
-    position:absolute;top:-12px;left:50%;transform:translateX(-50%);
-    width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;
-    border-bottom:22px solid var(--accent);filter:drop-shadow(0 8px 18px rgba(255,90,40,0.12));
-    z-index:30;
+
+  button:hover {
+    opacity:0.85;
   }
-  .controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:8px}
-  button{background:linear-gradient(90deg,#ff4b2b,#ff9a3f);border:0;color:#090909;padding:10px 16px;border-radius:12px;font-weight:700;cursor:pointer}
-  #spinBtn[disabled]{opacity:.5;cursor:default}
-  .info{margin-top:8px;font-size:14px;color:#ffd8b0}
-  .result{margin-top:10px;font-weight:700;font-size:1.1rem;color:#ffd8b0}
-  .history{margin-top:10px;background:rgba(255,90,30,0.04);padding:8px;border-radius:10px;max-height:120px;overflow:auto;font-size:13px;color:#ffd8b0}
-  .debug{margin-top:8px;font-size:13px;color:#ccc}
-  @media (max-width:420px){ .pointer{top:-8px;border-left:11px;border-right:11px;border-bottom:18px} }
+
+  .history {
+    margin-top:20px;
+    font-size:14px;
+    text-align:center;
+  }
+
+  .history span {
+    display:inline-block;
+    margin:3px;
+    padding:6px 10px;
+    border-radius:8px;
+    background:#222;
+    color:#ffb700;
+  }
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>🔥 Heat Spinner</h1>
-    <div class="spinner-container" id="container">
-      <div class="pointer" aria-hidden="true"></div>
 
-      <!-- replace src if you move the svg; keep hosted svg fine -->
-      <img id="wheel" src="https://cdn.shopify.com/s/files/1/0962/6648/6067/files/heat-spinner.svg?v=1762454435" alt="Heat Spinner Wheel">
+<div class="spinner-container">
+  <div class="pointer"></div>
+  <div class="wheel" id="wheel"></div>
+  <div class="center" id="result">--</div>
+</div>
 
-      <!-- overlay captures taps / clicks and shows calibration feedback -->
-      <div class="tap-overlay" id="overlay" title="Tap the number under the pointer to calibrate"></div>
-    </div>
-
-    <div class="controls">
-      <button id="autoCalBtn">Tap to Calibrate (top)</button>
-      <button id="spinBtn">SPIN 🔥</button>
-      <button id="clearHistory">Clear</button>
-    </div>
-
-    <div class="info" id="info">Instruction: Tap the number that sits directly under the pointer (top). Then press SPIN.</div>
-    <div class="result" id="result">Ready</div>
-    <div class="history" id="history"><div style="opacity:.6">History (newest first):</div></div>
-    <div class="debug" id="debug" aria-hidden="true"></div>
-  </div>
+<button id="spinBtn">SPIN 🔥</button>
+<div class="history" id="history"></div>
 
 <script>
-/* Robust tap-to-calibrate spinner
-   - You tap the wheel anywhere (preferably where the pointer points: top)
-   - Code computes which sector you tapped from center and uses that as calibration index
-   - Then spinning is exact: chosen sector lands under pointer
-*/
+  const wheel = document.getElementById('wheel');
+  const result = document.getElementById('result');
+  const historyBox = document.getElementById('history');
+  const spinBtn = document.getElementById('spinBtn');
 
-const wheel = document.getElementById('wheel');
-const overlay = document.getElementById('overlay');
-const autoCalBtn = document.getElementById('autoCalBtn');
-const spinBtn = document.getElementById('spinBtn');
-const resultEl = document.getElementById('result');
-const historyEl = document.getElementById('history');
-const debugEl = document.getElementById('debug');
+  const numbers = Array.from({length:37}, (_,i)=>i); // 0-36
+  const sliceDeg = 360 / numbers.length;
 
-let currentRotation = 0;            // accumulated rotation degrees applied to the wheel image
-let calibrated = false;
-let calibrationIndex = 0;          // which index in `numbers` is currently at the top (under pointer)
+  // Create slices
+  numbers.forEach((num, i)=>{
+    const slice = document.createElement('div');
+    slice.classList.add('slice');
+    const color = num===0 ? '#00ffb3' : (i%2===0 ? '#ff4500' : '#ff9500');
+    slice.style.background = color;
+    slice.style.transform = `rotate(${i*sliceDeg}deg) skewY(${90 - sliceDeg}deg)`;
+    slice.textContent = num;
+    wheel.appendChild(slice);
+  });
 
-//
-// EDIT THIS: your wheel number order clockwise starting from 8 at the top (as provided).
-// Keep exactly the same array you gave us (with 35 not 53):
-//
-const numbers = [
-  8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7,
-  28, 12, 35, 3, 26, 0, 32, 15, 19, 4, 21, 25, 17, 34, 6, 27, 13, 36, 11, 30
-];
+  let currentRotation = 0;
+  let spinning = false;
+  const history = [];
 
-const sectorCount = numbers.length;
-const sectorDeg = 360 / sectorCount;
+  spinBtn.addEventListener('click', ()=>{
+    if (spinning) return;
+    spinning = true;
 
-// Utility: get center coordinates and size of the wheel image on the page
-function getWheelRect(){
-  const rect = wheel.getBoundingClientRect();
-  return rect;
-}
+    const randomIndex = Math.floor(Math.random() * numbers.length);
+    const winningNumber = numbers[randomIndex];
 
-// Compute the sector index for an angle (angleFromTop in degrees, clockwise)
-function angleToSectorIndex(angleFromTopDeg){
-  // angleFromTopDeg: 0 at top, increases clockwise 0..360
-  let idx = Math.floor(angleFromTopDeg / sectorDeg);
-  idx = ((idx % sectorCount) + sectorCount) % sectorCount;
-  return idx;
-}
+    const spinTo = 360 * 6 + (360 - randomIndex * sliceDeg) - sliceDeg/2; // 6 full spins + offset
+    currentRotation = spinTo;
 
-// Convert browser coords to "angle from top"
-function getAngleFromTop(clientX, clientY){
-  const rect = getWheelRect();
-  const cx = rect.left + rect.width/2;
-  const cy = rect.top + rect.height/2;
-  // coordinates relative to center
-  const dx = clientX - cx;
-  const dy = clientY - cy;
-  // atan2 returns angle from x-axis; we want from top (negative y)
-  let ang = Math.atan2(dy, dx) * 180 / Math.PI; // -180..180, 0 at +x
-  // convert to degrees where 0 = top, increasing clockwise
-  // angleFromTop = 90 - ang  (since ang 0 = +x, 90 - 0 = 90 -> maps)
-  let angleFromTop = 90 - ang;
-  angleFromTop = (angleFromTop % 360 + 360) % 360;
-  return angleFromTop;
-}
+    wheel.style.transition = 'transform 5s cubic-bezier(0.25,0.1,0.25,1)';
+    wheel.style.transform = `rotate(${currentRotation}deg)`;
 
-// Calibration by tapping: user will tap the wheel near the top (under pointer).
-// But we accept taps anywhere: the tapped sector becomes the "currently under pointer" sector.
-async function handleTap(clientX, clientY){
-  const angleFromTop = getAngleFromTop(clientX, clientY);
-  const tappedSector = angleToSectorIndex(angleFromTop);
+    setTimeout(()=>{
+      spinning = false;
+      result.textContent = winningNumber;
+      history.unshift(winningNumber);
+      renderHistory();
+    }, 5000);
+  });
 
-  // Set calibration so that numbers[tappedSector] is considered currently at the top
-  calibrationIndex = tappedSector;
-  calibrated = true;
-  localStorage.setItem('heatSpinnerCalibrationIndex', String(calibrationIndex));
-  resultEl.textContent = `Calibrated: top = ${numbers[calibrationIndex]}`;
-  debugEl.textContent = `Tapped angle: ${angleFromTop.toFixed(1)}° → sector ${tappedSector} → number ${numbers[tappedSector]}`;
-  // small visual nudge (no rotation change)
-  wheel.style.transition = 'transform .45s ease';
-  wheel.style.transform = `rotate(${currentRotation}deg)`;
-  setTimeout(()=> wheel.style.transition = 'transform 4.6s cubic-bezier(.17,.67,.83,.67)', 500);
-}
-
-// Attach tap/click/touch on overlay
-function onPointerEvent(e){
-  e.preventDefault();
-  const touch = e.touches ? e.touches[0] : e;
-  handleTap(touch.clientX, touch.clientY);
-}
-overlay.addEventListener('click', onPointerEvent, {passive:false});
-overlay.addEventListener('touchstart', onPointerEvent, {passive:false});
-
-// Restore saved calibration if present
-const saved = localStorage.getItem('heatSpinnerCalibrationIndex');
-if(saved !== null){
-  const idx = parseInt(saved, 10);
-  if(!isNaN(idx) && idx >=0 && idx < sectorCount){
-    calibrationIndex = idx;
-    calibrated = true;
-    resultEl.textContent = `Loaded calibration: top = ${numbers[calibrationIndex]}`;
+  function renderHistory(){
+    historyBox.innerHTML = history
+      .slice(0,8)
+      .map(n=>`<span>${n}</span>`)
+      .join('');
   }
-}
-
-// autoCalBtn: guide user to tap — doesn't change behaviour, since tapping overlay does calibration
-autoCalBtn.addEventListener('click', ()=>{
-  resultEl.textContent = 'Tap the number under the pointer (top) on the wheel image now.';
-});
-
-// Clear history
-document.getElementById('clearHistory').addEventListener('click', ()=>{
-  // remove items except header
-  const children = Array.from(historyEl.children);
-  children.slice(1).forEach(n => n.remove());
-  resultEl.textContent = 'History cleared';
-});
-
-// Spin button logic — uses calibrationIndex
-spinBtn.addEventListener('click', ()=>{
-  if(!calibrated){
-    resultEl.textContent = 'Please calibrate: Tap the number under the pointer first.';
-    return;
-  }
-
-  spinBtn.disabled = true;
-  resultEl.textContent = 'Spinning... 🔥';
-  debugEl.textContent = '';
-
-  // choose random sector index (result we want)
-  const targetSector = Math.floor(Math.random() * sectorCount);
-  const chosenNumber = numbers[targetSector];
-
-  // compute how many sectors to move clockwise from current top (which is calibrationIndex)
-  // positive delta means wheel must rotate clockwise to bring that index to top.
-  let delta = targetSector - calibrationIndex;
-  delta = ((delta % sectorCount) + sectorCount) % sectorCount; // normalize 0..n-1
-
-  const rotateForTarget = delta * sectorDeg;
-  // add some full spins for flair (random 4..7)
-  const fullSpins = (4 + Math.floor(Math.random()*4)) * 360;
-
-  // CSS rotate positive values rotate clockwise
-  const finalRotation = currentRotation + fullSpins + rotateForTarget;
-
-  // apply rotation
-  wheel.style.transform = `rotate(${finalRotation}deg)`;
-  // save rotation
-  currentRotation = finalRotation;
-
-  // after animation ends, show result and history
-  const duration = 4800; // milliseconds (should match CSS transition)
-  setTimeout(()=>{
-    const timestamp = new Date().toLocaleTimeString();
-    resultEl.textContent = `🔥 Landed on ${chosenNumber} — ${timestamp}`;
-    const item = document.createElement('div');
-    item.textContent = `${timestamp} → ${chosenNumber}`;
-    item.style.padding = '6px';
-    item.style.borderRadius = '6px';
-    item.style.margin = '6px 0';
-    historyEl.insertBefore(item, historyEl.children[1] || null);
-    // keep max 20
-    const items = historyEl.querySelectorAll('div');
-    if(items.length > 22) items[items.length-1].remove();
-
-    spinBtn.disabled = false;
-  }, duration + 120);
-});
-
 </script>
 </body>
 </html>
