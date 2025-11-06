@@ -87,7 +87,7 @@ function pushNotificationTx(tx, userId, message) {
   });
 }
 
-/* ---------- Auth State Watcher + Lazy Notifications (Non-blocking) ---------- */
+/* ---------- Auth State Watcher + Lazy Notifications (Non-blocking + Clears Read) ---------- */
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
 
@@ -139,9 +139,16 @@ onAuthStateChanged(auth, async (user) => {
           return;
         }
 
-        // Batch DOM updates for performance
+        // Only show unread notifications
+        const unreadDocs = snapshot.docs.filter(docSnap => !docSnap.data().read);
+
+        if (unreadDocs.length === 0) {
+          notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
+          return;
+        }
+
         const fragment = document.createDocumentFragment();
-        snapshot.docs.forEach((docSnap) => {
+        unreadDocs.forEach((docSnap) => {
           const n = docSnap.data();
           const time = n.timestamp?.seconds
             ? new Date(n.timestamp.seconds * 1000).toLocaleTimeString([], {
@@ -151,7 +158,7 @@ onAuthStateChanged(auth, async (user) => {
             : "--:--";
 
           const item = document.createElement("div");
-          item.className = `notification-item ${n.read ? "" : "unread"}`;
+          item.className = `notification-item unread`;
           item.dataset.id = docSnap.id;
           item.innerHTML = `
             <span>${n.message || "(no message)"}</span>
@@ -160,7 +167,7 @@ onAuthStateChanged(auth, async (user) => {
           fragment.appendChild(item);
         });
 
-        notificationsList.innerHTML = ""; // Clear old
+        notificationsList.innerHTML = "";
         notificationsList.appendChild(fragment);
       },
       (error) => {
@@ -190,7 +197,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   // ------------------------------
-  // 6️⃣ Mark All As Read (Non-blocking)
+  // 6️⃣ Mark All As Read (Non-blocking + Clears UI)
   // ------------------------------
   const markAllBtn = document.getElementById("markAllRead");
   if (markAllBtn) {
@@ -227,8 +234,14 @@ onAuthStateChanged(auth, async (user) => {
           batchCount++;
           console.log(`✅ Batch ${batchCount} committed`);
 
-          // Yield to UI thread to avoid freeze
+          // Yield to UI thread
           await new Promise(resolve => setTimeout(resolve, 50));
+        }
+
+        // ✅ Clear notifications list immediately
+        const notificationsList = document.getElementById("notificationsList");
+        if (notificationsList) {
+          notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
         }
 
         showToast("✅ All notifications marked as read.", "success");
