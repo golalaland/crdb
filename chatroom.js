@@ -1547,8 +1547,8 @@ videoPlayer.parentElement.appendChild(hint);
   showHint("Tap to unmute", 1500);
 })();
 
-// URL of your custom star SVG
-const customStarURL = "https://res.cloudinary.com/dekxhwh6l/image/upload/v1760596116/starssvg_k3hmsu.svg";
+// URL of your custom star SVG hosted on Shopify
+const customStarURL = "https://cdn.shopify.com/s/files/1/0962/6648/6067/files/starssvg.svg?v=1761770774";
 
 // Replace stars in text nodes with SVG + floating stars (invisible)
 function replaceStarsWithSVG(root = document.body) {
@@ -1638,6 +1638,7 @@ observer.observe(document.body, { childList: true, subtree: true });
 
 // Initial run
 replaceStarsWithSVG();
+
 
 
 /* ---------- DOM Elements ---------- */
