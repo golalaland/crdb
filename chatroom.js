@@ -653,7 +653,7 @@ function handleChatAutoScroll() {
       font-size: 16px;
       font-weight: 700;
       cursor: pointer;
-      opacity: 0;
+      opacity: 1;
       pointer-events: none;
       transition: all 0.3s ease;
       z-index: 9999;
