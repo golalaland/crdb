@@ -1624,6 +1624,15 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   background: linear-gradient(90deg, #ff007a, #ffa500);
   box-shadow: 0 0 4px rgba(255, 0, 122, 0.3);
 }
+#sessionBar {
+  display: none; /* hide entire bar until login */
+  gap: 8px;
+  justify-content: center;
+}
+
+.session-btn {
+  display: none; /* hide all buttons until login */
+}
 </style>
 </head>
 <body>
@@ -1711,13 +1720,13 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   </div>
 </div>
 
-<div id="sessionBar" style="display:flex; gap:8px; justify-content:center;">
-  <button class="session-btn" id="topBallersBtn" style="display:none;">💎 Top Ballers</button>
+<div id="sessionBar">
+  <button class="session-btn" id="topBallersBtn">💎 Top Ballers</button>
 
   <!-- Middle button (Star Hosts) -->
-  <button id="openHostsBtn" class="session-btn star-hosts-btn" style="display:none;">🌟 Star Hosts 🌟</button>
+  <button id="openHostsBtn" class="session-btn star-hosts-btn">🌟 Star Hosts 🌟</button>
 
-  <button class="session-btn" id="highlightsBtn" style="display:none;">🔥 Highlights</button>
+  <button class="session-btn" id="highlightsBtn">🔥 Highlights</button>
 </div>
 
 <div id="sessionModal" style="display:none;">
