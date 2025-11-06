@@ -183,27 +183,27 @@ const markAllBtn = document.getElementById("markAllRead");
 if (markAllBtn) {
   markAllBtn.addEventListener("click", async () => {
     console.log("🟡 Marking all notifications as read...");
-    
+
     try {
       const snapshot = await getDocs(query(notifRef, where("userId", "==", userQueryId)));
-      
+
       if (snapshot.empty) {
         alert("ℹ️ No notifications to mark as read.");
         return;
       }
 
-      const docs = snapshot.docs;
-      const batchSize = 10; // small batch size to avoid jamming
-      for (let i = 0; i < docs.length; i += batchSize) {
-        const batchDocs = docs.slice(i, i + batchSize);
-        const batchPromises = batchDocs.map(docSnap => {
+      const batchLimit = 500; // Firestore batch limit
+      for (let i = 0; i < snapshot.docs.length; i += batchLimit) {
+        const batch = writeBatch(db); // create a new batch
+        const batchDocs = snapshot.docs.slice(i, i + batchLimit);
+
+        batchDocs.forEach(docSnap => {
           const ref = doc(db, "notifications", docSnap.id);
-          return updateDoc(ref, { read: true });
+          batch.update(ref, { read: true });
         });
 
-        await Promise.all(batchPromises);
-        // Optional: small delay to keep UI smooth
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await batch.commit(); // commit batch at once
+        console.log(`✅ Batch ${i / batchLimit + 1} committed`);
       }
 
       alert("✅ All notifications marked as read.");
