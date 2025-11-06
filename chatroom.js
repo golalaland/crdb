@@ -837,103 +837,50 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
   };
 });
 
-async function initSessionBar(currentUser) {
-  if (!currentUser) return; // Only show for logged-in users
-
-  const sessionBar = document.getElementById("sessionBar");
+// Call this function after user logs in
+function showSessionButtons() {
+  const topBallersBtn = document.getElementById("topBallersBtn");
+  const highlightsBtn = document.getElementById("highlightsBtn");
   const sessionModal = document.getElementById("sessionModal");
-  const ballerList = document.getElementById("ballerList");
 
-  sessionBar.style.display = "flex";
-  sessionBar.style.gap = "8px"; 
-  sessionBar.style.marginBottom = "6px";
+  // Show the buttons
+  topBallersBtn.style.display = "inline-block";
+  highlightsBtn.style.display = "inline-block";
 
-  // Fetch top users dynamically
-  const topUsersData = [];
-  const topUsersSnap = await getDocs(collection(db, "topUsers"));
-  topUsersSnap.forEach(docSnap => topUsersData.push(docSnap.data()));
-
-  // Render Top Ballers
-  function renderBallers(period = "week") {
-    ballerList.innerHTML = "";
-    const filtered = topUsersData.filter(u => u.period === period || period === "all");
-
-    filtered.forEach(user => {
-      const userEl = document.createElement("div");
-      userEl.className = "ballerItem";
-      userEl.style.marginBottom = "6px";
-      userEl.innerHTML = `
-        <span>${user.username} (${user.social || "No handle"})</span>
-        <div style="margin-top:4px;">
-          <button class="followBtn" data-username="${user.username}">Follow</button>
-          <button class="watchBtn" data-username="${user.username}">Watch</button>
-        </div>
-      `;
-      ballerList.appendChild(userEl);
-    });
-
-    ballerList.querySelectorAll(".followBtn").forEach(btn => {
-      btn.onclick = () => console.log(`Follow ${btn.dataset.username}`);
-    });
-
-    ballerList.querySelectorAll(".watchBtn").forEach(btn => {
-      btn.onclick = () => console.log(`Watch ${btn.dataset.username}`);
-    });
-  }
-
-  renderBallers("week");
-
-  // Toggle modal when clicking session buttons
-  sessionBar.querySelectorAll(".sessionTab").forEach(tabBtn => {
-    tabBtn.addEventListener("click", () => {
-      const isVisible = sessionModal.style.display === "block";
-      sessionModal.style.display = isVisible ? "none" : "block";
-
-      // Position modal below sessionBar
-      const rect = sessionBar.getBoundingClientRect();
-      sessionModal.style.position = "absolute";
-      sessionModal.style.top = rect.bottom + window.scrollY + "px";
-      sessionModal.style.left = rect.left + "px";
-      sessionModal.style.width = rect.width + "px";
-      sessionModal.style.zIndex = 9999;
-      sessionModal.style.background = "#111";
-      sessionModal.style.border = "1px solid #333";
-      sessionModal.style.borderRadius = "8px";
-      sessionModal.style.padding = "12px";
-      sessionModal.style.boxShadow = "0 4px 10px rgba(0,0,0,0.5)";
-    });
+  // Toggle modal when buttons are clicked
+  topBallersBtn.addEventListener("click", () => {
+    sessionModal.style.display = "block";
+    switchTab("ballers");
   });
 
-  // Close modal if click outside
-  document.addEventListener("click", (e) => {
-    if (!sessionModal.contains(e.target) && !sessionBar.contains(e.target)) {
+  highlightsBtn.addEventListener("click", () => {
+    sessionModal.style.display = "block";
+    switchTab("extras");
+  });
+
+  // Optional: close modal when clicking outside content
+  sessionModal.addEventListener("click", (e) => {
+    if (e.target === sessionModal) {
       sessionModal.style.display = "none";
     }
   });
+}
 
-  // Main tab switching inside modal
-  const mainTabs = sessionModal.querySelectorAll(".sessionTabs button");
-  const contentTabs = sessionModal.querySelectorAll(".sessionContent");
-  mainTabs.forEach(tabBtn => {
-    tabBtn.addEventListener("click", () => {
-      const target = tabBtn.dataset.tab;
-      mainTabs.forEach(b => b.classList.remove("active"));
-      tabBtn.classList.add("active");
-      contentTabs.forEach(c => c.classList.remove("active"));
-      document.getElementById(target === "ballers" ? "tabBallers" : "tabExtras").classList.add("active");
-    });
-  });
+// Helper to switch main modal tab
+function switchTab(tabName) {
+  const mainTabs = document.querySelectorAll("#sessionModal .sessionTabs button");
+  const contentTabs = document.querySelectorAll("#sessionModal .sessionContent");
 
-  // Sub-tabs for Top Ballers
-  const subTabs = sessionModal.querySelectorAll(".ballerTabs button");
-  subTabs.forEach(btn => {
-    btn.addEventListener("click", () => {
-      const period = btn.dataset.period;
-      subTabs.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      renderBallers(period);
-    });
-  });
+  mainTabs.forEach(btn => btn.classList.remove("active"));
+  contentTabs.forEach(content => content.classList.remove("active"));
+
+  if (tabName === "ballers") {
+    document.querySelector('#sessionModal .sessionTabs button[data-tab="ballers"]').classList.add("active");
+    document.getElementById("tabBallers").classList.add("active");
+  } else {
+    document.querySelector('#sessionModal .sessionTabs button[data-tab="extras"]').classList.add("active");
+    document.getElementById("tabExtras").classList.add("active");
+  }
 }
 
 
