@@ -169,26 +169,39 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   border-radius: 8px;
   background: var(--glass);
   max-width: 100%;
-  display: flex;
-  gap: 8px;
-  align-items: center;
+  
+  /* ✅ remove side-by-side column / flex alignment */
+  display: block;
+  text-align: left;
 }
-.msg.me { background: rgba(255, 20, 147, 0.06); }
+
+/* your color for ME stays untouched */
+.msg.me { 
+  background: rgba(255, 20, 147, 0.06); 
+}
+
+/* ✅ username */
 .msg .meta {
   font-weight: 700;
   font-size: 13px;
   white-space: nowrap;
   margin-right: 4px;
+  display: inline;     /* ✅ same line */
   color: inherit;
 }
+
+/* ✅ message body */
 .msg .content {
   font-size: 13px;
   color: #fff;
-  white-space: pre-wrap;
+  display: inline;      /* ✅ same line + wraps naturally */
+  white-space: normal;
   word-break: break-word;
-  display: inline-block;
 }
 
+#messages {
+  position: relative; /* ensures modal positions correctly within chat */
+}
 /* 🔥 Keypad (chat input) - always at bottom */
 .send-area {
   position: fixed;       
@@ -1467,6 +1480,153 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   font-size: 14px !important;
   border-radius: 8px !important;
 }
+.username-blink {
+  animation: blinkName 0.4s ease-in-out;
+}
+
+@keyframes blinkName {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(255, 255, 0, 0.4); border-radius: 4px; }
+}
+/* Baller Alert Wrapper */
+#ballerAlert {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #ffcc00, #ff33cc);
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  color: #000;
+  font-size: 16px;
+  text-align: center;
+  z-index: 999999;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Glow pulse */
+.baller-glow {
+  animation: pulseGlow 2s ease-in-out;
+}
+
+/* Confetti pieces */
+.baller-confetti {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  opacity: 0.9;
+  animation: floatConfetti 3s ease-in-out forwards;
+}
+
+@keyframes floatConfetti {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
+}
+
+@keyframes pulseGlow {
+  0%,100% { box-shadow: 0 0 12px rgba(255,255,255,0.2); }
+  50% { box-shadow: 0 0 24px rgba(255,255,255,0.8); }
+}
+/* ---------- Chat Tap Modal ---------- */
+.tap-modal {
+  position: absolute;
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 9999;
+  pointer-events: auto;
+}
+
+.tap-modal button {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 2px 6px;
+}
+
+.tap-modal button:hover {
+  background: rgba(255,255,255,0.2);
+  border-radius: 4px;
+}
+#sessionBar {
+  display: flex;
+  justify-content: space-around; /* keeps buttons spaced nicely */
+  gap: 8px;                      /* adds consistent spacing */
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(6px);
+  border-radius: 12px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+#sessionModal {
+  position: fixed;
+  bottom: -100%;
+  left: 0; right: 0;
+  height: 65%;
+  background: rgba(15,15,15,0.95);
+  color: #fff;
+  border-radius: 20px 20px 0 0;
+  transition: bottom 0.4s ease;
+  z-index: 1000;
+  overflow-y: auto;
+}
+#sessionModal.active { bottom: 0; }
+
+.sessionTabs button {
+  background: none; border: none;
+  color: #aaa; padding: 10px 16px;
+  font-weight: 700; cursor: pointer;
+}
+.sessionTabs button.active { color: #fff; border-bottom: 2px solid #ff33cc; }
+
+.ballerTabs button.active { color: #fff; border-bottom: 2px solid #ffcc00; }
+
+.baller-card {
+  display: flex; align-items: center;
+  padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.baller-card img { width: 32px; height: 32px; border-radius: 50%; margin-right: 10px; }
+
+/* Unified compact session buttons */
+.session-btn {
+  background: #222;             
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-block;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s, background 0.2s;
+  margin: 0 2px; /* tiny buffer between buttons */
+}
+
+.session-btn:hover {
+  transform: scale(1.05);
+  background: #333;
+}
+
+/* Star Hosts gets the gradient */
+.star-hosts-btn {
+  background: linear-gradient(90deg, #ff007a, #ffa500);
+  box-shadow: 0 0 4px rgba(255, 0, 122, 0.3);
+}
 </style>
 </head>
 <body>
@@ -1481,7 +1641,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 <audio id="buzz-sound" src="https://pixabay.com/sound-effects/buzz-01-0-07.mp3" preload="auto"></audio>
 <div id="appWrapper">
   <div class="app">
-    <div class="brand">ᙅᙀᙖᙓ</div>
+    <div class="brand">乂丨乂丨</div>
     <div id="greeting"></div>
     <div id="center">
     <div class="video-container" style="position: relative; width: 100%; max-width: 600px; margin: auto;">
@@ -1503,10 +1663,38 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
             <circle cx="12" cy="12" r="3"/>
         </svg>
         <span id="onlineCount">…</span>
-        <span>people are interacting in this room</span>
+        <span>people are interacting in chatrooms</span>
     </div>
+    
+    <div id="sessionBar">
+  <button class="session-btn" id="topBallersBtn">💎 Top Ballers</button>
 
-    <button id="openHostsBtn" class="featured-btn" style="display:none;">🌟 Star Hosts 🌟</button>
+  <!-- Middle button (Star Hosts) -->
+  <button id="openHostsBtn" class="session-btn star-hosts-btn">🌟 Star Hosts 🌟</button>
+
+  <button class="session-btn" id="highlightsBtn">🔥 Highlights</button>
+</div>
+
+<div id="sessionModal" style="display:none;">
+  <div class="sessionTabs">
+    <button class="active" data-tab="ballers">Top Ballers</button>
+    <button data-tab="extras">Highlights</button>
+  </div>
+
+  <div class="sessionContent active" id="tabBallers">
+    <div class="ballerTabs">
+      <button class="active" data-period="week">This Week</button>
+      <button data-period="month">This Month</button>
+      <button data-period="all">All Time</button>
+    </div>
+    <div id="ballerList"></div>
+  </div>
+
+  <div class="sessionContent" id="tabExtras">
+    <p>Coming soon — session stats or custom content.</p>
+  </div>
+</div>
+    <button id="openHostsBtnz" class="featured-btn" style="display:none;">🌟 Star Hosts 🌟</button>
 </div>
 
  <div id="guestMsg"></div>
@@ -1553,8 +1741,10 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     <button id="chatIDConfirmBtn" class="small-btn" style="width:100%;padding:10px;">Confirm</button>
   </div>
 </div>
-  <div id="messages"></div>
-</div>
+
+<!-- Chat messages container -->
+<div id="messages"></div>
+
 
 <div class="send-area" id="sendArea" style="display:none;">
   <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" />
@@ -1670,7 +1860,7 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
       <hr class="divider" style="margin:20px 0;">
 
       <!-- Socials Section -->
-      <h4 style="text-align:center; margin-bottom:10px;">Socials</h4>
+      <h4 style="text-align:center; margin-bottom:10px;">Socials 🫱🏽‍🫲🏼</h4>
 
       <label>WhatsApp</label>
       <input type="text" id="whatsapp" placeholder="Enter WhatsApp number">
@@ -1768,9 +1958,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 
 </div>
 
-
-      <hr class="divider" style="margin:12px 0;">
-
       <!-- Messages / Additional Info -->
       <div id="hostMessagesContainer" style="padding:6px 0;">
         <!-- Messages or host-specific info will be dynamically loaded here -->
@@ -1778,16 +1965,14 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     </div>
   </div>
 </div>
-    <!-- 🔔 NOTIFICATIONS TAB -->
-    <div id="notificationsTab" class="tab-content" style="display:none; max-height:400px; overflow-y:auto;">
-      <div class="notifications-header">
-        <h3>Notifications</h3>
-        <button id="markAllRead" class="themed-btn small">Mark all as read</button>
-      </div>
-<div id="notificationsList" class="notifications-list">
-  <p style="opacity:0.7;">No new notifications yet.</p>
-</div>
-    </div>
+<!-- 🔔 NOTIFICATIONS TAB -->
+<div id="notificationsTab" class="tab-content" style="display:none; max-height:400px; overflow-y:auto;">
+  <div class="notifications-header">
+    <h3>Notifications</h3>
+    <button id="markAllRead" class="themed-btn small">Mark all as read</button>
+  </div>
+  <div id="notificationsList" class="notifications-list">
+    <p style="opacity:0.7;">No new notifications yet.</p>
   </div>
 </div>
 
@@ -1840,8 +2025,9 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   </div>
 </div>
 
-<!-- Scroll-to-Bottom Arrow -->
-<div id="scrollArrow">&#x2193;</div>
+
+
+
 
 <!-- Gift Alert -->
 <div id="giftAlert" class="gift-alert"></div>
