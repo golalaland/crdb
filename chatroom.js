@@ -633,36 +633,48 @@ function renderMessagesFromArray(messages) {
   }
 }
 
-if (!scrollBtn) {
-  scrollBtn = document.createElement("div");
-  scrollBtn.id = "scrollToBottomBtn";
-  scrollBtn.textContent = "↓";
-  scrollBtn.style.cssText = `
-    position: fixed;
-    bottom: 90px;
-    right: 20px;
-    padding: 6px 12px;
-    background: rgba(255,20,147,0.9);
-    color: #fff;
-    border-radius: 14px;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    opacity: 0;  /* <-- initial opacity */
-    pointer-events: none; /* <-- initially unclickable */
-    transition: all 0.3s ease;
-    z-index: 9999;
-  `;
-  document.body.appendChild(scrollBtn);
+// Auto-scroll + scroll-to-bottom button
+function handleChatAutoScroll() {
+  if (!refs.messagesEl) return;
 
-  // ✅ Force it visible for testing:
-  scrollBtn.style.opacity = 1;
-  scrollBtn.style.pointerEvents = "auto";
+  let scrollBtn = document.getElementById("scrollToBottomBtn");
+  if (!scrollBtn) {
+    scrollBtn = document.createElement("div");
+    scrollBtn.id = "scrollToBottomBtn";
+    scrollBtn.textContent = "↓";
+    scrollBtn.style.cssText = `
+      position: fixed;
+      bottom: 90px;
+      right: 20px;
+      padding: 6px 12px;
+      background: rgba(255,20,147,0.9);
+      color: #fff;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      z-index: 9999;
+    `;
+    document.body.appendChild(scrollBtn);
+    scrollBtn.addEventListener("click", () => {
+      refs.messagesEl.scrollTo({ top: refs.messagesEl.scrollHeight, behavior: "smooth" });
+      scrollBtn.style.opacity = 0;
+      scrollBtn.style.pointerEvents = "none";
+    });
+  }
 
-  scrollBtn.addEventListener("click", () => {
-    refs.messagesEl.scrollTo({ top: refs.messagesEl.scrollHeight, behavior: "smooth" });
-    scrollBtn.style.opacity = 0;
-    scrollBtn.style.pointerEvents = "none";
+  refs.messagesEl.addEventListener("scroll", () => {
+    const distance = refs.messagesEl.scrollHeight - refs.messagesEl.scrollTop - refs.messagesEl.clientHeight;
+    if (distance > 150) {
+      scrollBtn.style.opacity = 1;
+      scrollBtn.style.pointerEvents = "auto";
+    } else {
+      scrollBtn.style.opacity = 1;
+      scrollBtn.style.pointerEvents = "none";
+    }
   });
 }
 
