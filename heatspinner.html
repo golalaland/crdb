@@ -1,88 +1,71 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🔥 Heat Spinner</title>
   <style>
-    * { box-sizing: border-box; }
-
     body {
-      margin: 0;
-      background: radial-gradient(circle at center, #0a0a0a, #000);
-      color: white;
-      font-family: 'Poppins', sans-serif;
+      background: radial-gradient(circle at center, #0a0a0a 40%, #1e1e1e);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       height: 100vh;
       overflow: hidden;
+      font-family: 'Poppins', sans-serif;
+      color: white;
     }
 
     .spinner-container {
       position: relative;
-      width: 300px;
-      height: 300px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 280px;
+      height: 280px;
     }
 
-    svg {
+    .spinner-wheel {
       width: 100%;
       height: 100%;
-      transform: rotate(0deg);
-      transition: transform 4s cubic-bezier(0.33, 1, 0.68, 1);
+      transition: transform 5s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+      transform-origin: center center;
     }
 
-    /* 🔥 Pointer */
+    /* 🔺 Pointer on top */
     .pointer {
       position: absolute;
-      top: -10px;
+      top: -20px;
       left: 50%;
       transform: translateX(-50%);
       width: 0;
       height: 0;
-      border-left: 12px solid transparent;
-      border-right: 12px solid transparent;
-      border-bottom: 25px solid #ff3c00;
-      filter: drop-shadow(0 0 10px #ff3c00);
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-bottom: 25px solid #ff4444;
       z-index: 10;
     }
 
     button {
-      margin-top: 30px;
-      background: linear-gradient(90deg, #ff3c00, #ff9500);
+      margin-top: 40px;
+      background: linear-gradient(135deg, #ff3c3c, #ff9900);
       border: none;
       color: white;
-      padding: 12px 28px;
-      border-radius: 30px;
-      font-size: 1.1rem;
-      font-weight: 600;
+      font-size: 1.2rem;
+      padding: 14px 34px;
+      border-radius: 50px;
       cursor: pointer;
-      box-shadow: 0 0 15px rgba(255, 60, 0, 0.6);
-      transition: 0.2s;
+      transition: 0.3s ease;
+      font-weight: 600;
     }
 
-    button:active {
-      transform: scale(0.96);
-      box-shadow: 0 0 5px rgba(255, 60, 0, 0.3);
+    button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 20px #ff6600;
     }
 
-    .results {
-      margin-top: 20px;
-      max-height: 100px;
-      overflow-y: auto;
-      width: 80%;
-      text-align: center;
-      font-size: 0.9rem;
-      opacity: 0.9;
-    }
-
-    .result-item {
-      margin: 4px 0;
-      color: #ffb86c;
+    .result {
+      margin-top: 25px;
+      font-size: 1.4rem;
+      letter-spacing: 1px;
     }
   </style>
 </head>
@@ -90,58 +73,55 @@
 
   <div class="spinner-container">
     <div class="pointer"></div>
-
-    <!-- 🌀 Your real SVG wheel -->
-    <div id="wheel">
-      <img src="https://cdn.shopify.com/s/files/1/0962/6648/6067/files/heat-spinner.svg?v=1762454435" alt="Heat Spinner Wheel" style="width:100%; height:100%;">
-    </div>
+    <img id="wheel" class="spinner-wheel" 
+      src="https://cdn.shopify.com/s/files/1/0962/6648/6067/files/heat-spinner.svg?v=1762454435" 
+      alt="Heat Spinner Wheel">
   </div>
 
-  <button id="spinBtn">HEAT IT 🔥</button>
+  <button id="spinBtn">🔥 SPIN THE HEAT</button>
+  <div class="result" id="result">Ready?</div>
 
-  <div class="results" id="results"></div>
+  <script>
+    const wheel = document.getElementById("wheel");
+    const result = document.getElementById("result");
+    const spinBtn = document.getElementById("spinBtn");
 
-<script>
-  const spinBtn = document.getElementById('spinBtn');
-  const wheel = document.querySelector('#wheel img');
-  const resultsBox = document.getElementById('results');
+    // ✅ Your actual wheel order (clockwise from top)
+    const numbers = [
+      8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7,
+      28, 12, 53, 3, 26, 0, 32, 15, 19, 4, 21, 25, 17, 34, 6, 27, 13, 36, 11, 30
+    ];
 
-  // 🎯 Real roulette sequence (European)
-  const rouletteNumbers = [
-    0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11,
-    30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18,
-    29, 7, 28, 12, 35, 3, 26
-  ];
+    let currentRotation = 0;
 
-  let currentRotation = 0;
-  const sectors = rouletteNumbers.length; // 37
-  const degreesPerSector = 360 / sectors;
+    spinBtn.addEventListener("click", () => {
+      spinBtn.disabled = true;
+      result.textContent = "Spinning... 🔥";
 
-  spinBtn.addEventListener('click', () => {
-    const randomSector = Math.floor(Math.random() * sectors);
-    const spinRounds = 5;
-    
-    // Offset to align pointer (adjust if wheel appears misaligned)
-    const offset = 270; // 0 = top, 90 = right, 180 = bottom, 270 = left
-    
-    const targetAngle = randomSector * degreesPerSector;
-    const finalRotation = spinRounds * 360 + offset + targetAngle;
-    currentRotation = finalRotation;
+      // Pick a random number
+      const randomIndex = Math.floor(Math.random() * numbers.length);
+      const chosenNumber = numbers[randomIndex];
 
-    wheel.style.transition = 'transform 4s cubic-bezier(0.33, 1, 0.68, 1)';
-    wheel.style.transform = `rotate(${currentRotation}deg)`;
+      // Calculate segment angle
+      const segmentAngle = 360 / numbers.length;
+      // Compute target angle so the chosen number lands at the top (pointer)
+      const targetAngle = (numbers.length - randomIndex) * segmentAngle;
 
-    // Calculate winning number after spin
-    setTimeout(() => {
-      const normalized = (currentRotation - offset) % 360;
-      const selectedSector = Math.floor((360 - normalized) / degreesPerSector) % sectors;
-      const resultNumber = rouletteNumbers[selectedSector];
+      // Add multiple full rotations for smooth spin
+      const spins = 6 * 360;
+      const finalRotation = currentRotation + spins + targetAngle;
 
-      const item = document.createElement('div');
-      item.classList.add('result-item');
-      item.textContent = `🔥 Spin Result: ${resultNumber}`;
-      resultsBox.prepend(item);
-    }, 4200);
-  });
-</script>
+      // Spin animation
+      wheel.style.transform = `rotate(${finalRotation}deg)`;
 
+      // Save for next spin offset
+      currentRotation = finalRotation;
+
+      setTimeout(() => {
+        result.textContent = `🔥 Landed on ${chosenNumber}`;
+        spinBtn.disabled = false;
+      }, 5200);
+    });
+  </script>
+</body>
+</html>
