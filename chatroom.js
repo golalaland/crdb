@@ -2077,7 +2077,7 @@ openBtn.addEventListener("click", () => {
 async function sendGift() {
   const receiver = hosts[currentIndex];
   if (!receiver?.id) return showGiftAlert("⚠️ No host selected.");
-  if (!currentUser?.uid) return showGiftAlert("Please log in to send stars ⭐");
+  if (!currentUser?.uid) return showGiftAlert("⚠️ You must be logged in to send stars");
 
   const giftStars = parseInt(giftSlider.value, 10);
   if (isNaN(giftStars) || giftStars <= 0)
