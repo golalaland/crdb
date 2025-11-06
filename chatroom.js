@@ -87,10 +87,7 @@ function pushNotificationTx(tx, userId, message) {
   });
 }
 
-/* ======================================================
-   🔔 Notifications + Mark All As Read System
-   Fully dynamic & production-ready
-====================================================== */
+/* ---------- Auth State Watcher (Stable + Lazy Notifications) ---------- */
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
 
@@ -100,14 +97,18 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  // --- 1️⃣ Sanitize user email for Firestore ---
+  // ✅ 1. Define the sanitization helper
   const sanitizeEmail = (email) => email.replace(/\./g, ",");
+
+  // ✅ 2. Generate and store the ID used for querying
   const userQueryId = sanitizeEmail(currentUser.email);
   console.log("✅ Logged in as Sanitized ID:", userQueryId);
   localStorage.setItem("userId", userQueryId);
 
-  // --- 2️⃣ References ---
+  // ✅ 3. Reference the top-level 'notifications' collection
   const notifRef = collection(db, "notifications");
+
+  // ✅ 4. Define the query using the sanitized email ID
   const notifQuery = query(
     notifRef,
     where("userId", "==", userQueryId),
@@ -116,7 +117,7 @@ onAuthStateChanged(auth, async (user) => {
 
   let unsubscribe = null;
 
-  // --- 3️⃣ Initialize Notifications Listener ---
+  // ✅ 5. Initialize Notifications Listener
   async function initNotificationsListener() {
     const notificationsList = document.getElementById("notificationsList");
     if (!notificationsList) {
@@ -156,98 +157,41 @@ onAuthStateChanged(auth, async (user) => {
 
         notificationsList.innerHTML = items.join("");
       },
-      (error) => console.error("🔴 Firestore Listener Error:", error)
+      (error) => {
+        console.error("🔴 Firestore Listener Error:", error);
+      }
     );
   }
 
-  // Initialize listener after DOM ready
+  // ✅ 6. Initialize based on DOM state
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initNotificationsListener);
   } else {
     initNotificationsListener();
   }
 
-  // --- 4️⃣ Re-run listener when notifications tab is opened ---
+  // ✅ 7. Re-run listener when user opens Notifications tab
   const notifTabBtn = document.querySelector('.tab-btn[data-tab="notificationsTab"]');
   if (notifTabBtn) {
-    notifTabBtn.addEventListener("click", () => setTimeout(initNotificationsListener, 150));
+    notifTabBtn.addEventListener("click", () => {
+      setTimeout(initNotificationsListener, 150);
+    });
   }
 
-  // --- 5️⃣ Mark All As Read (dynamic, guaranteed) ---
-  document.body.addEventListener("click", async (e) => {
-    if (!e.target.closest("#markAllRead")) return; // Only respond to this button
-    console.log("🟡 Mark All button clicked!");
-
-    try {
-      const unreadQuery = query(
-        notifRef,
-        where("userId", "==", userQueryId),
-        where("read", "==", false)
-      );
-      const snapshot = await getDocs(unreadQuery);
-
-      if (snapshot.empty) {
-        console.log("ℹ️ No unread notifications.");
-        showToast("ℹ️ No unread notifications.", "info");
-        return;
+  // ✅ 8. Mark All As Read
+  const markAllBtn = document.getElementById("markAllRead");
+  if (markAllBtn) {
+    markAllBtn.addEventListener("click", async () => {
+      console.log("🟡 Marking all notifications as read...");
+      const snapshot = await getDocs(query(notifRef, where("userId", "==", userQueryId)));
+      for (const docSnap of snapshot.docs) {
+        const ref = doc(db, "notifications", docSnap.id);
+        await updateDoc(ref, { read: true });
       }
-
-      console.log(`🔹 Found ${snapshot.docs.length} unread notifications.`);
-
-      const batchLimit = 500;
-      for (let i = 0; i < snapshot.docs.length; i += batchLimit) {
-        const batch = writeBatch(db);
-        const batchDocs = snapshot.docs.slice(i, i + batchLimit);
-
-        batchDocs.forEach(docSnap => {
-          const ref = doc(db, "notifications", docSnap.id);
-          batch.update(ref, { read: true });
-        });
-
-        await batch.commit();
-        console.log(`✅ Batch ${i / batchLimit + 1} committed (${batchDocs.length})`);
-        await new Promise(res => setTimeout(res, 50)); // Yield UI thread
-      }
-
-      // Clear notifications UI
-      const notificationsList = document.getElementById("notificationsList");
-      if (notificationsList) {
-        notificationsList.innerHTML = `<p style="opacity:0.7;">No new notifications yet.</p>`;
-      }
-
-      showToast("✅ All notifications marked as read.", "success");
-      console.log("✅ All notifications marked as read.");
-
-    } catch (error) {
-      console.error("❌ Failed to mark notifications:", error);
-      showToast("❌ Failed to mark notifications.", "error");
-    }
-  });
+      alert("✅ All notifications marked as read.");
+    });
+  }
 });
-
-// --- 6️⃣ Toast helper ---
-function showToast(message, type = "info") {
-  const toast = document.createElement("div");
-  toast.className = `toast toast-${type}`;
-  toast.textContent = message;
-  toast.style.position = "fixed";
-  toast.style.bottom = "20px";
-  toast.style.right = "20px";
-  toast.style.background = type === "success" ? "#4CAF50" : type === "error" ? "#F44336" : "#333";
-  toast.style.color = "#fff";
-  toast.style.padding = "10px 20px";
-  toast.style.borderRadius = "6px";
-  toast.style.opacity = "0";
-  toast.style.transition = "opacity 0.3s ease-in-out";
-
-  document.body.appendChild(toast);
-  requestAnimationFrame(() => (toast.style.opacity = "1"));
-
-  setTimeout(() => {
-    toast.style.opacity = "0";
-    toast.addEventListener("transitionend", () => toast.remove());
-  }, 2500);
-}
 
 /* ===============================
    🔔 Manual Notification Starter (for whitelist login)
@@ -302,9 +246,6 @@ async function startNotificationsFor(userEmail) {
     (err) => console.error("🔴 Notification listener error:", err)
   );
 }
-
-
-
 
 
 
@@ -895,7 +836,6 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     }
   };
 });
-
 
 /* ---------- 🆔 ChatID Modal ---------- */
 async function promptForChatID(userRef, userData) {
@@ -1671,8 +1611,8 @@ function replaceStarsWithSVG(root = document.body) {
         floatingStar.style.transform = "translate(-50%, -50%)";
 
         const rect = inlineStar.getBoundingClientRect();
-        floatingStar.style.top = ${rect.top + rect.height / 2 + window.scrollY}px;
-        floatingStar.style.left = ${rect.left + rect.width / 2 + window.scrollX}px;
+        floatingStar.style.top = `${rect.top + rect.height / 2 + window.scrollY}px`;
+        floatingStar.style.left = `${rect.left + rect.width / 2 + window.scrollX}px`;
 
         document.body.appendChild(floatingStar);
 
@@ -1698,7 +1638,6 @@ observer.observe(document.body, { childList: true, subtree: true });
 
 // Initial run
 replaceStarsWithSVG();
-
 
 
 /* ---------- DOM Elements ---------- */
@@ -2134,7 +2073,7 @@ openBtn.addEventListener("click", () => {
 async function sendGift() {
   const receiver = hosts[currentIndex];
   if (!receiver?.id) return showGiftAlert("⚠️ No host selected.");
-  if (!currentUser?.uid) return showGiftAlert("⚠️ You must be logged in to send stars");
+  if (!currentUser?.uid) return showGiftAlert("Please log in to send stars ⭐");
 
   const giftStars = parseInt(giftSlider.value, 10);
   if (isNaN(giftStars) || giftStars <= 0)
@@ -3268,56 +3207,6 @@ hostSettingsBtn.addEventListener("click", () => {
   setGreeting();
 });
 
-/* ===============================
-   🔔 TABS + 
-================================= */
-document.addEventListener("DOMContentLoaded", () => {
-  const topBallersBtn = document.getElementById("topBallersBtn");
-  const highlightsBtn = document.getElementById("highlightsBtn");
-  const sessionModal = document.getElementById("sessionModal");
-
-  const mainTabs = sessionModal.querySelectorAll(".sessionTabs button");
-  const contentTabs = sessionModal.querySelectorAll(".sessionContent");
-
-  // Open modal and select tab
-  function openModal(tab) {
-    sessionModal.classList.add("active"); // slide up modal
-    switchTab(tab);
-  }
-
-  // Switch internal modal tabs
-  function switchTab(tab) {
-    mainTabs.forEach(btn => btn.classList.remove("active"));
-    contentTabs.forEach(c => c.classList.remove("active"));
-
-    if (tab === "ballers") {
-      sessionModal.querySelector("[data-tab='ballers']").classList.add("active");
-      document.getElementById("tabBallers").classList.add("active");
-    } else if (tab === "extras") {
-      sessionModal.querySelector("[data-tab='extras']").classList.add("active");
-      document.getElementById("tabExtras").classList.add("active");
-    }
-  }
-
-  // Button clicks to open modal
-  topBallersBtn.addEventListener("click", () => openModal("ballers"));
-  highlightsBtn.addEventListener("click", () => openModal("extras"));
-
-  // Internal modal tab clicks
-  mainTabs.forEach(btn => {
-    btn.addEventListener("click", () => {
-      const tab = btn.getAttribute("data-tab");
-      switchTab(tab);
-    });
-  });
-
-  // Close modal if clicking outside content
-  sessionModal.addEventListener("click", (e) => {
-    if (e.target === sessionModal) {
-      sessionModal.classList.remove("active"); // slide down
-    }
-  });
-});
 
 const scrollArrow = document.getElementById('scrollArrow');
   const chatContainer = document.querySelector('#chatContainer'); // your chat wrapper
