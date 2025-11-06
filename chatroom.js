@@ -295,44 +295,47 @@ function showStarPopup(text) {
    🔔 TABS + 
 ================================= */
 async function initSessionButtons(currentUser) {
-  if (!currentUser) return; // Only show for logged-in users
+  if (!currentUser) return; // user not logged in
 
-  const sessionModal = document.getElementById("sessionModal");
+  const sessionBar = document.getElementById("sessionBar");
   const topBallersBtn = document.getElementById("topBallersBtn");
   const highlightsBtn = document.getElementById("highlightsBtn");
+  const sessionModal = document.getElementById("sessionModal");
 
-  // Helper: open modal and show desired tab
-  function openModal(tab) {
-    sessionModal.style.display = "block"; // show modal
-    const mainTabs = sessionModal.querySelectorAll(".sessionTabs button");
-    const contentTabs = sessionModal.querySelectorAll(".sessionContent");
+  // Show panel and buttons
+  sessionBar.style.display = "flex";
+  topBallersBtn.style.display = "inline-block";
+  highlightsBtn.style.display = "inline-block";
+
+  // --- Top Ballers click ---
+  topBallersBtn.addEventListener("click", () => {
+    sessionModal.classList.toggle("active"); // slide modal
+    switchToTab("ballers");
+  });
+
+  // --- Highlights click ---
+  highlightsBtn.addEventListener("click", () => {
+    sessionModal.classList.toggle("active"); // slide modal
+    switchToTab("extras");
+  });
+
+  // Helper: switch tab inside modal
+  function switchToTab(tabId) {
+    const mainTabs = document.querySelectorAll("#sessionModal .sessionTabs button");
+    const contentTabs = document.querySelectorAll("#sessionModal .sessionContent");
 
     mainTabs.forEach(btn => btn.classList.remove("active"));
-    contentTabs.forEach(tabContent => tabContent.classList.remove("active"));
+    contentTabs.forEach(c => c.classList.remove("active"));
 
-    if (tab === "ballers") {
-      document.querySelector('[data-tab="ballers"]').classList.add("active");
+    if (tabId === "ballers") {
+      document.querySelector("#sessionModal [data-tab='ballers']").classList.add("active");
       document.getElementById("tabBallers").classList.add("active");
-    } else if (tab === "extras") {
-      document.querySelector('[data-tab="extras"]').classList.add("active");
+    } else {
+      document.querySelector("#sessionModal [data-tab='extras']").classList.add("active");
       document.getElementById("tabExtras").classList.add("active");
     }
   }
-
-  // Attach click events
-  topBallersBtn.addEventListener("click", () => openModal("ballers"));
-  highlightsBtn.addEventListener("click", () => openModal("extras"));
-
-  // Optional: close modal if clicked outside content
-  window.addEventListener("click", (e) => {
-    if (e.target === sessionModal) {
-      sessionModal.style.display = "none";
-    }
-  });
 }
-
-// Call this after user login
-// initSessionButtons(currentUser);
 
 
 /* ----------------------------
