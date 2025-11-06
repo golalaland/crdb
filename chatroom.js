@@ -3219,17 +3219,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const highlightsBtn = document.getElementById("highlightsBtn");
   const sessionModal = document.getElementById("sessionModal");
 
-  // Function to show the modal and switch tab
+  const mainTabs = sessionModal.querySelectorAll(".sessionTabs button");
+  const contentTabs = sessionModal.querySelectorAll(".sessionContent");
+
+  // Open modal and select tab
   function openModal(tab) {
-    sessionModal.style.display = "block"; // show modal
+    sessionModal.classList.add("active"); // slide up modal
     switchTab(tab);
   }
 
-  // Function to switch the internal modal tabs
+  // Switch internal modal tabs
   function switchTab(tab) {
-    const mainTabs = sessionModal.querySelectorAll(".sessionTabs button");
-    const contentTabs = sessionModal.querySelectorAll(".sessionContent");
-
     mainTabs.forEach(btn => btn.classList.remove("active"));
     contentTabs.forEach(c => c.classList.remove("active"));
 
@@ -3242,16 +3242,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Button clicks to open modal
+  topBallersBtn.addEventListener("click", () => openModal("ballers"));
+  highlightsBtn.addEventListener("click", () => openModal("extras"));
+
+  // Internal modal tab clicks
+  mainTabs.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const tab = btn.getAttribute("data-tab");
+      switchTab(tab);
+    });
+  });
+
   // Close modal if clicking outside content
   sessionModal.addEventListener("click", (e) => {
     if (e.target === sessionModal) {
-      sessionModal.style.display = "none";
+      sessionModal.classList.remove("active"); // slide down
     }
   });
-
-  // Button clicks
-  topBallersBtn.addEventListener("click", () => openModal("ballers"));
-  highlightsBtn.addEventListener("click", () => openModal("extras"));
 });
 
 const scrollArrow = document.getElementById('scrollArrow');
