@@ -633,48 +633,36 @@ function renderMessagesFromArray(messages) {
   }
 }
 
-// Auto-scroll + scroll-to-bottom button
-function handleChatAutoScroll() {
-  if (!refs.messagesEl) return;
+if (!scrollBtn) {
+  scrollBtn = document.createElement("div");
+  scrollBtn.id = "scrollToBottomBtn";
+  scrollBtn.textContent = "↓";
+  scrollBtn.style.cssText = `
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    padding: 6px 12px;
+    background: rgba(255,20,147,0.9);
+    color: #fff;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    opacity: 0;  /* <-- initial opacity */
+    pointer-events: none; /* <-- initially unclickable */
+    transition: all 0.3s ease;
+    z-index: 9999;
+  `;
+  document.body.appendChild(scrollBtn);
 
-  let scrollBtn = document.getElementById("scrollToBottomBtn");
-  if (!scrollBtn) {
-    scrollBtn = document.createElement("div");
-    scrollBtn.id = "scrollToBottomBtn";
-    scrollBtn.textContent = "↓";
-    scrollBtn.style.cssText = `
-      position: fixed;
-      bottom: 90px;
-      right: 20px;
-      padding: 6px 12px;
-      background: rgba(255,20,147,0.9);
-      color: #fff;
-      border-radius: 14px;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-      opacity: 0;
-      pointer-events: none;
-      transition: all 0.3s ease;
-      z-index: 9999;
-    `;
-    document.body.appendChild(scrollBtn);
-    scrollBtn.addEventListener("click", () => {
-      refs.messagesEl.scrollTo({ top: refs.messagesEl.scrollHeight, behavior: "smooth" });
-      scrollBtn.style.opacity = 0;
-      scrollBtn.style.pointerEvents = "none";
-    });
-  }
+  // ✅ Force it visible for testing:
+  scrollBtn.style.opacity = 1;
+  scrollBtn.style.pointerEvents = "auto";
 
-  refs.messagesEl.addEventListener("scroll", () => {
-    const distance = refs.messagesEl.scrollHeight - refs.messagesEl.scrollTop - refs.messagesEl.clientHeight;
-    if (distance > 150) {
-      scrollBtn.style.opacity = 1;
-      scrollBtn.style.pointerEvents = "auto";
-    } else {
-      scrollBtn.style.opacity = 0;
-      scrollBtn.style.pointerEvents = "none";
-    }
+  scrollBtn.addEventListener("click", () => {
+    refs.messagesEl.scrollTo({ top: refs.messagesEl.scrollHeight, behavior: "smooth" });
+    scrollBtn.style.opacity = 0;
+    scrollBtn.style.pointerEvents = "none";
   });
 }
 
@@ -1916,7 +1904,7 @@ function showMeetModal(host) {
   }
 
   if ((currentUser.stars || 0) < COST) {
-    showGiftAlert("🥺 Uh oh, not enough stars ⭐");
+    showGiftAlert("⚠️ Uh oh, not enough stars ⭐");
     modal.remove();
     return;
   }
@@ -2489,7 +2477,7 @@ confirmBtn.onclick = async () => {
 document.addEventListener("DOMContentLoaded", () => {
 
 
-  /* ======================================================
+/* ======================================================
   Social Card + Gift Stars System — Firestore + Chat Banner
   Paste AFTER Firebase/Firestore initialized
 ====================================================== */(async function initSocialCardSystem() {
