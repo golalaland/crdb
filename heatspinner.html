@@ -101,37 +101,47 @@
 
   <div class="results" id="results"></div>
 
-  <script>
-    const spinBtn = document.getElementById('spinBtn');
-    const wheel = document.querySelector('#wheel img');
-    const resultsBox = document.getElementById('results');
+<script>
+  const spinBtn = document.getElementById('spinBtn');
+  const wheel = document.querySelector('#wheel img');
+  const resultsBox = document.getElementById('results');
 
-    let currentRotation = 0;
-    const sectors = 12; // adjust based on how many slices your wheel has
-    const degreesPerSector = 360 / sectors;
+  // 🎯 Real roulette sequence (European)
+  const rouletteNumbers = [
+    0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11,
+    30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18,
+    29, 7, 28, 12, 35, 3, 26
+  ];
 
-    spinBtn.addEventListener('click', () => {
-      const randomSector = Math.floor(Math.random() * sectors);
-      const randomSpin = 360 * 5 + (randomSector * degreesPerSector) + Math.random() * degreesPerSector;
-      currentRotation += randomSpin;
+  let currentRotation = 0;
+  const sectors = rouletteNumbers.length; // 37
+  const degreesPerSector = 360 / sectors;
 
-      // Animate the wheel
-      wheel.style.transition = 'transform 4s cubic-bezier(0.33, 1, 0.68, 1)';
-      wheel.style.transform = `rotate(${currentRotation}deg)`;
+  spinBtn.addEventListener('click', () => {
+    const randomSector = Math.floor(Math.random() * sectors);
+    const spinRounds = 5;
+    
+    // Offset to align pointer (adjust if wheel appears misaligned)
+    const offset = 270; // 0 = top, 90 = right, 180 = bottom, 270 = left
+    
+    const targetAngle = randomSector * degreesPerSector;
+    const finalRotation = spinRounds * 360 + offset + targetAngle;
+    currentRotation = finalRotation;
 
-      // After spin ends, determine result
-      setTimeout(() => {
-        const normalized = currentRotation % 360;
-        const selectedSector = Math.floor((360 - normalized) / degreesPerSector) % sectors + 1;
+    wheel.style.transition = 'transform 4s cubic-bezier(0.33, 1, 0.68, 1)';
+    wheel.style.transform = `rotate(${currentRotation}deg)`;
 
-        const result = `🔥 Spin Result: ${selectedSector}`;
-        const item = document.createElement('div');
-        item.classList.add('result-item');
-        item.textContent = result;
-        resultsBox.prepend(item);
-      }, 4200);
-    });
-  </script>
+    // Calculate winning number after spin
+    setTimeout(() => {
+      const normalized = (currentRotation - offset) % 360;
+      const selectedSector = Math.floor((360 - normalized) / degreesPerSector) % sectors;
+      const resultNumber = rouletteNumbers[selectedSector];
 
-</body>
-</html>
+      const item = document.createElement('div');
+      item.classList.add('result-item');
+      item.textContent = `🔥 Spin Result: ${resultNumber}`;
+      resultsBox.prepend(item);
+    }, 4200);
+  });
+</script>
+
