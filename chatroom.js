@@ -177,21 +177,37 @@ onAuthStateChanged(auth, async (user) => {
       setTimeout(initNotificationsListener, 150);
     });
   }
+// ✅ 8. Mark All As Read
+const markAllBtn = document.getElementById("markAllRead");
 
-  // ✅ 8. Mark All As Read
-  const markAllBtn = document.getElementById("markAllRead");
-  if (markAllBtn) {
-    markAllBtn.addEventListener("click", async () => {
-      console.log("🟡 Marking all notifications as read...");
+if (markAllBtn) {
+  markAllBtn.addEventListener("click", async () => {
+    console.log("🟡 Marking all notifications as read...");
+    
+    try {
       const snapshot = await getDocs(query(notifRef, where("userId", "==", userQueryId)));
-      for (const docSnap of snapshot.docs) {
-        const ref = doc(db, "notifications", docSnap.id);
-        await updateDoc(ref, { read: true });
+
+      if (snapshot.empty) {
+        alert("ℹ️ No notifications to mark as read.");
+        return;
       }
+
+      // Update all notifications in parallel
+      const updatePromises = snapshot.docs.map(docSnap => {
+        const ref = doc(db, "notifications", docSnap.id);
+        return updateDoc(ref, { read: true });
+      });
+
+      await Promise.all(updatePromises);
+
       alert("✅ All notifications marked as read.");
-    });
-  }
-});
+      console.log("✅ Done marking all notifications as read.");
+    } catch (error) {
+      console.error("❌ Error marking notifications as read:", error);
+      alert("❌ Failed to mark notifications as read. Try again.");
+    }
+  });
+}
 
 /* ===============================
    🔔 Manual Notification Starter (for whitelist login)
