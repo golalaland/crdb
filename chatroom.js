@@ -3298,44 +3298,6 @@ checkScroll(); // initial check
 }); // ✅ closes DOMContentLoaded event listener
 
 
-// ---------- Highlights Button ----------
-highlightsBtn.onclick = async () => {
-  try {
-    if (!currentUser || !currentUser.uid) {
-      showGoldAlert("Please log in to view highlights 🔒");
-      return;
-    }
-
-    const highlightsRef = collection(db, "highlightVideos");
-    const q = query(highlightsRef, orderBy("createdAt", "desc"));
-    const snapshot = await getDocs(q);
-
-    if (snapshot.empty) {
-      showGoldAlert("No highlights uploaded yet ⚡");
-      return;
-    }
-
-    const videos = snapshot.docs.map(docSnap => {
-      const d = docSnap.data();
-      return {
-        id: docSnap.id,
-        highlightVideo: d.highlightVideo,
-        highlightVideoPrice: d.highlightVideoPrice,
-        title: d.title,
-        uploader: d.uploaderName || "Anonymous",
-        uploaderId: d.uploaderId,
-        uploaderEmail: d.uploaderEmail || "unknown",
-        description: d.description || "",
-      };
-    });
-
-    showHighlightsModal(videos);
-  } catch (err) {
-    console.error("🔥 Error fetching highlights:", err);
-    showGoldAlert("Error fetching highlights — please try again.");
-  }
-};
-
 // ---------- Highlights Modal ----------
 function showHighlightsModal(videos) {
   document.getElementById("highlightsModal")?.remove();
@@ -3383,52 +3345,102 @@ function showHighlightsModal(videos) {
     });
 
     // 🎥 Preview container
-const videoContainer = document.createElement("div");
-Object.assign(videoContainer.style, { 
-  height: "320px", 
-  overflow: "hidden", 
-  position: "relative" 
-});
+    const videoContainer = document.createElement("div");
+    Object.assign(videoContainer.style, { 
+      height: "320px", 
+      overflow: "hidden", 
+      position: "relative" 
+    });
 
-const videoEl = document.createElement("video");
-videoEl.src = video.highlightVideo;
-videoEl.muted = true;
-videoEl.loop = true;
-videoEl.preload = "metadata";
-videoEl.poster = video.thumbnail || `https://image-thumbnails-service/?video=${encodeURIComponent(video.highlightVideo)}&blur=10`;
-Object.assign(videoEl.style, { width: "100%", height: "100%", objectFit: "cover" });
+    const videoEl = document.createElement("video");
+    videoEl.src = video.highlightVideo;
+    videoEl.muted = true;
+    videoEl.loop = true;
+    videoEl.preload = "metadata";
+    videoEl.poster = video.thumbnail || `https://image-thumbnails-service/?video=${encodeURIComponent(video.highlightVideo)}&blur=10`;
+    Object.assign(videoEl.style, { width: "100%", height: "100%", objectFit: "cover" });
 
-// 🚫 Overlay lock until unlocked
-const lockOverlay = document.createElement("div");
-Object.assign(lockOverlay.style, {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-  background: "rgba(0,0,0,0.55)",
-  backdropFilter: "blur(2px)",
-  color: "#fff",
-  fontWeight: "600",
-  fontSize: "14px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  transition: "opacity 0.3s ease"
-});
-lockOverlay.textContent = "🔒 Locked — Unlock to Watch";
+    // 🚫 Overlay lock
+    const lockOverlay = document.createElement("div");
+    Object.assign(lockOverlay.style, {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      background: "rgba(0,0,0,0.55)",
+      backdropFilter: "blur(2px)",
+      color: "#fff",
+      fontWeight: "600",
+      fontSize: "14px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      transition: "opacity 0.3s ease"
+    });
+    lockOverlay.textContent = "🔒 Locked — Unlock to Watch";
 
-// prevent playing full video before unlock
-videoContainer.onclick = (e) => {
-  e.stopPropagation();
-  if (lockOverlay.style.display !== "none") {
-    showGoldAlert("Unlock first to watch this highlight 🔓");
-  }
-};
+    // prevent premature play
+    videoContainer.onclick = (e) => {
+      e.stopPropagation();
+      if (lockOverlay.style.display !== "none") {
+        showGoldAlert("Unlock first to watch this highlight 🔓");
+      }
+    };
 
-// Append
-videoContainer.appendChild(videoEl);
-videoContainer.appendChild(lockOverlay);
+    videoContainer.appendChild(videoEl);
+    videoContainer.appendChild(lockOverlay);
+
+    // 📋 Info panel
+    const infoPanel = document.createElement("div");
+    Object.assign(infoPanel.style, {
+      background: "#111",
+      padding: "10px",
+      display: "flex",
+      flexDirection: "column",
+      textAlign: "left",
+      gap: "4px"
+    });
+
+    const vidTitle = document.createElement("div");
+    vidTitle.textContent = video.title || "Untitled";
+    Object.assign(vidTitle.style, { fontWeight: "700", color: "#fff", fontSize: "14px" });
+
+    const uploader = document.createElement("div");
+    uploader.textContent = `By: ${video.uploader || "Anonymous"}`;
+    Object.assign(uploader.style, { fontSize: "12px", color: "#bbb" });
+
+    const unlockBtn = document.createElement("button");
+    unlockBtn.textContent = `Unlock ${video.highlightVideoPrice || 100} ⭐`;
+    Object.assign(unlockBtn.style, {
+      background: "#ff006e",
+      border: "none",
+      borderRadius: "6px",
+      padding: "8px 0",
+      fontWeight: "600",
+      color: "#fff",
+      cursor: "pointer",
+      transition: "background 0.2s"
+    });
+    unlockBtn.onmouseenter = () => (unlockBtn.style.background = "#ff3385");
+    unlockBtn.onmouseleave = () => (unlockBtn.style.background = "#ff006e");
+
+    unlockBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (!currentUser || !currentUser.uid) return showGoldAlert("Please log in to unlock content 🔒");
+      showUnlockConfirm(video);
+    };
+
+    infoPanel.appendChild(vidTitle);
+    infoPanel.appendChild(uploader);
+    infoPanel.appendChild(unlockBtn);
+
+    // 🧩 Build card
+    card.appendChild(videoContainer);
+    card.appendChild(infoPanel);
+    content.appendChild(card);
+  });
+
   const closeBtn = document.createElement("div");
   closeBtn.innerHTML = "&times;";
   Object.assign(closeBtn.style, {
@@ -3446,116 +3458,4 @@ videoContainer.appendChild(lockOverlay);
   modal.appendChild(content);
   modal.appendChild(closeBtn);
   document.body.appendChild(modal);
-}
-
-// ---------- Unlock Confirmation ----------
-function showUnlockConfirm(video) {
-  document.getElementById("unlockConfirmModal")?.remove();
-
-  const modal = document.createElement("div");
-  modal.id = "unlockConfirmModal";
-  Object.assign(modal.style, {
-    position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
-    background: "rgba(0,0,0,0.75)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: "1000001",
-    backdropFilter: "blur(3px)"
-  });
-
-  modal.innerHTML = `
-    <div style="background:#111;padding:20px;border-radius:12px;text-align:center;color:#fff;max-width:320px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
-      <h3 style="margin-bottom:10px;font-weight:600;">Unlock "${video.title}"?</h3>
-      <p style="margin-bottom:16px;">This will cost <b>${video.highlightVideoPrice} ⭐</b></p>
-      <div style="display:flex;gap:12px;justify-content:center;">
-        <button id="cancelUnlock" style="padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">Cancel</button>
-        <button id="confirmUnlock" style="padding:8px 16px;background:linear-gradient(90deg,#ff0099,#ff6600);border:none;color:#fff;border-radius:8px;font-weight:600;">Yes</button>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-
-  const confirmBtn = modal.querySelector("#confirmUnlock");
-  const cancelBtn = modal.querySelector("#cancelUnlock");
-
-  cancelBtn.onclick = () => modal.remove();
-
-  confirmBtn.onclick = async () => {
-    confirmBtn.disabled = true;
-    confirmBtn.style.opacity = "0.5";
-    await handleUnlockVideo(video);
-    modal.remove();
-  };
-}
-
-// ---------- Deduct Stars + Credit Uploader + Notify ----------
-async function handleUnlockVideo(video) {
-  try {
-    const senderId = currentUser.uid;
-    const receiverId = video.uploaderId;
-    const starsToDeduct = parseInt(video.highlightVideoPrice, 10) || 0;
-
-    if (!starsToDeduct || starsToDeduct <= 0) return showGoldAlert("Invalid unlock price ❌");
-    if (senderId === receiverId) return showGoldAlert("You can’t unlock your own video 😅");
-
-    const senderRef = doc(db, "users", senderId);
-    const receiverRef = doc(db, "users", receiverId);
-    const unlockRef = doc(db, "highlightUnlocks", `${senderId}_${video.id}`);
-
-    await runTransaction(db, async (tx) => {
-      const senderSnap = await tx.get(senderRef);
-      const receiverSnap = await tx.get(receiverRef);
-      const unlockSnap = await tx.get(unlockRef);
-
-      if (!senderSnap.exists()) throw new Error("User record not found.");
-      if (!receiverSnap.exists()) tx.set(receiverRef, { stars: 0 }, { merge: true });
-
-      const senderData = senderSnap.data();
-      if ((senderData.stars || 0) < starsToDeduct)
-        throw new Error("Insufficient stars ⭐");
-
-      if (unlockSnap.exists()) throw new Error("You already unlocked this highlight ✅");
-
-      // deduct & credit
-      tx.update(senderRef, { stars: increment(-starsToDeduct) });
-      tx.update(receiverRef, { stars: increment(starsToDeduct) });
-
-      // record unlock
-      tx.set(unlockRef, {
-        userId: senderId,
-        videoId: video.id,
-        unlockedAt: serverTimestamp()
-      });
-
-      // notifications
-      pushNotification(receiverId, `🎥 ${senderData.username || "Someone"} unlocked your highlight "${video.title}"`);
-      pushNotification(senderId, `✅ You unlocked "${video.title}" by ${video.uploader}`);
-    });
-
-    // 🧠 visually mark unlocked
-    const card = [...document.querySelectorAll("#highlightsModal video")]
-      .find(v => v.src === video.highlightVideo)
-      ?.closest("div");
-
-    if (card) {
-      const overlay = card.querySelector("div[style*='Locked']");
-      if (overlay) overlay.style.display = "none";
-    }
-
-    const btn = [...document.querySelectorAll("button")]
-      .find(b => b.textContent.includes(video.highlightVideoPrice));
-    if (btn) {
-      btn.textContent = "✅ Unlocked";
-      btn.disabled = true;
-      btn.style.background = "#222";
-      btn.style.cursor = "default";
-    }
-
-    showGoldAlert(`✅ Highlight unlocked successfully!`);
-  } catch (err) {
-    console.error("❌ Unlock failed:", err);
-    showGoldAlert(`⚠️ ${err.message}`);
-  }
 }
