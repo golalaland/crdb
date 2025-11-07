@@ -2487,10 +2487,48 @@ document.getElementById("uploadHighlightBtn").addEventListener("click", async ()
   }
 });
 
+// ==========================
+// 🎬 Smart Thumbnail Handler
+// Supports: YouTube, TikTok, Instagram, and Direct Uploads
+// ==========================
+async function generateSmartThumbnail(videoUrl) {
+  try {
+    // 🎥 YouTube
+    if (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be")) {
+      const videoIdMatch = videoUrl.match(/(?:v=|youtu\.be\/)([^&?/]+)/);
+      if (videoIdMatch) {
+        return `https://img.youtube.com/vi/${videoIdMatch[1]}/hqdefault.jpg`;
+      }
+    }
+
+    // 🎵 TikTok
+    if (videoUrl.includes("tiktok.com")) {
+      const apiUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(videoUrl)}`;
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+      if (data.thumbnail_url) return data.thumbnail_url;
+    }
+
+    // 📸 Instagram
+    if (videoUrl.includes("instagram.com")) {
+      const apiUrl = `https://www.instagram.com/oembed/?url=${encodeURIComponent(videoUrl)}`;
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+      if (data.thumbnail_url) return data.thumbnail_url;
+    }
+
+    // 🎞️ Local or unknown source → generate blurred thumbnail
+    return await generateLocalThumbnail(videoUrl);
+  } catch (err) {
+    console.warn("⚠️ Thumbnail generation failed:", err);
+    return "/img/default-thumbnail.jpg"; // fallback
+  }
+}
+
 // ===============
-// 🧩 Thumbnail Gen
+// 🧩 Local Thumbnail (for uploads)
 // ===============
-async function generateVideoThumbnail(videoUrl) {
+async function generateLocalThumbnail(videoUrl) {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
     video.src = videoUrl;
@@ -2504,11 +2542,9 @@ async function generateVideoThumbnail(videoUrl) {
       const ctx = canvas.getContext("2d");
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-
-      ctx.filter = "blur(6px)"; // 🔆 slight blur for privacy
+      ctx.filter = "blur(6px)";
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
-      resolve(dataUrl);
+      resolve(canvas.toDataURL("image/jpeg", 0.7));
     });
 
     video.addEventListener("error", reject);
@@ -2519,20 +2555,18 @@ async function generateVideoThumbnail(videoUrl) {
 // 🪄 Upload Thumbnail
 // =====================
 async function uploadThumbnailToShopify(base64Img) {
-  // ⚠️ Replace this with your Shopify upload logic
-  // (can use same endpoint as highlightVideo uploads)
   const blob = await (await fetch(base64Img)).blob();
   const formData = new FormData();
   formData.append("file", blob, "thumbnail.jpg");
 
-  const response = await fetch("/upload-to-shopify", { // ← your backend endpoint
+  const response = await fetch("/upload-to-shopify", {
     method: "POST",
     body: formData,
   });
 
   if (!response.ok) throw new Error("Shopify upload failed");
   const data = await response.json();
-  return data.url; // ✅ return CDN URL
+  return data.url;
 }
 
   // --- Initial random values for first load ---
