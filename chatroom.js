@@ -3308,37 +3308,34 @@ topBallersBtn.onclick = () => {
 
 // ---------- Highlights Button ----------
 highlightsBtn.onclick = async () => {
-  if (!currentUser) {
-    showGoldAlert("⚠️ Please sign in first to view highlights.");
-    return;
-  }
-
   try {
-    const highlightsRef = collection(db, "highlights");
-    const q = query(highlightsRef, orderBy("timestamp", "desc"));
+    const highlightsRef = collection(db, "highlightVideos");
+    const q = query(highlightsRef, orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) {
-      showGoldAlert("💫 No highlights uploaded yet — be the first to post one!");
+      showGoldAlert("No highlights uploaded yet ⚡");
       return;
     }
 
     const videos = snapshot.docs.map(docSnap => {
-      const data = docSnap.data();
+      const d = docSnap.data();
       return {
         id: docSnap.id,
-        highlightVideo: data.highlightVideoUrl || "",
-        highlightVideoPrice: data.price || 100,
-        title: data.title || "Untitled Highlight",
-        uploader: data.uploaderName || "Anonymous",
-        uploaderId: data.uploaderId || "",
+        highlightVideo: d.highlightVideo, // your video field
+        highlightVideoPrice: d.highlightVideoPrice,
+        title: d.title,
+        uploader: d.uploaderName || "Anonymous",
+        uploaderId: d.uploaderId,
+        uploaderEmail: d.uploaderEmail || "unknown",
+        description: d.description || "",
       };
     });
 
     showHighlightsModal(videos);
   } catch (err) {
-    console.error("🔥 Error loading highlights:", err);
-    showGoldAlert("⚠️ Couldn’t load highlights, please try again.");
+    console.error("🔥 Error fetching highlights:", err);
+    showGoldAlert("Error fetching highlights — please try again.");
   }
 };
 
