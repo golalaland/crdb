@@ -3308,35 +3308,38 @@ topBallersBtn.onclick = () => {
 
 // ---------- Highlights Button ----------
 highlightsBtn.onclick = async () => {
-  // Demo videos / fetch from Firestore later
-  const videos = [
-    {
-      id: "test1",
-      highlightVideo: "https://www.w3schools.com/html/mov_bbb.mp4",
-      highlightVideoPrice: 150,
-      title: "Big Buck Bunny",
-      uploader: "TestUser",
-      uploaderId: currentUser?.uid || "testUserId"
-    },
-    {
-      id: "test2",
-      highlightVideo: "https://www.w3schools.com/html/movie.mp4",
-      highlightVideoPrice: 100,
-      title: "Sample Video",
-      uploader: "DemoUser",
-      uploaderId: "demoUserId"
-    },
-    {
-      id: "test3",
-      highlightVideo: "https://www.w3schools.com/html/mov_bbb.mp4",
-      highlightVideoPrice: 200,
-      title: "Another Clip",
-      uploader: "TestUser2",
-      uploaderId: "testUser2Id"
-    }
-  ];
+  if (!currentUser) {
+    showGoldAlert("⚠️ Please sign in first to view highlights.");
+    return;
+  }
 
-  showHighlightsModal(videos);
+  try {
+    const highlightsRef = collection(db, "highlights");
+    const q = query(highlightsRef, orderBy("timestamp", "desc"));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      showGoldAlert("💫 No highlights uploaded yet — be the first to post one!");
+      return;
+    }
+
+    const videos = snapshot.docs.map(docSnap => {
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        highlightVideo: data.highlightVideoUrl || "",
+        highlightVideoPrice: data.price || 100,
+        title: data.title || "Untitled Highlight",
+        uploader: data.uploaderName || "Anonymous",
+        uploaderId: data.uploaderId || "",
+      };
+    });
+
+    showHighlightsModal(videos);
+  } catch (err) {
+    console.error("🔥 Error loading highlights:", err);
+    showGoldAlert("⚠️ Couldn’t load highlights, please try again.");
+  }
 };
 
 // ---------- Highlights Modal ----------
@@ -3347,7 +3350,10 @@ function showHighlightsModal(videos) {
   modal.id = "highlightsModal";
   Object.assign(modal.style, {
     position: "fixed",
-    top: 0, left: 0, width: "100vw", height: "100vh",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
     background: "rgba(0,0,0,0.9)",
     display: "flex",
     alignItems: "center",
@@ -3382,7 +3388,6 @@ function showHighlightsModal(videos) {
       boxShadow: "0 2px 10px rgba(0,0,0,0.4)"
     });
 
-    // Video container
     const videoContainer = document.createElement("div");
     Object.assign(videoContainer.style, { height: "320px", overflow: "hidden", position: "relative" });
 
@@ -3398,7 +3403,6 @@ function showHighlightsModal(videos) {
     videoContainer.onmouseenter = () => videoEl.play();
     videoContainer.onmouseleave = () => videoEl.pause();
 
-    // Info panel (glued bottom)
     const infoPanel = document.createElement("div");
     Object.assign(infoPanel.style, {
       background: "#111",
@@ -3445,7 +3449,6 @@ function showHighlightsModal(videos) {
     content.appendChild(card);
   });
 
-  // Close button
   const closeBtn = document.createElement("div");
   closeBtn.innerHTML = "&times;";
   Object.assign(closeBtn.style, {
@@ -3498,9 +3501,6 @@ function showUnlockConfirm(video) {
   modal.querySelector("#confirmUnlock").onclick = async () => {
     modal.remove();
     await handleUnlockVideo(video);
-
-    // Notifications (popup style)
-    alert(`✅ You unlocked ${video.uploader}'s content! Enjoy!`);
-    // Optional: send notification to uploader
+    showGoldAlert(`✅ You unlocked ${video.uploader}'s content! Enjoy!`);
   };
 }
