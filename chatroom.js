@@ -3239,3 +3239,194 @@ const scrollArrow = document.getElementById('scrollArrow');
 
   checkScroll(); // initial check
 }); // ✅ closes DOMContentLoaded event listener
+const highlightsBtn = document.getElementById("highlightsBtn");
+
+highlightsBtn.onclick = async () => {
+  // Fetch videos from Firestore
+  let videos = [];
+  try {
+    const snapshot = await getDocs(collection(db, "highlightVideos"));
+    videos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (err) {
+    console.error("Failed to fetch highlight videos:", err);
+  }
+
+  showHighlightsModal(videos);
+};
+
+function showHighlightsModal(videos) {
+  document.getElementById("highlightModal")?.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "highlightModal";
+  Object.assign(modal.style, {
+    position: "fixed",
+    top: 0, left: 0,
+    width: "100vw", height: "100vh",
+    background: "rgba(0,0,0,0.85)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 999999,
+    padding: "20px",
+    overflowY: "auto"
+  });
+
+  const container = document.createElement("div");
+  Object.assign(container.style, {
+    width: "90%",
+    maxWidth: "900px",
+    background: "#111",
+    borderRadius: "12px",
+    padding: "16px",
+    color: "#fff"
+  });
+
+  // Close button
+  const closeBtn = document.createElement("div");
+  closeBtn.innerHTML = "&times;";
+  Object.assign(closeBtn.style, {
+    fontSize: "22px",
+    fontWeight: "700",
+    cursor: "pointer",
+    textAlign: "right"
+  });
+  closeBtn.onclick = () => modal.remove();
+  container.appendChild(closeBtn);
+
+  // Modal title
+  const title = document.createElement("h2");
+  title.textContent = "Highlights";
+  title.style.textAlign = "center";
+  container.appendChild(title);
+
+  // Gallery wrapper
+  const gallery = document.createElement("div");
+  Object.assign(gallery.style, {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "12px",
+    marginTop: "12px",
+    justifyContent: "center"
+  });
+
+  videos.forEach(video => {
+    const card = document.createElement("div");
+    Object.assign(card.style, {
+      width: "200px",
+      background: "#222",
+      borderRadius: "10px",
+      overflow: "hidden",
+      textAlign: "center",
+      padding: "6px",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      cursor: "pointer"
+    });
+
+    // Thumbnail
+    const thumb = document.createElement("img");
+    thumb.src = video.highlightThumbnail || "";
+    thumb.alt = video.highlightVideoTitle;
+    Object.assign(thumb.style, { width: "100%", borderRadius: "6px" });
+    card.appendChild(thumb);
+
+    // Title
+    const vidTitle = document.createElement("p");
+    vidTitle.textContent = video.highlightVideoTitle;
+    vidTitle.style.fontWeight = "600";
+    vidTitle.style.margin = "6px 0 4px";
+    card.appendChild(vidTitle);
+
+    // Creator
+    const creator = document.createElement("p");
+    creator.textContent = "By: " + (video.creatorChatId || "Unknown");
+    creator.style.fontSize = "12px";
+    creator.style.opacity = "0.8";
+    card.appendChild(creator);
+
+    // Unlock button
+    const costBtn = document.createElement("button");
+    costBtn.textContent = `${video.highlightVideoPrice || 50} ⭐ Unlock`;
+    Object.assign(costBtn.style, {
+      padding: "6px 12px",
+      border: "none",
+      borderRadius: "6px",
+      fontWeight: "600",
+      background: "linear-gradient(90deg,#ff0099,#ff6600)",
+      color: "#fff",
+      cursor: "pointer",
+      marginTop: "6px"
+    });
+
+    costBtn.onclick = async () => {
+      if (!currentUser?.uid) return showStarPopup("⚠️ Log in to unlock videos");
+      if ((currentUser.stars || 0) < video.highlightVideoPrice)
+        return showStarPopup("🔥 Not enough stars!");
+
+      const purchasedRef = doc(db, "videoPurchases", `${currentUser.uid}_${video.id}`);
+      const purchasedSnap = await getDoc(purchasedRef);
+      if (purchasedSnap.exists()) return showVideoModal(video);
+
+      try {
+        // Deduct stars from user & pay creator
+        await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-video.highlightVideoPrice) });
+        await updateDoc(doc(db, "users", video.creatorUid), { stars: increment(video.highlightVideoPrice) });
+
+        // Record purchase
+        await setDoc(purchasedRef, { purchasedAt: serverTimestamp(), videoId: video.id, pricePaid: video.highlightVideoPrice });
+
+        showVideoModal(video);
+      } catch (err) {
+        console.error("Unlock failed:", err);
+        showStarPopup("⚠️ Could not unlock video");
+      }
+    };
+
+    card.appendChild(costBtn);
+    gallery.appendChild(card);
+  });
+
+  container.appendChild(gallery);
+  modal.appendChild(container);
+  document.body.appendChild(modal);
+}
+
+function showVideoModal(video) {
+  const { highlightVideo, highlightVideoTitle, creatorChatId } = video;
+  document.getElementById("videoModal")?.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "videoModal";
+  Object.assign(modal.style, {
+    position: "fixed",
+    top: 0, left: 0,
+    width: "100vw", height: "100vh",
+    background: "rgba(0,0,0,0.85)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 999999,
+    padding: "20px"
+  });
+
+  modal.innerHTML = `
+    <div style="position:relative;max-width:90%;width:480px;background:#111;border-radius:12px;overflow:hidden;">
+      <div style="text-align:right;padding:6px;">
+        <span id="videoClose" style="cursor:pointer;font-weight:700;font-size:20px;">&times;</span>
+      </div>
+      <div style="padding:10px;text-align:center;">
+        <h2 style="margin:0 0 6px;font-size:18px;">${highlightVideoTitle}</h2>
+      </div>
+      <video controls autoplay style="width:100%;height:auto;border-top:1px solid #222;">
+        <source src="${highlightVideo}" type="video/mp4">
+        Your browser does not support HTML video.
+      </video>
+      <div style="padding:8px;text-align:center;font-size:13px;">Unlocked video from ${creatorChatId}</div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.querySelector("#videoClose").onclick = () => modal.remove();
+}
