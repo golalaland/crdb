@@ -3393,7 +3393,7 @@ highlightsBtn.onclick = async () => {
 
 // ---------- Highlights Modal ----------
 function showHighlightsModal(videos) {
-  // 🧹 Remove existing modal if any
+  // 🧹 Remove any existing modal
   document.getElementById("highlightsModal")?.remove();
 
   // 🪩 Main modal wrapper
@@ -3416,41 +3416,51 @@ function showHighlightsModal(videos) {
     boxSizing: "border-box",
   });
 
-  // 🪄 Intro Message (above video frames)
+  // 🪄 Sticky Intro Message (stays on top)
   const intro = document.createElement("div");
   intro.innerHTML = `
     <div style="
       text-align:center;
       color:#ccc;
-      margin:0 auto 24px;
-      max-width:600px;
+      max-width:640px;
+      margin:0 auto;
       line-height:1.6;
       font-size:14px;
-      background:rgba(255,255,255,0.05);
-      padding:12px 18px;
+      background:rgba(255,255,255,0.06);
+      padding:14px 20px;
       border-radius:10px;
-      backdrop-filter:blur(4px);
+      backdrop-filter:blur(5px);
+      box-shadow:0 0 12px rgba(255,255,255,0.08);
     ">
       <p style="margin:0;">
-        🎬 <b>Highlights</b> are short, exclusive video clips uploaded by creators.<br>
+        🎬 <b>Highlights</b> are short, exclusive clips uploaded by creators.<br>
         To view premium clips, simply <b>unlock them with ⭐ Stars</b> —  
         each unlock supports the creator and boosts your engagement score.
       </p>
     </div>
   `;
+  Object.assign(intro.style, {
+    position: "sticky",
+    top: "10px",
+    zIndex: "1001",
+    marginBottom: "24px",
+  });
   modal.appendChild(intro);
 
-  // 🧱 Inner container (video grid)
+  // 🧱 Inner container (horizontal scroll)
   const content = document.createElement("div");
   Object.assign(content.style, {
     display: "flex",
     gap: "16px",
     flexWrap: "nowrap",
     overflowX: "auto",
-    paddingBottom: "30px",
+    paddingBottom: "40px",
+    scrollBehavior: "smooth",
+    width: "100%",
+    justifyContent: "flex-start",
   });
 
-  // 🎥 Loop through videos to create cards
+  // 🎥 Loop through videos to create highlight cards
   videos.forEach(video => {
     const card = document.createElement("div");
     Object.assign(card.style, {
@@ -3464,8 +3474,11 @@ function showHighlightsModal(videos) {
       justifyContent: "space-between",
       cursor: "pointer",
       flexShrink: 0,
-      boxShadow: "0 2px 10px rgba(0,0,0,0.4)",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
+      transition: "transform 0.2s ease",
     });
+    card.onmouseenter = () => (card.style.transform = "scale(1.03)");
+    card.onmouseleave = () => (card.style.transform = "scale(1)");
 
     // 🎞 Video container
     const videoContainer = document.createElement("div");
@@ -3493,7 +3506,7 @@ function showHighlightsModal(videos) {
 
     videoContainer.appendChild(videoEl);
 
-    // 🌀 Hover preview (only before unlock)
+    // 🌀 Hover preview
     videoContainer.onmouseenter = () => {
       const unlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
       if (!unlocked) videoEl.play();
@@ -3561,11 +3574,9 @@ function showHighlightsModal(videos) {
     infoPanel.appendChild(uploader);
     infoPanel.appendChild(unlockBtn);
 
-    // Add both parts to card
+    // 🧩 Add both sections to the card
     card.appendChild(videoContainer);
     card.appendChild(infoPanel);
-
-    // Add card to container
     content.appendChild(card);
   });
 
@@ -3584,7 +3595,7 @@ function showHighlightsModal(videos) {
   });
   closeBtn.onclick = () => modal.remove();
 
-  // 🧩 Add everything to modal
+  // 🧩 Combine all elements
   modal.appendChild(content);
   modal.appendChild(closeBtn);
   document.body.appendChild(modal);
