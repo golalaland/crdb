@@ -3572,16 +3572,36 @@ Object.assign(modal.style, {
   opacity: "1",
 });
 
-  modal.innerHTML = `
-    <div style="background:#111;padding:20px;border-radius:12px;text-align:center;color:#fff;max-width:320px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
-      <h3 style="margin-bottom:10px;font-weight:600;">Unlock "${video.title}"?</h3>
-      <p style="margin-bottom:16px;">This will cost <b>${video.highlightVideoPrice} ⭐</b></p>
-      <div style="display:flex;gap:12px;justify-content:center;">
-        <button id="cancelUnlock" style="padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">Cancel</button>
-        <button id="confirmUnlock" style="padding:8px 16px;background:linear-gradient(90deg,#ff0099,#ff6600);border:none;color:#fff;border-radius:8px;font-weight:600;">Yes</button>
-      </div>
+modal.innerHTML = `
+  <div style="background:#111;padding:24px;border-radius:14px;text-align:center;color:#fff;max-width:340px;
+              box-shadow:0 0 25px rgba(0,0,0,0.6);">
+              
+    <!-- 🪩 Intro Message -->
+    <div style="margin-bottom:16px;font-size:14px;line-height:1.5;color:#ccc;">
+      <p style="margin:0;">
+        Unlocking highlights with <b>⭐ Stars</b> helps creators earn and grow visibility.  
+        Each unlock supports the uploader and boosts your own engagement score.
+      </p>
     </div>
-  `;
+
+    <!-- 🔓 Unlock Prompt -->
+    <h3 style="margin-bottom:10px;font-weight:600;">Unlock "${video.title}"?</h3>
+    <p style="margin-bottom:18px;">This will cost <b>${video.highlightVideoPrice} ⭐</b></p>
+
+    <div style="display:flex;gap:12px;justify-content:center;">
+      <button id="cancelUnlock" 
+        style="padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">
+        Cancel
+      </button>
+
+      <button id="confirmUnlock" 
+        style="padding:8px 16px;background:linear-gradient(90deg,#ff0099,#ff6600);
+               border:none;color:#fff;border-radius:8px;font-weight:600;">
+        Yes
+      </button>
+    </div>
+  </div>
+`;
 
   document.body.appendChild(modal);
   modal.querySelector("#cancelUnlock").onclick = () => modal.remove();
