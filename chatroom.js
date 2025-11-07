@@ -2487,48 +2487,52 @@ document.getElementById("uploadHighlightBtn").addEventListener("click", async ()
   }
 });
 
-// ==========================
-// 🎬 Smart Thumbnail Handler
-// Supports: YouTube, TikTok, Instagram, and Direct Uploads
-// ==========================
-async function generateSmartThumbnail(videoUrl) {
+// ===============================
+// 🧩 Smart Thumbnail Generator
+// ===============================
+async function generateVideoThumbnail(videoUrl) {
   try {
-    // 🎥 YouTube
-    if (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be")) {
-      const videoIdMatch = videoUrl.match(/(?:v=|youtu\.be\/)([^&?/]+)/);
+    // 🟢 1. TikTok
+    if (videoUrl.includes("tiktok.com")) {
+      const videoIdMatch = videoUrl.match(/\/video\/(\d+)/);
       if (videoIdMatch) {
-        return `https://img.youtube.com/vi/${videoIdMatch[1]}/hqdefault.jpg`;
+        const videoId = videoIdMatch[1];
+        return `https://www.tiktok.com/oembed?url=https://www.tiktok.com/@user/video/${videoId}`;
       }
     }
 
-    // 🎵 TikTok
-    if (videoUrl.includes("tiktok.com")) {
-      const apiUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(videoUrl)}`;
-      const response = await fetch(apiUrl);
-      const data = await response.json();
-      if (data.thumbnail_url) return data.thumbnail_url;
-    }
-
-    // 📸 Instagram
+    // 🟣 2. Instagram
     if (videoUrl.includes("instagram.com")) {
-      const apiUrl = `https://www.instagram.com/oembed/?url=${encodeURIComponent(videoUrl)}`;
-      const response = await fetch(apiUrl);
-      const data = await response.json();
-      if (data.thumbnail_url) return data.thumbnail_url;
+      const res = await fetch(`https://www.instagram.com/oembed/?url=${videoUrl}`);
+      const data = await res.json();
+      return data.thumbnail_url || data.thumbnail_url_with_play_button || data.author_url || "";
     }
 
-    // 🎞️ Local or unknown source → generate blurred thumbnail
-    return await generateLocalThumbnail(videoUrl);
+    // 🟠 3. YouTube
+    if (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be")) {
+      const match = videoUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+      if (match) {
+        const id = match[1];
+        return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+      }
+    }
+
+    // 🟣 4. Shopify CDN (already an image/video link)
+    if (videoUrl.includes("cdn.shopify.com")) {
+      return videoUrl;
+    }
+
+    // 🔵 5. Default Fallback (try extracting first video frame)
+    return await generateThumbnailFromVideo(videoUrl);
+
   } catch (err) {
-    console.warn("⚠️ Thumbnail generation failed:", err);
-    return "/img/default-thumbnail.jpg"; // fallback
+    console.warn("⚠️ Could not fetch platform thumbnail, using fallback:", err);
+    return "https://via.placeholder.com/480x270?text=Preview+Unavailable";
   }
 }
 
-// ===============
-// 🧩 Local Thumbnail (for uploads)
-// ===============
-async function generateLocalThumbnail(videoUrl) {
+// Helper for direct video files (MP4, etc.)
+async function generateThumbnailFromVideo(videoUrl) {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
     video.src = videoUrl;
@@ -2542,9 +2546,9 @@ async function generateLocalThumbnail(videoUrl) {
       const ctx = canvas.getContext("2d");
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      ctx.filter = "blur(6px)";
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL("image/jpeg", 0.7));
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+      resolve(dataUrl);
     });
 
     video.addEventListener("error", reject);
