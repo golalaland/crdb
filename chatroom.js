@@ -3238,3 +3238,52 @@ const scrollArrow = document.getElementById('scrollArrow');
 
   checkScroll(); // initial check
 }); // ✅ closes DOMContentLoaded event listener
+document.addEventListener("DOMContentLoaded", () => {
+  const topBallersBtn = document.getElementById("topBallersBtn");
+  const highlightsBtn = document.getElementById("highlightsBtn");
+  const sessionModal = document.getElementById("sessionModal");
+
+  const mainTabs = sessionModal.querySelectorAll(".sessionTabs button");
+  const contentTabs = sessionModal.querySelectorAll(".sessionContent");
+
+  // Show the modal and switch to chosen tab
+  function openModal(tab) {
+    sessionModal.style.display = "block";   // show modal
+    sessionModal.classList.add("active");   // trigger slide-up
+    switchTab(tab);
+  }
+
+  // Switch internal modal tabs
+  function switchTab(tab) {
+    mainTabs.forEach(btn => btn.classList.remove("active"));
+    contentTabs.forEach(c => c.classList.remove("active"));
+
+    if (tab === "ballers") {
+      sessionModal.querySelector("[data-tab='ballers']").classList.add("active");
+      document.getElementById("tabBallers").classList.add("active");
+    } else if (tab === "extras") {
+      sessionModal.querySelector("[data-tab='extras']").classList.add("active");
+      document.getElementById("tabExtras").classList.add("active");
+    }
+  }
+
+  // --- Click handlers ---
+  topBallersBtn.addEventListener("click", () => openModal("ballers"));
+  highlightsBtn.addEventListener("click", () => openModal("extras"));
+
+  // --- Inside-modal tab switching ---
+  mainTabs.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const tab = btn.getAttribute("data-tab");
+      switchTab(tab);
+    });
+  });
+
+  // --- Close modal when clicking outside content ---
+  sessionModal.addEventListener("click", (e) => {
+    if (e.target === sessionModal) {
+      sessionModal.classList.remove("active");
+      setTimeout(() => (sessionModal.style.display = "none"), 300);
+    }
+  });
+});
