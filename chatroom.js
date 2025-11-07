@@ -3452,47 +3452,48 @@ function showHighlightsModal(videos) {
     intro.style.opacity = modal.scrollTop > 50 ? "0.7" : "1";
   });
 
-  // 🩵 Search bar wrapper
-  const searchWrap = document.createElement("div");
-  Object.assign(searchWrap.style, {
-    position: "sticky",
-    top: "84px",
-    zIndex: "1001",
-    marginBottom: "20px",
-    display: "flex",
-    justifyContent: "center",
-  });
+  // 🩵 Search Bar (Sticky + Functional)
+const searchWrap = document.createElement("div");
+Object.assign(searchWrap.style, {
+  position: "sticky",
+  top: "84px",
+  zIndex: "1001",
+  marginBottom: "20px",
+  display: "flex",
+  justifyContent: "center",
+});
 
-  searchWrap.innerHTML = `
-    <div style="
-      display:flex;
-      align-items:center;
-      background:rgba(255,255,255,0.1);
-      border-radius:30px;
-      padding:8px 14px;
-      width:260px;
-      backdrop-filter:blur(6px);
-      box-shadow:0 0 8px rgba(255,255,255,0.05);
-    ">
-      <svg xmlns="http://www.w3.org/2000/svg" height="18" width="18" fill="#ccc" style="margin-right:8px;">
-        <path d="M15.5 14.09l-3.6-3.6A5.5 5.5 0 0010.5 2 5.5 5.5 0 005 7.5 5.5 5.5 0 0010.5 13a5.5 5.5 0 001.95-.36l3.6 3.6zM10.5 11a3.5 3.5 0 110-7 3.5 3.5 0 010 7z"/>
-      </svg>
-      <input id="highlightSearch" 
-        type="text" 
-        placeholder="Search by creator..." 
-        style="
-          flex:1;
-          background:transparent;
-          border:none;
-          outline:none;
-          color:#fff;
-          font-size:13px;
-          letter-spacing:0.3px;
-        "
-      />
-    </div>
-  `;
-  modal.appendChild(searchWrap);
+searchWrap.innerHTML = `
+  <div style="
+    display:flex;
+    align-items:center;
+    background:rgba(255,255,255,0.08);
+    border-radius:30px;
+    padding:8px 14px;
+    width:280px;
+    backdrop-filter:blur(6px);
+    box-shadow:0 0 10px rgba(0,0,0,0.25);
+  ">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#ccc" viewBox="0 0 24 24" style="margin-right:8px;">
+      <path d="M21.71 20.29l-3.388-3.388A8.959 8.959 0 0018 10a9 9 0 10-9 9 8.959 8.959 0 006.902-3.678l3.388 3.388a1 1 0 001.414-1.414zM4 10a6 6 0 1112 0 6 6 0 01-12 0z"/>
+    </svg>
+    <input 
+      id="highlightSearchInput"
+      type="text"
+      placeholder="Search by creator..."
+      style="
+        flex:1;
+        background:transparent;
+        border:none;
+        outline:none;
+        color:#fff;
+        font-size:13px;
+        letter-spacing:0.3px;
+      "
+    />
+  </div>
+`;
+modal.appendChild(searchWrap);
 
   // 🧱 Inner container (horizontal scroll)
   const content = document.createElement("div");
@@ -3528,6 +3529,10 @@ function showHighlightsModal(videos) {
       });
       card.onmouseenter = () => (card.style.transform = "scale(1.03)");
       card.onmouseleave = () => (card.style.transform = "scale(1)");
+        // 🏷️ Add searchable attributes
+  card.classList.add("videoCard");
+  card.setAttribute("data-uploader", video.uploader || "Anonymous");
+  card.setAttribute("data-title", video.title || "");
 
       const videoContainer = document.createElement("div");
       Object.assign(videoContainer.style, {
@@ -3625,15 +3630,21 @@ function showHighlightsModal(videos) {
   // Initial render
   renderCards(videos);
 
-  // 🔎 Live Search Filter
-  const searchInput = searchWrap.querySelector("#highlightSearch");
-  searchInput.addEventListener("input", (e) => {
-    const query = e.target.value.trim().toLowerCase();
-    const filtered = videos.filter(v =>
-      (v.uploaderName || "").toLowerCase().includes(query)
-    );
-    renderCards(filtered);
+// 🔎 Live Search Filter (No re-render — hides/shows instantly)
+const searchInput = searchWrap.querySelector("#highlightSearchInput");
+
+searchInput.addEventListener("input", (e) => {
+  const term = e.target.value.trim().toLowerCase();
+
+  // Loop through all visible video cards
+  content.querySelectorAll(".videoCard").forEach(card => {
+    const uploader = card.getAttribute("data-uploader")?.toLowerCase() || "";
+    const title = card.getAttribute("data-title")?.toLowerCase() || "";
+
+    card.style.display =
+      uploader.includes(term) || title.includes(term) ? "flex" : "none";
   });
+});
 
   // ❌ Close button
   const closeBtn = document.createElement("div");
