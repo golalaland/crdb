@@ -2453,16 +2453,22 @@ document.getElementById("uploadHighlightBtn").addEventListener("click", async ()
   try {
     const userId = currentUser.uid;
     const emailId = (currentUser.email || "").replace(/\./g, ",");
+    const chatId = currentUser.chatId || currentUser.displayName || "Anonymous";
+
+    statusEl.textContent = "⏳ Generating preview...";
+    const thumbnail = await generateVideoThumbnail(videoUrl);
+    const thumbnailUrl = await uploadThumbnailToShopify(thumbnail); // ✅ upload to CDN
 
     const docRef = await addDoc(collection(db, "highlightVideos"), {
       uploaderId: userId,
       uploaderEmail: emailId,
-      uploaderName: currentUser.displayName || "Anonymous",
+      uploaderName: chatId, // 💥 uses chatId instead of Anonymous
       highlightVideo: videoUrl,
       highlightVideoPrice: price,
       title,
       description: desc || "",
-      createdAt: serverTimestamp()
+      thumbnail: thumbnailUrl, // 🎞 added thumbnail link
+      createdAt: serverTimestamp(),
     });
 
     console.log("✅ Uploaded highlight:", docRef.id);
@@ -2480,6 +2486,54 @@ document.getElementById("uploadHighlightBtn").addEventListener("click", async ()
     statusEl.textContent = "⚠️ Failed to upload. Try again.";
   }
 });
+
+// ===============
+// 🧩 Thumbnail Gen
+// ===============
+async function generateVideoThumbnail(videoUrl) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.src = videoUrl;
+    video.crossOrigin = "anonymous";
+    video.preload = "metadata";
+    video.muted = true;
+    video.playsInline = true;
+
+    video.addEventListener("loadeddata", () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      ctx.filter = "blur(6px)"; // 🔆 slight blur for privacy
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+      resolve(dataUrl);
+    });
+
+    video.addEventListener("error", reject);
+  });
+}
+
+// =====================
+// 🪄 Upload Thumbnail
+// =====================
+async function uploadThumbnailToShopify(base64Img) {
+  // ⚠️ Replace this with your Shopify upload logic
+  // (can use same endpoint as highlightVideo uploads)
+  const blob = await (await fetch(base64Img)).blob();
+  const formData = new FormData();
+  formData.append("file", blob, "thumbnail.jpg");
+
+  const response = await fetch("/upload-to-shopify", { // ← your backend endpoint
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) throw new Error("Shopify upload failed");
+  const data = await response.json();
+  return data.url; // ✅ return CDN URL
+}
 
   // --- Initial random values for first load ---
 (function() {
