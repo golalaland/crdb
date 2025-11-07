@@ -3393,8 +3393,10 @@ highlightsBtn.onclick = async () => {
 
 // ---------- Highlights Modal ----------
 function showHighlightsModal(videos) {
+  // 🧹 Remove existing modal if any
   document.getElementById("highlightsModal")?.remove();
 
+  // 🪩 Main modal wrapper
   const modal = document.createElement("div");
   modal.id = "highlightsModal";
   Object.assign(modal.style, {
@@ -3405,22 +3407,50 @@ function showHighlightsModal(videos) {
     height: "100vh",
     background: "rgba(0,0,0,0.9)",
     display: "flex",
+    flexDirection: "column",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     zIndex: "999999",
-    overflowX: "auto",
+    overflowY: "auto",
     padding: "20px",
     boxSizing: "border-box",
   });
 
+  // 🪄 Intro Message (above video frames)
+  const intro = document.createElement("div");
+  intro.innerHTML = `
+    <div style="
+      text-align:center;
+      color:#ccc;
+      margin:0 auto 24px;
+      max-width:600px;
+      line-height:1.6;
+      font-size:14px;
+      background:rgba(255,255,255,0.05);
+      padding:12px 18px;
+      border-radius:10px;
+      backdrop-filter:blur(4px);
+    ">
+      <p style="margin:0;">
+        🎬 <b>Highlights</b> are short, exclusive video clips uploaded by creators.<br>
+        To view premium clips, simply <b>unlock them with ⭐ Stars</b> —  
+        each unlock supports the creator and boosts your engagement score.
+      </p>
+    </div>
+  `;
+  modal.appendChild(intro);
+
+  // 🧱 Inner container (video grid)
   const content = document.createElement("div");
   Object.assign(content.style, {
     display: "flex",
     gap: "16px",
-    height: "90%",
-    alignItems: "center",
+    flexWrap: "nowrap",
+    overflowX: "auto",
+    paddingBottom: "30px",
   });
 
+  // 🎥 Loop through videos to create cards
   videos.forEach(video => {
     const card = document.createElement("div");
     Object.assign(card.style, {
@@ -3437,10 +3467,15 @@ function showHighlightsModal(videos) {
       boxShadow: "0 2px 10px rgba(0,0,0,0.4)",
     });
 
+    // 🎞 Video container
     const videoContainer = document.createElement("div");
-    Object.assign(videoContainer.style, { height: "320px", overflow: "hidden", position: "relative" });
+    Object.assign(videoContainer.style, {
+      height: "320px",
+      overflow: "hidden",
+      position: "relative",
+    });
 
-    // 🎥 Video Element
+    // 🎬 Video element
     const videoEl = document.createElement("video");
     videoEl.src = video.previewClip || video.highlightVideo;
     videoEl.muted = true;
@@ -3450,7 +3485,11 @@ function showHighlightsModal(videos) {
     videoEl.poster =
       video.thumbnail ||
       `https://image-thumbnails-service/?video=${encodeURIComponent(video.highlightVideo)}&blur=10`;
-    Object.assign(videoEl.style, { width: "100%", height: "100%", objectFit: "cover" });
+    Object.assign(videoEl.style, {
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+    });
 
     videoContainer.appendChild(videoEl);
 
@@ -3488,7 +3527,7 @@ function showHighlightsModal(videos) {
     Object.assign(vidTitle.style, { fontWeight: "700", color: "#fff", fontSize: "14px" });
 
     const uploader = document.createElement("div");
-    uploader.textContent = `By: ${video.uploader || "Anonymous"}`;
+    uploader.textContent = `By: ${video.uploaderName || "Anonymous"}`;
     Object.assign(uploader.style, { fontSize: "12px", color: "#bbb" });
 
     const unlockBtn = document.createElement("button");
@@ -3522,15 +3561,19 @@ function showHighlightsModal(videos) {
     infoPanel.appendChild(uploader);
     infoPanel.appendChild(unlockBtn);
 
+    // Add both parts to card
     card.appendChild(videoContainer);
     card.appendChild(infoPanel);
+
+    // Add card to container
     content.appendChild(card);
   });
 
+  // ❌ Close Button
   const closeBtn = document.createElement("div");
   closeBtn.innerHTML = "&times;";
   Object.assign(closeBtn.style, {
-    position: "absolute",
+    position: "fixed",
     top: "20px",
     right: "28px",
     fontSize: "32px",
@@ -3541,6 +3584,7 @@ function showHighlightsModal(videos) {
   });
   closeBtn.onclick = () => modal.remove();
 
+  // 🧩 Add everything to modal
   modal.appendChild(content);
   modal.appendChild(closeBtn);
   document.body.appendChild(modal);
@@ -3572,36 +3616,16 @@ Object.assign(modal.style, {
   opacity: "1",
 });
 
-modal.innerHTML = `
-  <div style="background:#111;padding:24px;border-radius:14px;text-align:center;color:#fff;max-width:340px;
-              box-shadow:0 0 25px rgba(0,0,0,0.6);">
-              
-    <!-- 🪩 Intro Message -->
-    <div style="margin-bottom:16px;font-size:14px;line-height:1.5;color:#ccc;">
-      <p style="margin:0;">
-        Unlocking highlights with <b>⭐ Stars</b> helps creators earn and grow visibility.  
-        Each unlock supports the uploader and boosts your own engagement score.
-      </p>
+  modal.innerHTML = `
+    <div style="background:#111;padding:20px;border-radius:12px;text-align:center;color:#fff;max-width:320px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
+      <h3 style="margin-bottom:10px;font-weight:600;">Unlock "${video.title}"?</h3>
+      <p style="margin-bottom:16px;">This will cost <b>${video.highlightVideoPrice} ⭐</b></p>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button id="cancelUnlock" style="padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">Cancel</button>
+        <button id="confirmUnlock" style="padding:8px 16px;background:linear-gradient(90deg,#ff0099,#ff6600);border:none;color:#fff;border-radius:8px;font-weight:600;">Yes</button>
+      </div>
     </div>
-
-    <!-- 🔓 Unlock Prompt -->
-    <h3 style="margin-bottom:10px;font-weight:600;">Unlock "${video.title}"?</h3>
-    <p style="margin-bottom:18px;">This will cost <b>${video.highlightVideoPrice} ⭐</b></p>
-
-    <div style="display:flex;gap:12px;justify-content:center;">
-      <button id="cancelUnlock" 
-        style="padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">
-        Cancel
-      </button>
-
-      <button id="confirmUnlock" 
-        style="padding:8px 16px;background:linear-gradient(90deg,#ff0099,#ff6600);
-               border:none;color:#fff;border-radius:8px;font-weight:600;">
-        Yes
-      </button>
-    </div>
-  </div>
-`;
+  `;
 
   document.body.appendChild(modal);
   modal.querySelector("#cancelUnlock").onclick = () => modal.remove();
