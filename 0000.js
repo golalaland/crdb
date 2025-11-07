@@ -653,7 +653,7 @@ function handleChatAutoScroll() {
       font-size: 16px;
       font-weight: 700;
       cursor: pointer;
-      opacity: 0;
+      opacity: 1;
       pointer-events: none;
       transition: all 0.3s ease;
       z-index: 9999;
@@ -672,7 +672,7 @@ function handleChatAutoScroll() {
       scrollBtn.style.opacity = 1;
       scrollBtn.style.pointerEvents = "auto";
     } else {
-      scrollBtn.style.opacity = 0;
+      scrollBtn.style.opacity = 1;
       scrollBtn.style.pointerEvents = "none";
     }
   });
@@ -1422,133 +1422,132 @@ refs.sendBtn?.addEventListener("click", async () => {
 });
 
 /* =====================================
-   🎥 Video Navigation & UI Fade Logic
+   🎥 Video Navigation & UI Fade Logic
 ======================================= */
 (() => {
-  const videoPlayer = document.getElementById("videoPlayer");
-  const prevBtn = document.getElementById("prev");
-  const nextBtn = document.getElementById("next");
-  const container = document.querySelector(".video-container");
-  const navButtons = [prevBtn, nextBtn].filter(Boolean);
+  const videoPlayer = document.getElementById("videoPlayer");
+  const prevBtn = document.getElementById("prev");
+  const nextBtn = document.getElementById("next");
+  const container = document.querySelector(".video-container");
+  const navButtons = [prevBtn, nextBtn].filter(Boolean);
 
-  if (!videoPlayer || navButtons.length === 0) return;
+  if (!videoPlayer || navButtons.length === 0) return;
 
-  // Wrap the video in a relative container if not already
-  const videoWrapper = document.createElement("div");
-  videoWrapper.style.position = "relative";
-  videoWrapper.style.display = "inline-block";
-  videoPlayer.parentNode.insertBefore(videoWrapper, videoPlayer);
-  videoWrapper.appendChild(videoPlayer);
+  // Wrap the video in a relative container if not already
+  const videoWrapper = document.createElement("div");
+  videoWrapper.style.position = "relative";
+  videoWrapper.style.display = "inline-block";
+  videoPlayer.parentNode.insertBefore(videoWrapper, videoPlayer);
+  videoWrapper.appendChild(videoPlayer);
 
-  // ---------- Create hint overlay inside video ----------
-  let hint = document.createElement("div");
-hint = document.createElement("div");
-hint.className = "video-hint";
-hint.style.position = "absolute";
-hint.style.bottom = "10%";            // slightly above bottom
-hint.style.left = "50%";
-hint.style.transform = "translateX(-50%)"; // horizontal center
-hint.style.padding = "2px 8px";       // small pill
-hint.style.background = "rgba(0,0,0,0.5)";
-hint.style.color = "#fff";
-hint.style.borderRadius = "12px";     // pill shape
-hint.style.fontSize = "14px";         // readable small font
-hint.style.opacity = "0";
-hint.style.pointerEvents = "none";
-hint.style.transition = "opacity 0.4s";
-// ensure parent is positioned
-videoPlayer.parentElement.style.position = "relative";
-videoPlayer.parentElement.appendChild(hint);
+  // ---------- Create hint overlay inside video ----------
+  const hint = document.createElement("div");
+  hint.className = "video-hint";
+  hint.style.position = "absolute";
+  hint.style.bottom = "10%"; // slightly above bottom
+  hint.style.left = "50%";
+  hint.style.transform = "translateX(-50%)"; // horizontal center
+  hint.style.padding = "2px 8px";
+  hint.style.background = "rgba(0,0,0,0.5)";
+  hint.style.color = "#fff";
+  hint.style.borderRadius = "12px";
+  hint.style.fontSize = "14px";
+  hint.style.opacity = "0";
+  hint.style.pointerEvents = "none";
+  hint.style.transition = "opacity 0.4s";
+  videoWrapper.appendChild(hint);
 
-  const showHint = (msg, timeout = 1500) => {
-    hint.textContent = msg;
-    hint.style.opacity = "1";
-    clearTimeout(hint._t);
-    hint._t = setTimeout(() => (hint.style.opacity = "0"), timeout);
-  };
+  const showHint = (msg, timeout = 1500) => {
+    hint.textContent = msg;
+    hint.style.opacity = "1";
+    clearTimeout(hint._t);
+    hint._t = setTimeout(() => (hint.style.opacity = "0"), timeout);
+  };
 
-  // 🎞️ Video list (Shopify video)
-  const videos = [
-    "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4"
-    // Add more Shopify videos if needed
-  ];
-  let currentVideo = 0;
-  let hideTimeout = null;
+  // 🎞️ Video list (Shopify video)
+  const videos = [
+    "https://cdn.shopify.com/videos/c/o/v/aa400d8029e14264bc1ba0a47babce47.mp4",
+    "https://cdn.shopify.com/videos/c/o/v/45c20ba8df2c42d89807c79609fe85ac.mp4"
+  ];
 
-  /* ----------------------------
-     ▶️ Load & Play Video
-  ----------------------------- */
-  const loadVideo = (index) => {
-    if (index < 0) index = videos.length - 1;
-    if (index >= videos.length) index = 0;
+  let currentVideo = 0;
+  let hideTimeout = null;
 
-    currentVideo = index;
-    videoPlayer.src = videos[currentVideo];
-    videoPlayer.muted = true;
+  /* ----------------------------
+       ▶️ Load & Play Video
+  ----------------------------- */
+  const loadVideo = (index) => {
+    if (index < 0) index = videos.length - 1;
+    if (index >= videos.length) index = 0;
 
-    videoPlayer.addEventListener(
-      "canplay",
-      function onCanPlay() {
-        videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
-        videoPlayer.removeEventListener("canplay", onCanPlay);
-      }
-    );
-  };
+    currentVideo = index;
+    videoPlayer.src = videos[currentVideo];
+    videoPlayer.muted = true;
 
-  /* ----------------------------
-     🔊 Toggle Mute on Tap
-  ----------------------------- */
-  videoPlayer.addEventListener("click", () => {
-    videoPlayer.muted = !videoPlayer.muted;
-    showHint(videoPlayer.muted ? "Tap to unmute" : "Sound on");
-  });
+    // Wait for metadata before playing
+    videoPlayer.addEventListener("loadedmetadata", function onMeta() {
+      videoPlayer.play().catch(() => console.warn("Autoplay may be blocked by browser"));
+      videoPlayer.removeEventListener("loadedmetadata", onMeta);
+    });
+  };
 
-  /* ----------------------------
-     ⏪⏩ Navigation Buttons
-  ----------------------------- */
-  prevBtn?.addEventListener("click", () => loadVideo(currentVideo - 1));
-  nextBtn?.addEventListener("click", () => loadVideo(currentVideo + 1));
+  /* ----------------------------
+       🔊 Toggle Mute on Tap
+  ----------------------------- */
+  videoPlayer.addEventListener("click", () => {
+    videoPlayer.muted = !videoPlayer.muted;
+    showHint(videoPlayer.muted ? "Tap to unmute" : "Sound on");
+  });
 
-  /* ----------------------------
-     👀 Auto Hide/Show Buttons
-  ----------------------------- */
-  const showButtons = () => {
-    navButtons.forEach(btn => {
-      btn.style.opacity = "1";
-      btn.style.pointerEvents = "auto";
-    });
-    clearTimeout(hideTimeout);
-    hideTimeout = setTimeout(() => {
-      navButtons.forEach(btn => {
-        btn.style.opacity = "0";
-        btn.style.pointerEvents = "none";
-      });
-    }, 3000);
-  };
+  /* ----------------------------
+       ⏪⏩ Navigation Buttons
+  ----------------------------- */
+  prevBtn?.addEventListener("click", () => loadVideo(currentVideo - 1));
+  nextBtn?.addEventListener("click", () => loadVideo(currentVideo + 1));
 
-  navButtons.forEach(btn => {
-    btn.style.transition = "opacity 0.6s ease";
-    btn.style.opacity = "0";
-    btn.style.pointerEvents = "none";
-  });
+  /* ----------------------------
+       👀 Auto Hide/Show Buttons
+  ----------------------------- */
+  const showButtons = () => {
+    navButtons.forEach(btn => {
+      btn.style.opacity = "1";
+      btn.style.pointerEvents = "auto";
+    });
+    clearTimeout(hideTimeout);
+    hideTimeout = setTimeout(() => {
+      navButtons.forEach(btn => {
+        btn.style.opacity = "0";
+        btn.style.pointerEvents = "none";
+      });
+    }, 3000);
+  };
 
-  ["mouseenter", "mousemove", "click"].forEach(evt => container?.addEventListener(evt, showButtons));
-  container?.addEventListener("mouseleave", () => {
-    navButtons.forEach(btn => {
-      btn.style.opacity = "0";
-      btn.style.pointerEvents = "none";
-    });
-  });
+  navButtons.forEach(btn => {
+    btn.style.transition = "opacity 0.6s ease";
+    btn.style.opacity = "0";
+    btn.style.pointerEvents = "none";
+  });
 
-  // Start with first video
-  loadVideo(0);
+  ["mouseenter", "mousemove", "click"].forEach(evt => container?.addEventListener(evt, showButtons));
+  container?.addEventListener("mouseleave", () => {
+    navButtons.forEach(btn => {
+      btn.style.opacity = "0";
+      btn.style.pointerEvents = "none";
+    });
+  });
 
-  // Show initial hint inside video
-  showHint("Tap to unmute", 1500);
+  // Start with first video
+  loadVideo(0);
+
+  // Show initial hint after video metadata loads
+  videoPlayer.addEventListener("loadedmetadata", () => {
+    showHint("Tap to unmute", 1500);
+  });
 })();
 
-// URL of your custom star SVG
-const customStarURL = "https://res.cloudinary.com/dekxhwh6l/image/upload/v1760596116/starssvg_k3hmsu.svg";
+
+// URL of your custom star SVG hosted on Shopify
+const customStarURL = "https://cdn.shopify.com/s/files/1/0962/6648/6067/files/starssvg.svg?v=1761770774";
 
 // Replace stars in text nodes with SVG + floating stars (invisible)
 function replaceStarsWithSVG(root = document.body) {
@@ -1638,6 +1637,7 @@ observer.observe(document.body, { childList: true, subtree: true });
 
 // Initial run
 replaceStarsWithSVG();
+
 
 
 /* ---------- DOM Elements ---------- */
@@ -1916,7 +1916,7 @@ function showMeetModal(host) {
   }
 
   if ((currentUser.stars || 0) < COST) {
-    showGiftAlert("🥺 Uh oh, not enough stars ⭐");
+    showGiftAlert("⚠️ Uh oh, not enough stars ⭐");
     modal.remove();
     return;
   }
@@ -2424,6 +2424,117 @@ confirmBtn.onclick = async () => {
     });
   }
 }
+
+// ================================
+// 💰 $ell Content (Highlight Upload)
+// ================================
+document.getElementById("uploadHighlightBtn").addEventListener("click", async () => {
+  const statusEl = document.getElementById("highlightUploadStatus");
+  statusEl.textContent = "";
+
+  // 🧍 Wait until user is confirmed
+  if (!currentUser) {
+    statusEl.textContent = "⚠️ Please sign in first!";
+    console.warn("❌ Upload blocked — no currentUser found");
+    return;
+  }
+
+  // 🧾 Get field values
+  const videoUrl = document.getElementById("highlightVideoInput").value.trim();
+  const title = document.getElementById("highlightTitleInput").value.trim();
+  const desc = document.getElementById("highlightDescInput").value.trim();
+  const price = parseInt(document.getElementById("highlightPriceInput").value.trim() || "0");
+
+  if (!videoUrl || !title || !price) {
+    statusEl.textContent = "⚠️ Fill in all required fields (URL, title, price)";
+    return;
+  }
+
+  try {
+    const userId = currentUser.uid;
+    const emailId = (currentUser.email || "").replace(/\./g, ",");
+    const chatId = currentUser.chatId || currentUser.displayName || "Anonymous";
+
+    statusEl.textContent = "⏳ Generating preview...";
+    const thumbnail = await generateVideoThumbnail(videoUrl);
+    const thumbnailUrl = await uploadThumbnailToShopify(thumbnail); // ✅ upload to CDN
+
+    const docRef = await addDoc(collection(db, "highlightVideos"), {
+      uploaderId: userId,
+      uploaderEmail: emailId,
+      uploaderName: chatId, // 💥 uses chatId instead of Anonymous
+      highlightVideo: videoUrl,
+      highlightVideoPrice: price,
+      title,
+      description: desc || "",
+      thumbnail: thumbnailUrl, // 🎞 added thumbnail link
+      createdAt: serverTimestamp(),
+    });
+
+    console.log("✅ Uploaded highlight:", docRef.id);
+    statusEl.textContent = "✅ Highlight uploaded successfully!";
+    setTimeout(() => (statusEl.textContent = ""), 4000);
+
+    // Optional: reset form
+    document.getElementById("highlightVideoInput").value = "";
+    document.getElementById("highlightTitleInput").value = "";
+    document.getElementById("highlightDescInput").value = "";
+    document.getElementById("highlightPriceInput").value = "";
+
+  } catch (err) {
+    console.error("❌ Error uploading highlight:", err);
+    statusEl.textContent = "⚠️ Failed to upload. Try again.";
+  }
+});
+
+// ===============
+// 🧩 Thumbnail Gen
+// ===============
+async function generateVideoThumbnail(videoUrl) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.src = videoUrl;
+    video.crossOrigin = "anonymous";
+    video.preload = "metadata";
+    video.muted = true;
+    video.playsInline = true;
+
+    video.addEventListener("loadeddata", () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      ctx.filter = "blur(6px)"; // 🔆 slight blur for privacy
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+      resolve(dataUrl);
+    });
+
+    video.addEventListener("error", reject);
+  });
+}
+
+// =====================
+// 🪄 Upload Thumbnail
+// =====================
+async function uploadThumbnailToShopify(base64Img) {
+  // ⚠️ Replace this with your Shopify upload logic
+  // (can use same endpoint as highlightVideo uploads)
+  const blob = await (await fetch(base64Img)).blob();
+  const formData = new FormData();
+  formData.append("file", blob, "thumbnail.jpg");
+
+  const response = await fetch("/upload-to-shopify", { // ← your backend endpoint
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) throw new Error("Shopify upload failed");
+  const data = await response.json();
+  return data.url; // ✅ return CDN URL
+}
+
   // --- Initial random values for first load ---
 (function() {
   const onlineCountEl = document.getElementById('onlineCount');
@@ -2489,7 +2600,7 @@ confirmBtn.onclick = async () => {
 document.addEventListener("DOMContentLoaded", () => {
 
 
-  /* ======================================================
+/* ======================================================
   Social Card + Gift Stars System — Firestore + Chat Banner
   Paste AFTER Firebase/Firestore initialized
 ====================================================== */(async function initSocialCardSystem() {
@@ -2844,7 +2955,7 @@ Object.assign(giftBtnLocal.style, {
       if (i >= text.length) clearInterval(iv);
     }, speed);
   }
-
+  
   // --- USERNAME TAP DETECTOR ---
   document.addEventListener('pointerdown', (e) => {
     const target = e.target;
@@ -2946,6 +3057,7 @@ await addDoc(notifRef, {
 }
 
 })(); // ✅ closes IIFE
+
 
 // ========== 🟣 HOST SETTINGS LOGIC ==========
 const isHost = true; // <-- later dynamic
@@ -3235,6 +3347,364 @@ const scrollArrow = document.getElementById('scrollArrow');
       behavior: 'smooth'
     });
   });
-
-  checkScroll(); // initial check
+  
+checkScroll(); // initial check
 }); // ✅ closes DOMContentLoaded event listener
+
+
+// ---------- Highlights Button ----------
+highlightsBtn.onclick = async () => {
+  try {
+    if (!currentUser || !currentUser.uid) {
+      showGoldAlert("Please log in to view highlights 🔒");
+      return;
+    }
+
+    const highlightsRef = collection(db, "highlightVideos");
+    const q = query(highlightsRef, orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      showGoldAlert("No highlights uploaded yet ⚡");
+      return;
+    }
+
+    const videos = snapshot.docs.map(docSnap => {
+      const d = docSnap.data();
+      return {
+        id: docSnap.id,
+        highlightVideo: d.highlightVideo,
+        highlightVideoPrice: d.highlightVideoPrice,
+        title: d.title,
+        uploader: d.uploaderName || "Anonymous",
+        uploaderId: d.uploaderId,
+        uploaderEmail: d.uploaderEmail || "unknown",
+        description: d.description || "",
+        thumbnail: d.thumbnail || null,
+      };
+    });
+
+    showHighlightsModal(videos);
+  } catch (err) {
+    console.error("🔥 Error fetching highlights:", err);
+    showGoldAlert("Error fetching highlights — please try again.");
+  }
+};
+
+// ---------- Highlights Modal ----------
+function showHighlightsModal(videos) {
+  // 🧹 Remove any existing modal
+  document.getElementById("highlightsModal")?.remove();
+
+  // 🪩 Main modal wrapper
+  const modal = document.createElement("div");
+  modal.id = "highlightsModal";
+  Object.assign(modal.style, {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    background: "rgba(0,0,0,0.9)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    zIndex: "999999",
+    overflowY: "auto",
+    padding: "20px",
+    boxSizing: "border-box",
+  });
+
+  // 🪄 Sticky Intro Message (stays on top)
+  const intro = document.createElement("div");
+  intro.innerHTML = `
+    <div style="
+      text-align:center;
+      color:#ccc;
+      max-width:640px;
+      margin:0 auto;
+      line-height:1.6;
+      font-size:14px;
+      background:rgba(255,255,255,0.06);
+      padding:14px 20px;
+      border-radius:10px;
+      backdrop-filter:blur(5px);
+      box-shadow:0 0 12px rgba(255,255,255,0.08);
+    ">
+      <p style="margin:0;">
+        🎬 <b>Highlights</b> are short, exclusive clips uploaded by creators.<br>
+        To view premium clips, simply <b>unlock them with ⭐ Stars</b> —  
+        each unlock supports the creator and boosts your engagement score.
+      </p>
+    </div>
+  `;
+  Object.assign(intro.style, {
+    position: "sticky",
+    top: "10px",
+    zIndex: "1001",
+    marginBottom: "24px",
+  });
+  modal.appendChild(intro);
+
+  // 🧱 Inner container (horizontal scroll)
+  const content = document.createElement("div");
+  Object.assign(content.style, {
+    display: "flex",
+    gap: "16px",
+    flexWrap: "nowrap",
+    overflowX: "auto",
+    paddingBottom: "40px",
+    scrollBehavior: "smooth",
+    width: "100%",
+    justifyContent: "flex-start",
+  });
+
+  // 🎥 Loop through videos to create highlight cards
+  videos.forEach(video => {
+    const card = document.createElement("div");
+    Object.assign(card.style, {
+      minWidth: "230px",
+      maxWidth: "230px",
+      background: "#1b1b1b",
+      borderRadius: "12px",
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+      cursor: "pointer",
+      flexShrink: 0,
+      boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
+      transition: "transform 0.2s ease",
+    });
+    card.onmouseenter = () => (card.style.transform = "scale(1.03)");
+    card.onmouseleave = () => (card.style.transform = "scale(1)");
+
+    // 🎞 Video container
+    const videoContainer = document.createElement("div");
+    Object.assign(videoContainer.style, {
+      height: "320px",
+      overflow: "hidden",
+      position: "relative",
+    });
+
+    // 🎬 Video element
+    const videoEl = document.createElement("video");
+    videoEl.src = video.previewClip || video.highlightVideo;
+    videoEl.muted = true;
+    videoEl.controls = false;
+    videoEl.loop = true;
+    videoEl.preload = "metadata";
+    videoEl.poster =
+      video.thumbnail ||
+      `https://image-thumbnails-service/?video=${encodeURIComponent(video.highlightVideo)}&blur=10`;
+    Object.assign(videoEl.style, {
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+    });
+
+    videoContainer.appendChild(videoEl);
+
+    // 🌀 Hover preview
+    videoContainer.onmouseenter = () => {
+      const unlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
+      if (!unlocked) videoEl.play();
+    };
+    videoContainer.onmouseleave = () => {
+      videoEl.pause();
+      videoEl.currentTime = 0;
+    };
+
+    // 🖱 Click-to-play or unlock
+    videoContainer.onclick = (e) => {
+      e.stopPropagation();
+      const unlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
+      if (unlocked) playFullVideo(video);
+      else showUnlockConfirm(video);
+    };
+
+    // ℹ️ Info section
+    const infoPanel = document.createElement("div");
+    Object.assign(infoPanel.style, {
+      background: "#111",
+      padding: "10px",
+      display: "flex",
+      flexDirection: "column",
+      textAlign: "left",
+      gap: "4px",
+    });
+
+    const vidTitle = document.createElement("div");
+    vidTitle.textContent = video.title || "Untitled";
+    Object.assign(vidTitle.style, { fontWeight: "700", color: "#fff", fontSize: "14px" });
+
+    const uploader = document.createElement("div");
+    uploader.textContent = `By: ${video.uploaderName || "Anonymous"}`;
+    Object.assign(uploader.style, { fontSize: "12px", color: "#bbb" });
+
+    const unlockBtn = document.createElement("button");
+    const isUnlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
+    unlockBtn.textContent = isUnlocked ? "Unlocked ✅" : `Unlock ${video.highlightVideoPrice || 100} ⭐`;
+    Object.assign(unlockBtn.style, {
+      background: isUnlocked ? "#444" : "#ff006e",
+      border: "none",
+      borderRadius: "6px",
+      padding: "8px 0",
+      fontWeight: "600",
+      color: "#fff",
+      cursor: isUnlocked ? "default" : "pointer",
+      transition: "background 0.2s",
+    });
+
+    if (!isUnlocked) {
+      unlockBtn.onmouseenter = () => (unlockBtn.style.background = "#ff3385");
+      unlockBtn.onmouseleave = () => (unlockBtn.style.background = "#ff006e");
+      unlockBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (!currentUser || !currentUser.uid)
+          return showGoldAlert("Please log in to unlock content 🔒");
+        showUnlockConfirm(video);
+      };
+    } else {
+      unlockBtn.disabled = true;
+    }
+
+    infoPanel.appendChild(vidTitle);
+    infoPanel.appendChild(uploader);
+    infoPanel.appendChild(unlockBtn);
+
+    // 🧩 Add both sections to the card
+    card.appendChild(videoContainer);
+    card.appendChild(infoPanel);
+    content.appendChild(card);
+  });
+
+  // ❌ Close Button
+  const closeBtn = document.createElement("div");
+  closeBtn.innerHTML = "&times;";
+  Object.assign(closeBtn.style, {
+    position: "fixed",
+    top: "20px",
+    right: "28px",
+    fontSize: "32px",
+    color: "#fff",
+    fontWeight: "700",
+    cursor: "pointer",
+    zIndex: "1000000",
+  });
+  closeBtn.onclick = () => modal.remove();
+
+  // 🧩 Combine all elements
+  modal.appendChild(content);
+  modal.appendChild(closeBtn);
+  document.body.appendChild(modal);
+}
+
+// ---------- Unlock Confirmation ----------
+function showUnlockConfirm(video) {
+  // 🛑 Stop any video that might be playing behind
+  document.querySelectorAll("video").forEach(v => v.pause());
+
+  // Remove any existing unlock modal
+  document.getElementById("unlockConfirmModal")?.remove();
+
+  const modal = document.createElement("div");
+ modal.id = "unlockConfirmModal";
+Object.assign(modal.style, {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100vw",
+  height: "100vh",
+  background: "rgba(0,0,0,0.93)", // darker and more opaque
+  backdropFilter: "blur(8px)",    // thicker blur = more glassy
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: "1000001",
+  transition: "opacity 0.3s ease",
+  opacity: "1",
+});
+
+  modal.innerHTML = `
+    <div style="background:#111;padding:20px;border-radius:12px;text-align:center;color:#fff;max-width:320px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
+      <h3 style="margin-bottom:10px;font-weight:600;">Unlock "${video.title}"?</h3>
+      <p style="margin-bottom:16px;">This will cost <b>${video.highlightVideoPrice} ⭐</b></p>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button id="cancelUnlock" style="padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">Cancel</button>
+        <button id="confirmUnlock" style="padding:8px 16px;background:linear-gradient(90deg,#ff0099,#ff6600);border:none;color:#fff;border-radius:8px;font-weight:600;">Yes</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.querySelector("#cancelUnlock").onclick = () => modal.remove();
+  modal.querySelector("#confirmUnlock").onclick = async () => {
+    modal.remove();
+    await handleUnlockVideo(video);
+  };
+}
+
+// ---------- Deduct Stars + Credit Uploader ----------
+async function handleUnlockVideo(video) {
+  try {
+    const senderId = currentUser.uid;
+    const receiverId = video.uploaderId;
+    const starsToDeduct = parseInt(video.highlightVideoPrice, 10) || 0;
+
+    if (!starsToDeduct || starsToDeduct <= 0) return showGoldAlert("Invalid unlock price ❌");
+    if (senderId === receiverId) return showGoldAlert("You can’t unlock your own video 😅");
+
+    const senderRef = doc(db, "users", senderId);
+    const receiverRef = doc(db, "users", receiverId);
+
+    await runTransaction(db, async (tx) => {
+      const senderSnap = await tx.get(senderRef);
+      const receiverSnap = await tx.get(receiverRef);
+      if (!senderSnap.exists()) throw new Error("User record not found.");
+      if (!receiverSnap.exists()) tx.set(receiverRef, { stars: 0 }, { merge: true });
+
+      const senderData = senderSnap.data();
+      if ((senderData.stars || 0) < starsToDeduct)
+        throw new Error("Insufficient stars ⭐");
+
+      tx.update(senderRef, { stars: increment(-starsToDeduct) });
+      tx.update(receiverRef, { stars: increment(starsToDeduct) });
+    });
+
+    // ✅ Remember unlock
+    localStorage.setItem(`unlocked_${video.id}`, "true");
+    showGoldAlert(`✅ You unlocked ${video.uploader}'s video for ${starsToDeduct} ⭐`);
+
+    // ✅ Refresh modal to show unlock state
+    document.getElementById("highlightsModal")?.remove();
+    showHighlightsModal([video]);
+  } catch (err) {
+    console.error("❌ Unlock failed:", err);
+    showGoldAlert(`⚠️ ${err.message}`);
+  }
+}
+
+// ---------- Play Full Video Modal ----------
+function playFullVideo(video) {
+  const modal = document.createElement("div");
+  Object.assign(modal.style, {
+    position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
+    background: "rgba(0,0,0,0.95)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    zIndex: "1000002"
+  });
+
+  const vid = document.createElement("video");
+  vid.src = video.highlightVideo;
+  vid.controls = true;
+  vid.autoplay = true;
+  vid.style.maxWidth = "90%";
+  vid.style.maxHeight = "90%";
+  vid.style.borderRadius = "12px";
+
+  modal.appendChild(vid);
+  modal.onclick = () => modal.remove();
+  document.body.appendChild(modal);
+}
