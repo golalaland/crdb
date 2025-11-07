@@ -2488,27 +2488,23 @@ document.getElementById("uploadHighlightBtn").addEventListener("click", async ()
 });
 
 // ===============================
-// 🧩 Smart Thumbnail Generator
+// 🧩 Smart Thumbnail Generator (Instant)
 // ===============================
 async function generateVideoThumbnail(videoUrl) {
   try {
-    // 🟢 1. TikTok
+    // 🟢 1. TikTok (return static placeholder instead of CORS fetch)
     if (videoUrl.includes("tiktok.com")) {
-      const videoIdMatch = videoUrl.match(/\/video\/(\d+)/);
-      if (videoIdMatch) {
-        const videoId = videoIdMatch[1];
-        return `https://www.tiktok.com/oembed?url=https://www.tiktok.com/@user/video/${videoId}`;
-      }
+      return "https://upload.wikimedia.org/wikipedia/commons/a/a9/TikTok_logo.svg";
     }
 
     // 🟣 2. Instagram
     if (videoUrl.includes("instagram.com")) {
       const res = await fetch(`https://www.instagram.com/oembed/?url=${videoUrl}`);
       const data = await res.json();
-      return data.thumbnail_url || data.thumbnail_url_with_play_button || data.author_url || "";
+      return data.thumbnail_url || "https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg";
     }
 
-    // 🟠 3. YouTube
+    // 🔴 3. YouTube
     if (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be")) {
       const match = videoUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
       if (match) {
@@ -2517,13 +2513,18 @@ async function generateVideoThumbnail(videoUrl) {
       }
     }
 
-    // 🟣 4. Shopify CDN (already an image/video link)
+    // 🟠 4. Shopify CDN (already hosted image/video)
     if (videoUrl.includes("cdn.shopify.com")) {
       return videoUrl;
     }
 
-    // 🔵 5. Default Fallback (try extracting first video frame)
-    return await generateThumbnailFromVideo(videoUrl);
+    // 🟡 5. Regular MP4 or Direct File
+    if (videoUrl.endsWith(".mp4") || videoUrl.endsWith(".mov")) {
+      return await generateThumbnailFromVideo(videoUrl);
+    }
+
+    // ⚪ Fallback
+    return "https://via.placeholder.com/480x270?text=Preview+Unavailable";
 
   } catch (err) {
     console.warn("⚠️ Could not fetch platform thumbnail, using fallback:", err);
@@ -2531,7 +2532,15 @@ async function generateVideoThumbnail(videoUrl) {
   }
 }
 
-// Helper for direct video files (MP4, etc.)
+// ===============================
+// 🪄 Thumbnail Uploader (Simplified)
+// ===============================
+async function uploadThumbnailToShopify(thumbnailUrl) {
+  // 🩵 No upload needed — just return the URL
+  return thumbnailUrl;
+}
+
+// Helper for direct .mp4/.mov videos
 async function generateThumbnailFromVideo(videoUrl) {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
