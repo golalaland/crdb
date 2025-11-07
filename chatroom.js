@@ -3474,8 +3474,8 @@ searchWrap.innerHTML = `
     backdrop-filter:blur(6px);
     box-shadow:0 0 10px rgba(0,0,0,0.25);
   ">
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#ccc" viewBox="0 0 24 24" style="margin-right:8px;">
-      <path d="M21.71 20.29l-3.388-3.388A8.959 8.959 0 0018 10a9 9 0 10-9 9 8.959 8.959 0 006.902-3.678l3.388 3.388a1 1 0 001.414-1.414zM4 10a6 6 0 1112 0 6 6 0 01-12 0z"/>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M15 15L21 21M10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10C17 13.866 13.866 17 10 17Z" stroke="#999999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
     <input 
       id="highlightSearchInput"
