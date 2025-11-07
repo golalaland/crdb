@@ -3236,5 +3236,5 @@ const scrollArrow = document.getElementById('scrollArrow');
       behavior: 'smooth'
     });
   });
-
-  checkScroll(); // initial check
+checkScroll(); // initial check
+}); // ✅ closes DOMContentLoaded event listener
