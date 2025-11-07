@@ -3391,7 +3391,8 @@ function showHighlightsModal(videos) {
     videoEl.muted = true;
     videoEl.controls = false;
     videoEl.loop = true;
-    videoEl.preload = "metadata";
+   videoEl.preload = "metadata";
+videoEl.poster = video.thumbnail || `https://image-thumbnails-service/?video=${encodeURIComponent(video.highlightVideo)}&blur=10`;
     Object.assign(videoEl.style, { width: "100%", height: "100%", objectFit: "cover" });
 
     // 🎞 hover preview
