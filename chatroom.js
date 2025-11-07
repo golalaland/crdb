@@ -3238,52 +3238,156 @@ const scrollArrow = document.getElementById('scrollArrow');
 
   checkScroll(); // initial check
 }); // ✅ closes DOMContentLoaded event listener
-document.addEventListener("DOMContentLoaded", () => {
+async function initSessionButtons(currentUser) {
+  // === 1️⃣ Only show if user is logged in ===
+  if (!currentUser) {
+    console.log("User not logged in — session buttons hidden.");
+    return;
+  }
+
+  // === 2️⃣ DOM references ===
   const topBallersBtn = document.getElementById("topBallersBtn");
   const highlightsBtn = document.getElementById("highlightsBtn");
   const sessionModal = document.getElementById("sessionModal");
+  const tabBallers = document.getElementById("tabBallers");
+  const tabExtras = document.getElementById("tabExtras");
+  const ballerList = document.getElementById("ballerList");
 
-  const mainTabs = sessionModal.querySelectorAll(".sessionTabs button");
-  const contentTabs = sessionModal.querySelectorAll(".sessionContent");
+  // === 3️⃣ Reveal the buttons ===
+  [topBallersBtn, highlightsBtn].forEach(btn => (btn.style.display = "inline-block"));
 
-  // Show the modal and switch to chosen tab
-  function openModal(tab) {
-    sessionModal.style.display = "block";   // show modal
-    sessionModal.classList.add("active");   // trigger slide-up
+  // === 4️⃣ Fetch Firestore data (example placeholders) ===
+  const topBallersData = [];
+  const highlightsData = [];
+
+  try {
+    const topSnap = await getDocs(collection(db, "topBallers"));
+    topSnap.forEach(doc => topBallersData.push(doc.data()));
+
+    const highlightSnap = await getDocs(collection(db, "highlights"));
+    highlightSnap.forEach(doc => highlightsData.push(doc.data()));
+  } catch (err) {
+    console.warn("⚠️ Firestore fetch failed — using mock data:", err);
+    topBallersData.push({ username: "DemoUser", social: "@demo", period: "week" });
+    highlightsData.push({ username: "StarGirl", social: "@stargirl" });
+  }
+
+  // === 5️⃣ Modal Open/Close logic ===
+  function openModal(tab = "ballers") {
+    sessionModal.style.display = "block";
+    requestAnimationFrame(() => sessionModal.classList.add("active")); // slide up
     switchTab(tab);
   }
 
-  // Switch internal modal tabs
+  function closeModal() {
+    sessionModal.classList.remove("active");
+    setTimeout(() => (sessionModal.style.display = "none"), 300);
+  }
+
+  // === 6️⃣ Internal tab switching ===
   function switchTab(tab) {
+    const mainTabs = sessionModal.querySelectorAll(".sessionTabs button");
+    const contentTabs = sessionModal.querySelectorAll(".sessionContent");
+
     mainTabs.forEach(btn => btn.classList.remove("active"));
     contentTabs.forEach(c => c.classList.remove("active"));
 
     if (tab === "ballers") {
       sessionModal.querySelector("[data-tab='ballers']").classList.add("active");
-      document.getElementById("tabBallers").classList.add("active");
-    } else if (tab === "extras") {
+      tabBallers.classList.add("active");
+    } else {
       sessionModal.querySelector("[data-tab='extras']").classList.add("active");
-      document.getElementById("tabExtras").classList.add("active");
+      tabExtras.classList.add("active");
     }
   }
 
-  // --- Click handlers ---
+  // === 7️⃣ Render Top Ballers ===
+  function renderTopBallers(period = "week") {
+    ballerList.innerHTML = "";
+    const filtered = topBallersData.filter(u => u.period === period || period === "all");
+
+    filtered.forEach(user => {
+      const item = document.createElement("div");
+      item.className = "baller-card";
+      item.innerHTML = `
+        <span>${user.username} (${user.social || "No handle"})</span>
+        <div class="ballerBtns">
+          <button class="followBtn" data-username="${user.username}">Follow</button>
+          <button class="watchBtn" data-username="${user.username}">Watch</button>
+        </div>
+      `;
+      ballerList.appendChild(item);
+    });
+
+    // Action buttons
+    ballerList.querySelectorAll(".followBtn").forEach(btn => {
+      btn.onclick = () => {
+        console.log("Followed", btn.dataset.username);
+        // TODO: award stars
+      };
+    });
+    ballerList.querySelectorAll(".watchBtn").forEach(btn => {
+      btn.onclick = () => {
+        console.log("Watched", btn.dataset.username);
+        // TODO: award stars
+      };
+    });
+  }
+
+  // === 8️⃣ Render Highlights ===
+  function renderHighlights() {
+    tabExtras.innerHTML = "";
+    highlightsData.forEach(user => {
+      const item = document.createElement("div");
+      item.className = "highlight-card";
+      item.innerHTML = `
+        <span>${user.username} (${user.social || "No handle"})</span>
+        <div class="highlightBtns">
+          <button class="followHighlight" data-username="${user.username}">Follow</button>
+          <button class="watchHighlight" data-username="${user.username}">Watch</button>
+        </div>
+      `;
+      tabExtras.appendChild(item);
+    });
+
+    tabExtras.querySelectorAll(".followHighlight").forEach(btn => {
+      btn.onclick = () => console.log("Follow highlight:", btn.dataset.username);
+    });
+    tabExtras.querySelectorAll(".watchHighlight").forEach(btn => {
+      btn.onclick = () => console.log("Watch highlight:", btn.dataset.username);
+    });
+  }
+
+  // === 9️⃣ Button & Tab Events ===
   topBallersBtn.addEventListener("click", () => openModal("ballers"));
   highlightsBtn.addEventListener("click", () => openModal("extras"));
 
-  // --- Inside-modal tab switching ---
-  mainTabs.forEach(btn => {
+  sessionModal.querySelectorAll(".sessionTabs button").forEach(btn => {
+    btn.addEventListener("click", () => switchTab(btn.getAttribute("data-tab")));
+  });
+
+  sessionModal.addEventListener("click", e => {
+    if (e.target === sessionModal) closeModal();
+  });
+
+  const subTabs = tabBallers.querySelectorAll(".ballerTabs button");
+  subTabs.forEach(btn => {
     btn.addEventListener("click", () => {
-      const tab = btn.getAttribute("data-tab");
-      switchTab(tab);
+      subTabs.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      renderTopBallers(btn.dataset.period);
     });
   });
 
-  // --- Close modal when clicking outside content ---
-  sessionModal.addEventListener("click", (e) => {
-    if (e.target === sessionModal) {
-      sessionModal.classList.remove("active");
-      setTimeout(() => (sessionModal.style.display = "none"), 300);
-    }
-  });
-});
+  // === 🔟 Initial render ===
+  renderTopBallers("week");
+  renderHighlights();
+
+  // === ✨ Glow notifier (optional) ===
+  function showGlow(button) {
+    button.classList.add("sessionGlow");
+    setTimeout(() => button.classList.remove("sessionGlow"), 3000);
+  }
+  // Example trigger:
+  // showGlow(topBallersBtn);
+}
