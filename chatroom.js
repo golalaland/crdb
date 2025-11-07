@@ -2845,63 +2845,6 @@ Object.assign(giftBtnLocal.style, {
     }, speed);
   }
   
-  if (user.videoURL) {
-  const unlockBtn = document.createElement('button');
-  unlockBtn.textContent = 'Unlock Video ⭐';
-  Object.assign(unlockBtn.style, {
-    padding: '7px 14px',
-    borderRadius: '6px',
-    border: 'none',
-    fontWeight: '600',
-    background: 'linear-gradient(90deg,#ff33cc,#ff6600)',
-    color: '#fff',
-    cursor: 'pointer',
-    position: 'relative'
-  });
-
-  unlockBtn.onclick = async () => {
-    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
-    
-    const COST = user.videoCost || 50;
-
-    const purchasedRef = doc(db, 'videoPurchases', `${currentUser.uid}_${user._docId}`);
-    const purchasedSnap = await getDoc(purchasedRef);
-    if (purchasedSnap.exists()) return showVideoModal(user.videoURL, user.chatId, user.videoTitle, user.videoDesc);
-
-    if ((currentUser.stars || 0) < COST) return showStarPopup(`🔥 You need ${COST} ⭐ to unlock this video`);
-
-    const originalText = unlockBtn.textContent;
-    unlockBtn.textContent = '';
-    const spinner = document.createElement('div');
-    Object.assign(spinner.style, {
-      width: '16px',
-      height: '16px',
-      border: '2px solid rgba(255,255,255,0.3)',
-      borderTop: '2px solid white',
-      borderRadius: '50%',
-      animation: 'spin 0.8s linear infinite',
-      display: 'inline-block',
-      verticalAlign: 'middle'
-    });
-    unlockBtn.appendChild(spinner);
-
-    try {
-      await updateDoc(doc(db, 'users', currentUser.uid), { stars: increment(-COST) });
-      await updateDoc(doc(db, 'users', user._docId), { stars: increment(COST) });
-      await setDoc(purchasedRef, { purchasedAt: serverTimestamp(), videoURL: user.videoURL, pricePaid: COST });
-
-      showVideoModal(user.videoURL, user.chatId, user.videoTitle, user.videoDesc);
-    } catch (err) {
-      console.error("Video unlock failed:", err);
-      showStarPopup("⚠️ Could not unlock video. Please try again.");
-    } finally {
-      unlockBtn.textContent = originalText;
-    }
-  };
-
-  btnWrap.appendChild(unlockBtn);
-}
-
   // --- USERNAME TAP DETECTOR ---
   document.addEventListener('pointerdown', (e) => {
     const target = e.target;
@@ -3004,50 +2947,6 @@ await addDoc(notifRef, {
 
 })(); // ✅ closes IIFE
 
-
-// ========== 🎥 SHOW VIDEO MODAL ==========
-
-function showVideoModal(videoURL, userChatId, videoTitle = "Untitled", videoDesc = "") {
-  document.getElementById('videoModal')?.remove();
-
-  const modal = document.createElement('div');
-  modal.id = 'videoModal';
-  Object.assign(modal.style, {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100vw',
-    height: '100vh',
-    background: 'rgba(0,0,0,0.85)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 999999,
-    backdropFilter: 'blur(5px)',
-    color: '#fff',
-    padding: '12px'
-  });
-
-  modal.innerHTML = `
-    <div style="position:relative;max-width:90%;width:480px;background:#111;border-radius:12px;overflow:hidden;">
-      <div style="text-align:right;padding:6px;">
-        <span id="videoClose" style="cursor:pointer;font-weight:700;font-size:20px;">&times;</span>
-      </div>
-      <div style="padding:10px;text-align:center;">
-        <h2 style="margin:0 0 6px;font-size:18px;">${videoTitle}</h2>
-        <p style="margin:0 0 12px;font-size:14px;opacity:0.8;">${videoDesc}</p>
-      </div>
-      <video controls autoplay style="width:100%;height:auto;border-top:1px solid #222;">
-        <source src="${videoURL}" type="video/mp4">
-        Your browser does not support HTML video.
-      </video>
-      <div style="padding:8px;text-align:center;font-size:13px;">Unlocked video from ${userChatId}</div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-  modal.querySelector('#videoClose').onclick = () => modal.remove();
-}
 
 // ========== 🟣 HOST SETTINGS LOGIC ==========
 const isHost = true; // <-- later dynamic
