@@ -3297,18 +3297,14 @@ const scrollArrow = document.getElementById('scrollArrow');
 checkScroll(); // initial check
 }); // ✅ closes DOMContentLoaded event listener
 
-// ---------- Session Buttons ----------
-const topBallersBtn = document.getElementById("topBallersBtn");
-const highlightsBtn = document.getElementById("highlightsBtn");
-
-// ---------- WIN $STRZ Button ----------
-topBallersBtn.onclick = () => {
-  if (typeof showWinStarsModal === "function") showWinStarsModal();
-};
-
 // ---------- Highlights Button ----------
 highlightsBtn.onclick = async () => {
   try {
+    if (!currentUser || !currentUser.uid) {
+      showGoldAlert("Please log in to view highlights 🔒");
+      return;
+    }
+
     const highlightsRef = collection(db, "highlightVideos");
     const q = query(highlightsRef, orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
@@ -3322,7 +3318,7 @@ highlightsBtn.onclick = async () => {
       const d = docSnap.data();
       return {
         id: docSnap.id,
-        highlightVideo: d.highlightVideo, // your video field
+        highlightVideo: d.highlightVideo,
         highlightVideoPrice: d.highlightVideoPrice,
         title: d.title,
         uploader: d.uploaderName || "Anonymous",
@@ -3385,6 +3381,7 @@ function showHighlightsModal(videos) {
       boxShadow: "0 2px 10px rgba(0,0,0,0.4)"
     });
 
+    // 🎥 Preview container
     const videoContainer = document.createElement("div");
     Object.assign(videoContainer.style, { height: "320px", overflow: "hidden", position: "relative" });
 
@@ -3396,10 +3393,12 @@ function showHighlightsModal(videos) {
     videoEl.preload = "metadata";
     Object.assign(videoEl.style, { width: "100%", height: "100%", objectFit: "cover" });
 
+    // 🎞 hover preview
     videoContainer.appendChild(videoEl);
     videoContainer.onmouseenter = () => videoEl.play();
     videoContainer.onmouseleave = () => videoEl.pause();
 
+    // Info / unlock
     const infoPanel = document.createElement("div");
     Object.assign(infoPanel.style, {
       background: "#111",
@@ -3434,6 +3433,7 @@ function showHighlightsModal(videos) {
     unlockBtn.onmouseleave = () => (unlockBtn.style.background = "#ff006e");
     unlockBtn.onclick = (e) => {
       e.stopPropagation();
+      if (!currentUser || !currentUser.uid) return showGoldAlert("Please log in to unlock content 🔒");
       showUnlockConfirm(video);
     };
 
@@ -3465,7 +3465,7 @@ function showHighlightsModal(videos) {
   document.body.appendChild(modal);
 }
 
-// ---------- Unlock Confirmation Modal ----------
+// ---------- Unlock Confirmation ----------
 function showUnlockConfirm(video) {
   document.getElementById("unlockConfirmModal")?.remove();
 
@@ -3493,11 +3493,43 @@ function showUnlockConfirm(video) {
   `;
 
   document.body.appendChild(modal);
-
   modal.querySelector("#cancelUnlock").onclick = () => modal.remove();
   modal.querySelector("#confirmUnlock").onclick = async () => {
     modal.remove();
     await handleUnlockVideo(video);
-    showGoldAlert(`✅ You unlocked ${video.uploader}'s content! Enjoy!`);
   };
+}
+
+// ---------- Deduct Stars + Credit Uploader ----------
+async function handleUnlockVideo(video) {
+  try {
+    const senderId = currentUser.uid;
+    const receiverId = video.uploaderId;
+    const starsToDeduct = parseInt(video.highlightVideoPrice, 10) || 0;
+
+    if (!starsToDeduct || starsToDeduct <= 0) return showGoldAlert("Invalid unlock price ❌");
+    if (senderId === receiverId) return showGoldAlert("You can’t unlock your own video 😅");
+
+    const senderRef = doc(db, "users", senderId);
+    const receiverRef = doc(db, "users", receiverId);
+
+    await runTransaction(db, async (tx) => {
+      const senderSnap = await tx.get(senderRef);
+      const receiverSnap = await tx.get(receiverRef);
+      if (!senderSnap.exists()) throw new Error("User record not found.");
+      if (!receiverSnap.exists()) tx.set(receiverRef, { stars: 0 }, { merge: true });
+
+      const senderData = senderSnap.data();
+      if ((senderData.stars || 0) < starsToDeduct)
+        throw new Error("Insufficient stars ⭐");
+
+      tx.update(senderRef, { stars: increment(-starsToDeduct) });
+      tx.update(receiverRef, { stars: increment(starsToDeduct) });
+    });
+
+    showGoldAlert(`✅ You unlocked ${video.uploader}'s video for ${starsToDeduct} ⭐`);
+  } catch (err) {
+    console.error("❌ Unlock failed:", err);
+    showGoldAlert(`⚠️ ${err.message}`);
+  }
 }
