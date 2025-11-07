@@ -3494,16 +3494,29 @@ function showHighlightsModal(videos) {
 
 // ---------- Unlock Confirmation ----------
 function showUnlockConfirm(video) {
+  // 🛑 Stop any video that might be playing behind
+  document.querySelectorAll("video").forEach(v => v.pause());
+
+  // Remove any existing unlock modal
   document.getElementById("unlockConfirmModal")?.remove();
 
   const modal = document.createElement("div");
-  modal.id = "unlockConfirmModal";
-  Object.assign(modal.style, {
-    position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
-    background: "rgba(0,0,0,0.75)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    zIndex: "1000001", backdropFilter: "blur(3px)",
-  });
+ modal.id = "unlockConfirmModal";
+Object.assign(modal.style, {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100vw",
+  height: "100vh",
+  background: "rgba(0,0,0,0.93)", // darker and more opaque
+  backdropFilter: "blur(8px)",    // thicker blur = more glassy
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: "1000001",
+  transition: "opacity 0.3s ease",
+  opacity: "1",
+});
 
   modal.innerHTML = `
     <div style="background:#111;padding:20px;border-radius:12px;text-align:center;color:#fff;max-width:320px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
