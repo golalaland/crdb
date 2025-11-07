@@ -3236,5 +3236,189 @@ const scrollArrow = document.getElementById('scrollArrow');
       behavior: 'smooth'
     });
   });
+  
 checkScroll(); // initial check
 }); // ✅ closes DOMContentLoaded event listener
+
+// ---------- Session Buttons ----------
+const topBallersBtn = document.getElementById("topBallersBtn");
+const highlightsBtn = document.getElementById("highlightsBtn");
+
+// ---------- WIN $STRZ Button ----------
+topBallersBtn.onclick = () => {
+  if (typeof showWinStarsModal === 'function') showWinStarsModal();
+};
+
+// ---------- Highlights Button ----------
+highlightsBtn.onclick = async () => {
+  // Fetch highlight videos from Firestore
+  let videos = [];
+  try {
+    const snapshot = await getDocs(collection(db, "highlightVideos"));
+    videos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (err) {
+    console.error("Failed to fetch highlight videos:", err);
+  }
+
+  showHighlightsModal(videos);
+};
+
+// ---------- Highlights Modal Function ----------
+function showHighlightsModal(videos) {
+  // Remove existing modal
+  document.getElementById("highlightsModal")?.remove();
+
+  // Create modal container
+  const modal = document.createElement("div");
+  modal.id = "highlightsModal";
+  Object.assign(modal.style, {
+    position: "fixed",
+    top: 0, left: 0, width: "100vw", height: "100vh",
+    background: "rgba(0,0,0,0.85)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: "999999",
+    overflowY: "auto",
+    padding: "20px",
+    boxSizing: "border-box"
+  });
+
+  // Modal content
+  const content = document.createElement("div");
+  Object.assign(content.style, {
+    background: "#111",
+    borderRadius: "12px",
+    padding: "16px",
+    width: "90%",
+    maxWidth: "900px",
+    color: "#fff",
+    textAlign: "center",
+    boxShadow: "0 0 20px rgba(0,0,0,0.6)"
+  });
+
+  const title = document.createElement("h2");
+  title.textContent = "🔥 Highlights";
+  Object.assign(title.style, { marginBottom: "12px" });
+  content.appendChild(title);
+
+  // Horizontal video gallery
+  const gallery = document.createElement("div");
+  Object.assign(gallery.style, {
+    display: "flex",
+    overflowX: "auto",
+    gap: "12px",
+    paddingBottom: "12px"
+  });
+
+  videos.forEach(video => {
+    const card = document.createElement("div");
+    Object.assign(card.style, {
+      minWidth: "160px",
+      background: "#222",
+      borderRadius: "8px",
+      padding: "6px",
+      cursor: "pointer",
+      textAlign: "center",
+      flexShrink: 0
+    });
+
+    const thumbnail = document.createElement("video");
+    thumbnail.src = video.highlightVideo;
+    thumbnail.style.width = "100%";
+    thumbnail.style.borderRadius = "6px";
+    thumbnail.muted = true;
+    thumbnail.controls = false;
+    thumbnail.preload = "metadata";
+    thumbnail.onclick = () => handleUnlockVideo(video); // unlock on click
+    card.appendChild(thumbnail);
+
+    const vidTitle = document.createElement("div");
+    vidTitle.textContent = video.title || "Untitled";
+    Object.assign(vidTitle.style, { margin: "6px 0", fontWeight: "600", fontSize: "14px" });
+    card.appendChild(vidTitle);
+
+    const price = document.createElement("div");
+    price.textContent = `${video.highlightVideoPrice || 100} ⭐ to unlock`;
+    Object.assign(price.style, { fontSize: "12px", color: "#ffcc00" });
+    card.appendChild(price);
+
+    const uploader = document.createElement("div");
+    uploader.textContent = `By: ${video.uploader || "Anonymous"}`;
+    Object.assign(uploader.style, { fontSize: "11px", color: "#aaa" });
+    card.appendChild(uploader);
+
+    gallery.appendChild(card);
+  });
+
+  content.appendChild(gallery);
+
+  // Close button
+  const closeBtn = document.createElement("div");
+  closeBtn.innerHTML = "&times;";
+  Object.assign(closeBtn.style, {
+    position: "absolute",
+    top: "16px",
+    right: "20px",
+    fontSize: "24px",
+    fontWeight: "700",
+    color: "#fff",
+    cursor: "pointer"
+  });
+  closeBtn.onclick = () => modal.remove();
+  modal.appendChild(closeBtn);
+
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+}
+
+// ---------- Unlock Video Handler ----------
+async function handleUnlockVideo(video) {
+  if (!currentUser?.uid) return alert("⚠️ Please log in to unlock videos");
+
+  const cost = video.highlightVideoPrice || 100;
+  if ((currentUser.stars || 0) < cost) return alert("⚠️ Not enough stars to unlock");
+
+  try {
+    // Deduct stars from current user
+    await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-cost) });
+    // Give stars to uploader
+    if (video.uploaderId) {
+      await updateDoc(doc(db, "users", video.uploaderId), { stars: increment(cost) });
+    }
+
+    currentUser.stars -= cost;
+
+    // Show video in a popup
+    const modal = document.createElement("div");
+    Object.assign(modal.style, {
+      position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
+      background: "rgba(0,0,0,0.85)", display: "flex",
+      alignItems: "center", justifyContent: "center", zIndex: "999999"
+    });
+
+    const videoEl = document.createElement("video");
+    videoEl.src = video.highlightVideo;
+    videoEl.controls = true;
+    videoEl.autoplay = true;
+    videoEl.style.maxWidth = "90%";
+    videoEl.style.maxHeight = "80%";
+    videoEl.style.borderRadius = "10px";
+    modal.appendChild(videoEl);
+
+    const closeBtn = document.createElement("div");
+    closeBtn.innerHTML = "&times;";
+    Object.assign(closeBtn.style, {
+      position: "absolute", top: "20px", right: "24px",
+      fontSize: "28px", fontWeight: "700", color: "#fff",
+      cursor: "pointer"
+    });
+    closeBtn.onclick = () => modal.remove();
+    modal.appendChild(closeBtn);
+
+    document.body.appendChild(modal);
+  } catch (err) {
+    console.error("Failed to unlock video:", err);
+    alert("⚠️ Something went wrong. Try again.");
+  }
+}
