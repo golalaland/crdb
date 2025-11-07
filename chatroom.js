@@ -3251,13 +3251,32 @@ topBallersBtn.onclick = () => {
 
 // ---------- Highlights Button ----------
 highlightsBtn.onclick = async () => {
-  let videos = [];
-  try {
-    const snapshot = await getDocs(collection(db, "highlightVideos"));
-    videos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  } catch (err) {
-    console.error("Failed to fetch highlight videos:", err);
+  let videos = [
+  {
+    id: "test1",
+    highlightVideo: "https://www.w3schools.com/html/mov_bbb.mp4",
+    highlightVideoPrice: 150,
+    title: "Big Buck Bunny",
+    uploader: "TestUser",
+    uploaderId: currentUser?.uid || "testUserId"
+  },
+  {
+    id: "test2",
+    highlightVideo: "https://www.w3schools.com/html/movie.mp4",
+    highlightVideoPrice: 100,
+    title: "Sample Video",
+    uploader: "DemoUser",
+    uploaderId: "demoUserId"
+  },
+  {
+    id: "test3",
+    highlightVideo: "https://www.w3schools.com/html/mov_bbb.mp4",
+    highlightVideoPrice: 200,
+    title: "Another Clip",
+    uploader: "TestUser2",
+    uploaderId: "testUser2Id"
   }
+];
 
   showHighlightsModal(videos);
 };
