@@ -2424,6 +2424,78 @@ confirmBtn.onclick = async () => {
     });
   }
 }
+
+// --- ✅ $ELL CONTENT TAB---
+// 📦 Elements
+const uploadBtn = document.getElementById("uploadHighlightBtn");
+const videoFileInput = document.getElementById("highlightUploadInput");
+const videoLinkInput = document.getElementById("highlightVideoInput");
+const titleInput = document.getElementById("highlightTitleInput");
+const descInput = document.getElementById("highlightDescInput");
+const priceInput = document.getElementById("highlightPriceInput");
+const statusEl = document.getElementById("highlightUploadStatus");
+
+// ⚡ Shopify Upload Integration Placeholder
+// You’ll replace this with your Shopify upload endpoint later
+async function uploadToShopify(file) {
+  // TODO: Replace with real Shopify upload call
+  console.log("Uploading to Shopify:", file.name);
+  return "https://cdn.shopify.com/videos/" + file.name; // dummy URL for now
+}
+
+// 🚀 Upload Logic
+uploadBtn.addEventListener("click", async () => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      statusEl.textContent = "Please sign in first!";
+      return;
+    }
+
+    const title = titleInput.value.trim();
+    const description = descInput.value.trim();
+    const priceStars = parseInt(priceInput.value);
+    let videoURL = videoLinkInput.value.trim();
+
+    // ✅ Shopify upload if a file was chosen
+    if (videoFileInput.files.length > 0) {
+      const file = videoFileInput.files[0];
+      videoURL = await uploadToShopify(file);
+    }
+
+    if (!videoURL || !title || !priceStars) {
+      statusEl.textContent = "Please fill in all required fields!";
+      return;
+    }
+
+    statusEl.textContent = "⏳ Uploading highlight...";
+
+    // ✅ Save to Firestore
+    await addDoc(collection(db, "highlightVideos"), {
+      userId: user.uid,
+      videoURL,
+      title,
+      description,
+      priceStars,
+      uploadedAt: serverTimestamp(),
+      status: "active",
+      likes: 0,
+      views: 0
+    });
+
+    statusEl.textContent = "✅ Highlight uploaded successfully!";
+    videoFileInput.value = "";
+    videoLinkInput.value = "";
+    titleInput.value = "";
+    descInput.value = "";
+    priceInput.value = "";
+
+  } catch (error) {
+    console.error("Error uploading highlight:", error);
+    statusEl.textContent = "❌ Upload failed. Try again!";
+  }
+});
+
   // --- Initial random values for first load ---
 (function() {
   const onlineCountEl = document.getElementById('onlineCount');
