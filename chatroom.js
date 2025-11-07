@@ -2425,74 +2425,59 @@ confirmBtn.onclick = async () => {
   }
 }
 
-// --- ✅ $ELL CONTENT TAB---
-// 📦 Elements
-const uploadBtn = document.getElementById("uploadHighlightBtn");
-const videoFileInput = document.getElementById("highlightUploadInput");
-const videoLinkInput = document.getElementById("highlightVideoInput");
-const titleInput = document.getElementById("highlightTitleInput");
-const descInput = document.getElementById("highlightDescInput");
-const priceInput = document.getElementById("highlightPriceInput");
-const statusEl = document.getElementById("highlightUploadStatus");
+// ================================
+// 💰 $ell Content (Highlight Upload)
+// ================================
+document.getElementById("uploadHighlightBtn").addEventListener("click", async () => {
+  const statusEl = document.getElementById("highlightUploadStatus");
+  statusEl.textContent = "";
 
-// ⚡ Shopify Upload Integration Placeholder
-// You’ll replace this with your Shopify upload endpoint later
-async function uploadToShopify(file) {
-  // TODO: Replace with real Shopify upload call
-  console.log("Uploading to Shopify:", file.name);
-  return "https://cdn.shopify.com/videos/" + file.name; // dummy URL for now
-}
+  // 🧍 Wait until user is confirmed
+  if (!currentUser) {
+    statusEl.textContent = "⚠️ Please sign in first!";
+    console.warn("❌ Upload blocked — no currentUser found");
+    return;
+  }
 
-// 🚀 Upload Logic
-uploadBtn.addEventListener("click", async () => {
+  // 🧾 Get field values
+  const videoUrl = document.getElementById("highlightVideoInput").value.trim();
+  const title = document.getElementById("highlightTitleInput").value.trim();
+  const desc = document.getElementById("highlightDescInput").value.trim();
+  const price = parseInt(document.getElementById("highlightPriceInput").value.trim() || "0");
+
+  if (!videoUrl || !title || !price) {
+    statusEl.textContent = "⚠️ Fill in all required fields (URL, title, price)";
+    return;
+  }
+
   try {
-    const user = auth.currentUser;
-    if (!user) {
-      statusEl.textContent = "Please sign in first!";
-      return;
-    }
+    const userId = currentUser.uid;
+    const emailId = (currentUser.email || "").replace(/\./g, ",");
 
-    const title = titleInput.value.trim();
-    const description = descInput.value.trim();
-    const priceStars = parseInt(priceInput.value);
-    let videoURL = videoLinkInput.value.trim();
-
-    // ✅ Shopify upload if a file was chosen
-    if (videoFileInput.files.length > 0) {
-      const file = videoFileInput.files[0];
-      videoURL = await uploadToShopify(file);
-    }
-
-    if (!videoURL || !title || !priceStars) {
-      statusEl.textContent = "Please fill in all required fields!";
-      return;
-    }
-
-    statusEl.textContent = "⏳ Uploading highlight...";
-
-    // ✅ Save to Firestore
-    await addDoc(collection(db, "highlightVideos"), {
-      userId: user.uid,
-      videoURL,
+    const docRef = await addDoc(collection(db, "highlightVideos"), {
+      uploaderId: userId,
+      uploaderEmail: emailId,
+      uploaderName: currentUser.displayName || "Anonymous",
+      highlightVideo: videoUrl,
+      highlightVideoPrice: price,
       title,
-      description,
-      priceStars,
-      uploadedAt: serverTimestamp(),
-      status: "active",
-      likes: 0,
-      views: 0
+      description: desc || "",
+      createdAt: serverTimestamp()
     });
 
+    console.log("✅ Uploaded highlight:", docRef.id);
     statusEl.textContent = "✅ Highlight uploaded successfully!";
-    videoFileInput.value = "";
-    videoLinkInput.value = "";
-    titleInput.value = "";
-    descInput.value = "";
-    priceInput.value = "";
+    setTimeout(() => (statusEl.textContent = ""), 4000);
 
-  } catch (error) {
-    console.error("Error uploading highlight:", error);
-    statusEl.textContent = "❌ Upload failed. Try again!";
+    // Optional: reset form
+    document.getElementById("highlightVideoInput").value = "";
+    document.getElementById("highlightTitleInput").value = "";
+    document.getElementById("highlightDescInput").value = "";
+    document.getElementById("highlightPriceInput").value = "";
+
+  } catch (err) {
+    console.error("❌ Error uploading highlight:", err);
+    statusEl.textContent = "⚠️ Failed to upload. Try again.";
   }
 });
 
