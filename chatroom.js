@@ -3240,7 +3240,6 @@ const scrollArrow = document.getElementById('scrollArrow');
 checkScroll(); // initial check
 }); // ✅ closes DOMContentLoaded event listener
 
-
 // ---------- Session Buttons ----------
 const topBallersBtn = document.getElementById("topBallersBtn");
 const highlightsBtn = document.getElementById("highlightsBtn");
@@ -3253,7 +3252,7 @@ topBallersBtn.onclick = () => {
 // ---------- Highlights Button ----------
 highlightsBtn.onclick = async () => {
   // Fetch highlight videos from Firestore
-let videos = [
+  let videos = [
   {
     id: "test1",
     highlightVideo: "https://www.w3schools.com/html/mov_bbb.mp4",
@@ -3279,15 +3278,14 @@ let videos = [
     uploaderId: "testUser2Id"
   }
 ];
+
   showHighlightsModal(videos);
 };
 
 // ---------- Highlights Modal Function ----------
 function showHighlightsModal(videos) {
-  // Remove existing modal
   document.getElementById("highlightsModal")?.remove();
 
-  // Create modal container
   const modal = document.createElement("div");
   modal.id = "highlightsModal";
   Object.assign(modal.style, {
@@ -3303,7 +3301,6 @@ function showHighlightsModal(videos) {
     boxSizing: "border-box"
   });
 
-  // Modal content
   const content = document.createElement("div");
   Object.assign(content.style, {
     background: "#111",
@@ -3321,7 +3318,6 @@ function showHighlightsModal(videos) {
   Object.assign(title.style, { marginBottom: "12px" });
   content.appendChild(title);
 
-  // Horizontal video gallery
   const gallery = document.createElement("div");
   Object.assign(gallery.style, {
     display: "flex",
@@ -3337,7 +3333,6 @@ function showHighlightsModal(videos) {
       background: "#222",
       borderRadius: "8px",
       padding: "6px",
-      cursor: "pointer",
       textAlign: "center",
       flexShrink: 0
     });
@@ -3349,7 +3344,6 @@ function showHighlightsModal(videos) {
     thumbnail.muted = true;
     thumbnail.controls = false;
     thumbnail.preload = "metadata";
-    thumbnail.onclick = () => handleUnlockVideo(video); // unlock on click
     card.appendChild(thumbnail);
 
     const vidTitle = document.createElement("div");
@@ -3357,14 +3351,24 @@ function showHighlightsModal(videos) {
     Object.assign(vidTitle.style, { margin: "6px 0", fontWeight: "600", fontSize: "14px" });
     card.appendChild(vidTitle);
 
-    const price = document.createElement("div");
-    price.textContent = `${video.highlightVideoPrice || 100} ⭐ to unlock`;
-    Object.assign(price.style, { fontSize: "12px", color: "#ffcc00" });
-    card.appendChild(price);
+    const unlockBtn = document.createElement("button");
+    unlockBtn.textContent = `${video.highlightVideoPrice || 100} ⭐ to unlock`;
+    Object.assign(unlockBtn.style, {
+      fontSize: "12px",
+      color: "#fff",
+      background: "linear-gradient(90deg,#ff0099,#ff6600)",
+      border: "none",
+      borderRadius: "6px",
+      padding: "6px 10px",
+      cursor: "pointer",
+      fontWeight: "600"
+    });
+    unlockBtn.onclick = () => confirmUnlockVideo(video);
+    card.appendChild(unlockBtn);
 
     const uploader = document.createElement("div");
     uploader.textContent = `By: ${video.uploader || "Anonymous"}`;
-    Object.assign(uploader.style, { fontSize: "11px", color: "#aaa" });
+    Object.assign(uploader.style, { fontSize: "11px", color: "#aaa", marginTop: "4px" });
     card.appendChild(uploader);
 
     gallery.appendChild(card);
@@ -3372,7 +3376,6 @@ function showHighlightsModal(videos) {
 
   content.appendChild(gallery);
 
-  // Close button
   const closeBtn = document.createElement("div");
   closeBtn.innerHTML = "&times;";
   Object.assign(closeBtn.style, {
@@ -3385,59 +3388,114 @@ function showHighlightsModal(videos) {
     cursor: "pointer"
   });
   closeBtn.onclick = () => modal.remove();
-  modal.appendChild(closeBtn);
 
+  modal.appendChild(closeBtn);
   modal.appendChild(content);
   document.body.appendChild(modal);
 }
 
-// ---------- Unlock Video Handler ----------
-async function handleUnlockVideo(video) {
-  if (!currentUser?.uid) return alert("⚠️ Please log in to unlock videos");
+// ---------- Unlock Confirmation Modal ----------
+function confirmUnlockVideo(video) {
+  if (!currentUser?.uid) return showGiftAlert("⚠️ Please log in to unlock videos");
 
-  const cost = video.highlightVideoPrice || 100;
-  if ((currentUser.stars || 0) < cost) return alert("⚠️ Not enough stars to unlock");
+  document.getElementById("unlockVideoModal")?.remove();
 
-  try {
-    // Deduct stars from current user
-    await updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-cost) });
-    // Give stars to uploader
-    if (video.uploaderId) {
-      await updateDoc(doc(db, "users", video.uploaderId), { stars: increment(cost) });
+  const modal = document.createElement("div");
+  modal.id = "unlockVideoModal";
+  Object.assign(modal.style, {
+    position: "fixed",
+    top: 0, left: 0, width: "100vw", height: "100vh",
+    background: "rgba(0,0,0,0.75)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: "999999",
+    backdropFilter: "blur(3px)",
+    WebkitBackdropFilter: "blur(3px)"
+  });
+
+  modal.innerHTML = `
+    <div style="background:#111;padding:20px 22px;border-radius:12px;text-align:center;color:#fff;max-width:360px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
+      <h3 style="margin-bottom:10px;font-weight:600;">Unlock "${video.title}"?</h3>
+      <p style="margin-bottom:16px;">Spend <b>${video.highlightVideoPrice} ⭐</b> to unlock this video.</p>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button id="cancelUnlock" style="padding:8px 16px;background:#333;border:none;color:#fff;border-radius:8px;font-weight:500;">Cancel</button>
+        <button id="confirmUnlock" style="padding:8px 16px;background:linear-gradient(90deg,#ff0099,#ff6600);border:none;color:#fff;border-radius:8px;font-weight:600;">Unlock</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const cancelBtn = modal.querySelector("#cancelUnlock");
+  const confirmBtn = modal.querySelector("#confirmUnlock");
+
+  cancelBtn.onclick = () => modal.remove();
+
+  confirmBtn.onclick = async () => {
+    const cost = video.highlightVideoPrice || 100;
+
+    if ((currentUser.stars || 0) < cost) {
+      showGiftAlert("⚠️ Not enough stars to unlock this video");
+      modal.remove();
+      return;
     }
 
-    currentUser.stars -= cost;
+    confirmBtn.disabled = true;
+    confirmBtn.style.opacity = 0.6;
+    confirmBtn.style.cursor = "not-allowed";
 
-    // Show video in a popup
-    const modal = document.createElement("div");
-    Object.assign(modal.style, {
-      position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
-      background: "rgba(0,0,0,0.85)", display: "flex",
-      alignItems: "center", justifyContent: "center", zIndex: "999999"
-    });
+    try {
+      // Deduct stars from current user
+      currentUser.stars -= cost;
+      updateDoc(doc(db, "users", currentUser.uid), { stars: increment(-cost) }).catch(console.error);
 
-    const videoEl = document.createElement("video");
-    videoEl.src = video.highlightVideo;
-    videoEl.controls = true;
-    videoEl.autoplay = true;
-    videoEl.style.maxWidth = "90%";
-    videoEl.style.maxHeight = "80%";
-    videoEl.style.borderRadius = "10px";
-    modal.appendChild(videoEl);
+      // Give stars to uploader
+      if (video.uploaderId) {
+        updateDoc(doc(db, "users", video.uploaderId), { stars: increment(cost) }).catch(console.error);
+      }
 
-    const closeBtn = document.createElement("div");
-    closeBtn.innerHTML = "&times;";
-    Object.assign(closeBtn.style, {
-      position: "absolute", top: "20px", right: "24px",
-      fontSize: "28px", fontWeight: "700", color: "#fff",
-      cursor: "pointer"
-    });
-    closeBtn.onclick = () => modal.remove();
-    modal.appendChild(closeBtn);
+      showGiftAlert(`✅ You unlocked ${video.uploader}'s content! Enjoy!`, 4000);
+      showGiftAlert(`${currentUser.chatId || "Someone"} unlocked your content! You earned ${cost} ⭐️!`, 4000);
 
-    document.body.appendChild(modal);
-  } catch (err) {
-    console.error("Failed to unlock video:", err);
-    alert("⚠️ Something went wrong. Try again.");
-  }
+      modal.remove();
+
+      // Show the video
+      const videoModal = document.createElement("div");
+      Object.assign(videoModal.style, {
+        position: "fixed",
+        top: 0, left: 0, width: "100vw", height: "100vh",
+        background: "rgba(0,0,0,0.85)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: "999999"
+      });
+
+      const videoEl = document.createElement("video");
+      videoEl.src = video.highlightVideo;
+      videoEl.controls = true;
+      videoEl.autoplay = true;
+      videoEl.style.maxWidth = "90%";
+      videoEl.style.maxHeight = "80%";
+      videoEl.style.borderRadius = "10px";
+      videoModal.appendChild(videoEl);
+
+      const closeBtn = document.createElement("div");
+      closeBtn.innerHTML = "&times;";
+      Object.assign(closeBtn.style, {
+        position: "absolute", top: "20px", right: "24px",
+        fontSize: "28px", fontWeight: "700", color: "#fff",
+        cursor: "pointer"
+      });
+      closeBtn.onclick = () => videoModal.remove();
+      videoModal.appendChild(closeBtn);
+
+      document.body.appendChild(videoModal);
+    } catch (err) {
+      console.error("Unlock failed:", err);
+      alert("⚠️ Something went wrong. Try again.");
+      modal.remove();
+    }
+  };
 }
