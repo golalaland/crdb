@@ -1020,7 +1020,6 @@ async function autoLogin() {
 
 window.addEventListener("DOMContentLoaded", autoLogin);
 
-
 /* ===============================
    💫 Auto Star Earning System
 ================================= */
