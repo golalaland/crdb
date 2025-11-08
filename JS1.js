@@ -883,11 +883,7 @@ async function promptForChatID(userRef, userData) {
 }
 
 
-import { 
-  signInWithEmailAndPassword, 
-  signOut, 
-  getAuth 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 /* ===============================
    🔐 VIP Login (Email + Password + Whitelist)
@@ -897,13 +893,10 @@ async function loginWhitelist(email, password) {
   try {
     if (loader) loader.style.display = "flex";
 
-    // 1️⃣ Sign in with Firebase Auth
-    const auth = getAuth();
     const cred = await signInWithEmailAndPassword(auth, email, password);
     const user = cred.user;
     console.log("✅ Authenticated:", user.email);
 
-    // 2️⃣ Check Firestore whitelist
     const q = query(collection(db, "whitelist"), where("email", "==", email));
     const snap = await getDocs(q);
     if (snap.empty) {
@@ -912,7 +905,6 @@ async function loginWhitelist(email, password) {
       return false;
     }
 
-    // 3️⃣ Load user profile from “users” collection
     const uidKey = sanitizeKey(email);
     const userRef = doc(db, "users", uidKey);
     const userSnap = await getDoc(userRef);
@@ -940,10 +932,10 @@ async function loginWhitelist(email, password) {
       isHost: !!data.isHost
     };
 
-    // 4️⃣ Cache locally for auto-login
+    // cache email locally for UI or star popup
     localStorage.setItem("vipUser", JSON.stringify({ email }));
 
-    // 5️⃣ Launch chatroom systems
+    // launch chatroom & notifications
     updateRedeemLink();
     updateTipLink();
     setupPresence(currentUser);
@@ -952,7 +944,6 @@ async function loginWhitelist(email, password) {
     showChatUI(currentUser);
     startNotificationsFor(email);
 
-    console.log("🚀 Chatroom access granted:", email);
     return true;
 
   } catch (err) {
@@ -965,68 +956,82 @@ async function loginWhitelist(email, password) {
 }
 
 /* ===============================
-   🎟️  Bind VIP ACCESS button
+   🔁 Auto Login (Firebase Auth Persistence)
 ================================= */
-document.getElementById("whitelistLoginBtn")?.addEventListener("click", async () => {
-  const email = document.getElementById("emailInput")?.value.trim().toLowerCase();
-  const password = document.getElementById("passwordInput")?.value.trim();
-
-  if (!email || !password) return showStarPopup("Please enter both email and password.");
-
-  showLoadingBar(1000); // keep your loader effect
-  await loginWhitelist(email, password);
-});
-
-/* ----------------------------
-   🔁 Auto Login Session
------------------------------ */
-window.addEventListener("DOMContentLoaded", async () => {
-  const vipUser = JSON.parse(localStorage.getItem("vipUser"));
-  if (!vipUser?.email) return;
-
+window.addEventListener("DOMContentLoaded", () => {
   const loader = document.getElementById("postLoginLoader");
   const loadingBar = document.getElementById("loadingBar");
 
-  try {
-    if (loader) loader.style.display = "flex";
-    if (loadingBar) {
-      loadingBar.style.width = "0%";
-      loadingBar.style.background = "linear-gradient(90deg, #ff69b4, #ff1493)";
+  // show loader
+  if (loader) loader.style.display = "flex";
+  if (loadingBar) {
+    loadingBar.style.width = "0%";
+    loadingBar.style.background = "linear-gradient(90deg, #ff69b4, #ff1493)";
+  }
+
+  let progress = 0;
+  const interval = setInterval(() => {
+    if (progress < 90 && loadingBar) {
+      progress += Math.random() * 5;
+      loadingBar.style.width = `${Math.min(progress, 90)}%`;
     }
+  }, 80);
 
-    let progress = 0;
-    const interval = 80;
-    const loadingInterval = setInterval(() => {
-      if (progress < 90) {
-        progress += Math.random() * 5;
-        if (loadingBar) loadingBar.style.width = `${Math.min(progress, 90)}%`;
-      }
-    }, interval);
-
-    // attempt to auto-login using persisted email
-    const success = await loginWhitelist(vipUser.email, vipUser.password || ""); // fallback empty password
-
-    clearInterval(loadingInterval);
+  // ✅ Firebase already persists the session — just listen for it
+  onAuthStateChanged(auth, async (user) => {
+    clearInterval(interval);
     if (loadingBar) loadingBar.style.width = "100%";
 
-    if (success) {
-      await sleep(400);
-      updateRedeemLink();
-      updateTipLink();
-
-      if (typeof attachMessagesListener === "function") attachMessagesListener();
-      if (typeof setupPresence === "function") setupPresence(currentUser);
-      await startNotificationsFor(currentUser.email);
-
-      if (currentUser.isVIP) showStarPopup(`Welcome back, VIP ${currentUser.chatId || currentUser.email}! ⭐️`);
+    if (!user) {
+      console.log("⚠️ No logged-in user for auto-login");
+      if (loader) loader.style.display = "none";
+      return;
     }
 
-  } catch (err) {
-    console.error("❌ Auto-login error:", err);
-  } finally {
-    await sleep(300);
+    console.log("✅ Auto-login Firebase user detected:", user.email);
+
+    // load profile from Firestore
+    const uidKey = sanitizeKey(user.email);
+    const userRef = doc(db, "users", uidKey);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) {
+      await signOut(auth);
+      showStarPopup("⚠️ Account found but profile missing. Please login again.");
+      if (loader) loader.style.display = "none";
+      return;
+    }
+
+    const data = userSnap.data();
+    currentUser = {
+      uid: uidKey,
+      email: data.email,
+      chatId: data.chatId,
+      fullName: data.fullName || "",
+      isAdmin: !!data.isAdmin,
+      isVIP: !!data.isVIP,
+      gender: data.gender || "",
+      stars: data.stars || 0,
+      cash: data.cash || 0,
+      usernameColor: data.usernameColor || randomColor(),
+      subscriptionActive: !!data.subscriptionActive,
+      hostLink: data.hostLink || null,
+      invitedBy: data.invitedBy || null,
+      isHost: !!data.isHost
+    };
+
+    // launch chatroom & notifications
+    updateRedeemLink();
+    updateTipLink();
+    setupPresence(currentUser);
+    attachMessagesListener();
+    startStarEarning(currentUser.uid);
+    showChatUI(currentUser);
+    await startNotificationsFor(currentUser.email);
+
+    if (currentUser.isVIP) showStarPopup(`Welcome back, VIP ${currentUser.chatId || currentUser.email}! ⭐️`);
+
     if (loader) loader.style.display = "none";
-  }
+  });
 });
 
 /* ===============================
