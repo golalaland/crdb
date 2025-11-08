@@ -2487,68 +2487,10 @@ document.getElementById("uploadHighlightBtn").addEventListener("click", async ()
   }
 });
 
-// ===============================
-// 🧩 Smart Thumbnail Generator (Instant)
-// ===============================
+// ===============
+// 🧩 Thumbnail Gen
+// ===============
 async function generateVideoThumbnail(videoUrl) {
-  const fallback = "https://via.placeholder.com/480x270?text=Preview+Unavailable";
-
-  // helper for fetch with timeout
-  const fetchWithTimeout = (url, timeout = 3000) =>
-    Promise.race([
-      fetch(url).then(r => r.json()),
-      new Promise((_, reject) => setTimeout(() => reject("Timeout"), timeout))
-    ]);
-
-  try {
-    if (videoUrl.includes("tiktok.com")) {
-      return "https://upload.wikimedia.org/wikipedia/commons/a/a9/TikTok_logo.svg";
-    }
-
-    if (videoUrl.includes("instagram.com")) {
-      try {
-        const data = await fetchWithTimeout(`https://www.instagram.com/oembed/?url=${videoUrl}`);
-        return data.thumbnail_url || fallback;
-      } catch {
-        return fallback;
-      }
-    }
-
-    if (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be")) {
-      const match = videoUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
-      if (match) return `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`;
-      return fallback;
-    }
-
-    if (videoUrl.includes("cdn.shopify.com")) return videoUrl;
-
-    if (videoUrl.endsWith(".mp4") || videoUrl.endsWith(".mov")) {
-      return await generateThumbnailFromVideo(videoUrl);
-    }
-
-    return fallback;
-
-  } catch (err) {
-    console.warn("Thumbnail error:", err);
-    return fallback;
-  }
-}
-
-// 🪄 No Shopify upload for direct URLs
-async function uploadThumbnailToShopify(thumbnailUrl) {
-  return thumbnailUrl;
-}
-
-// ===============================
-// 🪄 Thumbnail Uploader (Simplified)
-// ===============================
-async function uploadThumbnailToShopify(thumbnailUrl) {
-  // 🩵 No upload needed — just return the URL
-  return thumbnailUrl;
-}
-
-// Helper for direct .mp4/.mov videos
-async function generateThumbnailFromVideo(videoUrl) {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
     video.src = videoUrl;
@@ -2562,6 +2504,8 @@ async function generateThumbnailFromVideo(videoUrl) {
       const ctx = canvas.getContext("2d");
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
+
+      ctx.filter = "blur(6px)"; // 🔆 slight blur for privacy
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
       resolve(dataUrl);
@@ -2575,20 +2519,21 @@ async function generateThumbnailFromVideo(videoUrl) {
 // 🪄 Upload Thumbnail
 // =====================
 async function uploadThumbnailToShopify(base64Img) {
+  // ⚠️ Replace this with your Shopify upload logic
+  // (can use same endpoint as highlightVideo uploads)
   const blob = await (await fetch(base64Img)).blob();
   const formData = new FormData();
   formData.append("file", blob, "thumbnail.jpg");
 
-  const response = await fetch("/upload-to-shopify", {
+  const response = await fetch("/upload-to-shopify", { // ← your backend endpoint
     method: "POST",
     body: formData,
   });
 
   if (!response.ok) throw new Error("Shopify upload failed");
   const data = await response.json();
-  return data.url;
+  return data.url; // ✅ return CDN URL
 }
-
   // --- Initial random values for first load ---
 (function() {
   const onlineCountEl = document.getElementById('onlineCount');
@@ -2605,6 +2550,7 @@ async function uploadThumbnailToShopify(base64Img) {
     const options = [100, 105, 405, 455, 364, 224];
     return options[Math.floor(Math.random() * options.length)];
   }
+  
   
   // Initialize count from storage or random
   let count = parseInt(localStorage.getItem(storageKey)) || getRandomStart();
