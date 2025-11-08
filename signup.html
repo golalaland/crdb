@@ -75,7 +75,9 @@ footer { width:100%; text-align:center; margin-top:2rem; font-size:0.8rem; color
 <div class="form-group"><input id="chatId" type="text" placeholder="Choose a Chat Name"></div>
 <div class="form-group"><input id="phone" type="text" placeholder="Phone Number"></div>
 <div class="form-group"><input id="email" type="email" placeholder="Email Address"></div>
-
+<div class="form-group">
+  <input id="password" type="password" placeholder="Create Password (min 6 chars)">
+</div>
 <div class="gender-label">Select Your Gender</div>
 <div class="gender-select">
   <button id="femaleBtn">F</button>
@@ -276,202 +278,198 @@ document.addEventListener('DOMContentLoaded', () => {
     return null;
   }
 
-  submitBtn.addEventListener('click', async () => {
-    const fullName = nameInput.value.trim();
-    const chatIdRaw = chatIdInput.value.trim();
-    const chatId = cleanChatId(chatIdRaw);
-    const phone = phoneInput.value.trim();
-    const email = emailInput.value.trim().toLowerCase();
-    const dob = dobInput.value;
+ import { getAuth, createUserWithEmailAndPassword } 
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-    if(!fullName||!chatId||!phone||!email||!gender||!dob){ messageEl.textContent='Please fill in all fields.'; return; }
+const auth = getAuth(app);
 
-    const age = calculateAge(dob);
-    if(age < 18){ messageEl.textContent='❌ You must be 18+ to sign up.'; return; }
+submitBtn.addEventListener('click', async () => {
+  const fullName = nameInput.value.trim();
+  const chatIdRaw = chatIdInput.value.trim();
+  const chatId = cleanChatId(chatIdRaw);
+  const phone = phoneInput.value.trim();
+  const email = emailInput.value.trim().toLowerCase();
+  const dob = dobInput.value;
+  const password = document.getElementById("password").value.trim();
 
-    if(chatId.length<5||chatId.length>15){ messageEl.textContent='Username must be 5-15 characters.'; return; }
-    if(phone.length<11||phone.length>15){ messageEl.textContent='Phone number not valid.'; return; }
-    if(!isValidEmail(email)){ messageEl.textContent='Email Address not valid.'; return; }
+  // 🧩 Basic validation
+  if(!fullName || !chatId || !phone || !email || !gender || !dob || !password){
+    messageEl.textContent = 'Please fill in all fields.';
+    return;
+  }
 
-    spinner.style.display='inline-block'; btnText.style.display='none'; messageEl.textContent='Signing up...';
-    submitBtn.disabled = true;
+  // 🧠 Password complexity validation
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^])[A-Za-z\d@$!%*?&#^]{8,}$/;
+  if(!passwordRegex.test(password)){
+    messageEl.textContent = 
+      'Password must contain at least 8 characters, one uppercase, one lowercase, one number, and one symbol.';
+    return;
+  }
 
-    const uidKey = sanitizeKey(email);
-    const userRef = doc(db, "users", uidKey);
+  const age = calculateAge(dob);
+  if(age < 18){ messageEl.textContent='❌ You must be 18+ to sign up.'; return; }
 
-    try {
-      const existingSnap = await getDoc(userRef);
-      const chatTaken = await isChatIdTaken(chatId);
-      if(existingSnap.exists() || chatTaken){
-        messageEl.textContent = "❌ User already signed up with this email or username.";
-        spinner.style.display='none'; btnText.style.display='inline';
-        submitBtn.disabled = false;
-        return;
-      }
+  if(chatId.length < 5 || chatId.length > 15){
+    messageEl.textContent='Username must be 5–15 characters.'; return;
+  }
+  if(phone.length < 11 || phone.length > 15){
+    messageEl.textContent='Phone number not valid.'; return;
+  }
+  if(!isValidEmail(email)){
+    messageEl.textContent='Email address not valid.'; return;
+  }
 
-      // detect country (silent)
-      let country = 'Unknown';
-      try { const res = await fetch('https://ipapi.co/json/'); const data = await res.json(); country = data.country_name || 'Unknown'; } catch(e){}
+  spinner.style.display='inline-block';
+  btnText.style.display='none';
+  messageEl.textContent='Signing up...';
+  submitBtn.disabled = true;
 
-      // attempt to resolve inviter (could be email or chatId)
-      let inviterRecord = null;
-      if(referrer){
-        inviterRecord = await findInviter(referrer);
-      }
+  const uidKey = sanitizeKey(email);
+  const userRef = doc(db, "users", uidKey);
 
-      // set invitedBy (sanitized email id) and hostName (chatId) properly
-      let invitedByField = null;
-      let hostNameField = null;
-      if(inviterRecord && inviterRecord.data){
-        const invData = inviterRecord.data;
-        // invitedBy should be sanitized email ID if present
-        if(invData.email) invitedByField = sanitizeKey(invData.email);
-        // hostName is inviter's chatId if available
-        if(invData.chatId) hostNameField = invData.chatId;
-        // if ref param was raw chatId and inviter doc found that way, ensure invitedBy set from inviter email if exists
-      } else {
-        // fallback: use referrer raw to populate hostName if it looks like a chatId (no '@')
-        if(referrer && !referrer.includes('@')) hostNameField = referrer;
-        // if referrer looks like an email, set invitedBy to sanitized ref
-        if(referrer && referrer.includes('@')) invitedByField = sanitizeKey(referrer);
-      }
-
-      const nowIso = new Date().toISOString();
-const userData = {
-  // identity
-  fullName,
-  chatId,
-  chatIdLower: chatId.toLowerCase(),
-  email,
-  phone,
-  dob,
-  age,
-  gender,
-
-  // verification
-  phoneVerified: false,
-  emailVerified: false,
-
-  // roles
-  isAdmin: false,
-  isVIP: !!isVIP,
-  isHost: (gender === 'Female' && !isVIP),
-  featuredHosts: false, // ✅ added
-
-  // referral + inviter relationship
-  invitedBy: invitedByField || null,   // sanitized inviter email id
-  hostName: hostNameField || null,     // inviter chatId
-  referral: referrer || null,
-  hostLink: (!isVIP && gender === 'Female')
-    ? `https://golalaland.github.io/chat/ref.html?ref=${encodeURIComponent(chatId)}`
-    : null,
-  vipName: isVIP ? chatId : null,      // VIP user chatId
-
-  // location
-  country,
-  city: "",        // ✅ added
-  location: "",    // ✅ added
-
-  // bank info
-  bankName: "",
-  bankAccountNumber: "",
-
-  // socials
-  instagram: "",
-  tiktok: "",
-  whatsapp: "",
-  telegram: "",
-
-  // profile & aesthetic
-  bioPick: "",     // ✅ added
-  naturePick: "",  // ✅ added
-  fruitPick: "",   // ✅ added
-  videoUrl: "",    // ✅ added
-
-  // reward + metrics
-  stars: 50,
-  starsToday: 0,
-  starsGifted: 0,
-  lastStarDate: nowIso.split("T")[0],
-  cash: 0,
-  points: 0,
-  gifts: 0,
-  views: 0,             // ✅ added
-  inviteeGiftStars: 0,  // ✅ added
-
-  // display / ui
-  usernameColor: '#' + Math.floor(Math.random()*16777215).toString(16),
-  socialShare: (gender === 'Female' && !isVIP),
-
-  // subscription
-  subscriptionActive: false,
-  subscriptionCount: 0,
-  subscriptionStartTime: null,
-  subscriptionEndTime: null,
-
-  // referral control
-  inviteeGiftShown: false,   // ✅ new for shop modal
-  hostFriends: [],           // ✅ new for referral tracking
-
-  // housekeeping
-  addedAt: Date.now(),       // ✅ added
-  createdAt: serverTimestamp(),
-  lastUpdated: serverTimestamp()
-};
-      await setDoc(userRef,userData);
-
-      // update inviter stats if inviter exists
-      if(inviterRecord && inviterRecord.ref && inviterRecord.data){
-        const inviterRef = inviterRecord.ref;
-        const inviterData = inviterRecord.data;
-        const bonusStars = isVIP ? 100 : 50;
-        try {
-        await updateDoc(inviterRef, {
-  hostFriends: arrayUnion({
-    chatId,
-    chatIdLower: chatId.toLowerCase(),
-    email,
-    giftShown: true,
-    hostLink: inviterData.hostLink || null,
-    hostVIP: isVIP ? 1 : 0,
-    invitedBy: invitedByField || referrer || null
-  })
-});
-// 🔥 Give inviter their star bonus + gifted count update
-const bonusStars = isVIP ? 100 : 50;
-try {
-  await updateDoc(inviterRef, {
-    stars: (inviterData.stars || 0) + bonusStars,
-    starsGifted: (inviterData.starsGifted || 0) + bonusStars
-  });
-} catch (err) {
-  console.warn("Failed updating inviter stars:", err);
-}
-        } catch(e){
-          console.warn("Failed updating inviter stats:", e);
-        }
-      }
-
-      // success UI
-      messageEl.textContent=`✅ Welcome ${fullName}! You’ve been gifted 50 ⭐️`;
-      // store for auto-login on shop
-      localStorage.setItem("vipUser", JSON.stringify({ email, chatId }));
-      // hide submit to prevent reclicks (hosts & vip)
-      submitBtn.style.display = 'none';
-      // confetti for signup success if VIP or just for celebration (keeps UX)
-      if(isVIP) triggerSprayConfetti();
-
-      setTimeout(()=>{ window.location.href="nushop.html"; },1500);
-
-    } catch(e){
-      console.error(e);
-      messageEl.textContent="❌ Signup failed. Please try again.";
+  try {
+    const existingSnap = await getDoc(userRef);
+    const chatTaken = await isChatIdTaken(chatId);
+    if(existingSnap.exists() || chatTaken){
+      messageEl.textContent = "❌ User already exists with this email or username.";
+      spinner.style.display='none'; btnText.style.display='inline';
       submitBtn.disabled = false;
-    } finally {
+      return;
+    }
+
+    // 🧱 Step 1: Create Firebase Authentication user
+    let userCredential;
+    try {
+      userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log("✅ Firebase Auth user created:", userCredential.user.uid);
+    } catch (err) {
+      console.error("❌ Auth signup failed:", err);
+      if (err.code === "auth/email-already-in-use") {
+        messageEl.textContent = "This email is already registered.";
+      } else if (err.code === "auth/weak-password") {
+        messageEl.textContent = "Password is too weak.";
+      } else {
+        messageEl.textContent = "Signup failed. Please try again.";
+      }
       spinner.style.display='none';
       btnText.style.display='inline';
+      submitBtn.disabled = false;
+      return;
     }
-  });
+
+    // 🧱 Step 2: Continue Firestore creation
+    let country = 'Unknown';
+    try { 
+      const res = await fetch('https://ipapi.co/json/'); 
+      const data = await res.json(); 
+      country = data.country_name || 'Unknown'; 
+    } catch(e){}
+
+    let inviterRecord = null;
+    if(referrer) inviterRecord = await findInviter(referrer);
+
+    let invitedByField = null;
+    let hostNameField = null;
+    if(inviterRecord && inviterRecord.data){
+      const invData = inviterRecord.data;
+      if(invData.email) invitedByField = sanitizeKey(invData.email);
+      if(invData.chatId) hostNameField = invData.chatId;
+    } else {
+      if(referrer && !referrer.includes('@')) hostNameField = referrer;
+      if(referrer && referrer.includes('@')) invitedByField = sanitizeKey(referrer);
+    }
+
+    const nowIso = new Date().toISOString();
+    const userData = {
+      uid: userCredential.user.uid,
+      fullName, chatId, chatIdLower: chatId.toLowerCase(),
+      email, phone, dob, age, gender,
+      phoneVerified: false, emailVerified: false,
+      isAdmin: false,
+      isVIP: !!isVIP,
+      isHost: (gender === 'Female' && !isVIP),
+      featuredHosts: false,
+      invitedBy: invitedByField || null,
+      hostName: hostNameField || null,
+      referral: referrer || null,
+      hostLink: (!isVIP && gender === 'Female')
+        ? `https://golalaland.github.io/chat/ref.html?ref=${encodeURIComponent(chatId)}`
+        : null,
+      vipName: isVIP ? chatId : null,
+      country,
+      city: "",
+      location: "",
+      bankName: "",
+      bankAccountNumber: "",
+      instagram: "",
+      tiktok: "",
+      whatsapp: "",
+      telegram: "",
+      bioPick: "",
+      naturePick: "",
+      fruitPick: "",
+      videoUrl: "",
+      stars: 50,
+      starsToday: 0,
+      starsGifted: 0,
+      lastStarDate: nowIso.split("T")[0],
+      cash: 0, points: 0, gifts: 0,
+      views: 0,
+      inviteeGiftStars: 0,
+      usernameColor: '#' + Math.floor(Math.random()*16777215).toString(16),
+      socialShare: (gender === 'Female' && !isVIP),
+      subscriptionActive: false,
+      subscriptionCount: 0,
+      subscriptionStartTime: null,
+      subscriptionEndTime: null,
+      inviteeGiftShown: false,
+      hostFriends: [],
+      addedAt: Date.now(),
+      createdAt: serverTimestamp(),
+      lastUpdated: serverTimestamp()
+    };
+
+    await setDoc(userRef, userData);
+
+    // 🧩 Update inviter stats if any
+    if(inviterRecord && inviterRecord.ref && inviterRecord.data){
+      const inviterRef = inviterRecord.ref;
+      const inviterData = inviterRecord.data;
+      const bonusStars = isVIP ? 100 : 50;
+      try {
+        await updateDoc(inviterRef, {
+          hostFriends: arrayUnion({
+            chatId,
+            chatIdLower: chatId.toLowerCase(),
+            email,
+            giftShown: true,
+            hostLink: inviterData.hostLink || null,
+            hostVIP: isVIP ? 1 : 0,
+            invitedBy: invitedByField || referrer || null
+          }),
+          stars: (inviterData.stars || 0) + bonusStars,
+          starsGifted: (inviterData.starsGifted || 0) + bonusStars
+        });
+      } catch (err) {
+        console.warn("Failed updating inviter stats:", err);
+      }
+    }
+
+    // ✅ Success UI + redirect
+    messageEl.textContent = `✅ Welcome ${fullName}! You’ve been gifted 50 ⭐️`;
+    localStorage.setItem("vipUser", JSON.stringify({ email, chatId }));
+    submitBtn.style.display = 'none';
+    if(isVIP) triggerSprayConfetti();
+    setTimeout(()=>{ window.location.href="nushop.html"; },1500);
+
+  } catch (e) {
+    console.error(e);
+    messageEl.textContent = "❌ Signup failed. Please try again.";
+    submitBtn.disabled = false;
+  } finally {
+    spinner.style.display='none';
+    btnText.style.display='inline';
+  }
 });
 </script>
 </body>
