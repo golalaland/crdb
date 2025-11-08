@@ -883,9 +883,11 @@ async function promptForChatID(userRef, userData) {
 }
 
 
+/* ---------- Firebase Auth Imports ---------- */
+import { signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
 /* ===============================
    🔐 VIP Login (Email + Password + Whitelist)
-   Smooth Dynamic Loader
 ================================= */
 async function loginWhitelist(email, password) {
   const loader = document.getElementById("postLoginLoader");
@@ -899,23 +901,19 @@ async function loginWhitelist(email, password) {
       loadingBar.style.background = "linear-gradient(90deg, #ff69b4, #ff1493)";
     }
 
-    // Helper to smoothly update the loading bar
-    const fillBar = (percent) => {
-      if (loadingBar) loadingBar.style.width = `${percent}%`;
-    };
+    const fillBar = (percent) => { if (loadingBar) loadingBar.style.width = `${percent}%`; };
 
-    // 1️⃣ Start: animate 10%
     fillBar(10);
     await sleep(100);
 
-    // 2️⃣ Firebase Auth
+    // 🔑 Firebase Auth
     const cred = await signInWithEmailAndPassword(auth, email, password);
     const user = cred.user;
     console.log("✅ Authenticated:", user.email);
     fillBar(40);
     await sleep(100);
 
-    // 3️⃣ Check whitelist
+    // 🔒 Check whitelist
     const q = query(collection(db, "whitelist"), where("email", "==", email));
     const snap = await getDocs(q);
     if (snap.empty) {
@@ -927,20 +925,19 @@ async function loginWhitelist(email, password) {
     fillBar(60);
     await sleep(100);
 
-    // 4️⃣ Load user profile
+    // 📝 Load profile
     const uidKey = sanitizeKey(email);
     const userRef = doc(db, "users", uidKey);
     const userSnap = await getDoc(userRef);
     if (!userSnap.exists()) {
       await signOut(auth);
-      showStarPopup("⚠️ Account found but profile missing. Please complete signup first.");
+      showStarPopup("⚠️ Account found but profile missing. Complete signup first.");
       fillBar(0);
       return false;
     }
     fillBar(80);
     await sleep(100);
 
-    // 5️⃣ Setup current user
     const data = userSnap.data();
     currentUser = {
       uid: uidKey,
@@ -959,12 +956,12 @@ async function loginWhitelist(email, password) {
       isHost: !!data.isHost
     };
 
-    // 6️⃣ Cache credentials
+    // Cache credentials for auto-login
     localStorage.setItem("vipUser", JSON.stringify({ email, password }));
     fillBar(90);
     await sleep(100);
 
-    // 7️⃣ Initialize chatroom & notifications
+    // Launch chatroom & notifications
     updateRedeemLink();
     updateTipLink();
     setupPresence(currentUser);
@@ -973,7 +970,6 @@ async function loginWhitelist(email, password) {
     showChatUI(currentUser);
     startNotificationsFor(email);
 
-    // Finalize loader
     fillBar(100);
     await sleep(200);
     if (loader) loader.style.display = "none";
@@ -983,7 +979,7 @@ async function loginWhitelist(email, password) {
 
   } catch (err) {
     console.error("❌ Login error:", err);
-    showStarPopup("Login failed. Please check credentials.");
+    showStarPopup("Login failed. Check credentials.");
     if (loadingBar) loadingBar.style.width = "0%";
     if (loader) loader.style.display = "none";
     return false;
@@ -993,7 +989,7 @@ async function loginWhitelist(email, password) {
 /* ===============================
    🎟️ VIP ACCESS button
 ================================= */
-document.getElementById("whitelistLoginBtn").addEventListener("click", async () => {
+document.getElementById("whitelistLoginBtn")?.addEventListener("click", async () => {
   const email = (document.getElementById("emailInput")?.value || "").trim().toLowerCase();
   const password = (document.getElementById("passwordInput")?.value || "").trim();
 
@@ -1019,9 +1015,8 @@ async function autoLogin() {
   }
 }
 
-// Call auto-login on page load
+// Run on page load
 window.addEventListener("DOMContentLoaded", autoLogin);
-
 
 
 /* ===============================
