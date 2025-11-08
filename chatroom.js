@@ -3469,141 +3469,158 @@ modal.appendChild(searchWrap);
     justifyContent: "flex-start",
   });
 
-  // 🎥 Function to render cards dynamically
-  function renderCards(filteredVideos) {
-    content.innerHTML = ""; // clear previous
-    filteredVideos.forEach(video => {
-      const card = document.createElement("div");
-      Object.assign(card.style, {
-        minWidth: "230px",
-        maxWidth: "230px",
-        background: "#1b1b1b",
-        borderRadius: "12px",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        cursor: "pointer",
-        flexShrink: 0,
-        boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
-        transition: "transform 0.2s ease",
-      });
-      card.onmouseenter = () => (card.style.transform = "scale(1.03)");
-      card.onmouseleave = () => (card.style.transform = "scale(1)");
-// 🏷️ Add searchable attributes
-card.classList.add("videoCard");
-card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
-card.setAttribute("data-title", video.title || "");
+// 🎥 Function to render cards dynamically
+function renderCards(filteredVideos) {
+  content.innerHTML = ""; // clear previous cards
 
-      const videoContainer = document.createElement("div");
-      Object.assign(videoContainer.style, {
-        height: "320px",
-        overflow: "hidden",
-        position: "relative",
-      });
+  // 🔍 Helper — auto-detect platform + return proper embed
+  function getVideoEmbed(video) {
+    const url = video.highlightVideo;
+    if (!url) return null;
 
-      const videoEl = document.createElement("video");
-      videoEl.src = video.previewClip || video.highlightVideo;
-      videoEl.muted = true;
-      videoEl.controls = false;
-      videoEl.loop = true;
-      videoEl.preload = "metadata";
-      videoEl.poster =
-        video.thumbnail ||
-        `https://image-thumbnails-service/?video=${encodeURIComponent(video.highlightVideo)}&blur=10`;
-      Object.assign(videoEl.style, {
-        width: "100%",
-        height: "100%",
-        objectFit: "cover",
-      });
+    if (url.includes("tiktok.com")) {
+      return `<blockquote class="tiktok-embed" cite="${url}" data-video-id style="max-width:230px;"><a href="${url}"></a></blockquote>`;
+    }
 
-      videoContainer.appendChild(videoEl);
+    if (url.includes("instagram.com")) {
+      return `<blockquote class="instagram-media" data-instgrm-permalink="${url}" data-instgrm-version="14" style="max-width:230px;"></blockquote>`;
+    }
 
-      videoContainer.onmouseenter = () => {
-        const unlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
-        if (!unlocked) videoEl.play();
-      };
-      videoContainer.onmouseleave = () => {
-        videoEl.pause();
-        videoEl.currentTime = 0;
-      };
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      const vidId = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/)?.[1];
+      return `<iframe width="230" height="320" src="https://www.youtube.com/embed/${vidId}" frameborder="0" allowfullscreen></iframe>`;
+    }
 
-      videoContainer.onclick = (e) => {
-        e.stopPropagation();
-        const unlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
-        if (unlocked) playFullVideo(video);
-        else showUnlockConfirm(video);
-      };
-
-      const infoPanel = document.createElement("div");
-      Object.assign(infoPanel.style, {
-        background: "#111",
-        padding: "10px",
-        display: "flex",
-        flexDirection: "column",
-        textAlign: "left",
-        gap: "4px",
-      });
-
-      const vidTitle = document.createElement("div");
-      vidTitle.textContent = video.title || "Untitled";
-      Object.assign(vidTitle.style, { fontWeight: "700", color: "#fff", fontSize: "14px" });
-
-      const uploader = document.createElement("div");
-      uploader.textContent = `By: ${video.uploaderName || "Anonymous"}`;
-      Object.assign(uploader.style, { fontSize: "12px", color: "#bbb" });
-
-      const unlockBtn = document.createElement("button");
-      const isUnlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
-      unlockBtn.textContent = isUnlocked ? "Unlocked ✅" : `Unlock ${video.highlightVideoPrice || 100} ⭐`;
-      Object.assign(unlockBtn.style, {
-        background: isUnlocked ? "#444" : "#ff006e",
-        border: "none",
-        borderRadius: "6px",
-        padding: "8px 0",
-        fontWeight: "600",
-        color: "#fff",
-        cursor: isUnlocked ? "default" : "pointer",
-        transition: "background 0.2s",
-      });
-
-      if (!isUnlocked) {
-        unlockBtn.onmouseenter = () => (unlockBtn.style.background = "#ff3385");
-        unlockBtn.onmouseleave = () => (unlockBtn.style.background = "#ff006e");
-        unlockBtn.onclick = (e) => {
-          e.stopPropagation();
-          if (!currentUser || !currentUser.uid)
-            return showGoldAlert("Please log in to unlock content 🔒");
-          showUnlockConfirm(video);
-        };
-      } else unlockBtn.disabled = true;
-
-      infoPanel.appendChild(vidTitle);
-      infoPanel.appendChild(uploader);
-      infoPanel.appendChild(unlockBtn);
-
-      card.appendChild(videoContainer);
-      card.appendChild(infoPanel);
-      content.appendChild(card);
-    });
+    // Shopify / .mp4 fallback
+    return `<video src="${url}" muted loop playsinline preload="metadata" style="width:100%;height:320px;object-fit:cover;border-radius:10px;"></video>`;
   }
 
-  // Initial render
-  renderCards(videos);
+  filteredVideos.forEach(video => {
+    const card = document.createElement("div");
+    Object.assign(card.style, {
+      minWidth: "230px",
+      maxWidth: "230px",
+      background: "#1b1b1b",
+      borderRadius: "12px",
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+      cursor: "pointer",
+      flexShrink: 0,
+      boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
+      transition: "transform 0.2s ease",
+    });
+    card.onmouseenter = () => (card.style.transform = "scale(1.03)");
+    card.onmouseleave = () => (card.style.transform = "scale(1)");
+
+    // 🏷️ Add searchable attributes
+    card.classList.add("videoCard");
+    card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
+    card.setAttribute("data-title", video.title || "");
+
+    // 🎬 Video container
+    const videoContainer = document.createElement("div");
+    Object.assign(videoContainer.style, {
+      height: "320px",
+      overflow: "hidden",
+      position: "relative",
+    });
+
+    const embedHTML = getVideoEmbed(video);
+    videoContainer.innerHTML = embedHTML;
+
+    // 🎞️ Hover autoplay (only for .mp4 videos)
+    const videoTag = videoContainer.querySelector("video");
+    if (videoTag) {
+      videoContainer.onmouseenter = () => {
+        const unlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
+        if (!unlocked) videoTag.play();
+      };
+      videoContainer.onmouseleave = () => {
+        videoTag.pause();
+        videoTag.currentTime = 0;
+      };
+    }
+
+    videoContainer.onclick = (e) => {
+      e.stopPropagation();
+      const unlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
+      if (unlocked) playFullVideo(video);
+      else showUnlockConfirm(video);
+    };
+
+    // 📄 Info section
+    const infoPanel = document.createElement("div");
+    Object.assign(infoPanel.style, {
+      background: "#111",
+      padding: "10px",
+      display: "flex",
+      flexDirection: "column",
+      textAlign: "left",
+      gap: "4px",
+    });
+
+    const vidTitle = document.createElement("div");
+    vidTitle.textContent = video.title || "Untitled";
+    Object.assign(vidTitle.style, { fontWeight: "700", color: "#fff", fontSize: "14px" });
+
+    const uploader = document.createElement("div");
+    uploader.textContent = `By: ${video.uploaderName || "Anonymous"}`;
+    Object.assign(uploader.style, { fontSize: "12px", color: "#bbb" });
+
+    const unlockBtn = document.createElement("button");
+    const isUnlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
+    unlockBtn.textContent = isUnlocked
+      ? "Unlocked ✅"
+      : `Unlock ${video.highlightVideoPrice || 100} ⭐`;
+    Object.assign(unlockBtn.style, {
+      background: isUnlocked ? "#444" : "#ff006e",
+      border: "none",
+      borderRadius: "6px",
+      padding: "8px 0",
+      fontWeight: "600",
+      color: "#fff",
+      cursor: isUnlocked ? "default" : "pointer",
+      transition: "background 0.2s",
+    });
+
+    if (!isUnlocked) {
+      unlockBtn.onmouseenter = () => (unlockBtn.style.background = "#ff3385");
+      unlockBtn.onmouseleave = () => (unlockBtn.style.background = "#ff006e");
+      unlockBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (!currentUser || !currentUser.uid)
+          return showGoldAlert("Please log in to unlock content 🔒");
+        showUnlockConfirm(video);
+      };
+    } else unlockBtn.disabled = true;
+
+    infoPanel.appendChild(vidTitle);
+    infoPanel.appendChild(uploader);
+    infoPanel.appendChild(unlockBtn);
+
+    card.appendChild(videoContainer);
+    card.appendChild(infoPanel);
+    content.appendChild(card);
+  });
+
+  // 🪄 Re-init embeds after render
+  if (window.tiktokEmbedLoad) window.tiktokEmbedLoad();
+  if (window.instgrm && window.instgrm.Embeds) window.instgrm.Embeds.process();
+}
+
+// Initial render
+renderCards(videos);
 
 // 🔎 Live Search Filter (No re-render — hides/shows instantly)
 const searchInput = searchWrap.querySelector("#highlightSearchInput");
-
 searchInput.addEventListener("input", (e) => {
   const term = e.target.value.trim().toLowerCase();
-
-  // Loop through all visible video cards
   content.querySelectorAll(".videoCard").forEach(card => {
     const uploader = card.getAttribute("data-uploader")?.toLowerCase() || "";
     const title = card.getAttribute("data-title")?.toLowerCase() || "";
-
-    card.style.display =
-      uploader.includes(term) || title.includes(term) ? "flex" : "none";
+    card.style.display = uploader.includes(term) || title.includes(term) ? "flex" : "none";
   });
 });
 
