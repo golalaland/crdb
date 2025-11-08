@@ -3417,45 +3417,31 @@ checkScroll(); // initial check
 
 // ---------- Highlights Button ----------
 highlightsBtn.onclick = async () => {
-  try {
-    if (!currentUser || !currentUser.uid) {
-      showGoldAlert("Please log in to view highlights 🔒");
-      return;
-    }
+  if (!currentUser?.uid) return showGoldAlert("Please log in to view highlights 🔒");
 
+  try {
     const highlightsRef = collection(db, "highlightVideos");
     const q = query(highlightsRef, orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
 
-    if (snapshot.empty) {
-      showGoldAlert("No highlights uploaded yet ⚡");
-      return;
-    }
+    if (snapshot.empty) return showGoldAlert("No highlights uploaded yet ⚡");
 
-const videos = snapshot.docs.map(docSnap => {
-  const d = docSnap.data();
+    const videos = snapshot.docs.map(docSnap => {
+      const d = docSnap.data();
+      return {
+        id: docSnap.id,
+        highlightVideo: d.highlightVideo,
+        highlightVideoPrice: d.highlightVideoPrice || 100,
+        title: d.title || "Untitled",
+        uploaderName: d.uploaderName || d.chatId || d.displayName || d.username || "Anonymous",
+        uploaderId: d.uploaderId || "",
+        uploaderEmail: d.uploaderEmail || "unknown",
+        description: d.description || "",
+        thumbnail: d.thumbnail || "",
+        createdAt: d.createdAt || null,
+      };
+    });
 
-  // 💎 Make sure uploaderName is resolved from multiple possible fields
-  const uploaderName =
-    d.uploaderName ||
-    d.chatId ||
-    d.displayName ||
-    d.username ||
-    "Anonymous";
-
-  return {
-    id: docSnap.id,
-    highlightVideo: d.highlightVideo,
-    highlightVideoPrice: d.highlightVideoPrice || 0,
-    title: d.title || "Untitled",
-    uploaderName, // ✅ keep consistent key used in renderCards()
-    uploaderId: d.uploaderId || "",
-    uploaderEmail: d.uploaderEmail || "unknown",
-    description: d.description || "",
-    thumbnail: d.thumbnail || "",
-    createdAt: d.createdAt || null,
-  };
-});
     showHighlightsModal(videos);
   } catch (err) {
     console.error("🔥 Error fetching highlights:", err);
@@ -3465,10 +3451,10 @@ const videos = snapshot.docs.map(docSnap => {
 
 // ---------- Highlights Modal ----------
 function showHighlightsModal(videos) {
-  // Remove any existing modal
+  // Remove existing modal
   document.getElementById("highlightsModal")?.remove();
 
-  // 🪩 Main modal wrapper
+  // Main modal
   const modal = document.createElement("div");
   modal.id = "highlightsModal";
   Object.assign(modal.style, {
@@ -3481,14 +3467,12 @@ function showHighlightsModal(videos) {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "flex-start",
-    zIndex: "999999",
     overflowY: "auto",
     padding: "20px",
-    boxSizing: "border-box",
+    zIndex: "999999",
   });
 
-  // 🪄 Sticky Intro Message
+  // Sticky intro
   const intro = document.createElement("div");
   intro.innerHTML = `
     <div style="
@@ -3510,64 +3494,36 @@ function showHighlightsModal(videos) {
       </p>
     </div>
   `;
-  Object.assign(intro.style, {
-    position: "sticky",
-    top: "10px",
-    zIndex: "1001",
-    marginBottom: "12px",
-    transition: "opacity 0.3s ease",
-  });
+  Object.assign(intro.style, { position: "sticky", top: "10px", zIndex: "1001", marginBottom: "12px", transition: "opacity 0.3s" });
   modal.appendChild(intro);
 
-  // 🧠 Fade intro slightly when scrolling
   modal.addEventListener("scroll", () => {
     intro.style.opacity = modal.scrollTop > 50 ? "0.7" : "1";
   });
 
-  // 🩵 Search Bar (Sticky + Functional)
-const searchWrap = document.createElement("div");
-Object.assign(searchWrap.style, {
-  position: "sticky",
-  top: "84px",
-  zIndex: "1001",
-  marginBottom: "20px",
-  display: "flex",
-  justifyContent: "center",
-});
+  // Search bar
+  const searchWrap = document.createElement("div");
+  Object.assign(searchWrap.style, { position: "sticky", top: "84px", zIndex: "1001", marginBottom: "20px", display: "flex", justifyContent: "center" });
+  searchWrap.innerHTML = `
+    <div style="
+      display:flex;
+      align-items:center;
+      background:rgba(255,255,255,0.08);
+      border-radius:30px;
+      padding:8px 14px;
+      width:280px;
+      backdrop-filter:blur(6px);
+      box-shadow:0 0 10px rgba(0,0,0,0.25);
+    ">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M15 15L21 21M10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10C17 13.866 13.866 17 10 17Z" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <input id="highlightSearchInput" type="text" placeholder="Search by creator..." style="flex:1; background:transparent; border:none; outline:none; color:#fff; font-size:13px; letter-spacing:0.3px;" />
+    </div>
+  `;
+  modal.appendChild(searchWrap);
 
-searchWrap.innerHTML = `
-  <div style="
-    display:flex;
-    align-items:center;
-    background:rgba(255,255,255,0.08);
-    border-radius:30px;
-    padding:8px 14px;
-    width:280px;
-    backdrop-filter:blur(6px);
-    box-shadow:0 0 10px rgba(0,0,0,0.25);
-  ">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M15 15L21 21M10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10C17 13.866 13.866 17 10 17Z" stroke="#999999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <input 
-      id="highlightSearchInput"
-      type="text"
-      placeholder="Search by creator..."
-      style="
-        flex:1;
-        background:transparent;
-        border:none;
-        outline:none;
-        color:#fff;
-        font-size:13px;
-        letter-spacing:0.3px;
-      "
-    />
-  </div>
-`;
-modal.appendChild(searchWrap);
-
-  // 🧱 Inner container (horizontal scroll)
+  // Content container
   const content = document.createElement("div");
   Object.assign(content.style, {
     display: "flex",
@@ -3577,182 +3533,129 @@ modal.appendChild(searchWrap);
     paddingBottom: "40px",
     scrollBehavior: "smooth",
     width: "100%",
-    justifyContent: "flex-start",
   });
 
-// 🎥 Function to render cards dynamically
-function renderCards(filteredVideos) {
-  content.innerHTML = ""; // clear previous cards
+  // Render cards
+  async function renderCards(filteredVideos) {
+    content.innerHTML = "";
 
-  // 🔍 Helper — auto-detect platform + return proper embed
-  function getVideoEmbed(video) {
-    const url = video.highlightVideo;
-    if (!url) return null;
-
-    if (url.includes("tiktok.com")) {
-      return `<blockquote class="tiktok-embed" cite="${url}" data-video-id style="max-width:230px;"><a href="${url}"></a></blockquote>`;
+    function getVideoEmbed(video) {
+      const url = video.highlightVideo;
+      if (!url) return null;
+      if (url.includes("tiktok.com")) return `<blockquote class="tiktok-embed" cite="${url}" data-video-id style="max-width:230px;"><a href="${url}"></a></blockquote>`;
+      if (url.includes("instagram.com")) return `<blockquote class="instagram-media" data-instgrm-permalink="${url}" data-instgrm-version="14" style="max-width:230px;"></blockquote>`;
+      if (url.includes("youtube.com") || url.includes("youtu.be")) {
+        const vidId = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/)?.[1];
+        return `<iframe width="230" height="320" src="https://www.youtube.com/embed/${vidId}" frameborder="0" allowfullscreen></iframe>`;
+      }
+      return `<video src="${url}" muted loop playsinline preload="metadata" style="width:100%;height:320px;object-fit:cover;border-radius:10px;"></video>`;
     }
 
-    if (url.includes("instagram.com")) {
-      return `<blockquote class="instagram-media" data-instgrm-permalink="${url}" data-instgrm-version="14" style="max-width:230px;"></blockquote>`;
+    for (const video of filteredVideos) {
+      const card = document.createElement("div");
+      Object.assign(card.style, {
+        minWidth: "230px",
+        maxWidth: "230px",
+        background: "#1b1b1b",
+        borderRadius: "12px",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        cursor: "pointer",
+        flexShrink: 0,
+        boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
+        transition: "transform 0.2s",
+      });
+      card.onmouseenter = () => card.style.transform = "scale(1.03)";
+      card.onmouseleave = () => card.style.transform = "scale(1)";
+      card.classList.add("videoCard");
+      card.setAttribute("data-uploader", video.uploaderName.toLowerCase());
+      card.setAttribute("data-title", video.title.toLowerCase());
+
+      // Video container
+      const videoContainer = document.createElement("div");
+      Object.assign(videoContainer.style, { height: "320px", overflow: "hidden", position: "relative" });
+      videoContainer.innerHTML = getVideoEmbed(video);
+
+      const videoTag = videoContainer.querySelector("video");
+      if (videoTag) {
+        videoContainer.onmouseenter = async () => {
+          const unlocked = await checkUnlockStatus(video.id, currentUser.uid);
+          if (unlocked) videoTag.play();
+          else videoTag.pause();
+        };
+        videoContainer.onmouseleave = () => { videoTag.pause(); videoTag.currentTime = 0; };
+      }
+
+      videoContainer.onclick = (e) => {
+        e.stopPropagation();
+        const unlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
+        unlocked ? playFullVideo(video) : showUnlockConfirm(video);
+      };
+
+      // Info panel
+      const infoPanel = document.createElement("div");
+      Object.assign(infoPanel.style, { background: "#111", padding: "10px", display: "flex", flexDirection: "column", gap: "4px" });
+
+      const vidTitle = document.createElement("div");
+      vidTitle.textContent = video.title;
+      Object.assign(vidTitle.style, { fontWeight: "700", color: "#fff", fontSize: "14px" });
+
+      const uploader = document.createElement("div");
+      uploader.textContent = `By: ${video.uploaderName}`;
+      Object.assign(uploader.style, { fontSize: "12px", color: "#bbb" });
+
+      const unlockBtn = document.createElement("button");
+      const isUnlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
+      unlockBtn.textContent = isUnlocked ? "Unlocked ✅" : `Unlock ${video.highlightVideoPrice} ⭐`;
+      Object.assign(unlockBtn.style, {
+        background: isUnlocked ? "#444" : "#ff006e",
+        border: "none",
+        borderRadius: "6px",
+        padding: "8px 0",
+        fontWeight: "600",
+        color: "#fff",
+        cursor: isUnlocked ? "default" : "pointer",
+        transition: "background 0.2s",
+      });
+
+      if (!isUnlocked) {
+        unlockBtn.onmouseenter = () => unlockBtn.style.background = "#ff3385";
+        unlockBtn.onmouseleave = () => unlockBtn.style.background = "#ff006e";
+        unlockBtn.onclick = (e) => { e.stopPropagation(); currentUser?.uid ? showUnlockConfirm(video) : showGoldAlert("Please log in 🔒"); };
+      } else unlockBtn.disabled = true;
+
+      infoPanel.append(vidTitle, uploader, unlockBtn);
+      card.append(videoContainer, infoPanel);
+      content.appendChild(card);
     }
 
-    if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      const vidId = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/)?.[1];
-      return `<iframe width="230" height="320" src="https://www.youtube.com/embed/${vidId}" frameborder="0" allowfullscreen></iframe>`;
-    }
-
-    // Shopify / .mp4 fallback
-    return `<video src="${url}" muted loop playsinline preload="metadata" style="width:100%;height:320px;object-fit:cover;border-radius:10px;"></video>`;
+    // Re-init embeds
+    if (window.tiktokEmbedLoad) window.tiktokEmbedLoad();
+    if (window.instgrm?.Embeds) window.instgrm.Embeds.process();
   }
 
-  filteredVideos.forEach(video => {
-    const card = document.createElement("div");
-    Object.assign(card.style, {
-      minWidth: "230px",
-      maxWidth: "230px",
-      background: "#1b1b1b",
-      borderRadius: "12px",
-      overflow: "hidden",
-      display: "flex",
-      flexDirection: "column",
-      justifyContent: "space-between",
-      cursor: "pointer",
-      flexShrink: 0,
-      boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
-      transition: "transform 0.2s ease",
+  renderCards(videos);
+
+  // Live search
+  const searchInput = searchWrap.querySelector("#highlightSearchInput");
+  searchInput.addEventListener("input", (e) => {
+    const term = e.target.value.trim().toLowerCase();
+    content.querySelectorAll(".videoCard").forEach(card => {
+      const uploader = card.getAttribute("data-uploader");
+      const title = card.getAttribute("data-title");
+      card.style.display = (uploader.includes(term) || title.includes(term)) ? "flex" : "none";
     });
-    card.onmouseenter = () => (card.style.transform = "scale(1.03)");
-    card.onmouseleave = () => (card.style.transform = "scale(1)");
-
-    // 🏷️ Add searchable attributes
-    card.classList.add("videoCard");
-    card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
-    card.setAttribute("data-title", video.title || "");
-
-    // 🎬 Video container
-    const videoContainer = document.createElement("div");
-    Object.assign(videoContainer.style, {
-      height: "320px",
-      overflow: "hidden",
-      position: "relative",
-    });
-
-    const embedHTML = getVideoEmbed(video);
-    videoContainer.innerHTML = embedHTML;
-
-    // 🎞️ Hover autoplay (only for .mp4 videos)
-    const videoTag = videoContainer.querySelector("video");
-    if (videoTag) {
-      videoContainer.onmouseenter = () => {
-        const unlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
-        if (!unlocked) videoTag.play();
-      };
-      videoContainer.onmouseleave = () => {
-        videoTag.pause();
-        videoTag.currentTime = 0;
-      };
-    }
-
-    videoContainer.onclick = (e) => {
-      e.stopPropagation();
-      const unlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
-      if (unlocked) playFullVideo(video);
-      else showUnlockConfirm(video);
-    };
-
-    // 📄 Info section
-    const infoPanel = document.createElement("div");
-    Object.assign(infoPanel.style, {
-      background: "#111",
-      padding: "10px",
-      display: "flex",
-      flexDirection: "column",
-      textAlign: "left",
-      gap: "4px",
-    });
-
-    const vidTitle = document.createElement("div");
-    vidTitle.textContent = video.title || "Untitled";
-    Object.assign(vidTitle.style, { fontWeight: "700", color: "#fff", fontSize: "14px" });
-
-    const uploader = document.createElement("div");
-    uploader.textContent = `By: ${video.uploaderName || "Anonymous"}`;
-    Object.assign(uploader.style, { fontSize: "12px", color: "#bbb" });
-
-    const unlockBtn = document.createElement("button");
-    const isUnlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
-    unlockBtn.textContent = isUnlocked
-      ? "Unlocked ✅"
-      : `Unlock ${video.highlightVideoPrice || 100} ⭐`;
-    Object.assign(unlockBtn.style, {
-      background: isUnlocked ? "#444" : "#ff006e",
-      border: "none",
-      borderRadius: "6px",
-      padding: "8px 0",
-      fontWeight: "600",
-      color: "#fff",
-      cursor: isUnlocked ? "default" : "pointer",
-      transition: "background 0.2s",
-    });
-
-    if (!isUnlocked) {
-      unlockBtn.onmouseenter = () => (unlockBtn.style.background = "#ff3385");
-      unlockBtn.onmouseleave = () => (unlockBtn.style.background = "#ff006e");
-      unlockBtn.onclick = (e) => {
-        e.stopPropagation();
-        if (!currentUser || !currentUser.uid)
-          return showGoldAlert("Please log in to unlock content 🔒");
-        showUnlockConfirm(video);
-      };
-    } else unlockBtn.disabled = true;
-
-    infoPanel.appendChild(vidTitle);
-    infoPanel.appendChild(uploader);
-    infoPanel.appendChild(unlockBtn);
-
-    card.appendChild(videoContainer);
-    card.appendChild(infoPanel);
-    content.appendChild(card);
   });
 
-  // 🪄 Re-init embeds after render
-  if (window.tiktokEmbedLoad) window.tiktokEmbedLoad();
-  if (window.instgrm && window.instgrm.Embeds) window.instgrm.Embeds.process();
-}
-
-// Initial render
-renderCards(videos);
-
-// 🔎 Live Search Filter (No re-render — hides/shows instantly)
-const searchInput = searchWrap.querySelector("#highlightSearchInput");
-searchInput.addEventListener("input", (e) => {
-  const term = e.target.value.trim().toLowerCase();
-  content.querySelectorAll(".videoCard").forEach(card => {
-    const uploader = card.getAttribute("data-uploader")?.toLowerCase() || "";
-    const title = card.getAttribute("data-title")?.toLowerCase() || "";
-    card.style.display = uploader.includes(term) || title.includes(term) ? "flex" : "none";
-  });
-});
-
-  // ❌ Close button
+  // Close button
   const closeBtn = document.createElement("div");
   closeBtn.innerHTML = "&times;";
-  Object.assign(closeBtn.style, {
-    position: "fixed",
-    top: "20px",
-    right: "28px",
-    fontSize: "32px",
-    color: "#fff",
-    fontWeight: "700",
-    cursor: "pointer",
-    zIndex: "1000000",
-  });
+  Object.assign(closeBtn.style, { position: "fixed", top: "20px", right: "28px", fontSize: "32px", color: "#fff", fontWeight: "700", cursor: "pointer", zIndex: "1000000" });
   closeBtn.onclick = () => modal.remove();
 
-  // Add everything
-  modal.appendChild(content);
-  modal.appendChild(closeBtn);
+  modal.append(content, closeBtn);
   document.body.appendChild(modal);
 }
 
@@ -3841,8 +3744,8 @@ async function handleUnlockVideo(video) {
   }
 }
 
-// ---------- Play Full Video Modal ----------
-function playFullVideo(video) {
+// ---------- Play Full Video ----------
+function playFullVideo(videoURL) {
   const modal = document.createElement("div");
   Object.assign(modal.style, {
     position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
@@ -3852,7 +3755,7 @@ function playFullVideo(video) {
   });
 
   const vid = document.createElement("video");
-  vid.src = video.highlightVideo;
+  vid.src = videoURL;
   vid.controls = true;
   vid.autoplay = true;
   vid.style.maxWidth = "90%";
