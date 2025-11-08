@@ -883,43 +883,37 @@ async function promptForChatID(userRef, userData) {
 }
 
 
-/* ---------- Imports (Firebase v10) ---------- */
-import { 
-  signInWithEmailAndPassword, 
-  signOut 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+/* ---------- VIP Login + Smooth Auto-login with Progress ---------- */
+import { signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-/* ===============================
-   🔐 VIP Login (Email + Password + Whitelist)
-================================= */
 async function loginWhitelist(email, password) {
   const loader = document.getElementById("postLoginLoader");
   const loadingBar = document.getElementById("loadingBar");
 
+  let progress = 0;
+  let loadingInterval;
+
   try {
-    // Show loader and reset progress
     if (loader) loader.style.display = "flex";
     if (loadingBar) {
       loadingBar.style.width = "0%";
       loadingBar.style.background = "linear-gradient(90deg, #ff69b4, #ff1493)";
     }
 
-    // Animate loading bar while login occurs
-    let progress = 0;
-    const interval = 80;
-    const loadingInterval = setInterval(() => {
-      if (progress < 90 && loadingBar) {
-        progress += Math.random() * 5;
-        loadingBar.style.width = `${Math.min(progress, 90)}%`;
+    // Smooth progress animation
+    loadingInterval = setInterval(() => {
+      if (progress < 95 && loadingBar) {
+        progress += Math.random() * 2 + 0.5; // slow, smooth increment
+        loadingBar.style.width = `${progress}%`;
       }
-    }, interval);
+    }, 80);
 
-    // 1️⃣ Firebase authentication
+    // Firebase Auth
     const cred = await signInWithEmailAndPassword(auth, email, password);
     const user = cred.user;
     console.log("✅ Authenticated:", user.email);
 
-    // 2️⃣ Whitelist check
+    // Whitelist check
     const q = query(collection(db, "whitelist"), where("email", "==", email));
     const snap = await getDocs(q);
     if (snap.empty) {
@@ -928,13 +922,13 @@ async function loginWhitelist(email, password) {
       return false;
     }
 
-    // 3️⃣ Load user profile
+    // Load user profile
     const uidKey = sanitizeKey(email);
     const userRef = doc(db, "users", uidKey);
     const userSnap = await getDoc(userRef);
     if (!userSnap.exists()) {
       await signOut(auth);
-      showStarPopup("⚠️ Account found but profile missing. Please complete signup first.");
+      showStarPopup("⚠️ Profile missing. Please complete signup first.");
       return false;
     }
 
@@ -956,10 +950,10 @@ async function loginWhitelist(email, password) {
       isHost: !!data.isHost
     };
 
-    // 4️⃣ Cache credentials for auto-login
+    // Cache credentials
     localStorage.setItem("vipUser", JSON.stringify({ email, password }));
 
-    // 5️⃣ Initialize chatroom + notifications
+    // Initialize chat + notifications
     updateRedeemLink();
     updateTipLink();
     setupPresence?.(currentUser);
@@ -970,12 +964,21 @@ async function loginWhitelist(email, password) {
 
     console.log("🚀 Chatroom access granted:", email);
 
-    // Complete loading bar
-    clearInterval(loadingInterval);
-    if (loadingBar) loadingBar.style.width = "100%";
+    // Complete progress bar smoothly to 100%
+    if (loadingBar) {
+      let finalProgress = progress;
+      const finalizeInterval = setInterval(() => {
+        finalProgress += 2;
+        if (finalProgress >= 100) {
+          loadingBar.style.width = "100%";
+          clearInterval(finalizeInterval);
+        } else {
+          loadingBar.style.width = `${finalProgress}%`;
+        }
+      }, 30);
+    }
 
     await sleep(400);
-
     return true;
 
   } catch (err) {
@@ -984,6 +987,7 @@ async function loginWhitelist(email, password) {
     if (loadingBar) loadingBar.style.width = "0%";
     return false;
   } finally {
+    clearInterval(loadingInterval);
     if (loader) loader.style.display = "none";
   }
 }
@@ -995,10 +999,7 @@ document.getElementById("whitelistLoginBtn")?.addEventListener("click", async ()
   const email = (document.getElementById("emailInput")?.value || "").trim().toLowerCase();
   const password = (document.getElementById("passwordInput")?.value || "").trim();
 
-  if (!email || !password) {
-    return showStarPopup("Please enter both email and password.");
-  }
-
+  if (!email || !password) return showStarPopup("Enter both email and password.");
   await loginWhitelist(email, password);
 });
 
@@ -1017,8 +1018,8 @@ async function autoLogin() {
   }
 }
 
-// Run auto-login on page load
 window.addEventListener("DOMContentLoaded", autoLogin);
+
 
 /* ===============================
    💫 Auto Star Earning System
