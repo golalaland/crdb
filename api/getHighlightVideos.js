@@ -1,5 +1,6 @@
 const admin = require("firebase-admin");
 
+// Initialize Firebase Admin once
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(
@@ -24,7 +25,7 @@ module.exports = async (req, res) => {
     const videos = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     res.status(200).json({ videos });
   } catch (err) {
-    console.error(err);
+    console.error("🔥 getHighlightVideos error:", err);
     res.status(500).json({ error: "Failed to fetch highlights" });
   }
 };
