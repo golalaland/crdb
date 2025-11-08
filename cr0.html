@@ -1700,27 +1700,31 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
  <div id="guestMsg"></div>
 <div id="authBox">
 
-  <!-- VIP Access Login Wrapper -->
-<div id="emailAuthWrapper">
-  <input 
-    type="email" 
-    id="emailInput" 
-    placeholder="Enter your email"
-    class="auth-input"
-  >
 
-  <input 
-    type="password" 
-    id="passwordInput" 
-    placeholder="Enter your password"
-    class="auth-input"
-  >
+<!-- VIP Access Login Wrapper -->
+  <div id="emailAuthWrapper">
+    <!-- Phone Number Input -->
+    <input 
+      type="tel" 
+      id="phoneInput" 
+      placeholder="Enter your phone number" 
+      class="auth-input" 
+      pattern="\+\d{1,4}\d{6,15}"
+    >
 
-  <button id="whitelistLoginBtn" class="google-btn">
-    <img src="https://cdn.shopify.com/s/files/1/0962/6648/6067/files/VIP__128_x_128_px.svg?v=1761812907" alt="VIP Ticket">
-    VIP ACCESS
-  </button>
-</div>
+    <!-- Email Input -->
+    <input 
+      type="email" 
+      id="emailInput" 
+      placeholder="Enter your email" 
+      class="auth-input"
+    >
+
+<!-- VIP Access Button -->
+<button id="whitelistLoginBtn" class="google-btn">
+  <img src="https://cdn.shopify.com/s/files/1/0962/6648/6067/files/VIP__128_x_128_px.svg?v=1761812907" alt="VIP Ticket">
+  VIP ACCESS
+</button>
 
     <!-- Google Sign-In Button -->
     <button id="googleSignInBtn" class="google-btn">
