@@ -3744,8 +3744,8 @@ async function handleUnlockVideo(video) {
   }
 }
 
-// ---------- Play Full Video ----------
-function playFullVideo(videoURL) {
+// ---------- Play Full Video Modal ----------
+function playFullVideo(video) {
   const modal = document.createElement("div");
   Object.assign(modal.style, {
     position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
@@ -3755,7 +3755,7 @@ function playFullVideo(videoURL) {
   });
 
   const vid = document.createElement("video");
-  vid.src = videoURL;
+  vid.src = video.highlightVideo;
   vid.controls = true;
   vid.autoplay = true;
   vid.style.maxWidth = "90%";
