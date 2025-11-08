@@ -884,39 +884,48 @@ async function promptForChatID(userRef, userData) {
 
 
 import { 
+  getAuth, 
   signInWithEmailAndPassword, 
-  signOut 
+  signOut, 
+  setPersistence, 
+  browserLocalPersistence 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { 
+  collection, query, where, getDocs, doc, getDoc 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ===============================
-   🔐 VIP Login (Email + Password + Whitelist)
-================================= */
+/* ---------- VIP Login + Whitelist ---------- */
 async function loginWhitelist(email, password) {
   const loader = document.getElementById("postLoginLoader");
-  try {
-    if (loader) loader.style.display = "flex";
+  if (loader) loader.style.display = "flex";
 
-    // 1️⃣  Sign in with Firebase Auth
+  try {
+    if (!navigator.onLine) throw new Error("Network offline or slow.");
+
+    // ✅ Ensure session persistence
+    await setPersistence(auth, browserLocalPersistence);
+
+    // 🔐 Sign in with Firebase Auth
     const cred = await signInWithEmailAndPassword(auth, email, password);
     const user = cred.user;
     console.log("✅ Authenticated:", user.email);
 
-    // 2️⃣  Check Firestore whitelist
-    const q = query(collection(db, "whitelist"), where("email", "==", email));
-    const snap = await getDocs(q);
+    // 🔍 Firestore whitelist check
+    const snap = await getDocs(query(collection(db, "whitelist"), where("email", "==", email)));
     if (snap.empty) {
       await signOut(auth);
       showStarPopup("❌ You’re not on the whitelist. Access denied.");
       return false;
     }
 
-    // 3️⃣  Load user profile from “users” collection
+    // 📄 Load user profile from “users” collection
     const uidKey = sanitizeKey(email);
     const userRef = doc(db, "users", uidKey);
     const userSnap = await getDoc(userRef);
+
     if (!userSnap.exists()) {
       await signOut(auth);
-      showStarPopup("⚠️ Account found but profile missing. Please complete signup first.");
+      showStarPopup("⚠️ Profile missing. Please complete signup.");
       return false;
     }
 
@@ -938,10 +947,10 @@ async function loginWhitelist(email, password) {
       isHost: !!data.isHost
     };
 
-    // 4️⃣  Cache locally
+    // ✅ Cache locally
     localStorage.setItem("vipUser", JSON.stringify({ email }));
 
-    // 5️⃣  Launch chatroom systems
+    // 🚀 Launch chatroom & notifications
     updateRedeemLink();
     updateTipLink();
     setupPresence(currentUser);
@@ -955,83 +964,79 @@ async function loginWhitelist(email, password) {
 
   } catch (err) {
     console.error("❌ Login error:", err);
-    showStarPopup("Login failed. Please check credentials.");
+    showStarPopup(err.message || "Login failed. Check credentials.");
     return false;
   } finally {
     if (loader) loader.style.display = "none";
   }
 }
 
-/* ===============================
-   🎟️  Bind VIP ACCESS button
-================================= */
+/* ---------- VIP ACCESS Button ---------- */
 document.getElementById("whitelistLoginBtn").addEventListener("click", async () => {
-  const email = document.getElementById("emailInput").value.trim().toLowerCase();
-  const password = document.getElementById("passwordInput").value.trim();
+  const email = (document.getElementById("emailInput").value || "").trim().toLowerCase();
+  const password = (document.getElementById("passwordInput").value || "").trim();
+  if (!email || !password) return showStarPopup("Enter both email and password.");
 
-  if (!email || !password) {
-    showStarPopup("Please enter both email and password.");
-    return;
-  }
+  const interval = showLoadingBar();
+  await sleep(50);
   await loginWhitelist(email, password);
+  finishLoadingBar(interval);
 });
 
-
-/* ----------------------------
-   🔁 Auto Login Session
------------------------------ */
+/* ---------- Auto-Login on Page Load ---------- */
 window.addEventListener("DOMContentLoaded", async () => {
   const vipUser = JSON.parse(localStorage.getItem("vipUser"));
-  if (!vipUser?.email || !vipUser?.phone) return;
+  if (!vipUser?.email) return;
 
-  const loader = document.getElementById("postLoginLoader");
-  const loadingBar = document.getElementById("loadingBar");
+  if (!navigator.onLine) return showStarPopup("⚠️ Network slow. Auto-login skipped.");
+
+  const interval = showLoadingBar();
+  await sleep(50);
 
   try {
-    if (loader) loader.style.display = "flex";
-    if (loadingBar) {
-      loadingBar.style.width = "0%";
-      // optional: set the pink gradient if not already in CSS
-      loadingBar.style.background = "linear-gradient(90deg, #ff69b4, #ff1493)";
-    }
-
-    // animate loading bar while login occurs
-    let progress = 0;
-    const interval = 80;
-    const loadingInterval = setInterval(() => {
-      if (progress < 90) {
-        progress += Math.random() * 5;
-        if (loadingBar) loadingBar.style.width = `${Math.min(progress, 90)}%`;
-      }
-    }, interval);
-
-    const success = await loginWhitelist(vipUser.email, vipUser.phone);
-
-    // complete the bar smoothly
-    clearInterval(loadingInterval);
-    if (loadingBar) loadingBar.style.width = "100%";
-
-    if (success) {
-      await sleep(400);
+    const user = auth.currentUser;
+    if (user && user.email === vipUser.email) {
+      currentUser = user;
+      localStorage.setItem("userId", user.email.replace(/\./g, ","));
       updateRedeemLink();
       updateTipLink();
-
-      // restore chatroom & notifications
-      if (typeof attachMessagesListener === "function") attachMessagesListener();
-      if (typeof setupPresence === "function") setupPresence(currentUser);
-      await startNotificationsFor(currentUser.email);
-
-      // VIP/star popup for returning VIP
-      if (currentUser.isVIP) showStarPopup(`Welcome back, VIP ${currentUser.chatId || currentUser.email}! ⭐️`);
+      startNotificationsFor(user.email);
+      showStarPopup(`Welcome back, VIP ${currentUser.chatId || currentUser.email}! ⭐️`);
     }
-
   } catch (err) {
-    console.error("❌ Auto-login error:", err);
+    console.warn("❌ Auto-login failed:", err);
   } finally {
-    await sleep(300);
-    if (loader) loader.style.display = "none";
+    finishLoadingBar(interval);
   }
 });
+
+/* ---------- Loading Bar Helpers ---------- */
+function showLoadingBar() {
+  if (loader) loader.style.display = "flex";
+  if (!loadingBar) return;
+
+  loadingBar.style.width = "0%";
+  loadingBar.style.background = "linear-gradient(90deg, #ff69b4, #ff1493)";
+
+  let progress = 0;
+  const interval = setInterval(() => {
+    if (progress < 90) {
+      progress += Math.random() * 5;
+      loadingBar.style.width = `${Math.min(progress, 90)}%`;
+    }
+  }, 60);
+
+  return interval;
+}
+
+function finishLoadingBar(interval) {
+  clearInterval(interval);
+  if (loadingBar) loadingBar.style.width = "100%";
+  setTimeout(() => {
+    if (loader) loader.style.display = "none";
+    if (loadingBar) loadingBar.style.width = "0%";
+  }, 400);
+}
 
 /* ===============================
    💫 Auto Star Earning System
