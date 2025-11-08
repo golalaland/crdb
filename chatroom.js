@@ -2491,45 +2491,52 @@ document.getElementById("uploadHighlightBtn").addEventListener("click", async ()
 // 🧩 Smart Thumbnail Generator (Instant)
 // ===============================
 async function generateVideoThumbnail(videoUrl) {
+  const fallback = "https://via.placeholder.com/480x270?text=Preview+Unavailable";
+
+  // helper for fetch with timeout
+  const fetchWithTimeout = (url, timeout = 3000) =>
+    Promise.race([
+      fetch(url).then(r => r.json()),
+      new Promise((_, reject) => setTimeout(() => reject("Timeout"), timeout))
+    ]);
+
   try {
-    // 🟢 1. TikTok (return static placeholder instead of CORS fetch)
     if (videoUrl.includes("tiktok.com")) {
       return "https://upload.wikimedia.org/wikipedia/commons/a/a9/TikTok_logo.svg";
     }
 
-    // 🟣 2. Instagram
     if (videoUrl.includes("instagram.com")) {
-      const res = await fetch(`https://www.instagram.com/oembed/?url=${videoUrl}`);
-      const data = await res.json();
-      return data.thumbnail_url || "https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg";
-    }
-
-    // 🔴 3. YouTube
-    if (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be")) {
-      const match = videoUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
-      if (match) {
-        const id = match[1];
-        return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+      try {
+        const data = await fetchWithTimeout(`https://www.instagram.com/oembed/?url=${videoUrl}`);
+        return data.thumbnail_url || fallback;
+      } catch {
+        return fallback;
       }
     }
 
-    // 🟠 4. Shopify CDN (already hosted image/video)
-    if (videoUrl.includes("cdn.shopify.com")) {
-      return videoUrl;
+    if (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be")) {
+      const match = videoUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+      if (match) return `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`;
+      return fallback;
     }
 
-    // 🟡 5. Regular MP4 or Direct File
+    if (videoUrl.includes("cdn.shopify.com")) return videoUrl;
+
     if (videoUrl.endsWith(".mp4") || videoUrl.endsWith(".mov")) {
       return await generateThumbnailFromVideo(videoUrl);
     }
 
-    // ⚪ Fallback
-    return "https://via.placeholder.com/480x270?text=Preview+Unavailable";
+    return fallback;
 
   } catch (err) {
-    console.warn("⚠️ Could not fetch platform thumbnail, using fallback:", err);
-    return "https://via.placeholder.com/480x270?text=Preview+Unavailable";
+    console.warn("Thumbnail error:", err);
+    return fallback;
   }
+}
+
+// 🪄 No Shopify upload for direct URLs
+async function uploadThumbnailToShopify(thumbnailUrl) {
+  return thumbnailUrl;
 }
 
 // ===============================
