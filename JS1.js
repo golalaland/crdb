@@ -894,38 +894,56 @@ import {
   collection, query, where, getDocs, doc, getDoc 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ---------- VIP Login + Whitelist ---------- */
-async function loginWhitelist(email, password) {
-  const loader = document.getElementById("postLoginLoader");
-  if (loader) loader.style.display = "flex";
+const loader = document.getElementById("postLoginLoader");
+const loadingBar = document.getElementById("loadingBar");
 
+/* ---------- Helper: Pink Gradient Loading Bar ---------- */
+function startLoadingBar() {
+  if (!loader || !loadingBar) return null;
+  loader.style.display = "flex";
+  loadingBar.style.width = "0%";
+  loadingBar.style.background = "linear-gradient(90deg, #ff69b4, #ff1493)";
+  let progress = 0;
+  return setInterval(() => {
+    if (progress < 90) {
+      progress += Math.random() * 5;
+      loadingBar.style.width = `${Math.min(progress, 90)}%`;
+    }
+  }, 60);
+}
+
+function finishLoadingBar(interval) {
+  if (interval) clearInterval(interval);
+  if (loadingBar) loadingBar.style.width = "100%";
+  setTimeout(() => {
+    if (loader) loader.style.display = "none";
+    if (loadingBar) loadingBar.style.width = "0%";
+  }, 400);
+}
+
+/* ---------- VIP Login Function ---------- */
+async function loginWhitelist(email, password) {
   try {
     if (!navigator.onLine) throw new Error("Network offline or slow.");
 
-    // ✅ Ensure session persistence
-    await setPersistence(auth, browserLocalPersistence);
+    await setPersistence(getAuth(), browserLocalPersistence);
+    const cred = await signInWithEmailAndPassword(getAuth(), email, password);
+    console.log("✅ Authenticated:", cred.user.email);
 
-    // 🔐 Sign in with Firebase Auth
-    const cred = await signInWithEmailAndPassword(auth, email, password);
-    const user = cred.user;
-    console.log("✅ Authenticated:", user.email);
-
-    // 🔍 Firestore whitelist check
+    // Whitelist check
     const snap = await getDocs(query(collection(db, "whitelist"), where("email", "==", email)));
     if (snap.empty) {
-      await signOut(auth);
-      showStarPopup("❌ You’re not on the whitelist. Access denied.");
+      await signOut(getAuth());
+      showStarPopup("❌ Not on whitelist.");
       return false;
     }
 
-    // 📄 Load user profile from “users” collection
+    // Load user profile
     const uidKey = sanitizeKey(email);
-    const userRef = doc(db, "users", uidKey);
-    const userSnap = await getDoc(userRef);
-
+    const userSnap = await getDoc(doc(db, "users", uidKey));
     if (!userSnap.exists()) {
-      await signOut(auth);
-      showStarPopup("⚠️ Profile missing. Please complete signup.");
+      await signOut(getAuth());
+      showStarPopup("⚠️ Profile missing.");
       return false;
     }
 
@@ -935,22 +953,15 @@ async function loginWhitelist(email, password) {
       email: data.email,
       chatId: data.chatId,
       fullName: data.fullName || "",
-      isAdmin: !!data.isAdmin,
       isVIP: !!data.isVIP,
-      gender: data.gender || "",
       stars: data.stars || 0,
       cash: data.cash || 0,
       usernameColor: data.usernameColor || randomColor(),
       subscriptionActive: !!data.subscriptionActive,
-      hostLink: data.hostLink || null,
-      invitedBy: data.invitedBy || null,
-      isHost: !!data.isHost
+      hostLink: data.hostLink || null
     };
 
-    // ✅ Cache locally
     localStorage.setItem("vipUser", JSON.stringify({ email }));
-
-    // 🚀 Launch chatroom & notifications
     updateRedeemLink();
     updateTipLink();
     setupPresence(currentUser);
@@ -959,45 +970,40 @@ async function loginWhitelist(email, password) {
     showChatUI(currentUser);
     startNotificationsFor(email);
 
-    console.log("🚀 Chatroom access granted:", email);
     return true;
-
   } catch (err) {
     console.error("❌ Login error:", err);
-    showStarPopup(err.message || "Login failed. Check credentials.");
+    showStarPopup(err.message || "Login failed.");
     return false;
-  } finally {
-    if (loader) loader.style.display = "none";
   }
 }
 
-/* ---------- VIP ACCESS Button ---------- */
-document.getElementById("whitelistLoginBtn").addEventListener("click", async () => {
-  const email = (document.getElementById("emailInput").value || "").trim().toLowerCase();
-  const password = (document.getElementById("passwordInput").value || "").trim();
-  if (!email || !password) return showStarPopup("Enter both email and password.");
-
-  const interval = showLoadingBar();
-  await sleep(50);
+/* ---------- VIP Button Click ---------- */
+document.getElementById("whitelistLoginBtn")?.addEventListener("click", async () => {
+  const email = document.getElementById("emailInput")?.value.trim().toLowerCase();
+  const password = document.getElementById("passwordInput")?.value.trim();
+  if (!email || !password) return showStarPopup("Enter email & password.");
+  
+  const interval = startLoadingBar();
   await loginWhitelist(email, password);
   finishLoadingBar(interval);
 });
 
-/* ---------- Auto-Login on Page Load ---------- */
+/* ---------- Auto Login on Page Load ---------- */
 window.addEventListener("DOMContentLoaded", async () => {
   const vipUser = JSON.parse(localStorage.getItem("vipUser"));
   if (!vipUser?.email) return;
 
   if (!navigator.onLine) return showStarPopup("⚠️ Network slow. Auto-login skipped.");
 
-  const interval = showLoadingBar();
+  const interval = startLoadingBar();
   await sleep(50);
 
   try {
-    const user = auth.currentUser;
+    const user = getAuth().currentUser;
     if (user && user.email === vipUser.email) {
+      localStorage.setItem("userId", sanitizeKey(user.email));
       currentUser = user;
-      localStorage.setItem("userId", user.email.replace(/\./g, ","));
       updateRedeemLink();
       updateTipLink();
       startNotificationsFor(user.email);
@@ -1009,34 +1015,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     finishLoadingBar(interval);
   }
 });
-
-/* ---------- Loading Bar Helpers ---------- */
-function showLoadingBar() {
-  if (loader) loader.style.display = "flex";
-  if (!loadingBar) return;
-
-  loadingBar.style.width = "0%";
-  loadingBar.style.background = "linear-gradient(90deg, #ff69b4, #ff1493)";
-
-  let progress = 0;
-  const interval = setInterval(() => {
-    if (progress < 90) {
-      progress += Math.random() * 5;
-      loadingBar.style.width = `${Math.min(progress, 90)}%`;
-    }
-  }, 60);
-
-  return interval;
-}
-
-function finishLoadingBar(interval) {
-  clearInterval(interval);
-  if (loadingBar) loadingBar.style.width = "100%";
-  setTimeout(() => {
-    if (loader) loader.style.display = "none";
-    if (loadingBar) loadingBar.style.width = "0%";
-  }, 400);
-}
 
 /* ===============================
    💫 Auto Star Earning System
