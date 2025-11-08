@@ -1,4 +1,4 @@
-/* ---------- Imports (Firebase v10) ---------- */
+k/* ---------- Imports (Firebase v10) ---------- */
 import { 
   initializeApp 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -3752,3 +3752,35 @@ function playFullVideo(video) {
   modal.onclick = () => modal.remove();
   document.body.appendChild(modal);
 }
+const topBallersBtn = document.getElementById("topBallersBtn");
+const sessionModal = document.getElementById("sessionModal");
+const sessionTabs = sessionModal.querySelectorAll(".sessionTabs button");
+const sessionContents = sessionModal.querySelectorAll(".sessionContent");
+
+// We'll create a new tab for $STRZ if needed
+let tabStrz = document.getElementById("tabStrz");
+if(!tabStrz){
+  tabStrz = document.createElement("div");
+  tabStrz.id = "tabStrz";
+  tabStrz.classList.add("sessionContent");
+  tabStrz.style.display = "none";
+  sessionModal.appendChild(tabStrz);
+}
+
+// Click handler
+topBallersBtn.onclick = () => {
+  // Show modal
+  sessionModal.style.display = "flex";
+
+  // Hide all tabs
+  sessionContents.forEach(tab => tab.style.display = "none");
+
+  // Show $STRZ tab
+  tabStrz.style.display = "block";
+
+  // Optional: remove glow when viewed
+  topBallersBtn.classList.remove("glow");
+
+  // Load your airdrop / quiz content here
+  loadStrzContent(tabStrz);
+};
