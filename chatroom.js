@@ -3433,12 +3433,26 @@ highlightsBtn.onclick = async () => {
   }
 };
 
+// ---------- Highlights Button ----------
+highlightsBtn.onclick = async () => {
+  if (!currentUser?.uid) return showGoldAlert("Please log in 🔒");
+
+  try {
+    const res = await fetch("/api/getHighlightVideos"); // calls your Vercel API
+    const { videos } = await res.json();
+    if (!videos.length) return showGoldAlert("No highlights uploaded yet ⚡");
+    showHighlightsModal(videos);
+  } catch (err) {
+    console.error("🔥 Error fetching highlights:", err);
+    showGoldAlert("Error fetching highlights — please try again.");
+  }
+};
+
 // ---------- Highlights Modal ----------
 function showHighlightsModal(videos) {
-  // Remove any existing modal
+  // Remove existing modal
   document.getElementById("highlightsModal")?.remove();
 
-  // Main modal container
   const modal = document.createElement("div");
   modal.id = "highlightsModal";
   Object.assign(modal.style, {
@@ -3456,7 +3470,7 @@ function showHighlightsModal(videos) {
     zIndex: "999999",
   });
 
-  // Intro sticky
+  // Sticky intro
   const intro = document.createElement("div");
   intro.innerHTML = `
     <div style="
@@ -3572,7 +3586,6 @@ function showHighlightsModal(videos) {
       videoContainer.innerHTML = getVideoPreview(video);
       const videoTag = videoContainer.querySelector("video");
 
-      // Overlay for locked videos
       if (!video.unlocked) {
         const overlay = document.createElement("div");
         Object.assign(overlay.style, {
@@ -3635,13 +3648,14 @@ function showHighlightsModal(videos) {
       content.appendChild(card);
     }
 
+    // Re-init embeds
     if (window.tiktokEmbedLoad) window.tiktokEmbedLoad();
     if (window.instgrm?.Embeds) window.instgrm.Embeds.process();
   }
 
   renderCards(videos);
 
-  // Search functionality
+  // ---------- Search ----------
   const searchInput = searchWrap.querySelector("#highlightSearchInput");
   searchInput.addEventListener("input", (e) => {
     const term = e.target.value.trim().toLowerCase();
@@ -3672,8 +3686,6 @@ function showUnlockConfirm(video) {
     alignItems: "center",
     justifyContent: "center",
     zIndex: "1000001",
-    transition: "opacity 0.3s ease",
-    opacity: "1",
   });
 
   modal.innerHTML = `
@@ -3686,59 +3698,41 @@ function showUnlockConfirm(video) {
       </div>
     </div>
   `;
-  document.body.appendChild(modal);
 
+  document.body.appendChild(modal);
   modal.querySelector("#cancelUnlock").onclick = () => modal.remove();
   modal.querySelector("#confirmUnlock").onclick = async () => {
     modal.remove();
-    await handleUnlockVideo(video);
+    await unlockVideo(video.id);
   };
 }
 
-// ---------- Deduct Stars + Credit Uploader ----------
-async function handleUnlockVideo(video) {
+// ---------- Unlock Video API Call ----------
+async function unlockVideo(videoId) {
   try {
-    const senderId = currentUser.uid;
-    const receiverId = video.uploaderId;
-    const starsToDeduct = parseInt(video.highlightVideoPrice, 10) || 0;
-
-    if (!starsToDeduct || starsToDeduct <= 0) return showGoldAlert("Invalid unlock price ❌");
-    if (senderId === receiverId) return showGoldAlert("You can’t unlock your own video 😅");
-
-    const senderRef = doc(db, "users", senderId);
-    const receiverRef = doc(db, "users", receiverId);
-
-    await runTransaction(db, async (tx) => {
-      const senderSnap = await tx.get(senderRef);
-      const receiverSnap = await tx.get(receiverRef);
-      if (!senderSnap.exists()) throw new Error("User record not found.");
-      if (!receiverSnap.exists()) tx.set(receiverRef, { stars: 0 }, { merge: true });
-
-      const senderData = senderSnap.data();
-      if ((senderData.stars || 0) < starsToDeduct) throw new Error("Insufficient stars ⭐");
-
-      tx.update(senderRef, { stars: increment(-starsToDeduct) });
-      tx.update(receiverRef, { stars: increment(starsToDeduct) });
+    const res = await fetch("/api/unlockVideo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: currentUser.uid, videoId }),
     });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Unlock failed");
 
-    const res = await fetch(`/api/getSecureVideoUrl?videoId=${video.id}`);
-    if (!res.ok) throw new Error("Failed to get secure video URL");
-    const { secureUrl } = await res.json();
+    // Replace preview with unlocked video
+    const card = [...document.querySelectorAll(".videoCard")]
+      .find(c => c.getAttribute("data-title") === data.title?.toLowerCase());
 
-    const card = [...document.querySelectorAll(".videoCard")].find(c => c.getAttribute("data-title") === video.title.toLowerCase());
-    if (card) {
+    if (card && data.secureUrl) {
       const videoContainer = card.querySelector("div");
-      videoContainer.innerHTML = `<video src="${secureUrl}" controls autoplay playsinline style="width:100%;height:320px;object-fit:cover;border-radius:10px;"></video>`;
+      videoContainer.innerHTML = `<video src="${data.secureUrl}" controls autoplay playsinline style="width:100%;height:320px;object-fit:cover;border-radius:10px;"></video>`;
     }
 
-    showGoldAlert(`✅ You unlocked ${video.uploaderName}'s video for ${starsToDeduct} ⭐`);
+    showGoldAlert("✅ Video unlocked!");
   } catch (err) {
-    console.error("❌ Unlock failed:", err);
+    console.error(err);
     showGoldAlert(`⚠️ ${err.message}`);
   }
 }
-
-
 
 // ---------- Play Full Video Modal ----------
 function playFullVideo(video) {
