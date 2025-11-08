@@ -987,24 +987,20 @@ window.addEventListener("DOMContentLoaded", async () => {
     const loadingBar = document.getElementById("loadingBar");
 
     try {
-      // ✅ Make sure loader and bar are visible
       if (loader) loader.style.display = "flex";
       if (loadingBar) loadingBar.style.width = "0%";
 
-      // 🩷 Animate bar while logging in
       let progress = 0;
       const interval = 80;
       const loadingInterval = setInterval(() => {
-        if (progress < 90) { // don’t fill completely until login ends
+        if (progress < 90) {
           progress += Math.random() * 5;
           loadingBar.style.width = `${Math.min(progress, 90)}%`;
         }
       }, interval);
 
-      // 🧠 Run the login
       const success = await loginWhitelist(vipUser.email, vipUser.phone);
 
-      // Finish bar smoothly
       clearInterval(loadingInterval);
       loadingBar.style.width = "100%";
 
@@ -1012,6 +1008,14 @@ window.addEventListener("DOMContentLoaded", async () => {
         await sleep(400);
         updateRedeemLink();
         updateTipLink();
+
+        // ✅ Reattach chatroom & notifications
+        if (typeof attachMessagesListener === "function") attachMessagesListener();
+        if (typeof setupPresence === "function") setupPresence(currentUser);
+        await startNotificationsFor(currentUser.email);
+
+        // ✅ Show VIP/star popup if applicable
+        if (currentUser.isVIP) showStarPopup(`Welcome back, VIP ${currentUser.chatId || currentUser.email}! ⭐️`);
       }
 
     } catch (err) {
@@ -1022,7 +1026,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
   }
 });
-
 
 /* ===============================
    💫 Auto Star Earning System
