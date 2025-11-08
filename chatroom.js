@@ -3418,20 +3418,21 @@ checkScroll(); // initial check
 
 // ---------- Highlights Button ----------
 highlightsBtn.onclick = async () => {
-  if (!currentUser?.uid) return showGoldAlert("Please log in to view highlights 🔒");
+  if (!currentUser?.uid) return showGoldAlert("Please log in 🔒");
 
   try {
-    const resp = await fetch(`/getHighlightVideos?userId=${currentUser.uid}`);
-    const { videos } = await resp.json();
+    // Call your Vercel API
+    const res = await fetch(`/api/getHighlightVideos?userId=${currentUser.uid}`);
+    const { videos } = await res.json();
 
     if (!videos.length) return showGoldAlert("No highlights uploaded yet ⚡");
-
     showHighlightsModal(videos);
   } catch (err) {
     console.error("🔥 Error fetching highlights:", err);
     showGoldAlert("Error fetching highlights — please try again.");
   }
 };
+
 
 // ---------- Highlights Button ----------
 highlightsBtn.onclick = async () => {
