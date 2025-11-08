@@ -3606,7 +3606,7 @@ async function renderCards(filteredVideos) {
         textAlign: "center",
         padding: "10px",
       });
-      overlay.textContent = `Unlock this video for ${video.highlightVideoPrice} ⭐`;
+      overlay.textContent = `Unlock this video to Watch 🔒`;
       overlay.onclick = (e) => {
         e.stopPropagation();
         showUnlockConfirm(video);
