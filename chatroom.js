@@ -1421,6 +1421,117 @@ refs.sendBtn?.addEventListener("click", async () => {
   const sleep = ms => new Promise(res => setTimeout(res, ms));
 });
 
+const topBallersBtn = document.getElementById("topBallersBtn");
+const sessionModal = document.getElementById("sessionModal");
+const sessionTabs = sessionModal.querySelectorAll(".sessionTabs button");
+const sessionContents = sessionModal.querySelectorAll(".sessionContent");
+
+// We'll create a new tab for $STRZ if needed
+let tabStrz = document.getElementById("tabStrz");
+if(!tabStrz){
+  tabStrz = document.createElement("div");
+  tabStrz.id = "tabStrz";
+  tabStrz.classList.add("sessionContent");
+  tabStrz.style.display = "none";
+  sessionModal.appendChild(tabStrz);
+}
+
+// Click handler
+topBallersBtn.onclick = () => {
+  // Show modal
+  sessionModal.style.display = "flex";
+
+  // Hide all tabs
+  sessionContents.forEach(tab => tab.style.display = "none");
+
+  // Show $STRZ tab
+  tabStrz.style.display = "block";
+
+  // Optional: remove glow when viewed
+  topBallersBtn.classList.remove("glow");
+
+  // Load your airdrop / quiz content here
+  loadStrzContent(tabStrz);
+};
+
+function loadStrzContent(container){
+  container.innerHTML = `
+    <h2>💎 Win $STRZ</h2>
+
+    <div class="strz-airdrop">
+      <h3>🎁 New Airdrop!</h3>
+      <p>Total Drop: <b id="airdropTotal">50,000 ⭐</b></p>
+      <p>Stars per user: <b id="airdropPerUser">200 ⭐</b></p>
+      <p>Claimed: <span id="airdropClaimed">0</span> / <span id="airdropRemaining">50,000</span></p>
+      <p>Next Drop in: <span id="airdropTimer">05:00</span></p>
+      <button id="airdropClaimBtn">Claim ⭐</button>
+    </div>
+
+    <div class="strz-quiz">
+      <h3>📝 Quiz Time!</h3>
+      <p id="quizQuestion">Which color is in the flag of Nigeria?</p>
+      <div class="quizOptions">
+        <button data-option="0">Red</button>
+        <button data-option="1">Green</button>
+        <button data-option="2">Blue</button>
+        <button data-option="3">Yellow</button>
+      </div>
+      <p>Participants left: <span id="quizSlotsLeft">50</span></p>
+    </div>
+  `;
+
+  initStrzLogic();
+}
+function initStrzLogic(){
+  let airdropEndTime = Date.now() + 5*60*1000; // 5 min countdown
+  let claimedUsers = new Set(); // track locally (replace with backend)
+
+  const airdropTimerEl = document.getElementById("airdropTimer");
+  const airdropClaimBtn = document.getElementById("airdropClaimBtn");
+  const airdropClaimedEl = document.getElementById("airdropClaimed");
+  const airdropRemainingEl = document.getElementById("airdropRemaining");
+
+  const interval = setInterval(()=>{
+    const diff = Math.max(0, airdropEndTime - Date.now());
+    const minutes = Math.floor(diff/60000);
+    const seconds = Math.floor((diff%60000)/1000);
+    airdropTimerEl.textContent = `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+    if(diff<=0) clearInterval(interval);
+  }, 1000);
+
+  airdropClaimBtn.onclick = () => {
+    const userId = currentUser?.uid;
+    if(!userId) return alert("Please log in to claim!");
+
+    if(claimedUsers.has(userId)) return alert("Already claimed!");
+    claimedUsers.add(userId);
+
+    alert("✅ You claimed 200 ⭐!");
+    airdropClaimedEl.textContent = claimedUsers.size;
+    airdropRemainingEl.textContent = 50000 - claimedUsers.size * 200;
+
+    if(airdropRemainingEl.textContent <=0){
+      airdropClaimBtn.disabled = true;
+      airdropClaimBtn.textContent = "All claimed!";
+    }
+  };
+
+  // Quiz logic
+  document.querySelectorAll(".quizOptions button").forEach(btn => {
+    btn.onclick = () => {
+      const selected = btn.getAttribute("data-option");
+      const correctOption = "1"; // Green
+      if(selected === correctOption) alert("🎉 Correct! + stars added");
+      else alert("❌ Wrong answer!");
+
+      const slotsEl = document.getElementById("quizSlotsLeft");
+      slotsEl.textContent = Math.max(0, parseInt(slotsEl.textContent)-1);
+    }
+  });
+}
+
+
+
 /* =====================================
    🎥 Video Navigation & UI Fade Logic
 ======================================= */
@@ -3752,35 +3863,3 @@ function playFullVideo(video) {
   modal.onclick = () => modal.remove();
   document.body.appendChild(modal);
 }
-const topBallersBtn = document.getElementById("topBallersBtn");
-const sessionModal = document.getElementById("sessionModal");
-const sessionTabs = sessionModal.querySelectorAll(".sessionTabs button");
-const sessionContents = sessionModal.querySelectorAll(".sessionContent");
-
-// We'll create a new tab for $STRZ if needed
-let tabStrz = document.getElementById("tabStrz");
-if(!tabStrz){
-  tabStrz = document.createElement("div");
-  tabStrz.id = "tabStrz";
-  tabStrz.classList.add("sessionContent");
-  tabStrz.style.display = "none";
-  sessionModal.appendChild(tabStrz);
-}
-
-// Click handler
-topBallersBtn.onclick = () => {
-  // Show modal
-  sessionModal.style.display = "flex";
-
-  // Hide all tabs
-  sessionContents.forEach(tab => tab.style.display = "none");
-
-  // Show $STRZ tab
-  tabStrz.style.display = "block";
-
-  // Optional: remove glow when viewed
-  topBallersBtn.classList.remove("glow");
-
-  // Load your airdrop / quiz content here
-  loadStrzContent(tabStrz);
-};
