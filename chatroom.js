@@ -3536,107 +3536,165 @@ function showHighlightsModal(videos) {
   });
 
   // Render cards
-  async function renderCards(filteredVideos) {
-    content.innerHTML = "";
+function renderCards(videos) {
+  content.innerHTML = ""; // clear previous cards
 
-    function getVideoEmbed(video) {
-      const url = video.highlightVideo;
-      if (!url) return null;
-      if (url.includes("tiktok.com")) return `<blockquote class="tiktok-embed" cite="${url}" data-video-id style="max-width:230px;"><a href="${url}"></a></blockquote>`;
-      if (url.includes("instagram.com")) return `<blockquote class="instagram-media" data-instgrm-permalink="${url}" data-instgrm-version="14" style="max-width:230px;"></blockquote>`;
-      if (url.includes("youtube.com") || url.includes("youtu.be")) {
-        const vidId = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/)?.[1];
-        return `<iframe width="230" height="320" src="https://www.youtube.com/embed/${vidId}" frameborder="0" allowfullscreen></iframe>`;
-      }
-      return `<video src="${url}" muted loop playsinline preload="metadata" style="width:100%;height:320px;object-fit:cover;border-radius:10px;"></video>`;
+  // 🔍 Helper — auto-detect platform + return proper embed
+  function getVideoEmbed(video) {
+    const url = video.highlightVideo;
+    if (!url) return null;
+
+    if (url.includes("tiktok.com")) {
+      return `<blockquote class="tiktok-embed" cite="${url}" data-video-id style="max-width:230px;"><a href="${url}"></a></blockquote>`;
     }
 
-    for (const video of filteredVideos) {
-      const card = document.createElement("div");
-      Object.assign(card.style, {
-        minWidth: "230px",
-        maxWidth: "230px",
-        background: "#1b1b1b",
-        borderRadius: "12px",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        cursor: "pointer",
-        flexShrink: 0,
-        boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
-        transition: "transform 0.2s",
-      });
-      card.onmouseenter = () => card.style.transform = "scale(1.03)";
-      card.onmouseleave = () => card.style.transform = "scale(1)";
-      card.classList.add("videoCard");
-      card.setAttribute("data-uploader", video.uploaderName.toLowerCase());
-      card.setAttribute("data-title", video.title.toLowerCase());
-
-      // Video container
-      const videoContainer = document.createElement("div");
-      Object.assign(videoContainer.style, { height: "320px", overflow: "hidden", position: "relative" });
-      videoContainer.innerHTML = getVideoEmbed(video);
-
-      const videoTag = videoContainer.querySelector("video");
-      if (videoTag) {
-        videoContainer.onmouseenter = async () => {
-          const unlocked = await checkUnlockStatus(video.id, currentUser.uid);
-          if (unlocked) videoTag.play();
-          else videoTag.pause();
-        };
-        videoContainer.onmouseleave = () => { videoTag.pause(); videoTag.currentTime = 0; };
-      }
-
-      videoContainer.onclick = (e) => {
-        e.stopPropagation();
-        const unlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
-        unlocked ? playFullVideo(video) : showUnlockConfirm(video);
-      };
-
-      // Info panel
-      const infoPanel = document.createElement("div");
-      Object.assign(infoPanel.style, { background: "#111", padding: "10px", display: "flex", flexDirection: "column", gap: "4px" });
-
-      const vidTitle = document.createElement("div");
-      vidTitle.textContent = video.title;
-      Object.assign(vidTitle.style, { fontWeight: "700", color: "#fff", fontSize: "14px" });
-
-      const uploader = document.createElement("div");
-      uploader.textContent = `By: ${video.uploaderName}`;
-      Object.assign(uploader.style, { fontSize: "12px", color: "#bbb" });
-
-      const unlockBtn = document.createElement("button");
-      const isUnlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
-      unlockBtn.textContent = isUnlocked ? "Unlocked ✅" : `Unlock ${video.highlightVideoPrice} ⭐`;
-      Object.assign(unlockBtn.style, {
-        background: isUnlocked ? "#444" : "#ff006e",
-        border: "none",
-        borderRadius: "6px",
-        padding: "8px 0",
-        fontWeight: "600",
-        color: "#fff",
-        cursor: isUnlocked ? "default" : "pointer",
-        transition: "background 0.2s",
-      });
-
-      if (!isUnlocked) {
-        unlockBtn.onmouseenter = () => unlockBtn.style.background = "#ff3385";
-        unlockBtn.onmouseleave = () => unlockBtn.style.background = "#ff006e";
-        unlockBtn.onclick = (e) => { e.stopPropagation(); currentUser?.uid ? showUnlockConfirm(video) : showGoldAlert("Please log in 🔒"); };
-      } else unlockBtn.disabled = true;
-
-      infoPanel.append(vidTitle, uploader, unlockBtn);
-      card.append(videoContainer, infoPanel);
-      content.appendChild(card);
+    if (url.includes("instagram.com")) {
+      return `<blockquote class="instagram-media" data-instgrm-permalink="${url}" data-instgrm-version="14" style="max-width:230px;"></blockquote>`;
     }
 
-    // Re-init embeds
-    if (window.tiktokEmbedLoad) window.tiktokEmbedLoad();
-    if (window.instgrm?.Embeds) window.instgrm.Embeds.process();
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      const vidId = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/)?.[1];
+      return `<iframe width="230" height="320" src="https://www.youtube.com/embed/${vidId}" frameborder="0" allowfullscreen></iframe>`;
+    }
+
+    // Shopify / .mp4 fallback
+    return `<video src="${url}" muted loop playsinline preload="metadata" style="width:100%;height:320px;object-fit:cover;border-radius:10px;"></video>`;
   }
 
-  renderCards(videos);
+  videos.forEach(video => {
+    const card = document.createElement("div");
+    Object.assign(card.style, {
+      minWidth: "230px",
+      maxWidth: "230px",
+      background: "#1b1b1b",
+      borderRadius: "12px",
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+      cursor: "pointer",
+      flexShrink: 0,
+      boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
+      transition: "transform 0.2s ease",
+    });
+    card.onmouseenter = () => (card.style.transform = "scale(1.03)");
+    card.onmouseleave = () => (card.style.transform = "scale(1)");
+
+    // 🏷️ Add searchable attributes
+    card.classList.add("videoCard");
+    card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
+    card.setAttribute("data-title", video.title || "");
+
+    // 🎬 Video container
+    const videoContainer = document.createElement("div");
+    Object.assign(videoContainer.style, {
+      height: "320px",
+      overflow: "hidden",
+      position: "relative",
+      borderRadius: "10px",
+    });
+
+    const embedHTML = getVideoEmbed(video);
+    videoContainer.innerHTML = embedHTML;
+
+    const videoTag = videoContainer.querySelector("video");
+    const isUnlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
+
+    if (videoTag) {
+      // Add blur overlay if locked
+      if (!isUnlocked) {
+        const blurOverlay = document.createElement("div");
+        Object.assign(blurOverlay.style, {
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          backdropFilter: "blur(12px)",
+          backgroundColor: "rgba(0,0,0,0.4)",
+          zIndex: 2,
+        });
+        videoContainer.appendChild(blurOverlay);
+      }
+
+      // Play video on hover (even if blurred)
+      videoContainer.onmouseenter = async () => {
+        if (!isUnlocked) {
+          videoTag.play(); // autoplay behind blur
+        } else {
+          videoTag.play();
+        }
+      };
+      videoContainer.onmouseleave = () => {
+        videoTag.pause();
+        videoTag.currentTime = 0;
+      };
+    }
+
+    videoContainer.onclick = (e) => {
+      e.stopPropagation();
+      if (isUnlocked) playFullVideo(video);
+      else showUnlockConfirm(video);
+    };
+
+    // 📄 Info section
+    const infoPanel = document.createElement("div");
+    Object.assign(infoPanel.style, {
+      background: "#111",
+      padding: "10px",
+      display: "flex",
+      flexDirection: "column",
+      textAlign: "left",
+      gap: "4px",
+    });
+
+    const vidTitle = document.createElement("div");
+    vidTitle.textContent = video.title || "Untitled";
+    Object.assign(vidTitle.style, { fontWeight: "700", color: "#fff", fontSize: "14px" });
+
+    const uploader = document.createElement("div");
+    uploader.textContent = `By: ${video.uploaderName || "Anonymous"}`;
+    Object.assign(uploader.style, { fontSize: "12px", color: "#bbb" });
+
+    const unlockBtn = document.createElement("button");
+    unlockBtn.textContent = isUnlocked
+      ? "Unlocked ✅"
+      : `Unlock ${video.highlightVideoPrice || 100} ⭐`;
+    Object.assign(unlockBtn.style, {
+      background: isUnlocked ? "#444" : "#ff006e",
+      border: "none",
+      borderRadius: "6px",
+      padding: "8px 0",
+      fontWeight: "600",
+      color: "#fff",
+      cursor: isUnlocked ? "default" : "pointer",
+      transition: "background 0.2s",
+    });
+
+    if (!isUnlocked) {
+      unlockBtn.onmouseenter = () => (unlockBtn.style.background = "#ff3385");
+      unlockBtn.onmouseleave = () => (unlockBtn.style.background = "#ff006e");
+      unlockBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (!currentUser || !currentUser.uid)
+          return showGoldAlert("Please log in to unlock content 🔒");
+        showUnlockConfirm(video);
+      };
+    } else unlockBtn.disabled = true;
+
+    infoPanel.appendChild(vidTitle);
+    infoPanel.appendChild(uploader);
+    infoPanel.appendChild(unlockBtn);
+
+    card.appendChild(videoContainer);
+    card.appendChild(infoPanel);
+    content.appendChild(card);
+  });
+
+  // 🪄 Re-init embeds after render
+  if (window.tiktokEmbedLoad) window.tiktokEmbedLoad();
+  if (window.instgrm && window.instgrm.Embeds) window.instgrm.Embeds.process();
+}
 
   // Live search
   const searchInput = searchWrap.querySelector("#highlightSearchInput");
