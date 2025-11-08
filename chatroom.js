@@ -3597,39 +3597,41 @@ function renderCards(videos) {
     const embedHTML = getVideoEmbed(video);
     videoContainer.innerHTML = embedHTML;
 
-    const videoTag = videoContainer.querySelector("video");
-    const isUnlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
+  const videoTag = videoContainer.querySelector("video");
+const isUnlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
 
-    if (videoTag) {
-      // Add blur overlay if locked
-      if (!isUnlocked) {
-        const blurOverlay = document.createElement("div");
-        Object.assign(blurOverlay.style, {
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          backdropFilter: "blur(12px)",
-          backgroundColor: "rgba(0,0,0,0.4)",
-          zIndex: 2,
-        });
-        videoContainer.appendChild(blurOverlay);
-      }
+if (videoTag) {
+  // Wrap video in a relative container
+  videoContainer.style.position = "relative";
 
-      // Play video on hover (even if blurred)
-      videoContainer.onmouseenter = async () => {
-        if (!isUnlocked) {
-          videoTag.play(); // autoplay behind blur
-        } else {
-          videoTag.play();
-        }
-      };
-      videoContainer.onmouseleave = () => {
-        videoTag.pause();
-        videoTag.currentTime = 0;
-      };
-    }
+  // Add blur overlay only if locked
+  let blurOverlay;
+  if (!isUnlocked) {
+    blurOverlay = document.createElement("div");
+    Object.assign(blurOverlay.style, {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      backdropFilter: "blur(12px)",
+      backgroundColor: "rgba(0,0,0,0.4)", // semi-transparent
+      zIndex: 1, // behind clickable layer
+      pointerEvents: "none", // allow clicks to go through
+      borderRadius: "10px",
+    });
+    videoContainer.appendChild(blurOverlay);
+  }
+
+  // Play video on hover (even if blurred)
+  videoContainer.onmouseenter = async () => {
+    videoTag.play();
+  };
+  videoContainer.onmouseleave = () => {
+    videoTag.pause();
+    videoTag.currentTime = 0;
+  };
+}
 
     videoContainer.onclick = (e) => {
       e.stopPropagation();
