@@ -1,19 +1,22 @@
-import admin from "firebase-admin";
+const admin = require("firebase-admin");
 
 if (!admin.apps.length) {
   admin.initializeApp({
-    credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
+    credential: admin.credential.cert(
+      JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+    ),
   });
 }
 
 const db = admin.firestore();
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).send("Method Not Allowed");
-
+module.exports = async (req, res) => {
   try {
+    if (req.method !== "POST") return res.status(405).send("Method Not Allowed");
+
     const { videoId, userId } = req.body;
-    if (!videoId || !userId) return res.status(400).json({ error: "Missing videoId or userId" });
+    if (!videoId || !userId)
+      return res.status(400).json({ error: "Missing videoId or userId" });
 
     const videoRef = db.collection("highlightVideos").doc(videoId);
     const userRef = db.collection("users").doc(userId);
@@ -31,14 +34,18 @@ export default async function handler(req, res) {
       const price = parseInt(videoData.highlightVideoPrice, 10) || 100;
       const currentStars = parseInt(userData.stars, 10) || 0;
 
-      if (userId === videoData.uploaderId) throw new Error("Cannot unlock your own video");
+      if (userId === videoData.uploaderId)
+        throw new Error("Cannot unlock your own video");
       if (currentStars < price) throw new Error("Insufficient stars ⭐");
 
       const uploaderRef = db.collection("users").doc(videoData.uploaderId);
+
       tx.update(userRef, { stars: admin.firestore.FieldValue.increment(-price) });
       tx.update(uploaderRef, { stars: admin.firestore.FieldValue.increment(price) });
 
-      const unlockRef = db.collection("highlightUnlocks").doc(`${videoId}_${userId}`);
+      const unlockRef = db
+        .collection("highlightUnlocks")
+        .doc(`${videoId}_${userId}`);
       tx.set(unlockRef, { videoId, userId, unlockedAt: admin.firestore.Timestamp.now() });
     });
 
@@ -47,4 +54,4 @@ export default async function handler(req, res) {
     console.error("❌ Unlock failed:", err);
     res.status(400).json({ error: err.message });
   }
-}
+};
