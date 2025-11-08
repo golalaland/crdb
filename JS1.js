@@ -883,99 +883,98 @@ async function promptForChatID(userRef, userData) {
 }
 
 
+import { 
+  signInWithEmailAndPassword, 
+  signOut 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
 /* ===============================
-   🔐 VIP Login (Whitelist Check)
+   🔐 VIP Login (Email + Password + Whitelist)
 ================================= */
-async function loginWhitelist(email, phone) {
+async function loginWhitelist(email, password) {
   const loader = document.getElementById("postLoginLoader");
   try {
     if (loader) loader.style.display = "flex";
-    await sleep(50);
 
-    // 🔍 Query whitelist
-    const whitelistQuery = query(
-      collection(db, "whitelist"),
-      where("email", "==", email),
-      where("phone", "==", phone)
-    );
-    const whitelistSnap = await getDocs(whitelistQuery);
-    console.log("📋 Whitelist result:", whitelistSnap.docs.map(d => d.data()));
+    // 1️⃣  Sign in with Firebase Auth
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    const user = cred.user;
+    console.log("✅ Authenticated:", user.email);
 
-    if (whitelistSnap.empty) {
-      return showStarPopup("You’re not on the whitelist. Please check your email and phone format.");
+    // 2️⃣  Check Firestore whitelist
+    const q = query(collection(db, "whitelist"), where("email", "==", email));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      await signOut(auth);
+      showStarPopup("❌ You’re not on the whitelist. Access denied.");
+      return false;
     }
 
+    // 3️⃣  Load user profile from “users” collection
     const uidKey = sanitizeKey(email);
     const userRef = doc(db, "users", uidKey);
     const userSnap = await getDoc(userRef);
-
     if (!userSnap.exists()) {
-      return showStarPopup("User not found. Please sign up on the main page first.");
+      await signOut(auth);
+      showStarPopup("⚠️ Account found but profile missing. Please complete signup first.");
+      return false;
     }
 
-    const data = userSnap.data() || {};
-
-    // 🧍🏽 Set current user details
+    const data = userSnap.data();
     currentUser = {
       uid: uidKey,
       email: data.email,
-      phone: data.phone,
       chatId: data.chatId,
-      chatIdLower: data.chatIdLower,
+      fullName: data.fullName || "",
+      isAdmin: !!data.isAdmin,
+      isVIP: !!data.isVIP,
+      gender: data.gender || "",
       stars: data.stars || 0,
       cash: data.cash || 0,
       usernameColor: data.usernameColor || randomColor(),
-      isAdmin: !!data.isAdmin,
-      isVIP: !!data.isVIP,
-      fullName: data.fullName || "",
-      gender: data.gender || "",
       subscriptionActive: !!data.subscriptionActive,
-      subscriptionCount: data.subscriptionCount || 0,
-      lastStarDate: data.lastStarDate || todayDate(),
-      starsGifted: data.starsGifted || 0,
-      starsToday: data.starsToday || 0,
       hostLink: data.hostLink || null,
       invitedBy: data.invitedBy || null,
-      inviteeGiftShown: !!data.inviteeGiftShown,
       isHost: !!data.isHost
     };
 
-    // ✅ Store user ID for notifications system
-    const userId = currentUser.chatId || currentUser.email || currentUser.phone;
-    localStorage.setItem("userId", userId);
-    console.log("✅ Stored userId for notifications:", userId);
+    // 4️⃣  Cache locally
+    localStorage.setItem("vipUser", JSON.stringify({ email }));
 
-    // 🧠 Setup post-login systems
+    // 5️⃣  Launch chatroom systems
     updateRedeemLink();
     updateTipLink();
     setupPresence(currentUser);
     attachMessagesListener();
     startStarEarning(currentUser.uid);
+    showChatUI(currentUser);
+    startNotificationsFor(email);
 
-    // Store VIP user in local storage (existing)
-    localStorage.setItem("vipUser", JSON.stringify({ email, phone }));
-
-    // Prompt guests for a permanent chatID
-    if (currentUser.chatId?.startsWith("GUEST")) {
-      await promptForChatID(userRef, data);
-    }
-
-    // 🎨 Update UI
-  showChatUI(currentUser);
-console.log("🚀 Starting notifications for:", email);
-startNotificationsFor(email);
-
-
+    console.log("🚀 Chatroom access granted:", email);
     return true;
 
   } catch (err) {
     console.error("❌ Login error:", err);
-    showStarPopup("Login failed. Try again!");
+    showStarPopup("Login failed. Please check credentials.");
     return false;
   } finally {
     if (loader) loader.style.display = "none";
   }
 }
+
+/* ===============================
+   🎟️  Bind VIP ACCESS button
+================================= */
+document.getElementById("whitelistLoginBtn").addEventListener("click", async () => {
+  const email = document.getElementById("emailInput").value.trim().toLowerCase();
+  const password = document.getElementById("passwordInput").value.trim();
+
+  if (!email || !password) {
+    showStarPopup("Please enter both email and password.");
+    return;
+  }
+  await loginWhitelist(email, password);
+});
 
 
 /* ----------------------------
