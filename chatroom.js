@@ -3490,10 +3490,10 @@ modal.appendChild(searchWrap);
       });
       card.onmouseenter = () => (card.style.transform = "scale(1.03)");
       card.onmouseleave = () => (card.style.transform = "scale(1)");
-        // 🏷️ Add searchable attributes
-  card.classList.add("videoCard");
-  card.setAttribute("data-uploader", video.uploader || "Anonymous");
-  card.setAttribute("data-title", video.title || "");
+// 🏷️ Add searchable attributes
+card.classList.add("videoCard");
+card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
+card.setAttribute("data-title", video.title || "");
 
       const videoContainer = document.createElement("div");
       Object.assign(videoContainer.style, {
