@@ -3321,21 +3321,30 @@ highlightsBtn.onclick = async () => {
       return;
     }
 
-    const videos = snapshot.docs.map(docSnap => {
-      const d = docSnap.data();
-      return {
-        id: docSnap.id,
-        highlightVideo: d.highlightVideo,
-        highlightVideoPrice: d.highlightVideoPrice,
-        title: d.title,
-        uploader: d.uploaderName || "Anonymous",
-        uploaderId: d.uploaderId,
-        uploaderEmail: d.uploaderEmail || "unknown",
-        description: d.description || "",
-        thumbnail: d.thumbnail || null,
-      };
-    });
+const videos = snapshot.docs.map(docSnap => {
+  const d = docSnap.data();
 
+  // 💎 Make sure uploaderName is resolved from multiple possible fields
+  const uploaderName =
+    d.uploaderName ||
+    d.chatId ||
+    d.displayName ||
+    d.username ||
+    "Anonymous";
+
+  return {
+    id: docSnap.id,
+    highlightVideo: d.highlightVideo,
+    highlightVideoPrice: d.highlightVideoPrice || 0,
+    title: d.title || "Untitled",
+    uploaderName, // ✅ keep consistent key used in renderCards()
+    uploaderId: d.uploaderId || "",
+    uploaderEmail: d.uploaderEmail || "unknown",
+    description: d.description || "",
+    thumbnail: d.thumbnail || "",
+    createdAt: d.createdAt || null,
+  };
+});
     showHighlightsModal(videos);
   } catch (err) {
     console.error("🔥 Error fetching highlights:", err);
