@@ -884,66 +884,41 @@ async function promptForChatID(userRef, userData) {
 
 
 import { 
-  getAuth, 
   signInWithEmailAndPassword, 
   signOut, 
-  setPersistence, 
-  browserLocalPersistence 
+  getAuth 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { 
-  collection, query, where, getDocs, doc, getDoc 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const loader = document.getElementById("postLoginLoader");
-const loadingBar = document.getElementById("loadingBar");
-
-/* ---------- Helper: Pink Gradient Loading Bar ---------- */
-function startLoadingBar() {
-  if (!loader || !loadingBar) return null;
-  loader.style.display = "flex";
-  loadingBar.style.width = "0%";
-  loadingBar.style.background = "linear-gradient(90deg, #ff69b4, #ff1493)";
-  let progress = 0;
-  return setInterval(() => {
-    if (progress < 90) {
-      progress += Math.random() * 5;
-      loadingBar.style.width = `${Math.min(progress, 90)}%`;
-    }
-  }, 60);
-}
-
-function finishLoadingBar(interval) {
-  if (interval) clearInterval(interval);
-  if (loadingBar) loadingBar.style.width = "100%";
-  setTimeout(() => {
-    if (loader) loader.style.display = "none";
-    if (loadingBar) loadingBar.style.width = "0%";
-  }, 400);
-}
-
-/* ---------- VIP Login Function ---------- */
+/* ===============================
+   🔐 VIP Login (Email + Password + Whitelist)
+================================= */
 async function loginWhitelist(email, password) {
+  const loader = document.getElementById("postLoginLoader");
   try {
-    if (!navigator.onLine) throw new Error("Network offline or slow.");
+    if (loader) loader.style.display = "flex";
 
-    await setPersistence(getAuth(), browserLocalPersistence);
-    const cred = await signInWithEmailAndPassword(getAuth(), email, password);
-    console.log("✅ Authenticated:", cred.user.email);
+    // 1️⃣ Sign in with Firebase Auth
+    const auth = getAuth();
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    const user = cred.user;
+    console.log("✅ Authenticated:", user.email);
 
-    // Whitelist check
-    const snap = await getDocs(query(collection(db, "whitelist"), where("email", "==", email)));
+    // 2️⃣ Check Firestore whitelist
+    const q = query(collection(db, "whitelist"), where("email", "==", email));
+    const snap = await getDocs(q);
     if (snap.empty) {
-      await signOut(getAuth());
-      showStarPopup("❌ Not on whitelist.");
+      await signOut(auth);
+      showStarPopup("❌ You’re not on the whitelist. Access denied.");
       return false;
     }
 
-    // Load user profile
+    // 3️⃣ Load user profile from “users” collection
     const uidKey = sanitizeKey(email);
-    const userSnap = await getDoc(doc(db, "users", uidKey));
+    const userRef = doc(db, "users", uidKey);
+    const userSnap = await getDoc(userRef);
     if (!userSnap.exists()) {
-      await signOut(getAuth());
-      showStarPopup("⚠️ Profile missing.");
+      await signOut(auth);
+      showStarPopup("⚠️ Account found but profile missing. Please complete signup first.");
       return false;
     }
 
@@ -953,15 +928,22 @@ async function loginWhitelist(email, password) {
       email: data.email,
       chatId: data.chatId,
       fullName: data.fullName || "",
+      isAdmin: !!data.isAdmin,
       isVIP: !!data.isVIP,
+      gender: data.gender || "",
       stars: data.stars || 0,
       cash: data.cash || 0,
       usernameColor: data.usernameColor || randomColor(),
       subscriptionActive: !!data.subscriptionActive,
-      hostLink: data.hostLink || null
+      hostLink: data.hostLink || null,
+      invitedBy: data.invitedBy || null,
+      isHost: !!data.isHost
     };
 
+    // 4️⃣ Cache locally for auto-login
     localStorage.setItem("vipUser", JSON.stringify({ email }));
+
+    // 5️⃣ Launch chatroom systems
     updateRedeemLink();
     updateTipLink();
     setupPresence(currentUser);
@@ -970,49 +952,80 @@ async function loginWhitelist(email, password) {
     showChatUI(currentUser);
     startNotificationsFor(email);
 
+    console.log("🚀 Chatroom access granted:", email);
     return true;
+
   } catch (err) {
     console.error("❌ Login error:", err);
-    showStarPopup(err.message || "Login failed.");
+    showStarPopup("Login failed. Please check credentials.");
     return false;
+  } finally {
+    if (loader) loader.style.display = "none";
   }
 }
 
-/* ---------- VIP Button Click ---------- */
+/* ===============================
+   🎟️  Bind VIP ACCESS button
+================================= */
 document.getElementById("whitelistLoginBtn")?.addEventListener("click", async () => {
   const email = document.getElementById("emailInput")?.value.trim().toLowerCase();
   const password = document.getElementById("passwordInput")?.value.trim();
-  if (!email || !password) return showStarPopup("Enter email & password.");
-  
-  const interval = startLoadingBar();
+
+  if (!email || !password) return showStarPopup("Please enter both email and password.");
+
+  showLoadingBar(1000); // keep your loader effect
   await loginWhitelist(email, password);
-  finishLoadingBar(interval);
 });
 
-/* ---------- Auto Login on Page Load ---------- */
+/* ----------------------------
+   🔁 Auto Login Session
+----------------------------- */
 window.addEventListener("DOMContentLoaded", async () => {
   const vipUser = JSON.parse(localStorage.getItem("vipUser"));
   if (!vipUser?.email) return;
 
-  if (!navigator.onLine) return showStarPopup("⚠️ Network slow. Auto-login skipped.");
-
-  const interval = startLoadingBar();
-  await sleep(50);
+  const loader = document.getElementById("postLoginLoader");
+  const loadingBar = document.getElementById("loadingBar");
 
   try {
-    const user = getAuth().currentUser;
-    if (user && user.email === vipUser.email) {
-      localStorage.setItem("userId", sanitizeKey(user.email));
-      currentUser = user;
+    if (loader) loader.style.display = "flex";
+    if (loadingBar) {
+      loadingBar.style.width = "0%";
+      loadingBar.style.background = "linear-gradient(90deg, #ff69b4, #ff1493)";
+    }
+
+    let progress = 0;
+    const interval = 80;
+    const loadingInterval = setInterval(() => {
+      if (progress < 90) {
+        progress += Math.random() * 5;
+        if (loadingBar) loadingBar.style.width = `${Math.min(progress, 90)}%`;
+      }
+    }, interval);
+
+    // attempt to auto-login using persisted email
+    const success = await loginWhitelist(vipUser.email, vipUser.password || ""); // fallback empty password
+
+    clearInterval(loadingInterval);
+    if (loadingBar) loadingBar.style.width = "100%";
+
+    if (success) {
+      await sleep(400);
       updateRedeemLink();
       updateTipLink();
-      startNotificationsFor(user.email);
-      showStarPopup(`Welcome back, VIP ${currentUser.chatId || currentUser.email}! ⭐️`);
+
+      if (typeof attachMessagesListener === "function") attachMessagesListener();
+      if (typeof setupPresence === "function") setupPresence(currentUser);
+      await startNotificationsFor(currentUser.email);
+
+      if (currentUser.isVIP) showStarPopup(`Welcome back, VIP ${currentUser.chatId || currentUser.email}! ⭐️`);
     }
+
   } catch (err) {
-    console.warn("❌ Auto-login failed:", err);
+    console.error("❌ Auto-login error:", err);
   } finally {
-    finishLoadingBar(interval);
+    await sleep(300);
+    if (loader) loader.style.display = "none";
   }
 });
 
