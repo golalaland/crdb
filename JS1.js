@@ -1686,6 +1686,7 @@ let hosts = [];
 let currentIndex = 0;
 
 /* ---------- Fetch + Listen to featuredHosts + users merge ---------- */
+async/* ---------- Fetch + Listen to featuredHosts + users merge ---------- */
 async function fetchFeaturedHosts() {
   try {
     const q = collection(db, "featuredHosts");
@@ -1720,12 +1721,7 @@ async function fetchFeaturedHosts() {
 
       console.log("✅ Loaded hosts:", hosts.length);
       renderHostAvatars();
-
-      // ❌ Remove this:
-      // loadHost(currentIndex >= hosts.length ? 0 : currentIndex);
-
-      // ✅ Instead: just prepare the first host silently
-      currentIndex = 0;
+      loadHost(currentIndex >= hosts.length ? 0 : currentIndex);
     });
   } catch (err) {
     console.error("❌ Error fetching hosts:", err);
@@ -1775,11 +1771,14 @@ async function loadHost(idx) {
     muted: true,
     loop: true,
     playsInline: true,
-    preload: "auto",
+    preload: "auto", // preload more data
     style: "width:100%;height:100%;object-fit:cover;border-radius:8px;display:none;cursor:pointer;"
   });
   videoEl.setAttribute("webkit-playsinline", "true");
   videoContainer.appendChild(videoEl);
+
+  // Force video to start loading immediately
+  videoEl.load();
 
   // Hint overlay
   const hint = document.createElement("div");
@@ -1787,7 +1786,13 @@ async function loadHost(idx) {
   hint.textContent = "Tap to unmute";
   videoContainer.appendChild(hint);
 
-  // Video tap handling
+  function showHint(msg, timeout = 1400) {
+    hint.textContent = msg;
+    hint.classList.add("show");
+    clearTimeout(hint._t);
+    hint._t = setTimeout(() => hint.classList.remove("show"), timeout);
+  }
+
   let lastTap = 0;
   function onTapEvent() {
     const now = Date.now();
@@ -1795,7 +1800,7 @@ async function loadHost(idx) {
       document.fullscreenElement ? document.exitFullscreen?.() : videoEl.requestFullscreen?.();
     } else {
       videoEl.muted = !videoEl.muted;
-      hint.textContent = videoEl.muted ? "Tap to unmute" : "Sound on";
+      showHint(videoEl.muted ? "Tap to unmute" : "Sound on", 1200);
     }
     lastTap = now;
   }
@@ -1807,50 +1812,57 @@ async function loadHost(idx) {
     }
   }, { passive: false });
 
-  // Show video when ready
+  // Show video as soon as it can play
   videoEl.addEventListener("canplay", () => {
     shimmer.style.display = "none";
     videoEl.style.display = "block";
+    showHint("Tap to unmute", 1400);
     videoEl.play().catch(() => {});
   });
 
-  // Host info
-  usernameEl.textContent = (host.chatId || "Unknown Host")
-    .toLowerCase()
-    .replace(/\b\w/g, char => char.toUpperCase());
+/* ---------- Host Info ---------- */
+usernameEl.textContent = (host.chatId || "Unknown Host")
+  .toLowerCase()
+  .replace(/\b\w/g, char => char.toUpperCase());
 
-  const gender = (host.gender || "person").toLowerCase();
-  const pronoun = gender === "male" ? "his" : "her";
-  const ageGroup = !host.age ? "20s" : host.age >= 30 ? "30s" : "20s";
-  const flair = gender === "male" ? "😎" : "💋";
-  const fruit = host.fruitPick || "🍇";
-  const nature = host.naturePick || "cool";
-  const city = host.location || "Lagos";
-  const country = host.country || "Nigeria";
+const gender = (host.gender || "person").toLowerCase();
+const pronoun = gender === "male" ? "his" : "her";
+const ageGroup = !host.age ? "20s" : host.age >= 30 ? "30s" : "20s";
+const flair = gender === "male" ? "😎" : "💋";
+const fruit = host.fruitPick || "🍇";
+const nature = host.naturePick || "cool";
+const city = host.location || "Lagos";
+const country = host.country || "Nigeria";
 
-  detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
+detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
 
-  // Typewriter bio
-  if (host.bioPick) {
-    const bioText = host.bioPick.length > 160 ? host.bioPick.slice(0, 160) + "…" : host.bioPick;
-    const bioEl = document.createElement("div");
-    bioEl.style.marginTop = "6px";
-    bioEl.style.fontWeight = "600";
-    bioEl.style.fontSize = "0.95em";
-    bioEl.style.whiteSpace = "pre-wrap";
-    bioEl.style.color = ["#FF3B3B", "#FF9500", "#FFEA00", "#00FFAB", "#00D1FF", "#FF00FF", "#FF69B4"][Math.floor(Math.random()*7)];
-    detailsEl.appendChild(bioEl);
+// Typewriter bio
+if (host.bioPick) {
+  const bioText = host.bioPick.length > 160 ? host.bioPick.slice(0, 160) + "…" : host.bioPick;
 
-    let index = 0;
-    function typeWriter() {
-      if (index < bioText.length) {
-        bioEl.textContent += bioText[index];
-        index++;
-        setTimeout(typeWriter, 40);
-      }
+  // Create a container for bio
+  const bioEl = document.createElement("div");
+  bioEl.style.marginTop = "6px";
+  bioEl.style.fontWeight = "600";  // little bold
+  bioEl.style.fontSize = "0.95em";
+  bioEl.style.whiteSpace = "pre-wrap"; // keep formatting
+
+  // Pick a random bright color
+  const brightColors = ["#FF3B3B", "#FF9500", "#FFEA00", "#00FFAB", "#00D1FF", "#FF00FF", "#FF69B4"];
+  bioEl.style.color = brightColors[Math.floor(Math.random() * brightColors.length)];
+
+  detailsEl.appendChild(bioEl);
+
+  // Typewriter effect
+  let index = 0;
+  function typeWriter() {
+    if (index < bioText.length) {
+      bioEl.textContent += bioText[index];
+      index++;
+      setTimeout(typeWriter, 40); // typing speed (ms)
     }
-    typeWriter();
   }
+  typeWriter();
 }
 /* ---------- Meet Button ---------- */
 let meetBtn = document.getElementById("meetBtn");
