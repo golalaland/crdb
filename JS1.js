@@ -444,30 +444,24 @@ async function reportMessage(msgData) {
         reporterUids: arrayUnion(reporterUid),
         lastReportedAt: serverTimestamp()
       });
-} else {
-  await setDoc(reportRef, {
-    messageId: msgData.id,
-    messageText: msgData.content,
-    offenderChatId: msgData.chatId,
-    offenderUid: msgData.uid || null,
-    reportedBy: [reporterChatId],
-    reporterUids: [reporterUid],
-    reportCount: 1,
-    createdAt: serverTimestamp(),
-    status: "pending"
-  });
-}
-
-// replace this ↓
-// alert("✅ Report submitted!");
-showStarPopup("✅ Report submitted!");
-
-} catch (err) {
-  console.error(err);
-  // replace this ↓
-  // alert("❌ Error reporting message.");
-  showStarPopup("❌ Error reporting message.");
-}
+    } else {
+      await setDoc(reportRef, {
+        messageId: msgData.id,
+        messageText: msgData.content,
+        offenderChatId: msgData.chatId,
+        offenderUid: msgData.uid || null,
+        reportedBy: [reporterChatId],
+        reporterUids: [reporterUid],
+        reportCount: 1,
+        createdAt: serverTimestamp(),
+        status: "pending"
+      });
+    }
+    alert("✅ Report submitted!");
+  } catch (err) {
+    console.error(err);
+    alert("❌ Error reporting message.");
+  }
 }
 
 // Tap modal for Reply / Report
@@ -889,142 +883,147 @@ async function promptForChatID(userRef, userData) {
 }
 
 
-/* ---------- VIP Login + Smooth Auto-login with Progress ---------- */
-import { signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-async function loginWhitelist(email, password) {
+/* ===============================
+   🔐 VIP Login (Whitelist Check)
+================================= */
+async function loginWhitelist(email, phone) {
   const loader = document.getElementById("postLoginLoader");
-  const loadingBar = document.getElementById("loadingBar");
-
-  let progress = 0;
-  let loadingInterval;
-
   try {
     if (loader) loader.style.display = "flex";
-    if (loadingBar) {
-      loadingBar.style.width = "0%";
-      loadingBar.style.background = "linear-gradient(90deg, #ff69b4, #ff1493)";
+    await sleep(50);
+
+    // 🔍 Query whitelist
+    const whitelistQuery = query(
+      collection(db, "whitelist"),
+      where("email", "==", email),
+      where("phone", "==", phone)
+    );
+    const whitelistSnap = await getDocs(whitelistQuery);
+    console.log("📋 Whitelist result:", whitelistSnap.docs.map(d => d.data()));
+
+    if (whitelistSnap.empty) {
+      return showStarPopup("You’re not on the whitelist. Please check your email and phone format.");
     }
 
-    // Smooth progress animation
-    loadingInterval = setInterval(() => {
-      if (progress < 95 && loadingBar) {
-        progress += Math.random() * 2 + 0.5; // slow, smooth increment
-        loadingBar.style.width = `${progress}%`;
-      }
-    }, 80);
-
-    // Firebase Auth
-    const cred = await signInWithEmailAndPassword(auth, email, password);
-    const user = cred.user;
-    console.log("✅ Authenticated:", user.email);
-
-    // Whitelist check
-    const q = query(collection(db, "whitelist"), where("email", "==", email));
-    const snap = await getDocs(q);
-    if (snap.empty) {
-      await signOut(auth);
-      showStarPopup("❌ You’re not on the whitelist. Access denied.");
-      return false;
-    }
-
-    // Load user profile
     const uidKey = sanitizeKey(email);
     const userRef = doc(db, "users", uidKey);
     const userSnap = await getDoc(userRef);
+
     if (!userSnap.exists()) {
-      await signOut(auth);
-      showStarPopup("⚠️ Profile missing. Please complete signup first.");
-      return false;
+      return showStarPopup("User not found. Please sign up on the main page first.");
     }
 
-    const data = userSnap.data();
+    const data = userSnap.data() || {};
+
+    // 🧍🏽 Set current user details
     currentUser = {
       uid: uidKey,
       email: data.email,
+      phone: data.phone,
       chatId: data.chatId,
-      fullName: data.fullName || "",
-      isAdmin: !!data.isAdmin,
-      isVIP: !!data.isVIP,
-      gender: data.gender || "",
+      chatIdLower: data.chatIdLower,
       stars: data.stars || 0,
       cash: data.cash || 0,
       usernameColor: data.usernameColor || randomColor(),
+      isAdmin: !!data.isAdmin,
+      isVIP: !!data.isVIP,
+      fullName: data.fullName || "",
+      gender: data.gender || "",
       subscriptionActive: !!data.subscriptionActive,
+      subscriptionCount: data.subscriptionCount || 0,
+      lastStarDate: data.lastStarDate || todayDate(),
+      starsGifted: data.starsGifted || 0,
+      starsToday: data.starsToday || 0,
       hostLink: data.hostLink || null,
       invitedBy: data.invitedBy || null,
+      inviteeGiftShown: !!data.inviteeGiftShown,
       isHost: !!data.isHost
     };
 
-    // Cache credentials
-    localStorage.setItem("vipUser", JSON.stringify({ email, password }));
+    // ✅ Store user ID for notifications system
+    const userId = currentUser.chatId || currentUser.email || currentUser.phone;
+    localStorage.setItem("userId", userId);
+    console.log("✅ Stored userId for notifications:", userId);
 
-    // Initialize chat + notifications
+    // 🧠 Setup post-login systems
     updateRedeemLink();
     updateTipLink();
-    setupPresence?.(currentUser);
-    attachMessagesListener?.();
+    setupPresence(currentUser);
+    attachMessagesListener();
     startStarEarning(currentUser.uid);
-    showChatUI(currentUser);
-    startNotificationsFor?.(email);
 
-    console.log("🚀 Chatroom access granted:", email);
+    // Store VIP user in local storage (existing)
+    localStorage.setItem("vipUser", JSON.stringify({ email, phone }));
 
-    // Complete progress bar smoothly to 100%
-    if (loadingBar) {
-      let finalProgress = progress;
-      const finalizeInterval = setInterval(() => {
-        finalProgress += 2;
-        if (finalProgress >= 100) {
-          loadingBar.style.width = "100%";
-          clearInterval(finalizeInterval);
-        } else {
-          loadingBar.style.width = `${finalProgress}%`;
-        }
-      }, 30);
+    // Prompt guests for a permanent chatID
+    if (currentUser.chatId?.startsWith("GUEST")) {
+      await promptForChatID(userRef, data);
     }
 
-    await sleep(400);
+    // 🎨 Update UI
+  showChatUI(currentUser);
+console.log("🚀 Starting notifications for:", email);
+startNotificationsFor(email);
+
+
     return true;
 
   } catch (err) {
     console.error("❌ Login error:", err);
-    showStarPopup("Login failed. Please check credentials.");
-    if (loadingBar) loadingBar.style.width = "0%";
+    showStarPopup("Login failed. Try again!");
     return false;
   } finally {
-    clearInterval(loadingInterval);
     if (loader) loader.style.display = "none";
   }
 }
 
-/* ===============================
-   🎟️ Bind VIP ACCESS button
-================================= */
-document.getElementById("whitelistLoginBtn")?.addEventListener("click", async () => {
-  const email = (document.getElementById("emailInput")?.value || "").trim().toLowerCase();
-  const password = (document.getElementById("passwordInput")?.value || "").trim();
-
-  if (!email || !password) return showStarPopup("Enter both email and password.");
-  await loginWhitelist(email, password);
-});
 
 /* ----------------------------
-   🔁 Auto-login session
+   🔁 Auto Login Session
 ----------------------------- */
-async function autoLogin() {
+window.addEventListener("DOMContentLoaded", async () => {
   const vipUser = JSON.parse(localStorage.getItem("vipUser"));
-  if (!vipUser?.email || !vipUser?.password) return;
+  if (vipUser?.email && vipUser?.phone) {
+    const loader = document.getElementById("postLoginLoader");
+    const loadingBar = document.getElementById("loadingBar");
 
-  console.log("🔄 Auto-login for:", vipUser.email);
-  const success = await loginWhitelist(vipUser.email, vipUser.password);
+    try {
+      // ✅ Make sure loader and bar are visible
+      if (loader) loader.style.display = "flex";
+      if (loadingBar) loadingBar.style.width = "0%";
 
-  if (success && currentUser?.isVIP) {
-    showStarPopup(`Welcome back, VIP ${currentUser.chatId || currentUser.email}! ⭐️`);
+      // 🩷 Animate bar while logging in
+      let progress = 0;
+      const interval = 80;
+      const loadingInterval = setInterval(() => {
+        if (progress < 90) { // don’t fill completely until login ends
+          progress += Math.random() * 5;
+          loadingBar.style.width = `${Math.min(progress, 90)}%`;
+        }
+      }, interval);
+
+      // 🧠 Run the login
+      const success = await loginWhitelist(vipUser.email, vipUser.phone);
+
+      // Finish bar smoothly
+      clearInterval(loadingInterval);
+      loadingBar.style.width = "100%";
+
+      if (success) {
+        await sleep(400);
+        updateRedeemLink();
+        updateTipLink();
+      }
+
+    } catch (err) {
+      console.error("❌ Auto-login error:", err);
+    } finally {
+      await sleep(300);
+      if (loader) loader.style.display = "none";
+    }
   }
-}
+});
 
-window.addEventListener("DOMContentLoaded", autoLogin);
 
 /* ===============================
    💫 Auto Star Earning System
@@ -1232,71 +1231,44 @@ window.addEventListener("DOMContentLoaded", () => {
   /* ----------------------------
      🔐 VIP Login Setup
   ----------------------------- */
-const emailInput = document.getElementById("emailInput");
-const passwordInput = document.getElementById("passwordInput"); // make sure you have this input
-const loginBtn = document.getElementById("whitelistLoginBtn");
+  const emailInput = document.getElementById("emailInput");
+  const phoneInput = document.getElementById("phoneInput");
+  const loginBtn = document.getElementById("whitelistLoginBtn");
 
-async function handleLogin() {
-  const email = (emailInput?.value || "").trim().toLowerCase();
-  const password = (passwordInput?.value || "").trim();
+  async function handleLogin() {
+    const email = (emailInput?.value || "").trim().toLowerCase();
+    const phone = (phoneInput?.value || "").trim();
 
-  if (!email || !password) {
-    return showStarPopup("Enter your email and password to get access.");
-  }
+    if (!email || !phone) {
+      return showStarPopup("Enter your email and phone to get access.");
+    }
 
-  const loaderController = showLoadingBar(1000);
-  await sleep(50);
+    showLoadingBar(1000);
+    await sleep(50);
 
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    currentUser = userCredential.user;
-
-    localStorage.setItem("vipUser", JSON.stringify({ email, password }));
-
-    loaderController.complete();
+    const success = await loginWhitelist(email, phone);
+    if (!success) return;
 
     await sleep(400);
     updateRedeemLink();
     updateTipLink();
-    attachMessagesListener?.();
-    setupPresence?.(currentUser);
-    startNotificationsFor?.(currentUser.email);
-
-  } catch (err) {
-    loaderController.complete();
-    console.error("❌ Login failed:", err);
-    showStarPopup("Login failed. Check your credentials.");
   }
-}
 
-loginBtn?.addEventListener("click", handleLogin);
+  loginBtn?.addEventListener("click", handleLogin);
+
   /* ----------------------------
      🔁 Auto Login Session
   ----------------------------- */
  async function autoLogin() {
   const vipUser = JSON.parse(localStorage.getItem("vipUser"));
-  if (!vipUser?.email || !vipUser?.password) return;
-
-  const loaderController = showLoadingBar(1000);
-  await sleep(50);
-
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, vipUser.email, vipUser.password);
-    currentUser = userCredential.user;
-
-    loaderController.complete();
-
+  if (vipUser?.email && vipUser?.phone) {
+    showLoadingBar(1000);
+    await sleep(60);
+    const success = await loginWhitelist(vipUser.email, vipUser.phone);
+    if (!success) return;
     await sleep(400);
     updateRedeemLink();
     updateTipLink();
-    attachMessagesListener?.();
-    setupPresence?.(currentUser);
-    startNotificationsFor?.(currentUser.email);
-
-  } catch (err) {
-    loaderController.complete();
-    console.error("❌ Auto-login failed:", err);
-    localStorage.removeItem("vipUser");
   }
 }
 
@@ -1685,8 +1657,8 @@ const nextBtn = document.getElementById("nextHost");
 let hosts = [];
 let currentIndex = 0;
 
+/* ---------- Fetch + Listen to featuredHosts ---------- */
 /* ---------- Fetch + Listen to featuredHosts + users merge ---------- */
-async/* ---------- Fetch + Listen to featuredHosts + users merge ---------- */
 async function fetchFeaturedHosts() {
   try {
     const q = collection(db, "featuredHosts");
@@ -2083,32 +2055,15 @@ giftSlider.addEventListener("input", () => {
   giftSlider.style.background = randomFieryGradient(); // change fiery color as it slides
 });
 
-/* ---------- Safe Modal Open (Only After Hosts Loaded) ---------- */
+/* ---------- Modal open (new color each popup) ---------- */
 openBtn.addEventListener("click", () => {
-  if (!hosts.length) {
-    alert("No featured hosts available yet!");
-    return;
-  }
-
-  loadHost(currentIndex);
   modal.style.display = "flex";
   modal.style.justifyContent = "center";
   modal.style.alignItems = "center";
+
+  // Give it a fiery flash on open
   giftSlider.style.background = randomFieryGradient();
   console.log("📺 Modal opened");
-});
-
-/* ---------- Safe Modal Close ---------- */
-closeModal.addEventListener("click", () => {
-  modal.style.display = "none";
-  console.log("❎ Modal closed");
-});
-
-window.addEventListener("click", e => {
-  if (e.target === modal) {
-    modal.style.display = "none";
-    console.log("🪟 Modal dismissed");
-  }
 });
 
 /* ===============================
@@ -2196,6 +2151,14 @@ prevBtn.addEventListener("click", e => {
 nextBtn.addEventListener("click", e => {
   e.preventDefault();
   loadHost((currentIndex + 1) % hosts.length);
+});
+
+/* ---------- Modal control ---------- */
+openBtn.addEventListener("click", () => {
+  modal.style.display = "flex";
+  modal.style.justifyContent = "center";
+  modal.style.alignItems = "center";
+  console.log("📺 Modal opened");
 });
 
 closeModal.addEventListener("click", () => {
