@@ -3239,31 +3239,32 @@ if (saveMediaBtn) {
       showStarPopup("⏳ Uploading media...");
 
       const formData = new FormData();
-      if (popupPhotoFile) formData.append("photo", popupPhotoFile);
-      if (uploadVideoFile) formData.append("video", uploadVideoFile);
+      if (popupPhotoFile) formData.append("file", popupPhotoFile);
+      if (uploadVideoFile) formData.append("file", uploadVideoFile);
 
-      const res = await fetch("/api/uploadShopify", { method: "POST", body: formData });
+      const res = await fetch("http://localhost:3000/api/uploadShopify", {
+        method: "POST",
+        body: formData
+      });
+
       if (!res.ok) throw new Error("Upload failed. Check your network.");
-
-      const data = await res.json(); // { photoUrl: "...", videoUrl: "..." }
+      const data = await res.json(); // { url: "..." }
 
       await updateFirestoreDoc(currentUser.uid, {
-        ...(data.photoUrl && { popupPhoto: data.photoUrl }),
-        ...(data.videoUrl && { videoUrl: data.videoUrl }),
+        ...(popupPhotoFile && { popupPhoto: data.url }),
+        ...(uploadVideoFile && { videoUrl: data.url }),
       });
 
       // Update preview if photo exists
-      if (data.photoUrl) {
+      if (data.url && popupPhotoFile) {
         const photoPreview = document.getElementById("photoPreview");
         const photoPlaceholder = document.getElementById("photoPlaceholder");
-        photoPreview.src = data.photoUrl;
+        photoPreview.src = data.url;
         photoPreview.style.display = "block";
         photoPlaceholder.style.display = "none";
       }
 
       showStarPopup("✅ Media uploaded successfully!");
-      hostModal.style.display = "none";
-
     } catch (err) {
       console.error("❌ Media upload error:", err);
       showStarPopup(`⚠️ Failed to upload media: ${err.message}`);
@@ -3764,10 +3765,18 @@ function playFullVideo(video) {
   document.body.appendChild(modal);
 }
 // ---------- OPEN HOSTS Modal BTN ----------
-document.getElementById("openHostsBtn").addEventListener("click", () => {
-  document.getElementById("featuredHostsModal").style.display = "flex";
-});
+window.addEventListener("DOMContentLoaded", () => {
+  const openBtn = document.getElementById("openHostsBtn");
+  const modal = document.getElementById("featuredHostsModal");
+  const closeBtn = document.querySelector(".featured-close");
 
-document.querySelector(".featured-close").addEventListener("click", () => {
-  document.getElementById("featuredHostsModal").style.display = "none";
+  if (!openBtn || !modal) return;
+
+  openBtn.addEventListener("click", () => {
+    modal.style.display = "flex";
+  });
+
+  closeBtn?.addEventListener("click", () => {
+    modal.style.display = "none";
+  });
 });
