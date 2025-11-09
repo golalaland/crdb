@@ -444,24 +444,30 @@ async function reportMessage(msgData) {
         reporterUids: arrayUnion(reporterUid),
         lastReportedAt: serverTimestamp()
       });
-    } else {
-      await setDoc(reportRef, {
-        messageId: msgData.id,
-        messageText: msgData.content,
-        offenderChatId: msgData.chatId,
-        offenderUid: msgData.uid || null,
-        reportedBy: [reporterChatId],
-        reporterUids: [reporterUid],
-        reportCount: 1,
-        createdAt: serverTimestamp(),
-        status: "pending"
-      });
-    }
-    alert("✅ Report submitted!");
-  } catch (err) {
-    console.error(err);
-    alert("❌ Error reporting message.");
-  }
+} else {
+  await setDoc(reportRef, {
+    messageId: msgData.id,
+    messageText: msgData.content,
+    offenderChatId: msgData.chatId,
+    offenderUid: msgData.uid || null,
+    reportedBy: [reporterChatId],
+    reporterUids: [reporterUid],
+    reportCount: 1,
+    createdAt: serverTimestamp(),
+    status: "pending"
+  });
+}
+
+// replace this ↓
+// alert("✅ Report submitted!");
+showStarPopup("✅ Report submitted!");
+
+} catch (err) {
+  console.error(err);
+  // replace this ↓
+  // alert("❌ Error reporting message.");
+  showStarPopup("❌ Error reporting message.");
+}
 }
 
 // Tap modal for Reply / Report
