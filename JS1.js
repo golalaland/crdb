@@ -2087,13 +2087,17 @@ giftSlider.addEventListener("input", () => {
   giftSlider.style.background = randomFieryGradient(); // change fiery color as it slides
 });
 
-/* ---------- Modal open (new color each popup) ---------- */
+/* ---------- Safe Modal Open (Only After Hosts Loaded) ---------- */
 openBtn.addEventListener("click", () => {
+  if (!hosts.length) {
+    alert("No featured hosts available yet!");
+    return;
+  }
+
+  loadHost(currentIndex);
   modal.style.display = "flex";
   modal.style.justifyContent = "center";
   modal.style.alignItems = "center";
-
-  // Give it a fiery flash on open
   giftSlider.style.background = randomFieryGradient();
   console.log("📺 Modal opened");
 });
@@ -2183,14 +2187,6 @@ prevBtn.addEventListener("click", e => {
 nextBtn.addEventListener("click", e => {
   e.preventDefault();
   loadHost((currentIndex + 1) % hosts.length);
-});
-
-/* ---------- Modal control ---------- */
-openBtn.addEventListener("click", () => {
-  modal.style.display = "flex";
-  modal.style.justifyContent = "center";
-  modal.style.alignItems = "center";
-  console.log("📺 Modal opened");
 });
 
 closeModal.addEventListener("click", () => {
