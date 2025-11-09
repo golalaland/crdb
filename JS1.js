@@ -3764,11 +3764,10 @@ function playFullVideo(video) {
   document.body.appendChild(modal);
 }
 // ---------- OPEN HOSTS Modal BTN ----------
-document.body.addEventListener("click", (e) => {
-    // Check if the clicked element is the openHostsBtn
-    if (e.target && e.target.id === "openHostsBtn") {
-        console.log("ModalOpened"); // logs only when actually clicked
-        const modal = document.getElementById("featuredHostsModal");
-        if (modal) modal.style.display = "block";
-    }
+document.getElementById("openHostsBtn").addEventListener("click", () => {
+  document.getElementById("featuredHostsModal").style.display = "flex";
+});
+
+document.querySelector(".featured-close").addEventListener("click", () => {
+  document.getElementById("featuredHostsModal").style.display = "none";
 });
