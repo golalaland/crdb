@@ -3763,3 +3763,12 @@ function playFullVideo(video) {
   modal.onclick = () => modal.remove();
   document.body.appendChild(modal);
 }
+// ---------- OPEN HOSTS Modal BTN ----------
+document.body.addEventListener("click", (e) => {
+    // Check if the clicked element is the openHostsBtn
+    if (e.target && e.target.id === "openHostsBtn") {
+        console.log("ModalOpened"); // logs only when actually clicked
+        const modal = document.getElementById("featuredHostsModal");
+        if (modal) modal.style.display = "block";
+    }
+});
