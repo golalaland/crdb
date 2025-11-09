@@ -1666,15 +1666,14 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
         <span>people are interacting in chatrooms</span>
     </div>
     
-    <div id="sessionBar">
+   <!-- Buttons (keep aligned) -->
+<div id="sessionBar">
   <button class="session-btn" id="topBallersBtn">💎Win $STRZ</button>
-
-  <!-- Middle button (Star Hosts) -->
   <button id="openHostsBtn" class="session-btn star-hosts-btn">🌟 Star Hosts 🌟</button>
-
   <button class="session-btn" id="highlightsBtn">🔥 Highlights</button>
 </div>
 
+<!-- 3-in-1 tabs (unchanged) -->
 <div id="sessionModal" style="display:none;">
   <div class="sessionTabs">
     <button class="active" data-tab="ballers">Top Ballers</button>
@@ -1694,6 +1693,42 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     <p>Coming soon — session stats or custom content.</p>
   </div>
 </div>
+
+<!-- 🌟 Featured Hosts Modal (move here, at page root) -->
+<div id="featuredHostsModal" class="featured-modal">
+  <div class="featured-modal-content">
+
+    <span class="featured-close">&times;</span>
+
+    <!-- 🎥 Video + Info -->
+    <div id="featuredHostVideo" class="featured-host-video-container"></div>
+    <div class="video-shimmer"></div>
+
+    <div class="featured-host-footer">
+      <div>
+        <div id="featuredHostUsername" class="featured-host-username"></div>
+        <div id="featuredHostDetails" class="featured-host-details"></div>
+      </div>
+
+      <div class="gift-slider-container">
+        <input type="range" id="giftSlider" min="1" max="999" value="1">
+        <span id="giftDisplay">
+          <span id="giftAmount">1</span>
+          <span class="star-emoji">⭐</span>
+        </span>
+        <button id="featuredGiftBtn" class="featured-gift-btn">GIFT</button>
+      </div>
+
+      <div id="featuredHostList" class="featured-host-list"></div>
+
+      <div class="featured-nav-buttons">
+        <a href="#" id="prevHost" class="featured-nav-link">Previous</a>
+        <a href="#" id="nextHost" class="featured-nav-link">Next</a>
+      </div>
+    </div>
+  </div>
+</div>
+
     <button id="openHostsBtnz" class="featured-btn" style="display:none;">🌟 Star Hosts 🌟</button>
 </div>
 
@@ -1989,53 +2024,6 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 <div class="star-popup" id="starPopup">
   <div id="starText">You've just earned +1 star! ⭐</div>
 </div>
-
-
-<!-- 🌟 Featured Hosts Modal -->
-<div id="featuredHostsModal" class="featured-modal">
-  <div class="featured-modal-content">
-
-    <span class="featured-close">&times;</span>
-
-<!-- 🎥 Video + Info -->
-<div id="featuredHostVideo" class="featured-host-video-container">
-  <!-- Player will be dynamically inserted here -->
-</div>
-<div class="video-shimmer"></div>
-
-   <div class="featured-host-footer">
-  <div>
-    <div id="featuredHostUsername" class="featured-host-username"></div>
-    <div id="featuredHostDetails" class="featured-host-details"></div>
-  </div>
-
-<div class="gift-slider-container">
-  <!-- Slider -->
-  <input type="range" id="giftSlider" min="1" max="999" value="1">
-
-  <!-- Number + star inline -->
-  <span id="giftDisplay">
-    <span id="giftAmount">1</span>
-    <span class="star-emoji">⭐</span>
-  </span>
-
-  <!-- Button -->
-  <button id="featuredGiftBtn" class="featured-gift-btn">GIFT</button>
-</div>
-
-    <!-- Host avatars list -->
-    <div id="featuredHostList" class="featured-host-list"></div>
-
-    <!-- Navigation -->
-    <div class="featured-nav-buttons">
-      <a href="#" id="prevHost" class="featured-nav-link">Previous</a>
-      <a href="#" id="nextHost" class="featured-nav-link">Next</a>
-    </div>
-
-  </div>
-</div>
-
-
 
 
 
