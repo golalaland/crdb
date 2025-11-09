@@ -2460,48 +2460,54 @@ document.getElementById("uploadHighlightBtn").addEventListener("click", async ()
   const statusEl = document.getElementById("highlightUploadStatus");
   statusEl.textContent = "";
 
-  // 🧍 Wait until user is confirmed
   if (!currentUser) {
     statusEl.textContent = "⚠️ Please sign in first!";
-    console.warn("❌ Upload blocked — no currentUser found");
     return;
   }
 
-  // 🧾 Get field values
+  const fileInput = document.getElementById("highlightFileInput");
+  const videoFile = fileInput.files[0];
   const videoUrl = document.getElementById("highlightVideoInput").value.trim();
   const title = document.getElementById("highlightTitleInput").value.trim();
   const desc = document.getElementById("highlightDescInput").value.trim();
   const price = parseInt(document.getElementById("highlightPriceInput").value.trim() || "0");
 
-  if (!videoUrl || !title || !price) {
-    statusEl.textContent = "⚠️ Fill in all required fields (URL, title, price)";
+  if ((!videoFile && !videoUrl) || !title || !price) {
+    statusEl.textContent = "⚠️ Please select a file or enter a URL (plus title and price)";
     return;
   }
 
   try {
-    const userId = currentUser.uid;
-    const emailId = (currentUser.email || "").replace(/\./g, ",");
-    const chatId = currentUser.chatId || currentUser.displayName || "Anonymous";
-
     statusEl.textContent = "⏳ Uploading highlight...";
 
-    // ✅ Direct upload without thumbnail generation
+    let finalVideoUrl = videoUrl; // fallback if using link
+
+    // 🔹 Direct Upload Path
+    if (videoFile) {
+      // ✅ upload to Firebase Storage
+      const storageRef = ref(storage, `highlightUploads/${Date.now()}_${videoFile.name}`);
+      await uploadBytes(storageRef, videoFile);
+      finalVideoUrl = await getDownloadURL(storageRef);
+    }
+
+    // ✅ Save metadata to Firestore
     const docRef = await addDoc(collection(db, "highlightVideos"), {
-      uploaderId: userId,
-      uploaderEmail: emailId,
-      uploaderName: chatId,
-      highlightVideo: videoUrl,
+      uploaderId: currentUser.uid,
+      uploaderEmail: (currentUser.email || "").replace(/\./g, ","),
+      uploaderName: currentUser.chatId || currentUser.displayName || "Anonymous",
+      highlightVideo: finalVideoUrl,
       highlightVideoPrice: price,
       title,
       description: desc || "",
       createdAt: serverTimestamp(),
     });
 
-    console.log("✅ Uploaded highlight:", docRef.id);
     statusEl.textContent = "✅ Highlight uploaded successfully!";
+    console.log("✅ Uploaded highlight:", docRef.id);
     setTimeout(() => (statusEl.textContent = ""), 4000);
 
-    // 🧹 Reset form
+    // 🧹 Reset fields
+    fileInput.value = "";
     document.getElementById("highlightVideoInput").value = "";
     document.getElementById("highlightTitleInput").value = "";
     document.getElementById("highlightDescInput").value = "";
@@ -3765,18 +3771,3 @@ function playFullVideo(video) {
   document.body.appendChild(modal);
 }
 // ---------- OPEN HOSTS Modal BTN ----------
-window.addEventListener("DOMContentLoaded", () => {
-  const openBtn = document.getElementById("openHostsBtn");
-  const modal = document.getElementById("featuredHostsModal");
-  const closeBtn = document.querySelector(".featured-close");
-
-  if (!openBtn || !modal) return;
-
-  openBtn.addEventListener("click", () => {
-    modal.style.display = "flex";
-  });
-
-  closeBtn?.addEventListener("click", () => {
-    modal.style.display = "none";
-  });
-});
