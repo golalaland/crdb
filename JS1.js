@@ -2102,6 +2102,19 @@ openBtn.addEventListener("click", () => {
   console.log("📺 Modal opened");
 });
 
+/* ---------- Safe Modal Close ---------- */
+closeModal.addEventListener("click", () => {
+  modal.style.display = "none";
+  console.log("❎ Modal closed");
+});
+
+window.addEventListener("click", e => {
+  if (e.target === modal) {
+    modal.style.display = "none";
+    console.log("🪟 Modal dismissed");
+  }
+});
+
 /* ===============================
    🎁 Send Gift + Dual Notification
 ================================= */
