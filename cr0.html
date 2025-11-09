@@ -669,16 +669,18 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 }
 .featured-btn:hover { transform: scale(1.05); }
 
-/* 🌟 Featured Hosts Modal (Compact Mobile Layout) */
+/* 🌟 Featured Hosts Modal (Centered) */
 .featured-modal {
-  display: none;
+  display: none;             /* hidden by default */
   position: fixed;
+  inset: 0;                  /* top:0; right:0; bottom:0; left:0 */
   z-index: 10000;
-  inset: 0;
-  justify-content: center;
-  align-items: center;
   background: rgba(0,0,0,0.85);
   backdrop-filter: blur(10px);
+
+  display: flex;             /* Flex container */
+  justify-content: center;   /* horizontal center */
+  align-items: center;       /* vertical center */
 }
 
 /* 🔲 Compact modal card */
