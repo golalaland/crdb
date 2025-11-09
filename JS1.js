@@ -1685,7 +1685,6 @@ const nextBtn = document.getElementById("nextHost");
 let hosts = [];
 let currentIndex = 0;
 
-/* ---------- Fetch + Listen to featuredHosts ---------- */
 /* ---------- Fetch + Listen to featuredHosts + users merge ---------- */
 async function fetchFeaturedHosts() {
   try {
@@ -1721,7 +1720,12 @@ async function fetchFeaturedHosts() {
 
       console.log("✅ Loaded hosts:", hosts.length);
       renderHostAvatars();
-      loadHost(currentIndex >= hosts.length ? 0 : currentIndex);
+
+      // ❌ Remove this:
+      // loadHost(currentIndex >= hosts.length ? 0 : currentIndex);
+
+      // ✅ Instead: just prepare the first host silently
+      currentIndex = 0;
     });
   } catch (err) {
     console.error("❌ Error fetching hosts:", err);
@@ -2460,54 +2464,48 @@ document.getElementById("uploadHighlightBtn").addEventListener("click", async ()
   const statusEl = document.getElementById("highlightUploadStatus");
   statusEl.textContent = "";
 
+  // 🧍 Wait until user is confirmed
   if (!currentUser) {
     statusEl.textContent = "⚠️ Please sign in first!";
+    console.warn("❌ Upload blocked — no currentUser found");
     return;
   }
 
-  const fileInput = document.getElementById("highlightFileInput");
-  const videoFile = fileInput.files[0];
+  // 🧾 Get field values
   const videoUrl = document.getElementById("highlightVideoInput").value.trim();
   const title = document.getElementById("highlightTitleInput").value.trim();
   const desc = document.getElementById("highlightDescInput").value.trim();
   const price = parseInt(document.getElementById("highlightPriceInput").value.trim() || "0");
 
-  if ((!videoFile && !videoUrl) || !title || !price) {
-    statusEl.textContent = "⚠️ Please select a file or enter a URL (plus title and price)";
+  if (!videoUrl || !title || !price) {
+    statusEl.textContent = "⚠️ Fill in all required fields (URL, title, price)";
     return;
   }
 
   try {
+    const userId = currentUser.uid;
+    const emailId = (currentUser.email || "").replace(/\./g, ",");
+    const chatId = currentUser.chatId || currentUser.displayName || "Anonymous";
+
     statusEl.textContent = "⏳ Uploading highlight...";
 
-    let finalVideoUrl = videoUrl; // fallback if using link
-
-    // 🔹 Direct Upload Path
-    if (videoFile) {
-      // ✅ upload to Firebase Storage
-      const storageRef = ref(storage, `highlightUploads/${Date.now()}_${videoFile.name}`);
-      await uploadBytes(storageRef, videoFile);
-      finalVideoUrl = await getDownloadURL(storageRef);
-    }
-
-    // ✅ Save metadata to Firestore
+    // ✅ Direct upload without thumbnail generation
     const docRef = await addDoc(collection(db, "highlightVideos"), {
-      uploaderId: currentUser.uid,
-      uploaderEmail: (currentUser.email || "").replace(/\./g, ","),
-      uploaderName: currentUser.chatId || currentUser.displayName || "Anonymous",
-      highlightVideo: finalVideoUrl,
+      uploaderId: userId,
+      uploaderEmail: emailId,
+      uploaderName: chatId,
+      highlightVideo: videoUrl,
       highlightVideoPrice: price,
       title,
       description: desc || "",
       createdAt: serverTimestamp(),
     });
 
-    statusEl.textContent = "✅ Highlight uploaded successfully!";
     console.log("✅ Uploaded highlight:", docRef.id);
+    statusEl.textContent = "✅ Highlight uploaded successfully!";
     setTimeout(() => (statusEl.textContent = ""), 4000);
 
-    // 🧹 Reset fields
-    fileInput.value = "";
+    // 🧹 Reset form
     document.getElementById("highlightVideoInput").value = "";
     document.getElementById("highlightTitleInput").value = "";
     document.getElementById("highlightDescInput").value = "";
@@ -3245,32 +3243,31 @@ if (saveMediaBtn) {
       showStarPopup("⏳ Uploading media...");
 
       const formData = new FormData();
-      if (popupPhotoFile) formData.append("file", popupPhotoFile);
-      if (uploadVideoFile) formData.append("file", uploadVideoFile);
+      if (popupPhotoFile) formData.append("photo", popupPhotoFile);
+      if (uploadVideoFile) formData.append("video", uploadVideoFile);
 
-      const res = await fetch("http://localhost:3000/api/uploadShopify", {
-        method: "POST",
-        body: formData
-      });
-
+      const res = await fetch("/api/uploadShopify", { method: "POST", body: formData });
       if (!res.ok) throw new Error("Upload failed. Check your network.");
-      const data = await res.json(); // { url: "..." }
+
+      const data = await res.json(); // { photoUrl: "...", videoUrl: "..." }
 
       await updateFirestoreDoc(currentUser.uid, {
-        ...(popupPhotoFile && { popupPhoto: data.url }),
-        ...(uploadVideoFile && { videoUrl: data.url }),
+        ...(data.photoUrl && { popupPhoto: data.photoUrl }),
+        ...(data.videoUrl && { videoUrl: data.videoUrl }),
       });
 
       // Update preview if photo exists
-      if (data.url && popupPhotoFile) {
+      if (data.photoUrl) {
         const photoPreview = document.getElementById("photoPreview");
         const photoPlaceholder = document.getElementById("photoPlaceholder");
-        photoPreview.src = data.url;
+        photoPreview.src = data.photoUrl;
         photoPreview.style.display = "block";
         photoPlaceholder.style.display = "none";
       }
 
       showStarPopup("✅ Media uploaded successfully!");
+      hostModal.style.display = "none";
+
     } catch (err) {
       console.error("❌ Media upload error:", err);
       showStarPopup(`⚠️ Failed to upload media: ${err.message}`);
@@ -3771,3 +3768,10 @@ function playFullVideo(video) {
   document.body.appendChild(modal);
 }
 // ---------- OPEN HOSTS Modal BTN ----------
+document.getElementById("openHostsBtn").addEventListener("click", () => {
+  document.getElementById("featuredHostsModal").style.display = "flex";
+});
+
+document.querySelector(".featured-close").addEventListener("click", () => {
+  document.getElementById("featuredHostsModal").style.display = "none";
+});
