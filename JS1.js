@@ -3767,11 +3767,3 @@ function playFullVideo(video) {
   modal.onclick = () => modal.remove();
   document.body.appendChild(modal);
 }
-// ---------- OPEN HOSTS Modal BTN ----------
-document.getElementById("openHostsBtn").addEventListener("click", () => {
-  document.getElementById("featuredHostsModal").style.display = "flex";
-});
-
-document.querySelector(".featured-close").addEventListener("click", () => {
-  document.getElementById("featuredHostsModal").style.display = "none";
-});
