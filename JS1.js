@@ -2050,15 +2050,30 @@ giftSlider.addEventListener("input", () => {
   giftSlider.style.background = randomFieryGradient(); // change fiery color as it slides
 });
 
-/* ---------- Modal open (new color each popup) ---------- */
+/* ---------- Event Listeners ---------- */
 openBtn.addEventListener("click", () => {
-  modal.style.display = "flex";
+  if (!hosts.length) {
+    alert("No featured hosts available yet!");
+    return;
+  }
+
+  loadHost(currentIndex);
+  modal.style.display = "flex"; // show modal centered
   modal.style.justifyContent = "center";
   modal.style.alignItems = "center";
-
-  // Give it a fiery flash on open
-  giftSlider.style.background = randomFieryGradient();
   console.log("📺 Modal opened");
+});
+
+closeModal.addEventListener("click", () => {
+  modal.style.display = "none"; // hide modal on close
+  console.log("❎ Modal closed");
+});
+
+window.addEventListener("click", e => {
+  if (e.target === modal) {
+    modal.style.display = "none"; // click outside closes modal
+    console.log("🪟 Modal dismissed");
+  }
 });
 
 /* ===============================
@@ -2148,25 +2163,7 @@ nextBtn.addEventListener("click", e => {
   loadHost((currentIndex + 1) % hosts.length);
 });
 
-/* ---------- Modal control ---------- */
-openBtn.addEventListener("click", () => {
-  modal.style.display = "flex";
-  modal.style.justifyContent = "center";
-  modal.style.alignItems = "center";
-  console.log("📺 Modal opened");
-});
 
-closeModal.addEventListener("click", () => {
-  modal.style.display = "none";
-  console.log("❎ Modal closed");
-});
-
-window.addEventListener("click", e => {
-  if (e.target === modal) {
-    modal.style.display = "none";
-    console.log("🪟 Modal dismissed");
-  }
-});
 /* ---------- Init ---------- */
 fetchFeaturedHosts();
 
