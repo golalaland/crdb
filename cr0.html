@@ -1913,52 +1913,58 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
     Your safety is our priority. This helps you verify that numbers here belong to real, verified users.
   </p>
 
-  <!-- 💰 Highlights ($ell Content) -->
-  <div id="sellContentBar" style="margin-top:30px; font-family: system-ui, sans-serif;">
-    <h4 style="text-align:center; margin-bottom:10px; font-weight:600;">
-      Highlights ($ell Content) 🎬
-    </h4>
+<!-- 💰 Highlights ($ell Content) -->
+<div id="sellContentBar" style="margin-top:30px; font-family: system-ui, sans-serif;">
+  <h4 style="text-align:center; margin-bottom:10px; font-weight:600;">
+    Highlights ($ell Content) 🎬
+  </h4>
 
-    <!-- Optional: short description about highlights -->
-    <p style="font-size:12.5px; color:#ccc; text-align:center; margin:0 0 12px;">
-      Upload short video highlights to showcase or sell.  
-      Users can unlock your videos using ⭐ stars — your way to earn visibility and rewards.
-    </p>
+  <p style="font-size:12.5px; color:#ccc; text-align:center; margin:0 0 12px;">
+    Upload short video highlights to showcase or sell.  
+    Users can unlock your videos using ⭐ stars — your way to earn visibility and rewards.
+  </p>
 
-    <div style="max-width:360px; margin:0 auto; display:flex; flex-direction:column; gap:12px;">
+  <div style="max-width:360px; margin:0 auto; display:flex; flex-direction:column; gap:12px;">
 
-      <h3 style="font-size:14px; font-weight:600; color:#fff; margin:0;">Upload Video</h3>
-      <input type="file" id="highlightUploadInput" accept="video/*"
-             style="padding:6px 10px; font-size:13px; border-radius:6px; border:1px solid #ccc; outline:none;" />
+    <h3 style="font-size:14px; font-weight:600; color:#fff; margin:0;">Upload Video</h3>
+    <input type="file" id="highlightUploadInput" accept="video/*"
+           style="padding:6px 10px; font-size:13px; border-radius:6px; border:1px solid #ccc; outline:none;" />
 
-      <h3 style="font-size:14px; font-weight:600; color:#fff; margin:0;">Paste Video Link</h3>
-      <input type="text" id="highlightVideoInput" placeholder="Paste video URL (Shopify/CDN)"
-             style="padding:6px 10px; font-size:13px; border-radius:6px; border:1px solid #ccc; outline:none;" />
+    <h3 style="font-size:14px; font-weight:600; color:#fff; margin:0;">Paste Video Link</h3>
+    <input type="text" id="highlightVideoInput" placeholder="Paste video URL (Shopify/CDN)"
+           style="padding:6px 10px; font-size:13px; border-radius:6px; border:1px solid #ccc; outline:none;" />
 
-      <h3 style="font-size:14px; font-weight:600; color:#fff; margin:0;">Title</h3>
-      <input type="text" id="highlightTitleInput" placeholder="Video title"
-             style="padding:6px 10px; font-size:13px; border-radius:6px; border:1px solid #ccc; outline:none;" />
+    <h3 style="font-size:14px; font-weight:600; color:#fff; margin:0;">Title</h3>
+    <input type="text" id="highlightTitleInput" placeholder="Video title"
+           style="padding:6px 10px; font-size:13px; border-radius:6px; border:1px solid #ccc; outline:none;" />
 
-      <h3 style="font-size:14px; font-weight:600; color:#fff; margin:0;">Video Description</h3>
-      <textarea id="highlightDescInput" placeholder="Description (optional)"
-                style="padding:6px 10px; font-size:13px; border-radius:6px; border:1px solid #ccc; outline:none; 
-                       resize:vertical; min-height:40px;"></textarea>
+    <h3 style="font-size:14px; font-weight:600; color:#fff; margin:0;">Video Description</h3>
+    <textarea id="highlightDescInput" placeholder="Description (optional)"
+              style="padding:6px 10px; font-size:13px; border-radius:6px; border:1px solid #ccc; outline:none; 
+                     resize:vertical; min-height:40px;"></textarea>
 
-      <h3 style="font-size:14px; font-weight:600; color:#fff; margin:0;">Set Video Unlock Price</h3>
-      <input type="number" id="highlightPriceInput" placeholder="Price in ⭐ stars"
-             style="padding:6px 10px; font-size:13px; border-radius:6px; border:1px solid #ccc; outline:none;" min="10" />
+    <h3 style="font-size:14px; font-weight:600; color:#fff; margin:0;">Set Video Unlock Price</h3>
 
-      <button id="uploadHighlightBtn"
-              style="padding:8px 16px; background:linear-gradient(90deg,#ff0099,#ff6600); 
-                     color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer;"
-              onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-        Upload Highlight
-      </button>
-
-      <div id="highlightUploadStatus" style="font-size:12px; color:#ffcc00; text-align:center;"></div>
+    <!-- ⭐ Input with symbol -->
+    <div style="display:flex; align-items:center; justify-content:center; gap:4px;">
+      <input type="number" id="highlightPriceInput" placeholder="0"
+             style="width:80px; text-align:right; padding:6px 10px; font-size:13px; border-radius:6px; border:1px solid #ccc; outline:none;"
+             min="10" />
+      <span style="font-size:16px;">⭐️</span>
     </div>
-  </div>
 
+    <!-- Smaller centered upload button -->
+    <div style="text-align:center;">
+      <button id="uploadHighlightBtn"
+              style="padding:6px 14px; background:linear-gradient(90deg,#ff0099,#ff6600);
+                     color:#fff; border:none; border-radius:6px; font-weight:600; font-size:13px; cursor:pointer;"
+              onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+        Upload
+      </button>
+    </div>
+
+    <div id="highlightUploadStatus" style="font-size:12px; color:#ffcc00; text-align:center;"></div>
+  </div>
 </div>
 
       <!-- Messages / Additional Info -->
