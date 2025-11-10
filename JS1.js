@@ -292,26 +292,46 @@ function showStarPopup(text) {
    ⭐ GIFT MODAL / CHAT BANNER ALERT
 ----------------------------- */
 async function showGiftModal(targetUid, targetData) {
+  // Stop if required info is missing
+  if (!targetUid || !targetData) return;
+
   const modal = document.getElementById("giftModal");
   const titleEl = document.getElementById("giftModalTitle");
   const amountInput = document.getElementById("giftAmountInput");
   const confirmBtn = document.getElementById("giftConfirmBtn");
   const closeBtn = document.getElementById("giftModalClose");
 
-  if (!modal || !titleEl || !amountInput || !confirmBtn) return;
+  // Make sure modal exists before doing anything
+  if (!modal || !titleEl || !amountInput || !confirmBtn || !closeBtn) {
+    console.warn("❌ Gift modal elements not found — skipping open");
+    return;
+  }
 
-  titleEl.textContent = `Gift ⭐️`;
+  // 🧩 Reset state before showing
+  titleEl.textContent = "Gift ⭐️";
   amountInput.value = "";
-  modal.style.display = "flex";
 
-  const close = () => (modal.style.display = "none");
+  // 🚫 Don't auto-show unless called intentionally
+  // So we only show the modal *after* all required info is ready
+  requestAnimationFrame(() => {
+    modal.style.display = "flex";
+  });
+
+  // Close modal behavior
+  const close = () => {
+    modal.style.display = "none";
+  };
+
   closeBtn.onclick = close;
-  modal.onclick = (e) => { if (e.target === modal) close(); };
+  modal.onclick = (e) => {
+    if (e.target === modal) close();
+  };
 
-  // Remove previous click listeners
+  // Remove any old listeners on confirm button
   const newConfirmBtn = confirmBtn.cloneNode(true);
   confirmBtn.replaceWith(newConfirmBtn);
 
+  // ✅ Confirm send action
   newConfirmBtn.addEventListener("click", async () => {
     const amt = parseInt(amountInput.value) || 0;
     if (amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
@@ -341,7 +361,6 @@ async function showGiftModal(targetUid, targetData) {
     showStarPopup(`You sent ${amt} stars ⭐️ to ${targetData.chatId}!`);
     close();
 
-    // Render banner; confetti/glow handled only once in renderer
     renderMessagesFromArray([{ id: docRef.id, data: messageData }]);
   });
 }
@@ -2156,25 +2175,43 @@ nextBtn.addEventListener("click", e => {
   loadHost((currentIndex + 1) % hosts.length);
 });
 
-/* ---------- Modal control ---------- */
+/* ---------- Safe Star Hosts Modal Open ---------- */
 openBtn.addEventListener("click", () => {
+  if (!hosts.length) {
+    showGiftAlert("⚠️ No featured hosts available yet!");
+    return;
+  }
+
+  // Load the current host safely
+  loadHost(currentIndex);
+
+  // Show modal centered
   modal.style.display = "flex";
   modal.style.justifyContent = "center";
   modal.style.alignItems = "center";
+
+  // Optional: fiery gradient for gift slider
+  if (giftSlider) {
+    giftSlider.style.background = randomFieryGradient();
+  }
+
   console.log("📺 Modal opened");
 });
 
+/* ---------- Close modal logic ---------- */
 closeModal.addEventListener("click", () => {
   modal.style.display = "none";
   console.log("❎ Modal closed");
 });
 
-window.addEventListener("click", e => {
+// Click outside modal closes it
+window.addEventListener("click", (e) => {
   if (e.target === modal) {
     modal.style.display = "none";
     console.log("🪟 Modal dismissed");
   }
 });
+
 /* ---------- Init ---------- */
 fetchFeaturedHosts();
 
