@@ -470,7 +470,7 @@ async function reportMessage(msgData) {
     if (reportSnap.exists()) {
       const data = reportSnap.data();
       if ((data.reportedBy || []).includes(reporterChatId)) {
-        return alert("You’ve already reported this message.");
+        return showStarPopup("You’ve already reported this message.", { type: "info" });
       }
       await updateDoc(reportRef, {
         reportCount: increment(1),
@@ -491,10 +491,14 @@ async function reportMessage(msgData) {
         status: "pending"
       });
     }
-    alert("✅ Report submitted!");
+
+    // ✅ Success popup
+    showStarPopup("✅ Report submitted!", { type: "success" });
+
   } catch (err) {
     console.error(err);
-    alert("❌ Error reporting message.");
+    // ❌ Error popup
+    showStarPopup("❌ Error reporting message.", { type: "error" });
   }
 }
 
