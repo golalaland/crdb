@@ -85,28 +85,42 @@ function pushNotificationTx(tx, userId, message) {
   });
 }
 
-/* ---------- Auth State Watcher (Stable + Lazy Notifications) ---------- */
+/* ---------- Auth State Watcher (with Unlocked Sync + Notifications) ---------- */
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
+
+  // 🔒 Hide modals until login completes
+  const allModals = document.querySelectorAll(".featured-modal, #giftModal, #sessionModal");
+  allModals.forEach(m => (m.style.display = "none"));
 
   if (!user) {
     console.warn("⚠️ No logged-in user found");
     localStorage.removeItem("userId");
+
+    // Hide protected sections
+    document.querySelectorAll(".after-login-only").forEach(el => (el.style.display = "none"));
     return;
   }
 
-  // ✅ 1. Define the sanitization helper
-  const sanitizeEmail = (email) => email.replace(/\./g, ",");
+  // ✅ Logged in user
+  console.log("✅ User authenticated:", user.email || user.uid);
+  document.querySelectorAll(".after-login-only").forEach(el => (el.style.display = ""));
 
-  // ✅ 2. Generate and store the ID used for querying
+  // ---------- Sync unlocked videos across devices ----------
+  try {
+    await syncUserUnlocks(); // 🔁 Keeps unlocks consistent across browsers
+    console.log("🔄 Unlocked videos synced successfully.");
+  } catch (err) {
+    console.error("⚠️ Sync unlocks failed:", err);
+  }
+
+  // ---------- Notifications Setup ----------
+  const sanitizeEmail = (email) => email.replace(/\./g, ",");
   const userQueryId = sanitizeEmail(currentUser.email);
-  console.log("✅ Logged in as Sanitized ID:", userQueryId);
+  console.log("📩 Logged in as Sanitized ID:", userQueryId);
   localStorage.setItem("userId", userQueryId);
 
-  // ✅ 3. Reference the top-level 'notifications' collection
   const notifRef = collection(db, "notifications");
-
-  // ✅ 4. Define the query using the sanitized email ID
   const notifQuery = query(
     notifRef,
     where("userId", "==", userQueryId),
@@ -115,18 +129,17 @@ onAuthStateChanged(auth, async (user) => {
 
   let unsubscribe = null;
 
-  // ✅ 5. Initialize Notifications Listener
   async function initNotificationsListener() {
     const notificationsList = document.getElementById("notificationsList");
     if (!notificationsList) {
-      console.warn("⚠️ #notificationsList not found yet — retrying...");
+      console.warn("⚠️ #notificationsList not found — retrying...");
       setTimeout(initNotificationsListener, 500);
       return;
     }
 
     if (unsubscribe) unsubscribe(); // Prevent duplicate listeners
 
-    console.log("🔔 Setting up live notification listener for ID:", userQueryId);
+    console.log("🔔 Setting up live notification listener for:", userQueryId);
     unsubscribe = onSnapshot(
       notifQuery,
       (snapshot) => {
@@ -155,20 +168,18 @@ onAuthStateChanged(auth, async (user) => {
 
         notificationsList.innerHTML = items.join("");
       },
-      (error) => {
-        console.error("🔴 Firestore Listener Error:", error);
-      }
+      (error) => console.error("🔴 Firestore Listener Error:", error)
     );
   }
 
-  // ✅ 6. Initialize based on DOM state
+  // Run notifications listener when DOM is ready
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initNotificationsListener);
   } else {
     initNotificationsListener();
   }
 
-  // ✅ 7. Re-run listener when user opens Notifications tab
+  // Re-init when Notifications tab opens
   const notifTabBtn = document.querySelector('.tab-btn[data-tab="notificationsTab"]');
   if (notifTabBtn) {
     notifTabBtn.addEventListener("click", () => {
@@ -176,15 +187,14 @@ onAuthStateChanged(auth, async (user) => {
     });
   }
 
-  // ✅ 8. Mark All As Read
+  // Mark all notifications as read
   const markAllBtn = document.getElementById("markAllRead");
   if (markAllBtn) {
     markAllBtn.addEventListener("click", async () => {
       console.log("🟡 Marking all notifications as read...");
       const snapshot = await getDocs(query(notifRef, where("userId", "==", userQueryId)));
       for (const docSnap of snapshot.docs) {
-        const ref = doc(db, "notifications", docSnap.id);
-        await updateDoc(ref, { read: true });
+        await updateDoc(doc(db, "notifications", docSnap.id), { read: true });
       }
       alert("✅ All notifications marked as read.");
     });
