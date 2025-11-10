@@ -3350,6 +3350,8 @@ const scrollArrow = document.getElementById('scrollArrow');
 checkScroll(); // initial check
 }); // ✅ closes DOMContentLoaded event listener
 
+
+// ---------- Highlights Button ----------
 highlightsBtn.onclick = async () => {
   try {
     if (!currentUser?.uid) {
@@ -3415,7 +3417,7 @@ function showHighlightsModal(videos) {
     boxSizing: "border-box",
   });
 
-  // ---------- Intro ----------
+  // Sticky intro
   const intro = document.createElement("div");
   intro.innerHTML = `
     <div style="text-align:center;color:#ccc;max-width:640px;margin:0 auto;line-height:1.6;font-size:14px;
@@ -3431,76 +3433,27 @@ function showHighlightsModal(videos) {
     intro.style.opacity = modal.scrollTop > 50 ? "0.7" : "1";
   });
 
-  // ---------- Search + Toggle Bar ----------
+  // Search + toggle bar
   const searchWrap = document.createElement("div");
-  Object.assign(searchWrap.style, {
-    position: "sticky",
-    top: "84px",
-    zIndex: "1001",
-    marginBottom: "20px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "8px"
-  });
-
-  // Search input
-  const searchInputWrap = document.createElement("div");
-  Object.assign(searchInputWrap.style, {
-    display: "flex",
-    alignItems: "center",
-    background: "rgba(255,255,255,0.08)",
-    borderRadius: "30px",
-    padding: "8px 14px",
-    width: "280px",
-    backdropFilter: "blur(6px)",
-    boxShadow: "0 0 10px rgba(0,0,0,0.25)"
-  });
-  searchInputWrap.innerHTML = `
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M15 15L21 21M10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10C17 13.866 13.866 17 10 17Z" stroke="#999999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <input id="highlightSearchInput" type="text" placeholder="Search by creator..." style="flex:1;background:transparent;border:none;outline:none;color:#fff;font-size:13px;letter-spacing:0.3px;"/>
+  Object.assign(searchWrap.style, { position: "sticky", top: "84px", zIndex: "1001", marginBottom: "20px", display: "flex", gap: "8px", justifyContent: "center" });
+  searchWrap.innerHTML = `
+    <div style="display:flex;align-items:center;background:rgba(255,255,255,0.08);border-radius:30px;padding:8px 14px;width:280px;backdrop-filter:blur(6px);box-shadow:0 0 10px rgba(0,0,0,0.25);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M15 15L21 21M10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10C17 13.866 13.866 17 10 17Z" stroke="#999999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <input id="highlightSearchInput" type="text" placeholder="Search by creator..." style="flex:1;background:transparent;border:none;outline:none;color:#fff;font-size:13px;letter-spacing:0.3px;"/>
+    </div>
+    <button id="toggleLocked" style="padding:6px 12px;border-radius:8px;background:#444;color:#fff;border:none;font-size:13px;cursor:pointer;">Show Unlocked</button>
   `;
-  searchWrap.appendChild(searchInputWrap);
-
-  // Toggle button under search
-  const toggleBtn = document.createElement("button");
-  toggleBtn.id = "toggleLocked";
-  toggleBtn.textContent = "Show Unlocked";
-  Object.assign(toggleBtn.style, {
-    padding: "6px 12px",
-    borderRadius: "12px",
-    background: "#444",
-    color: "#fff",
-    border: "none",
-    fontSize: "13px",
-    cursor: "pointer",
-    width: "140px",
-    textAlign: "center"
-  });
-  searchWrap.appendChild(toggleBtn);
-
   modal.appendChild(searchWrap);
 
-  // ---------- Content Container ----------
   const content = document.createElement("div");
-  Object.assign(content.style, {
-    display: "flex",
-    gap: "16px",
-    flexWrap: "nowrap",
-    overflowX: "auto",
-    paddingBottom: "40px",
-    scrollBehavior: "smooth",
-    width: "100%",
-    justifyContent: "flex-start"
-  });
+  Object.assign(content.style, { display:"flex", gap:"16px", flexWrap:"nowrap", overflowX:"auto", paddingBottom:"40px", scrollBehavior:"smooth", width:"100%", justifyContent:"flex-start" });
   modal.appendChild(content);
 
   let unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
   let showUnlockedOnly = false;
 
-  // ---------- Render Video Cards ----------
   function renderCards(videosToRender) {
     content.innerHTML = "";
     const filtered = videosToRender.filter(v => !showUnlockedOnly || unlockedVideos.includes(v.id));
@@ -3518,7 +3471,6 @@ function showHighlightsModal(videos) {
       card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
       card.setAttribute("data-title", video.title || "");
 
-      // Video container
       const videoContainer = document.createElement("div");
       Object.assign(videoContainer.style, { height: "320px", overflow: "hidden", position: "relative" });
 
@@ -3538,7 +3490,6 @@ function showHighlightsModal(videos) {
         else showUnlockConfirm(video, () => renderCards(videos));
       };
 
-      // Info panel
       const infoPanel = document.createElement("div");
       Object.assign(infoPanel.style, { background: "#111", padding: "10px", display: "flex", flexDirection: "column", textAlign: "left", gap: "4px" });
 
@@ -3570,8 +3521,7 @@ function showHighlightsModal(videos) {
         unlockBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           if (!currentUser?.uid) return showGoldAlert("Please log in to unlock content 🔒");
-          showUnlockConfirm(video, async () => {
-            await handleUnlockVideo(video);
+          showUnlockConfirm(video, () => {
             unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
             renderCards(videos);
           });
@@ -3586,16 +3536,8 @@ function showHighlightsModal(videos) {
 
   renderCards(videos);
 
-  // ---------- Toggle Event ----------
-  toggleBtn.addEventListener("click", () => {
-    showUnlockedOnly = !showUnlockedOnly;
-    toggleBtn.textContent = showUnlockedOnly ? "Show All" : "Show Unlocked";
-    renderCards(videos);
-  });
-
-  // ---------- Search Filter ----------
-  const searchInput = searchWrap.querySelector("#highlightSearchInput");
-  searchInput.addEventListener("input", e => {
+  // Search filter
+  searchWrap.querySelector("#highlightSearchInput").addEventListener("input", e => {
     const term = e.target.value.trim().toLowerCase();
     content.querySelectorAll(".videoCard").forEach(card => {
       const uploader = card.getAttribute("data-uploader")?.toLowerCase() || "";
@@ -3604,7 +3546,14 @@ function showHighlightsModal(videos) {
     });
   });
 
-  // ---------- Close Button ----------
+  // Toggle button
+  searchWrap.querySelector("#toggleLocked").addEventListener("click", () => {
+    showUnlockedOnly = !showUnlockedOnly;
+    searchWrap.querySelector("#toggleLocked").textContent = showUnlockedOnly ? "Show All" : "Show Unlocked";
+    renderCards(videos);
+  });
+
+  // Close button
   const closeBtn = document.createElement("div");
   closeBtn.innerHTML = "&times;";
   Object.assign(closeBtn.style, { position: "fixed", top: "20px", right: "28px", fontSize: "32px", color: "#fff", fontWeight: "700", cursor: "pointer", zIndex: "1000000" });
