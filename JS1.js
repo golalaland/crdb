@@ -1,8 +1,3 @@
-/* ---------- Imports (Firebase v10) ---------- */
-import { 
-  initializeApp 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-
 import { 
   getFirestore, 
   doc, 
@@ -18,7 +13,8 @@ import {
   increment, 
   getDocs, 
   where,
-  runTransaction
+  runTransaction,
+  arrayUnion   // <-- ADD THIS
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { 
@@ -3349,25 +3345,32 @@ const scrollArrow = document.getElementById('scrollArrow');
 checkScroll(); // initial check
 }); // ✅ closes DOMContentLoaded event listener
 
-// ---------- Highlights Button ----------
 highlightsBtn.onclick = async () => {
-  if (!currentUser?.uid) return showGoldAlert("Please log in to view highlights 🔒");
-
   try {
-    const highlightsRef = collection(db, "highlightVideos");
-    const snapshot = await getDocs(query(highlightsRef, orderBy("createdAt", "desc")));
+    if (!currentUser?.uid) {
+      showGoldAlert("Please log in to view highlights 🔒");
+      return;
+    }
 
-    if (snapshot.empty) return showGoldAlert("No highlights uploaded yet ⚡");
+    const highlightsRef = collection(db, "highlightVideos");
+    const q = query(highlightsRef, orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      showGoldAlert("No highlights uploaded yet ⚡");
+      return;
+    }
 
     const videos = snapshot.docs.map(docSnap => {
       const d = docSnap.data();
+      const uploaderName = d.uploaderName || d.chatId || d.displayName || d.username || "Anonymous";
+
       return {
         id: docSnap.id,
         highlightVideo: d.highlightVideo,
-        previewClip: d.previewClip || d.highlightVideo,
-        highlightVideoPrice: d.highlightVideoPrice || 100,
+        highlightVideoPrice: d.highlightVideoPrice || 0,
         title: d.title || "Untitled",
-        uploaderName: d.uploaderName || d.chatId || d.displayName || d.username || "Anonymous",
+        uploaderName,
         uploaderId: d.uploaderId || "",
         uploaderEmail: d.uploaderEmail || "unknown",
         description: d.description || "",
@@ -3391,13 +3394,23 @@ function showHighlightsModal(videos) {
   const modal = document.createElement("div");
   modal.id = "highlightsModal";
   Object.assign(modal.style, {
-    position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
-    background: "rgba(0,0,0,0.9)", display: "flex", flexDirection: "column",
-    alignItems: "center", justifyContent: "flex-start", zIndex: "999999",
-    overflowY: "auto", padding: "20px", boxSizing: "border-box",
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    background: "rgba(0,0,0,0.9)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    zIndex: "999999",
+    overflowY: "auto",
+    padding: "20px",
+    boxSizing: "border-box",
   });
 
-  // Sticky intro
+  // ---------- Intro ----------
   const intro = document.createElement("div");
   intro.innerHTML = `
     <div style="text-align:center;color:#ccc;max-width:640px;margin:0 auto;line-height:1.6;font-size:14px;
@@ -3406,23 +3419,37 @@ function showHighlightsModal(videos) {
       <p style="margin:0;">🎬 <b>Highlights</b> are exclusive creator moments.<br>
       Unlock premium clips with ⭐ Stars to support your favorite creators.</p>
     </div>`;
-  Object.assign(intro.style, { position: "sticky", top: "10px", zIndex: "1001", marginBottom: "12px", transition: "opacity 0.3s" });
+  Object.assign(intro.style, { position: "sticky", top: "10px", zIndex: "1001", marginBottom: "12px", transition: "opacity 0.3s ease" });
   modal.appendChild(intro);
 
-  modal.addEventListener("scroll", () => intro.style.opacity = modal.scrollTop > 50 ? "0.7" : "1");
-
-  // ---------- Search + Toggle ----------
-  const searchWrap = document.createElement("div");
-  Object.assign(searchWrap.style, {
-    position: "sticky", top: "84px", zIndex: "1001", marginBottom: "20px",
-    display: "flex", flexDirection: "column", alignItems: "center", gap: "8px"
+  modal.addEventListener("scroll", () => {
+    intro.style.opacity = modal.scrollTop > 50 ? "0.7" : "1";
   });
 
+  // ---------- Search + Toggle Bar ----------
+  const searchWrap = document.createElement("div");
+  Object.assign(searchWrap.style, {
+    position: "sticky",
+    top: "84px",
+    zIndex: "1001",
+    marginBottom: "20px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "8px"
+  });
+
+  // Search input
   const searchInputWrap = document.createElement("div");
   Object.assign(searchInputWrap.style, {
-    display: "flex", alignItems: "center", background: "rgba(255,255,255,0.08)",
-    borderRadius: "30px", padding: "8px 14px", width: "280px",
-    backdropFilter: "blur(6px)", boxShadow: "0 0 10px rgba(0,0,0,0.25)"
+    display: "flex",
+    alignItems: "center",
+    background: "rgba(255,255,255,0.08)",
+    borderRadius: "30px",
+    padding: "8px 14px",
+    width: "280px",
+    backdropFilter: "blur(6px)",
+    boxShadow: "0 0 10px rgba(0,0,0,0.25)"
   });
   searchInputWrap.innerHTML = `
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -3432,29 +3459,43 @@ function showHighlightsModal(videos) {
   `;
   searchWrap.appendChild(searchInputWrap);
 
+  // Toggle button under search
   const toggleBtn = document.createElement("button");
   toggleBtn.id = "toggleLocked";
   toggleBtn.textContent = "Show Unlocked";
   Object.assign(toggleBtn.style, {
-    padding: "6px 12px", borderRadius: "12px", background: "#444", color: "#fff",
-    border: "none", fontSize: "13px", cursor: "pointer", width: "140px", textAlign: "center"
+    padding: "6px 12px",
+    borderRadius: "12px",
+    background: "#444",
+    color: "#fff",
+    border: "none",
+    fontSize: "13px",
+    cursor: "pointer",
+    width: "140px",
+    textAlign: "center"
   });
   searchWrap.appendChild(toggleBtn);
 
   modal.appendChild(searchWrap);
 
-  // ---------- Content ----------
+  // ---------- Content Container ----------
   const content = document.createElement("div");
   Object.assign(content.style, {
-    display: "flex", gap: "16px", flexWrap: "nowrap", overflowX: "auto",
-    paddingBottom: "40px", scrollBehavior: "smooth", width: "100%", justifyContent: "flex-start"
+    display: "flex",
+    gap: "16px",
+    flexWrap: "nowrap",
+    overflowX: "auto",
+    paddingBottom: "40px",
+    scrollBehavior: "smooth",
+    width: "100%",
+    justifyContent: "flex-start"
   });
   modal.appendChild(content);
 
   let unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
   let showUnlockedOnly = false;
 
-  // ---------- Render Cards ----------
+  // ---------- Render Video Cards ----------
   function renderCards(videosToRender) {
     content.innerHTML = "";
     const filtered = videosToRender.filter(v => !showUnlockedOnly || unlockedVideos.includes(v.id));
@@ -3472,6 +3513,7 @@ function showHighlightsModal(videos) {
       card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
       card.setAttribute("data-title", video.title || "");
 
+      // Video container
       const videoContainer = document.createElement("div");
       Object.assign(videoContainer.style, { height: "320px", overflow: "hidden", position: "relative" });
 
@@ -3491,6 +3533,7 @@ function showHighlightsModal(videos) {
         else showUnlockConfirm(video, () => renderCards(videos));
       };
 
+      // Info panel
       const infoPanel = document.createElement("div");
       Object.assign(infoPanel.style, { background: "#111", padding: "10px", display: "flex", flexDirection: "column", textAlign: "left", gap: "4px" });
 
@@ -3506,8 +3549,13 @@ function showHighlightsModal(videos) {
       const unlocked = unlockedVideos.includes(video.id);
       unlockBtn.textContent = unlocked ? "Unlocked ✅" : `Unlock ${video.highlightVideoPrice || 100} ⭐`;
       Object.assign(unlockBtn.style, {
-        background: unlocked ? "#444" : "#ff006e", border: "none", borderRadius: "6px",
-        padding: "8px 0", fontWeight: "600", color: "#fff", cursor: unlocked ? "default" : "pointer",
+        background: unlocked ? "#444" : "#ff006e",
+        border: "none",
+        borderRadius: "6px",
+        padding: "8px 0",
+        fontWeight: "600",
+        color: "#fff",
+        cursor: unlocked ? "default" : "pointer",
         transition: "background 0.2s"
       });
 
@@ -3517,7 +3565,8 @@ function showHighlightsModal(videos) {
         unlockBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           if (!currentUser?.uid) return showGoldAlert("Please log in to unlock content 🔒");
-          showUnlockConfirm(video, () => {
+          showUnlockConfirm(video, async () => {
+            await handleUnlockVideo(video);
             unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
             renderCards(videos);
           });
@@ -3560,7 +3609,26 @@ function showHighlightsModal(videos) {
   document.body.appendChild(modal);
 }
 
-// ---------- Unlock Helper ----------
+// ---------- Unlock Video Logic ----------
+async function handleUnlockVideo(video) {
+  const userId = currentUser.uid;
+  const videoRef = doc(db, "highlightVideos", video.id);
+
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(videoRef);
+    if (!snap.exists()) throw "Video does not exist!";
+    transaction.update(videoRef, { unlockedBy: arrayUnion(userId) });
+  });
+
+  // Update localStorage
+  let unlocked = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
+  if (!unlocked.includes(video.id)) {
+    unlocked.push(video.id);
+    localStorage.setItem("userUnlockedVideos", JSON.stringify(unlocked));
+  }
+}
+
+// ---------- Unlock Confirmation Modal ----------
 function showUnlockConfirm(video, onUnlockCallback) {
   document.querySelectorAll("video").forEach(v => v.pause());
   document.getElementById("unlockConfirmModal")?.remove();
@@ -3568,9 +3636,17 @@ function showUnlockConfirm(video, onUnlockCallback) {
   const modal = document.createElement("div");
   modal.id = "unlockConfirmModal";
   Object.assign(modal.style, {
-    position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
-    background: "rgba(0,0,0,0.93)", backdropFilter: "blur(8px)",
-    display: "flex", alignItems: "center", justifyContent: "center", zIndex: "1000001",
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    background: "rgba(0,0,0,0.93)",
+    backdropFilter: "blur(8px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: "1000001",
   });
 
   modal.innerHTML = `
@@ -3589,7 +3665,7 @@ function showUnlockConfirm(video, onUnlockCallback) {
   modal.querySelector("#confirmUnlock").onclick = async () => {
     modal.remove();
     await handleUnlockVideo(video);
-    onUnlockCallback?.();
+    if (onUnlockCallback) onUnlockCallback();
   };
 }
 
