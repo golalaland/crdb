@@ -2083,32 +2083,43 @@ giftSlider.addEventListener("input", () => {
   giftSlider.style.background = randomFieryGradient(); // change fiery color as it slides
 });
 
-/* ---------- Event Listeners ---------- */
+
+/* ---------- Safe Star Hosts Modal Open ---------- */
 openBtn.addEventListener("click", () => {
   if (!hosts.length) {
-    alert("No featured hosts available yet!");
+    showGiftAlert("⚠️ No featured hosts available yet!");
     return;
   }
 
+  // Load the current host safely
   loadHost(currentIndex);
-  modal.style.display = "flex"; // show modal centered
+
+  // Show modal centered
+  modal.style.display = "flex";
   modal.style.justifyContent = "center";
   modal.style.alignItems = "center";
+
+  // Optional: fiery gradient for gift slider
+  if (giftSlider) {
+    giftSlider.style.background = randomFieryGradient();
+  }
+
   console.log("📺 Modal opened");
 });
 
+/* ---------- Close modal logic ---------- */
 closeModal.addEventListener("click", () => {
-  modal.style.display = "none"; // hide modal on close
+  modal.style.display = "none";
   console.log("❎ Modal closed");
 });
 
-window.addEventListener("click", e => {
+// Click outside modal closes it
+window.addEventListener("click", (e) => {
   if (e.target === modal) {
-    modal.style.display = "none"; // click outside closes modal
+    modal.style.display = "none";
     console.log("🪟 Modal dismissed");
   }
 });
-
 /* ===============================
    🎁 Send Gift + Dual Notification
 ================================= */
