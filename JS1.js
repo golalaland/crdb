@@ -3749,25 +3749,59 @@ async function handleUnlockVideo(video) {
     showGoldAlert(`⚠️ ${err.message}`);
   }
 }
-// ---------- Play Full Video Modal ----------
+// ---------- Play Full Video Modal with Zoom Animation ----------
 function playFullVideo(video) {
   const modal = document.createElement("div");
   Object.assign(modal.style, {
-    position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
     background: "rgba(0,0,0,0.95)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    zIndex: "1000002"
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: "1000002",
+    overflow: "hidden",
+    opacity: "0",
+    transition: "opacity 0.25s ease"
+  });
+
+  const vidWrapper = document.createElement("div");
+  Object.assign(vidWrapper.style, {
+    transform: "scale(0.7)",         // start smaller
+    transformOrigin: "center center",
+    transition: "transform 0.25s ease",
+    borderRadius: "12px",
+    overflow: "hidden"
   });
 
   const vid = document.createElement("video");
   vid.src = video.highlightVideo;
   vid.controls = true;
   vid.autoplay = true;
-  vid.style.maxWidth = "90%";
-  vid.style.maxHeight = "90%";
-  vid.style.borderRadius = "12px";
+  vid.style.maxWidth = "100%";
+  vid.style.maxHeight = "100%";
+  vid.style.display = "block";
 
-  modal.appendChild(vid);
-  modal.onclick = () => modal.remove();
+  vidWrapper.appendChild(vid);
+  modal.appendChild(vidWrapper);
   document.body.appendChild(modal);
+
+  // Animate in
+  requestAnimationFrame(() => {
+    modal.style.opacity = "1";
+    vidWrapper.style.transform = "scale(0.85)";  // 85% zoom
+  });
+
+  // Click outside video closes modal
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      // Animate out
+      vidWrapper.style.transform = "scale(0.7)";
+      modal.style.opacity = "0";
+      setTimeout(() => modal.remove(), 250);
+    }
+  };
 }
