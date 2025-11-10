@@ -1,8 +1,3 @@
-/* ---------- Imports (Firebase v10) ---------- */
-import { 
-  initializeApp 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-
 import { 
   getFirestore, 
   doc, 
@@ -18,16 +13,9 @@ import {
   increment, 
   getDocs, 
   where,
-  runTransaction
+  runTransaction,
+  arrayUnion       // <-- add this line
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-import { 
-  getDatabase, 
-  ref as rtdbRef, 
-  set as rtdbSet, 
-  onDisconnect, 
-  onValue 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 import { 
   getAuth, 
