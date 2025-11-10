@@ -1099,27 +1099,34 @@ function startStarEarning(uid) {
 const todayDate = () => new Date().toISOString().split("T")[0];
 const sleep = ms => new Promise(res => setTimeout(res, ms));
 
+
 /* ===============================
-   🧠 UI Updates After Auth
+   🧠 UI Updates After Auth (Improved)
 ================================= */
 function updateUIAfterAuth(user) {
   const subtitle = document.getElementById("roomSubtitle");
   const helloText = document.getElementById("helloText");
   const roomDescText = document.querySelector(".room-desc .text");
   const hostsBtn = document.getElementById("openHostsBtn");
+  const loginBar = document.getElementById("loginBar"); // adjust if different ID
+
+  // Keep Star Hosts button always visible
+  if (hostsBtn) hostsBtn.style.display = "block";
 
   if (user) {
-    // Hide intro texts and show host button
+    // Hide intro texts only for logged-in users
     if (subtitle) subtitle.style.display = "none";
     if (helloText) helloText.style.display = "none";
     if (roomDescText) roomDescText.style.display = "none";
-    if (hostsBtn) hostsBtn.style.display = "block";
+
+    if (loginBar) loginBar.style.display = "flex";
   } else {
-    // Restore intro texts and hide host button
+    // Show intro texts for guests
     if (subtitle) subtitle.style.display = "block";
     if (helloText) helloText.style.display = "block";
     if (roomDescText) roomDescText.style.display = "block";
-    if (hostsBtn) hostsBtn.style.display = "none";
+
+    if (loginBar) loginBar.style.display = "flex";
   }
 }
 
