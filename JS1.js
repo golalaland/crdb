@@ -3562,29 +3562,19 @@ function showHighlightsModal(videos) {
 
   document.body.appendChild(modal);
 }
-
-// ---------- Unlock Video Logic ----------
-async function handleUnlockVideo(video) {
-  const userId = currentUser.uid;
-  const videoRef = doc(db, "highlightVideos", video.id);
-
-  await runTransaction(db, async (transaction) => {
-    const snap = await transaction.get(videoRef);
-    if (!snap.exists()) throw "Video does not exist!";
-    transaction.update(videoRef, { unlockedBy: arrayUnion(userId) });
-  });
-
-  // Update localStorage
-  let unlocked = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
-  if (!unlocked.includes(video.id)) {
-    unlocked.push(video.id);
-    localStorage.setItem("userUnlockedVideos", JSON.stringify(unlocked));
-  }
+// ---------- Sorting helper ----------
+function sortVideos(videos, mode="all"){
+  const unlockedIds = JSON.parse(localStorage.getItem("userUnlockedVideos")||"[]");
+  if(mode==="unlocked") return videos.filter(v=>unlockedIds.includes(v.id));
+  if(mode==="locked") return videos.filter(v=>!unlockedIds.includes(v.id));
+  return videos;
 }
 
-// ---------- Unlock Confirmation Modal ----------
 function showUnlockConfirm(video, onUnlockCallback) {
+  // Stop any playing videos
   document.querySelectorAll("video").forEach(v => v.pause());
+
+  // Remove existing unlock modal
   document.getElementById("unlockConfirmModal")?.remove();
 
   const modal = document.createElement("div");
@@ -3601,6 +3591,7 @@ function showUnlockConfirm(video, onUnlockCallback) {
     alignItems: "center",
     justifyContent: "center",
     zIndex: "1000001",
+    opacity: "1",
   });
 
   modal.innerHTML = `
@@ -3613,9 +3604,13 @@ function showUnlockConfirm(video, onUnlockCallback) {
       </div>
     </div>
   `;
+
   document.body.appendChild(modal);
 
+  // Cancel button
   modal.querySelector("#cancelUnlock").onclick = () => modal.remove();
+
+  // Confirm button
   modal.querySelector("#confirmUnlock").onclick = async () => {
     modal.remove();
     await handleUnlockVideo(video);
