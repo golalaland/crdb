@@ -3349,7 +3349,7 @@ checkScroll(); // initial check
 }); // ✅ closes DOMContentLoaded event listener
 
 
-// ---------- Highlights Button ----------
+/* ---------- Highlights Button ---------- */
 highlightsBtn.onclick = async () => {
   try {
     if (!currentUser?.uid) {
@@ -3392,7 +3392,7 @@ highlightsBtn.onclick = async () => {
   }
 };
 
-// ---------- Highlights Modal ----------
+/* ---------- Highlights Modal ---------- */
 function showHighlightsModal(videos) {
   document.getElementById("highlightsModal")?.remove();
 
@@ -3560,7 +3560,8 @@ function showHighlightsModal(videos) {
 
   document.body.appendChild(modal);
 }
-// ---------- Sorting helper ----------
+
+/* ---------- Sorting helper ---------- */
 function sortVideos(videos, mode="all"){
   const unlockedIds = JSON.parse(localStorage.getItem("userUnlockedVideos")||"[]");
   if(mode==="unlocked") return videos.filter(v=>unlockedIds.includes(v.id));
@@ -3568,11 +3569,9 @@ function sortVideos(videos, mode="all"){
   return videos;
 }
 
+/* ---------- Unlock Confirm Modal ---------- */
 function showUnlockConfirm(video, onUnlockCallback) {
-  // Stop any playing videos
   document.querySelectorAll("video").forEach(v => v.pause());
-
-  // Remove existing unlock modal
   document.getElementById("unlockConfirmModal")?.remove();
 
   const modal = document.createElement("div");
@@ -3605,10 +3604,7 @@ function showUnlockConfirm(video, onUnlockCallback) {
 
   document.body.appendChild(modal);
 
-  // Cancel button
   modal.querySelector("#cancelUnlock").onclick = () => modal.remove();
-
-  // Confirm button
   modal.querySelector("#confirmUnlock").onclick = async () => {
     modal.remove();
     await handleUnlockVideo(video);
@@ -3616,44 +3612,53 @@ function showUnlockConfirm(video, onUnlockCallback) {
   };
 }
 
-// ---------- Unlock logic ----------
+/* ---------- Unlock Logic ---------- */
 async function handleUnlockVideo(video){
   try{
-    const senderId=currentUser.uid, receiverId=video.uploaderId, starsToDeduct=parseInt(video.highlightVideoPrice,10)||0;
-    if(!starsToDeduct||starsToDeduct<=0) return showGoldAlert("Invalid unlock price ❌");
-    if(senderId===receiverId) return showGoldAlert("You can’t unlock your own video 😅");
+    const senderId = currentUser.uid;
+    const receiverId = video.uploaderId;
+    const starsToDeduct = parseInt(video.highlightVideoPrice,10) || 0;
 
-    const senderRef=doc(db,"users",senderId), receiverRef=doc(db,"users",receiverId), videoRef=doc(db,"highlightVideos",video.id);
+    if(!starsToDeduct || starsToDeduct <= 0) return showGoldAlert("Invalid unlock price ❌");
+    if(senderId === receiverId) return showGoldAlert("You can’t unlock your own video 😅");
 
-    await runTransaction(db, async tx=>{
-      const senderSnap=await tx.get(senderRef), receiverSnap=await tx.get(receiverRef), videoSnap=await tx.get(videoRef);
+    const senderRef = doc(db, "users", senderId);
+    const receiverRef = doc(db, "users", receiverId);
+    const videoRef = doc(db, "highlightVideos", video.id);
+
+    await runTransaction(db, async tx => {
+      const senderSnap = await tx.get(senderRef);
+      const receiverSnap = await tx.get(receiverRef);
+      const videoSnap = await tx.get(videoRef);
+
       if(!senderSnap.exists()) throw new Error("User record not found.");
-      if(!receiverSnap.exists()) tx.set(receiverRef,{stars:0},{merge:true});
-      const senderData=senderSnap.data();
-      if((senderData.stars||0)<starsToDeduct) throw new Error("Insufficient stars ⭐");
+      if(!receiverSnap.exists()) tx.set(receiverRef, { stars: 0 }, { merge: true });
 
-      tx.update(senderRef,{stars:increment(-starsToDeduct)});
-      tx.update(receiverRef,{stars:increment(starsToDeduct)});
+      const senderData = senderSnap.data();
+      if((senderData.stars || 0) < starsToDeduct) throw new Error("Insufficient stars ⭐");
+
+      tx.update(senderRef, { stars: increment(-starsToDeduct) });
+      tx.update(receiverRef, { stars: increment(starsToDeduct) });
 
       // Add sender info to video unlockedBy
-      tx.update(videoRef,{ unlockedBy: arrayUnion({ userId: senderId, chatId: currentUser.chatId||"unknown", unlockedAt: serverTimestamp() }) });
+      tx.update(videoRef, { unlockedBy: arrayUnion({ userId: senderId, chatId: currentUser.chatId || "unknown", unlockedAt: serverTimestamp() }) });
 
       // Add video to user unlockedVideos
-      tx.update(senderRef,{ unlockedVideos: arrayUnion(video.id) });
+      tx.update(senderRef, { unlockedVideos: arrayUnion(video.id) });
     });
 
     // LocalStorage for quick UI
-    const unlockedIds=JSON.parse(localStorage.getItem("userUnlockedVideos")||"[]");
+    const unlockedIds = JSON.parse(localStorage.getItem("userUnlockedVideos")||"[]");
     if(!unlockedIds.includes(video.id)) unlockedIds.push(video.id);
     localStorage.setItem("userUnlockedVideos", JSON.stringify(unlockedIds));
-    localStorage.setItem(`unlocked_${video.id}`,"true");
+    localStorage.setItem(`unlocked_${video.id}`, "true");
 
     showGoldAlert(`✅ You unlocked ${video.uploaderName}'s video for ${starsToDeduct} ⭐`);
     document.getElementById("highlightsModal")?.remove();
     showHighlightsModal([video]);
 
   }catch(err){
-    console.error("❌ Unlock failed:",err);
+    console.error("❌ Unlock failed:", err);
     showGoldAlert(`⚠️ ${err.message}`);
   }
 }
