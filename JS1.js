@@ -3431,125 +3431,62 @@ function showHighlightsModal(videos) {
     intro.style.opacity = modal.scrollTop > 50 ? "0.7" : "1";
   });
 
-  // Search + toggle bar
-  const searchWrap = document.createElement("div");
-  Object.assign(searchWrap.style, { position: "sticky", top: "84px", zIndex: "1001", marginBottom: "20px", display: "flex", gap: "8px", justifyContent: "center" });
-  searchWrap.innerHTML = `
-    <div style="display:flex;align-items:center;background:rgba(255,255,255,0.08);border-radius:30px;padding:8px 14px;width:280px;backdrop-filter:blur(6px);box-shadow:0 0 10px rgba(0,0,0,0.25);">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M15 15L21 21M10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10C17 13.866 13.866 17 10 17Z" stroke="#999999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <input id="highlightSearchInput" type="text" placeholder="Search by creator..." style="flex:1;background:transparent;border:none;outline:none;color:#fff;font-size:13px;letter-spacing:0.3px;"/>
-    </div>
-    <button id="toggleLocked" style="padding:6px 12px;border-radius:8px;background:#444;color:#fff;border:none;font-size:13px;cursor:pointer;">Show Unlocked</button>
-  `;
-  modal.appendChild(searchWrap);
+// Search + toggle wrapper
+const searchWrap = document.createElement("div");
+Object.assign(searchWrap.style, {
+  position: "sticky",
+  top: "84px",
+  zIndex: "1001",
+  marginBottom: "20px",
+  display: "flex",
+  flexDirection: "column", // stack search + toggle vertically
+  alignItems: "center",
+  gap: "6px"
+});
 
-  const content = document.createElement("div");
-  Object.assign(content.style, { display:"flex", gap:"16px", flexWrap:"nowrap", overflowX:"auto", paddingBottom:"40px", scrollBehavior:"smooth", width:"100%", justifyContent:"flex-start" });
-  modal.appendChild(content);
+// Search input container
+const searchInputWrap = document.createElement("div");
+searchInputWrap.style.cssText = `
+  display:flex;
+  align-items:center;
+  background:rgba(255,255,255,0.08);
+  border-radius:30px;
+  padding:8px 14px;
+  width:280px;
+  backdrop-filter:blur(6px);
+  box-shadow:0 0 10px rgba(0,0,0,0.25);
+`;
+searchInputWrap.innerHTML = `
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M15 15L21 21M10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10C17 13.866 13.866 17 10 17Z" stroke="#999999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <input id="highlightSearchInput" type="text" placeholder="Search by creator..." style="flex:1;background:transparent;border:none;outline:none;color:#fff;font-size:13px;letter-spacing:0.3px;"/>
+`;
+searchWrap.appendChild(searchInputWrap);
 
-  let unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
-  let showUnlockedOnly = false;
+// Tiny toggle button underneath
+const toggleBtn = document.createElement("button");
+toggleBtn.id = "toggleLocked";
+toggleBtn.textContent = "Show Unlocked";
+Object.assign(toggleBtn.style, {
+  padding: "4px 10px",
+  borderRadius: "6px",
+  background: "#444",
+  color: "#fff",
+  border: "none",
+  fontSize: "12px",
+  cursor: "pointer"
+});
+searchWrap.appendChild(toggleBtn);
 
-  function renderCards(videosToRender) {
-    content.innerHTML = "";
-    const filtered = videosToRender.filter(v => !showUnlockedOnly || unlockedVideos.includes(v.id));
+modal.appendChild(searchWrap);
 
-    filtered.forEach(video => {
-      const card = document.createElement("div");
-      Object.assign(card.style, {
-        minWidth: "230px", maxWidth: "230px", background: "#1b1b1b", borderRadius: "12px",
-        overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between",
-        cursor: "pointer", flexShrink: 0, boxShadow: "0 2px 12px rgba(0,0,0,0.5)", transition: "transform 0.2s ease"
-      });
-      card.onmouseenter = () => card.style.transform = "scale(1.03)";
-      card.onmouseleave = () => card.style.transform = "scale(1)";
-      card.classList.add("videoCard");
-      card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
-      card.setAttribute("data-title", video.title || "");
-
-      const videoContainer = document.createElement("div");
-      Object.assign(videoContainer.style, { height: "320px", overflow: "hidden", position: "relative" });
-
-      const videoEl = document.createElement("video");
-      videoEl.src = video.previewClip || video.highlightVideo;
-      videoEl.muted = true; videoEl.controls = false; videoEl.loop = true; videoEl.preload = "metadata";
-      videoEl.poster = video.thumbnail || `https://image-thumbnails-service/?video=${encodeURIComponent(video.highlightVideo)}&blur=10`;
-      Object.assign(videoEl.style, { width: "100%", height: "100%", objectFit: "cover" });
-      videoContainer.appendChild(videoEl);
-
-      videoContainer.onmouseenter = () => { if(!unlockedVideos.includes(video.id)) videoEl.play(); };
-      videoContainer.onmouseleave = () => { videoEl.pause(); videoEl.currentTime = 0; };
-
-      videoContainer.onclick = (e) => {
-        e.stopPropagation();
-        if (unlockedVideos.includes(video.id)) playFullVideo(video);
-        else showUnlockConfirm(video, () => renderCards(videos));
-      };
-
-      const infoPanel = document.createElement("div");
-      Object.assign(infoPanel.style, { background: "#111", padding: "10px", display: "flex", flexDirection: "column", textAlign: "left", gap: "4px" });
-
-      const vidTitle = document.createElement("div");
-      vidTitle.textContent = video.title || "Untitled";
-      Object.assign(vidTitle.style, { fontWeight: "700", color: "#fff", fontSize: "14px" });
-
-      const uploader = document.createElement("div");
-      uploader.textContent = `By: ${video.uploaderName || "Anonymous"}`;
-      Object.assign(uploader.style, { fontSize: "12px", color: "#bbb" });
-
-      const unlockBtn = document.createElement("button");
-      const unlocked = unlockedVideos.includes(video.id);
-      unlockBtn.textContent = unlocked ? "Unlocked ✅" : `Unlock ${video.highlightVideoPrice || 100} ⭐`;
-      Object.assign(unlockBtn.style, {
-        background: unlocked ? "#444" : "#ff006e",
-        border: "none",
-        borderRadius: "6px",
-        padding: "8px 0",
-        fontWeight: "600",
-        color: "#fff",
-        cursor: unlocked ? "default" : "pointer",
-        transition: "background 0.2s"
-      });
-
-      if (!unlocked) {
-        unlockBtn.addEventListener("mouseenter", () => unlockBtn.style.background = "#ff3385");
-        unlockBtn.addEventListener("mouseleave", () => unlockBtn.style.background = "#ff006e");
-        unlockBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          if (!currentUser?.uid) return showGoldAlert("Please log in to unlock content 🔒");
-          showUnlockConfirm(video, () => {
-            unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
-            renderCards(videos);
-          });
-        });
-      } else unlockBtn.disabled = true;
-
-      infoPanel.append(vidTitle, uploader, unlockBtn);
-      card.append(videoContainer, infoPanel);
-      content.appendChild(card);
-    });
-  }
-
+// Toggle button logic
+toggleBtn.addEventListener("click", () => {
+  showUnlockedOnly = !showUnlockedOnly;
+  toggleBtn.textContent = showUnlockedOnly ? "Show All" : "Show Unlocked";
   renderCards(videos);
-
-  // Search filter
-  searchWrap.querySelector("#highlightSearchInput").addEventListener("input", e => {
-    const term = e.target.value.trim().toLowerCase();
-    content.querySelectorAll(".videoCard").forEach(card => {
-      const uploader = card.getAttribute("data-uploader")?.toLowerCase() || "";
-      const title = card.getAttribute("data-title")?.toLowerCase() || "";
-      card.style.display = (uploader.includes(term) || title.includes(term)) ? "flex" : "none";
-    });
-  });
-
-  // Toggle button
-  searchWrap.querySelector("#toggleLocked").addEventListener("click", () => {
-    showUnlockedOnly = !showUnlockedOnly;
-    searchWrap.querySelector("#toggleLocked").textContent = showUnlockedOnly ? "Show All" : "Show Unlocked";
-    renderCards(videos);
-  });
+});
 
   // Close button
   const closeBtn = document.createElement("div");
