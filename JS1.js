@@ -289,29 +289,48 @@ function showStarPopup(text) {
 
 
 /* ----------------------------
-   ⭐ GIFT MODAL / CHAT BANNER ALERT
+   ⭐ GIFT MODAL / CHAT BANNER ALERT (Safe)
 ----------------------------- */
 async function showGiftModal(targetUid, targetData) {
+  // Stop if required info is missing
+  if (!targetUid || !targetData) return;
+
   const modal = document.getElementById("giftModal");
   const titleEl = document.getElementById("giftModalTitle");
   const amountInput = document.getElementById("giftAmountInput");
   const confirmBtn = document.getElementById("giftConfirmBtn");
   const closeBtn = document.getElementById("giftModalClose");
 
-  if (!modal || !titleEl || !amountInput || !confirmBtn) return;
+  // Make sure modal elements exist
+  if (!modal || !titleEl || !amountInput || !confirmBtn || !closeBtn) {
+    console.warn("❌ Gift modal elements not found — skipping open");
+    return;
+  }
 
-  titleEl.textContent = `Gift ⭐️`;
+  // 🧩 Reset content before showing
+  titleEl.textContent = "Gift ⭐️";
   amountInput.value = "";
-  modal.style.display = "flex";
 
-  const close = () => (modal.style.display = "none");
+  // 🚫 Don't auto-show at startup; only show when function is called intentionally
+  requestAnimationFrame(() => {
+    modal.style.display = "flex";
+  });
+
+  // 🔒 Safe close logic
+  const close = () => {
+    modal.style.display = "none";
+  };
+
   closeBtn.onclick = close;
-  modal.onclick = (e) => { if (e.target === modal) close(); };
+  modal.onclick = (e) => {
+    if (e.target === modal) close();
+  };
 
-  // Remove previous click listeners
+  // Remove previous click listeners on confirm button
   const newConfirmBtn = confirmBtn.cloneNode(true);
   confirmBtn.replaceWith(newConfirmBtn);
 
+  // ✅ Confirm button handler
   newConfirmBtn.addEventListener("click", async () => {
     const amt = parseInt(amountInput.value) || 0;
     if (amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
@@ -341,10 +360,11 @@ async function showGiftModal(targetUid, targetData) {
     showStarPopup(`You sent ${amt} stars ⭐️ to ${targetData.chatId}!`);
     close();
 
-    // Render banner; confetti/glow handled only once in renderer
+    // Add the banner message visually
     renderMessagesFromArray([{ id: docRef.id, data: messageData }]);
   });
 }
+
 /* ---------- Gift Alert (Optional Popup) ---------- */
 function showGiftAlert(text) {
   const alertEl = document.getElementById("giftAlert");
