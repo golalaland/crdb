@@ -3781,8 +3781,8 @@ function playFullVideo(video) {
   vid.src = video.highlightVideo;
   vid.controls = true;
   vid.autoplay = true;
-  vid.style.maxWidth = "100%";
-  vid.style.maxHeight = "100%";
+  vid.style.maxWidth = "96%";
+  vid.style.maxHeight = "96%";
   vid.style.display = "block";
 
   vidWrapper.appendChild(vid);
