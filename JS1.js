@@ -3007,237 +3007,179 @@ await addDoc(notifRef, {
 })(); // ✅ closes IIFE
 
 
-// ========== 🟣 HOST SETTINGS LOGIC ==========
+
 const isHost = true; // <-- later dynamic
-const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
-const hostModal = document.getElementById("hostModal");
-const hostSettingsBtn = document.getElementById("hostSettingsBtn");
-const closeModal = hostModal?.querySelector(".close");
 
-if (isHost && hostSettingsWrapper) hostSettingsWrapper.style.display = "block";
+if (isHost) {
+  document.addEventListener("DOMContentLoaded", () => {
+    // 🟣 HOST SETTINGS LOGIC
+    const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
+    const hostModal = document.getElementById("hostModal");
+    const hostSettingsBtn = document.getElementById("hostSettingsBtn");
+    const closeModal = hostModal?.querySelector(".close");
 
-if (hostSettingsBtn && hostModal && closeModal) {
-  hostSettingsBtn.onclick = async () => {
-    hostModal.style.display = "block";
+    if (hostSettingsWrapper) hostSettingsWrapper.style.display = "block";
 
-    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
+    if (hostSettingsBtn && hostModal && closeModal) {
+      hostSettingsBtn.onclick = async () => {
+        hostModal.style.display = "block";
 
-    // Populate fields from Firestore (kept blank until user edits)
-    const userRef = doc(db, "users", currentUser.uid);
-    const snap = await getDoc(userRef);
-    if (!snap.exists()) return showStarPopup("⚠️ User data not found.");
+        if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
 
-    const data = snap.data();
-    document.getElementById("fullName").value = data.fullName || "";
-    document.getElementById("city").value = data.city || "";
-    document.getElementById("location").value = data.location || "";
-    document.getElementById("bio").value = data.bioPick || "";
-    document.getElementById("bankAccountNumber").value = data.bankAccountNumber || "";
-    document.getElementById("bankName").value = data.bankName || "";
-    document.getElementById("telegram").value = data.telegram || "";
-    document.getElementById("tiktok").value = data.tiktok || "";
-    document.getElementById("whatsapp").value = data.whatsapp || "";
-    document.getElementById("instagram").value = data.instagram || "";
+        const userRef = doc(db, "users", currentUser.uid);
+        const snap = await getDoc(userRef);
+        if (!snap.exists()) return showStarPopup("⚠️ User data not found.");
 
-    // Update photo preview if exists
-    if (data.popupPhoto) {
-      const photoPreview = document.getElementById("photoPreview");
-      const photoPlaceholder = document.getElementById("photoPlaceholder");
-      photoPreview.src = data.popupPhoto;
-      photoPreview.style.display = "block";
-      photoPlaceholder.style.display = "none";
+        const data = snap.data();
+        const ids = ["fullName","city","location","bio","bankAccountNumber","bankName","telegram","tiktok","whatsapp","instagram"];
+        ids.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = data[id] || data[id+"Pick"] || "";
+        });
+
+        if (data.popupPhoto) {
+          const photoPreview = document.getElementById("photoPreview");
+          const photoPlaceholder = document.getElementById("photoPlaceholder");
+          if (photoPreview && photoPlaceholder) {
+            photoPreview.src = data.popupPhoto;
+            photoPreview.style.display = "block";
+            photoPlaceholder.style.display = "none";
+          }
+        }
+      };
+
+      closeModal.onclick = () => hostModal.style.display = "none";
+      window.onclick = (e) => { if (e.target === hostModal) hostModal.style.display = "none"; };
     }
-  };
 
-  closeModal.onclick = () => (hostModal.style.display = "none");
-  window.onclick = (e) => {
-    if (e.target === hostModal) hostModal.style.display = "none";
-  };
-}
+    // 🟠 TAB LOGIC
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.onclick = () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach(tab => tab.style.display = "none");
+        btn.classList.add("active");
+        const tabContent = document.getElementById(btn.dataset.tab);
+        if (tabContent) tabContent.style.display = "block";
+      };
+    });
 
-// ========== 🟠 TAB LOGIC ==========
-document.querySelectorAll(".tab-btn").forEach((btn) => {
-  btn.onclick = () => {
-    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach((tab) => (tab.style.display = "none"));
-    btn.classList.add("active");
-    document.getElementById(btn.dataset.tab).style.display = "block";
-  };
-});
-
-// ========== 🖼️ PHOTO PREVIEW ==========
-document.addEventListener("change", (e) => {
-  if (e.target.id === "popupPhoto") {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const photoPreview = document.getElementById("photoPreview");
-      const photoPlaceholder = document.getElementById("photoPlaceholder");
-      if (photoPreview && photoPlaceholder) {
-        photoPreview.src = reader.result;
-        photoPreview.style.display = "block";
-        photoPlaceholder.style.display = "none";
+    // 🖼️ PHOTO PREVIEW
+    document.addEventListener("change", (e) => {
+      if (e.target.id === "popupPhoto") {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const photoPreview = document.getElementById("photoPreview");
+          const photoPlaceholder = document.getElementById("photoPlaceholder");
+          if (photoPreview && photoPlaceholder) {
+            photoPreview.src = reader.result;
+            photoPreview.style.display = "block";
+            photoPlaceholder.style.display = "none";
+          }
+        };
+        reader.readAsDataURL(file);
       }
-    };
-    reader.readAsDataURL(file);
-  }
-});
+    });
 
-// ========== 📝 SAVE INFO & MEDIA HANDLER ==========
-const saveInfoBtn = document.getElementById("saveInfo");
-const saveMediaBtn = document.getElementById("saveMedia");
+    // 📝 SAVE INFO & MEDIA HANDLER
+    const saveInfoBtn = document.getElementById("saveInfo");
+    const saveMediaBtn = document.getElementById("saveMedia");
 
+    async function updateFirestoreDoc(userId, data) {
+      const userRef = doc(db, "users", userId);
+      const filteredData = Object.fromEntries(
+        Object.entries(data).filter(([_, value]) => value !== undefined)
+      );
+      await updateDoc(userRef, { ...filteredData, lastUpdated: serverTimestamp() });
 
-// -------- Firestore update helper --------
-async function updateFirestoreDoc(userId, data) {
-  const userRef = doc(db, "users", userId);
-
-  // Only filter undefined (allow clearing fields to "")
-  const filteredData = Object.fromEntries(
-    Object.entries(data).filter(([_, value]) => value !== undefined)
-  );
-
-  await updateDoc(userRef, { ...filteredData, lastUpdated: serverTimestamp() });
-
-  // Sync to featuredHosts if doc exists
-  const hostRef = doc(db, "featuredHosts", userId);
-  const hostSnap = await getDoc(hostRef);
-  if (hostSnap.exists()) {
-    await updateDoc(hostRef, { ...filteredData, lastUpdated: serverTimestamp() });
-  }
-}
-
-// -------- Save Info --------
-if (saveInfoBtn) {
-  saveInfoBtn.onclick = async () => {
-    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
-
-    const fullName = document.getElementById("fullName")?.value || "";
-    const city = document.getElementById("city")?.value || "";
-    const location = document.getElementById("location")?.value || "";
-    const bio = document.getElementById("bio")?.value || "";
-    const bankAccountNumber = document.getElementById("bankAccountNumber")?.value || "";
-    const bankName = document.getElementById("bankName")?.value || "";
-    const telegram = document.getElementById("telegram")?.value || "";
-    const tiktok = document.getElementById("tiktok")?.value || "";
-    const whatsapp = document.getElementById("whatsapp")?.value || "";
-    const instagram = document.getElementById("instagram")?.value || "";
-    const naturePickEl = document.getElementById("naturePick");
-    const fruitPickEl = document.getElementById("fruitPick");
-    const naturePick = naturePickEl?.value || "";
-    const fruitPick = fruitPickEl?.value || "";
-
-    if (bankAccountNumber && !/^\d{1,11}$/.test(bankAccountNumber)) {
-      return showStarPopup("⚠️ Bank account number must be digits only (max 11).");
-    }
-    if (whatsapp && !/^\d+$/.test(whatsapp)) {
-      return showStarPopup("⚠️ WhatsApp number must be numbers only.");
-    }
-
-    const dataToUpdate = {
-      fullName: fullName ? fullName.replace(/\b\w/g, l => l.toUpperCase()) : "",
-      city,
-      location,
-      bioPick: bio,
-      bankAccountNumber,
-      bankName,
-      telegram,
-      tiktok,
-      whatsapp,
-      instagram,
-      naturePick,
-      fruitPick
-    };
-
-    // ---------- Tiny centered spinner ----------
-    const originalHTML = saveInfoBtn.innerHTML;
-    saveInfoBtn.innerHTML = `
-      <div class="spinner" style="
-        width:12px;
-        height:12px;
-        border:2px solid #fff;
-        border-top-color:transparent;
-        border-radius:50%;
-        animation: spin 0.6s linear infinite;
-        margin:auto;
-      "></div>
-    `;
-    saveInfoBtn.disabled = true;
-    saveInfoBtn.style.display = "flex";
-    saveInfoBtn.style.alignItems = "center";
-    saveInfoBtn.style.justifyContent = "center";
-
-    try {
-      await updateFirestoreDoc(currentUser.uid, dataToUpdate);
-      showStarPopup("✅ Profile updated successfully!");
-
-      // Keep dropdown selections visible
-      if (naturePickEl) naturePickEl.value = naturePick;
-      if (fruitPickEl) fruitPickEl.value = fruitPick;
-
-      document.querySelectorAll("#mediaTab input, #mediaTab textarea, #mediaTab select")
-              .forEach(input => input.blur());
-    } catch (err) {
-      console.error("❌ Error updating Firestore:", err);
-      showStarPopup("⚠️ Failed to update info. Please try again.");
-    } finally {
-      saveInfoBtn.innerHTML = originalHTML;
-      saveInfoBtn.disabled = false;
-      saveInfoBtn.style.display = "";
-      saveInfoBtn.style.alignItems = "";
-      saveInfoBtn.style.justifyContent = "";
-    }
-  };
-}
-
-// -------- Save Media --------
-if (saveMediaBtn) {
-  saveMediaBtn.onclick = async () => {
-    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
-
-    const popupPhotoFile = document.getElementById("popupPhoto")?.files[0];
-    const uploadVideoFile = document.getElementById("uploadVideo")?.files[0];
-
-    if (!popupPhotoFile && !uploadVideoFile) {
-      return showStarPopup("⚠️ Please select a photo or video to upload.");
-    }
-
-    try {
-      showStarPopup("⏳ Uploading media...");
-
-      const formData = new FormData();
-      if (popupPhotoFile) formData.append("photo", popupPhotoFile);
-      if (uploadVideoFile) formData.append("video", uploadVideoFile);
-
-      const res = await fetch("/api/uploadShopify", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Upload failed. Check your network.");
-
-      const data = await res.json(); // { photoUrl: "...", videoUrl: "..." }
-
-      await updateFirestoreDoc(currentUser.uid, {
-        ...(data.photoUrl && { popupPhoto: data.photoUrl }),
-        ...(data.videoUrl && { videoUrl: data.videoUrl }),
-      });
-
-      // Update preview if photo exists
-      if (data.photoUrl) {
-        const photoPreview = document.getElementById("photoPreview");
-        const photoPlaceholder = document.getElementById("photoPlaceholder");
-        photoPreview.src = data.photoUrl;
-        photoPreview.style.display = "block";
-        photoPlaceholder.style.display = "none";
+      const hostRef = doc(db, "featuredHosts", userId);
+      const hostSnap = await getDoc(hostRef);
+      if (hostSnap.exists()) {
+        await updateDoc(hostRef, { ...filteredData, lastUpdated: serverTimestamp() });
       }
-
-      showStarPopup("✅ Media uploaded successfully!");
-      hostModal.style.display = "none";
-
-    } catch (err) {
-      console.error("❌ Media upload error:", err);
-      showStarPopup(`⚠️ Failed to upload media: ${err.message}`);
     }
-  };
-}
+
+    if (saveInfoBtn) {
+      saveInfoBtn.onclick = async () => {
+        if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
+        const fields = ["fullName","city","location","bio","bankAccountNumber","bankName","telegram","tiktok","whatsapp","instagram","naturePick","fruitPick"];
+        const dataToUpdate = {};
+        fields.forEach(f => {
+          const el = document.getElementById(f);
+          if (el) dataToUpdate[f==="bio"?"bioPick":f] = el.value || "";
+        });
+
+        if (dataToUpdate.bankAccountNumber && !/^\d{1,11}$/.test(dataToUpdate.bankAccountNumber))
+          return showStarPopup("⚠️ Bank account number must be digits only (max 11).");
+        if (dataToUpdate.whatsapp && !/^\d+$/.test(dataToUpdate.whatsapp))
+          return showStarPopup("⚠️ WhatsApp number must be numbers only.");
+
+        const originalHTML = saveInfoBtn.innerHTML;
+        saveInfoBtn.innerHTML = `<div class="spinner" style="width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation: spin 0.6s linear infinite;margin:auto;"></div>`;
+        saveInfoBtn.disabled = true;
+        saveInfoBtn.style.display = "flex";
+        saveInfoBtn.style.alignItems = "center";
+        saveInfoBtn.style.justifyContent = "center";
+
+        try {
+          await updateFirestoreDoc(currentUser.uid, dataToUpdate);
+          showStarPopup("✅ Profile updated successfully!");
+        } catch (err) {
+          console.error("❌ Error updating Firestore:", err);
+          showStarPopup("⚠️ Failed to update info. Please try again.");
+        } finally {
+          saveInfoBtn.innerHTML = originalHTML;
+          saveInfoBtn.disabled = false;
+          saveInfoBtn.style.display = "";
+          saveInfoBtn.style.alignItems = "";
+          saveInfoBtn.style.justifyContent = "";
+        }
+      };
+    }
+
+    if (saveMediaBtn) {
+      saveMediaBtn.onclick = async () => {
+        if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
+        const popupPhotoFile = document.getElementById("popupPhoto")?.files[0];
+        const uploadVideoFile = document.getElementById("uploadVideo")?.files[0];
+        if (!popupPhotoFile && !uploadVideoFile) return showStarPopup("⚠️ Please select a photo or video to upload.");
+
+        try {
+          showStarPopup("⏳ Uploading media...");
+          const formData = new FormData();
+          if (popupPhotoFile) formData.append("photo", popupPhotoFile);
+          if (uploadVideoFile) formData.append("video", uploadVideoFile);
+          const res = await fetch("/api/uploadShopify", { method: "POST", body: formData });
+          if (!res.ok) throw new Error("Upload failed. Check your network.");
+          const data = await res.json();
+          await updateFirestoreDoc(currentUser.uid, {
+            ...(data.photoUrl && { popupPhoto: data.photoUrl }),
+            ...(data.videoUrl && { videoUrl: data.videoUrl }),
+          });
+
+          if (data.photoUrl) {
+            const photoPreview = document.getElementById("photoPreview");
+            const photoPlaceholder = document.getElementById("photoPlaceholder");
+            if (photoPreview && photoPlaceholder) {
+              photoPreview.src = data.photoUrl;
+              photoPreview.style.display = "block";
+              photoPlaceholder.style.display = "none";
+            }
+          }
+
+          showStarPopup("✅ Media uploaded successfully!");
+          hostModal.style.display = "none";
+
+        } catch (err) {
+          console.error("❌ Media upload error:", err);
+          showStarPopup(`⚠️ Failed to upload media: ${err.message}`);
+        }
+      };
+    }
+
+  }); // DOMContentLoaded
+} // end isHost
 
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
