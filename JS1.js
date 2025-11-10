@@ -91,11 +91,25 @@ function pushNotificationTx(tx, userId, message) {
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
 
+  // 🔒 Prevent modals or popups from showing before login completes
+  const allModals = document.querySelectorAll(".featured-modal, #giftModal, #sessionModal");
+  allModals.forEach(m => (m.style.display = "none"));
+
   if (!user) {
     console.warn("⚠️ No logged-in user found");
     localStorage.removeItem("userId");
+
+    // Optionally hide protected UI elements until login succeeds
+    const secureSections = document.querySelectorAll(".after-login-only");
+    secureSections.forEach(el => (el.style.display = "none"));
+
     return;
   }
+
+  // ✅ Once logged in — safe to enable modals again
+  console.log("✅ User authenticated:", user.email);
+  const secureSections = document.querySelectorAll(".after-login-only");
+  secureSections.forEach(el => (el.style.display = ""));
 
   // ✅ 1. Define the sanitization helper
   const sanitizeEmail = (email) => email.replace(/\./g, ",");
