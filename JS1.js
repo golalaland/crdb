@@ -1,22 +1,24 @@
 /* ---------- Imports (Firebase v10) ---------- */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore,
-  doc,
-  setDoc,
-  getDoc,
-  updateDoc,
-  collection,
-  addDoc,
-  serverTimestamp,
-  onSnapshot,
-  query,
-  orderBy,
-  increment,
-  getDocs,
+import { 
+  initializeApp 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  updateDoc, 
+  collection, 
+  addDoc, 
+  serverTimestamp, 
+  onSnapshot, 
+  query, 
+  orderBy, 
+  increment, 
+  getDocs, 
   where,
-  runTransaction,
-  arrayUnion
+  runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { 
@@ -85,42 +87,28 @@ function pushNotificationTx(tx, userId, message) {
   });
 }
 
-/* ---------- Auth State Watcher (with Unlocked Sync + Notifications) ---------- */
+/* ---------- Auth State Watcher (Stable + Lazy Notifications) ---------- */
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
-
-  // 🔒 Hide modals until login completes
-  const allModals = document.querySelectorAll(".featured-modal, #giftModal, #sessionModal");
-  allModals.forEach(m => (m.style.display = "none"));
 
   if (!user) {
     console.warn("⚠️ No logged-in user found");
     localStorage.removeItem("userId");
-
-    // Hide protected sections
-    document.querySelectorAll(".after-login-only").forEach(el => (el.style.display = "none"));
     return;
   }
 
-  // ✅ Logged in user
-  console.log("✅ User authenticated:", user.email || user.uid);
-  document.querySelectorAll(".after-login-only").forEach(el => (el.style.display = ""));
-
-  // ---------- Sync unlocked videos across devices ----------
-  try {
-    await syncUserUnlocks(); // 🔁 Keeps unlocks consistent across browsers
-    console.log("🔄 Unlocked videos synced successfully.");
-  } catch (err) {
-    console.error("⚠️ Sync unlocks failed:", err);
-  }
-
-  // ---------- Notifications Setup ----------
+  // ✅ 1. Define the sanitization helper
   const sanitizeEmail = (email) => email.replace(/\./g, ",");
+
+  // ✅ 2. Generate and store the ID used for querying
   const userQueryId = sanitizeEmail(currentUser.email);
-  console.log("📩 Logged in as Sanitized ID:", userQueryId);
+  console.log("✅ Logged in as Sanitized ID:", userQueryId);
   localStorage.setItem("userId", userQueryId);
 
+  // ✅ 3. Reference the top-level 'notifications' collection
   const notifRef = collection(db, "notifications");
+
+  // ✅ 4. Define the query using the sanitized email ID
   const notifQuery = query(
     notifRef,
     where("userId", "==", userQueryId),
@@ -129,17 +117,18 @@ onAuthStateChanged(auth, async (user) => {
 
   let unsubscribe = null;
 
+  // ✅ 5. Initialize Notifications Listener
   async function initNotificationsListener() {
     const notificationsList = document.getElementById("notificationsList");
     if (!notificationsList) {
-      console.warn("⚠️ #notificationsList not found — retrying...");
+      console.warn("⚠️ #notificationsList not found yet — retrying...");
       setTimeout(initNotificationsListener, 500);
       return;
     }
 
     if (unsubscribe) unsubscribe(); // Prevent duplicate listeners
 
-    console.log("🔔 Setting up live notification listener for:", userQueryId);
+    console.log("🔔 Setting up live notification listener for ID:", userQueryId);
     unsubscribe = onSnapshot(
       notifQuery,
       (snapshot) => {
@@ -168,18 +157,20 @@ onAuthStateChanged(auth, async (user) => {
 
         notificationsList.innerHTML = items.join("");
       },
-      (error) => console.error("🔴 Firestore Listener Error:", error)
+      (error) => {
+        console.error("🔴 Firestore Listener Error:", error);
+      }
     );
   }
 
-  // Run notifications listener when DOM is ready
+  // ✅ 6. Initialize based on DOM state
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initNotificationsListener);
   } else {
     initNotificationsListener();
   }
 
-  // Re-init when Notifications tab opens
+  // ✅ 7. Re-run listener when user opens Notifications tab
   const notifTabBtn = document.querySelector('.tab-btn[data-tab="notificationsTab"]');
   if (notifTabBtn) {
     notifTabBtn.addEventListener("click", () => {
@@ -187,14 +178,15 @@ onAuthStateChanged(auth, async (user) => {
     });
   }
 
-  // Mark all notifications as read
+  // ✅ 8. Mark All As Read
   const markAllBtn = document.getElementById("markAllRead");
   if (markAllBtn) {
     markAllBtn.addEventListener("click", async () => {
       console.log("🟡 Marking all notifications as read...");
       const snapshot = await getDocs(query(notifRef, where("userId", "==", userQueryId)));
       for (const docSnap of snapshot.docs) {
-        await updateDoc(doc(db, "notifications", docSnap.id), { read: true });
+        const ref = doc(db, "notifications", docSnap.id);
+        await updateDoc(ref, { read: true });
       }
       alert("✅ All notifications marked as read.");
     });
@@ -297,48 +289,29 @@ function showStarPopup(text) {
 
 
 /* ----------------------------
-   ⭐ GIFT MODAL / CHAT BANNER ALERT (Safe)
+   ⭐ GIFT MODAL / CHAT BANNER ALERT
 ----------------------------- */
 async function showGiftModal(targetUid, targetData) {
-  // Stop if required info is missing
-  if (!targetUid || !targetData) return;
-
   const modal = document.getElementById("giftModal");
   const titleEl = document.getElementById("giftModalTitle");
   const amountInput = document.getElementById("giftAmountInput");
   const confirmBtn = document.getElementById("giftConfirmBtn");
   const closeBtn = document.getElementById("giftModalClose");
 
-  // Make sure modal elements exist
-  if (!modal || !titleEl || !amountInput || !confirmBtn || !closeBtn) {
-    console.warn("❌ Gift modal elements not found — skipping open");
-    return;
-  }
+  if (!modal || !titleEl || !amountInput || !confirmBtn) return;
 
-  // 🧩 Reset content before showing
-  titleEl.textContent = "Gift ⭐️";
+  titleEl.textContent = `Gift ⭐️`;
   amountInput.value = "";
+  modal.style.display = "flex";
 
-  // 🚫 Don't auto-show at startup; only show when function is called intentionally
-  requestAnimationFrame(() => {
-    modal.style.display = "flex";
-  });
-
-  // 🔒 Safe close logic
-  const close = () => {
-    modal.style.display = "none";
-  };
-
+  const close = () => (modal.style.display = "none");
   closeBtn.onclick = close;
-  modal.onclick = (e) => {
-    if (e.target === modal) close();
-  };
+  modal.onclick = (e) => { if (e.target === modal) close(); };
 
-  // Remove previous click listeners on confirm button
+  // Remove previous click listeners
   const newConfirmBtn = confirmBtn.cloneNode(true);
   confirmBtn.replaceWith(newConfirmBtn);
 
-  // ✅ Confirm button handler
   newConfirmBtn.addEventListener("click", async () => {
     const amt = parseInt(amountInput.value) || 0;
     if (amt < 100) return showStarPopup("🔥 Minimum gift is 100 ⭐️");
@@ -368,11 +341,10 @@ async function showGiftModal(targetUid, targetData) {
     showStarPopup(`You sent ${amt} stars ⭐️ to ${targetData.chatId}!`);
     close();
 
-    // Add the banner message visually
+    // Render banner; confetti/glow handled only once in renderer
     renderMessagesFromArray([{ id: docRef.id, data: messageData }]);
   });
 }
-
 /* ---------- Gift Alert (Optional Popup) ---------- */
 function showGiftAlert(text) {
   const alertEl = document.getElementById("giftAlert");
@@ -464,7 +436,7 @@ async function reportMessage(msgData) {
     if (reportSnap.exists()) {
       const data = reportSnap.data();
       if ((data.reportedBy || []).includes(reporterChatId)) {
-        return showStarPopup("You’ve already reported this message.", { type: "info" });
+        return alert("You’ve already reported this message.");
       }
       await updateDoc(reportRef, {
         reportCount: increment(1),
@@ -485,14 +457,10 @@ async function reportMessage(msgData) {
         status: "pending"
       });
     }
-
-    // ✅ Success popup
-    showStarPopup("✅ Report submitted!", { type: "success" });
-
+    alert("✅ Report submitted!");
   } catch (err) {
     console.error(err);
-    // ❌ Error popup
-    showStarPopup("❌ Error reporting message.", { type: "error" });
+    alert("❌ Error reporting message.");
   }
 }
 
@@ -542,22 +510,21 @@ function showTapModal(targetEl, msgData) {
   setTimeout(() => tapModalEl?.remove(), 3000);
 }
 
-// Banner glow only (no confetti)
+// Confetti / glow for banners
 function triggerBannerEffect(bannerEl) {
   bannerEl.style.animation = "bannerGlow 1s ease-in-out infinite alternate";
-
-  // ✅ Confetti removed
-  // const confetti = document.createElement("div");
-  // confetti.className = "confetti";
-  // confetti.style.position = "absolute";
-  // confetti.style.top = "-4px";
-  // confetti.style.left = "50%";
-  // confetti.style.width = "6px";
-  // confetti.style.height = "6px";
-  // confetti.style.background = "#fff";
-  // confetti.style.borderRadius = "50%";
-  // bannerEl.appendChild(confetti);
-  // setTimeout(() => confetti.remove(), 1500);
+  // Optional: simple confetti particles
+  const confetti = document.createElement("div");
+  confetti.className = "confetti";
+  confetti.style.position = "absolute";
+  confetti.style.top = "-4px";
+  confetti.style.left = "50%";
+  confetti.style.width = "6px";
+  confetti.style.height = "6px";
+  confetti.style.background = "#fff";
+  confetti.style.borderRadius = "50%";
+  bannerEl.appendChild(confetti);
+  setTimeout(() => confetti.remove(), 1500);
 }
 
 // Render messages
@@ -916,142 +883,147 @@ async function promptForChatID(userRef, userData) {
 }
 
 
-/* ---------- VIP Login + Smooth Auto-login with Progress ---------- */
-import { signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-async function loginWhitelist(email, password) {
+/* ===============================
+   🔐 VIP Login (Whitelist Check)
+================================= */
+async function loginWhitelist(email, phone) {
   const loader = document.getElementById("postLoginLoader");
-  const loadingBar = document.getElementById("loadingBar");
-
-  let progress = 0;
-  let loadingInterval;
-
   try {
     if (loader) loader.style.display = "flex";
-    if (loadingBar) {
-      loadingBar.style.width = "0%";
-      loadingBar.style.background = "linear-gradient(90deg, #ff69b4, #ff1493)";
+    await sleep(50);
+
+    // 🔍 Query whitelist
+    const whitelistQuery = query(
+      collection(db, "whitelist"),
+      where("email", "==", email),
+      where("phone", "==", phone)
+    );
+    const whitelistSnap = await getDocs(whitelistQuery);
+    console.log("📋 Whitelist result:", whitelistSnap.docs.map(d => d.data()));
+
+    if (whitelistSnap.empty) {
+      return showStarPopup("You’re not on the whitelist. Please check your email and phone format.");
     }
 
-    // Smooth progress animation
-    loadingInterval = setInterval(() => {
-      if (progress < 95 && loadingBar) {
-        progress += Math.random() * 2 + 0.5; // slow, smooth increment
-        loadingBar.style.width = `${progress}%`;
-      }
-    }, 80);
-
-    // Firebase Auth
-    const cred = await signInWithEmailAndPassword(auth, email, password);
-    const user = cred.user;
-    console.log("✅ Authenticated:", user.email);
-
-    // Whitelist check
-    const q = query(collection(db, "whitelist"), where("email", "==", email));
-    const snap = await getDocs(q);
-    if (snap.empty) {
-      await signOut(auth);
-      showStarPopup("❌ You’re not on the whitelist. Access denied.");
-      return false;
-    }
-
-    // Load user profile
     const uidKey = sanitizeKey(email);
     const userRef = doc(db, "users", uidKey);
     const userSnap = await getDoc(userRef);
+
     if (!userSnap.exists()) {
-      await signOut(auth);
-      showStarPopup("⚠️ Profile missing. Please complete signup first.");
-      return false;
+      return showStarPopup("User not found. Please sign up on the main page first.");
     }
 
-    const data = userSnap.data();
+    const data = userSnap.data() || {};
+
+    // 🧍🏽 Set current user details
     currentUser = {
       uid: uidKey,
       email: data.email,
+      phone: data.phone,
       chatId: data.chatId,
-      fullName: data.fullName || "",
-      isAdmin: !!data.isAdmin,
-      isVIP: !!data.isVIP,
-      gender: data.gender || "",
+      chatIdLower: data.chatIdLower,
       stars: data.stars || 0,
       cash: data.cash || 0,
       usernameColor: data.usernameColor || randomColor(),
+      isAdmin: !!data.isAdmin,
+      isVIP: !!data.isVIP,
+      fullName: data.fullName || "",
+      gender: data.gender || "",
       subscriptionActive: !!data.subscriptionActive,
+      subscriptionCount: data.subscriptionCount || 0,
+      lastStarDate: data.lastStarDate || todayDate(),
+      starsGifted: data.starsGifted || 0,
+      starsToday: data.starsToday || 0,
       hostLink: data.hostLink || null,
       invitedBy: data.invitedBy || null,
+      inviteeGiftShown: !!data.inviteeGiftShown,
       isHost: !!data.isHost
     };
 
-    // Cache credentials
-    localStorage.setItem("vipUser", JSON.stringify({ email, password }));
+    // ✅ Store user ID for notifications system
+    const userId = currentUser.chatId || currentUser.email || currentUser.phone;
+    localStorage.setItem("userId", userId);
+    console.log("✅ Stored userId for notifications:", userId);
 
-    // Initialize chat + notifications
+    // 🧠 Setup post-login systems
     updateRedeemLink();
     updateTipLink();
-    setupPresence?.(currentUser);
-    attachMessagesListener?.();
+    setupPresence(currentUser);
+    attachMessagesListener();
     startStarEarning(currentUser.uid);
-    showChatUI(currentUser);
-    startNotificationsFor?.(email);
 
-    console.log("🚀 Chatroom access granted:", email);
+    // Store VIP user in local storage (existing)
+    localStorage.setItem("vipUser", JSON.stringify({ email, phone }));
 
-    // Complete progress bar smoothly to 100%
-    if (loadingBar) {
-      let finalProgress = progress;
-      const finalizeInterval = setInterval(() => {
-        finalProgress += 2;
-        if (finalProgress >= 100) {
-          loadingBar.style.width = "100%";
-          clearInterval(finalizeInterval);
-        } else {
-          loadingBar.style.width = `${finalProgress}%`;
-        }
-      }, 30);
+    // Prompt guests for a permanent chatID
+    if (currentUser.chatId?.startsWith("GUEST")) {
+      await promptForChatID(userRef, data);
     }
 
-    await sleep(400);
+    // 🎨 Update UI
+  showChatUI(currentUser);
+console.log("🚀 Starting notifications for:", email);
+startNotificationsFor(email);
+
+
     return true;
 
   } catch (err) {
     console.error("❌ Login error:", err);
-    showStarPopup("Login failed. Please check credentials.");
-    if (loadingBar) loadingBar.style.width = "0%";
+    showStarPopup("Login failed. Try again!");
     return false;
   } finally {
-    clearInterval(loadingInterval);
     if (loader) loader.style.display = "none";
   }
 }
 
-/* ===============================
-   🎟️ Bind VIP ACCESS button
-================================= */
-document.getElementById("whitelistLoginBtn")?.addEventListener("click", async () => {
-  const email = (document.getElementById("emailInput")?.value || "").trim().toLowerCase();
-  const password = (document.getElementById("passwordInput")?.value || "").trim();
-
-  if (!email || !password) return showStarPopup("Enter both email and password.");
-  await loginWhitelist(email, password);
-});
 
 /* ----------------------------
-   🔁 Auto-login session
+   🔁 Auto Login Session
 ----------------------------- */
-async function autoLogin() {
+window.addEventListener("DOMContentLoaded", async () => {
   const vipUser = JSON.parse(localStorage.getItem("vipUser"));
-  if (!vipUser?.email || !vipUser?.password) return;
+  if (vipUser?.email && vipUser?.phone) {
+    const loader = document.getElementById("postLoginLoader");
+    const loadingBar = document.getElementById("loadingBar");
 
-  console.log("🔄 Auto-login for:", vipUser.email);
-  const success = await loginWhitelist(vipUser.email, vipUser.password);
+    try {
+      // ✅ Make sure loader and bar are visible
+      if (loader) loader.style.display = "flex";
+      if (loadingBar) loadingBar.style.width = "0%";
 
-  if (success && currentUser?.isVIP) {
-    showStarPopup(`Welcome back, VIP ${currentUser.chatId || currentUser.email}! ⭐️`);
+      // 🩷 Animate bar while logging in
+      let progress = 0;
+      const interval = 80;
+      const loadingInterval = setInterval(() => {
+        if (progress < 90) { // don’t fill completely until login ends
+          progress += Math.random() * 5;
+          loadingBar.style.width = `${Math.min(progress, 90)}%`;
+        }
+      }, interval);
+
+      // 🧠 Run the login
+      const success = await loginWhitelist(vipUser.email, vipUser.phone);
+
+      // Finish bar smoothly
+      clearInterval(loadingInterval);
+      loadingBar.style.width = "100%";
+
+      if (success) {
+        await sleep(400);
+        updateRedeemLink();
+        updateTipLink();
+      }
+
+    } catch (err) {
+      console.error("❌ Auto-login error:", err);
+    } finally {
+      await sleep(300);
+      if (loader) loader.style.display = "none";
+    }
   }
-}
+});
 
-window.addEventListener("DOMContentLoaded", autoLogin);
 
 /* ===============================
    💫 Auto Star Earning System
@@ -1132,32 +1104,26 @@ const todayDate = () => new Date().toISOString().split("T")[0];
 const sleep = ms => new Promise(res => setTimeout(res, ms));
 
 /* ===============================
-   🧠 UI Updates After Auth (Improved)
+   🧠 UI Updates After Auth
 ================================= */
 function updateUIAfterAuth(user) {
   const subtitle = document.getElementById("roomSubtitle");
   const helloText = document.getElementById("helloText");
   const roomDescText = document.querySelector(".room-desc .text");
   const hostsBtn = document.getElementById("openHostsBtn");
-  const loginBar = document.getElementById("loginBar"); // adjust if different ID
-
-  // Keep Star Hosts button always visible
-  if (hostsBtn) hostsBtn.style.display = "block";
 
   if (user) {
-    // Hide intro texts only for logged-in users
+    // Hide intro texts and show host button
     if (subtitle) subtitle.style.display = "none";
     if (helloText) helloText.style.display = "none";
     if (roomDescText) roomDescText.style.display = "none";
-
-    if (loginBar) loginBar.style.display = "flex";
+    if (hostsBtn) hostsBtn.style.display = "block";
   } else {
-    // Show intro texts for guests
+    // Restore intro texts and hide host button
     if (subtitle) subtitle.style.display = "block";
     if (helloText) helloText.style.display = "block";
     if (roomDescText) roomDescText.style.display = "block";
-
-    if (loginBar) loginBar.style.display = "flex";
+    if (hostsBtn) hostsBtn.style.display = "none";
   }
 }
 
@@ -1691,76 +1657,47 @@ const nextBtn = document.getElementById("nextHost");
 let hosts = [];
 let currentIndex = 0;
 
-/* ---------- Fetch + Listen to Featured Hosts + Merge Users ---------- */
+/* ---------- Fetch + Listen to featuredHosts ---------- */
+/* ---------- Fetch + Listen to featuredHosts + users merge ---------- */
 async function fetchFeaturedHosts() {
   try {
-    console.log("🔄 Fetching featured hosts...");
+    const q = collection(db, "featuredHosts");
+    onSnapshot(q, async snapshot => {
+      const tempHosts = [];
 
-    const featuredRef = collection(db, "featuredHosts");
+      for (const docSnap of snapshot.docs) {
+        const hostData = { id: docSnap.id, ...docSnap.data() };
+        let merged = { ...hostData };
 
-    onSnapshot(
-      featuredRef,
-      async (snapshot) => {
-        let tempHosts = [];
-
-        if (!snapshot.empty) {
-          // Merge host + user data in parallel
-          tempHosts = await Promise.all(
-            snapshot.docs.map(async (docSnap) => {
-              const hostData = { id: docSnap.id, ...docSnap.data() };
-              const uid = hostData.userId || hostData.chatId;
-              let merged = { ...hostData };
-
-              if (uid) {
-                try {
-                  const userSnap = await getDoc(doc(db, "users", uid));
-                  if (userSnap.exists()) merged = { ...merged, ...userSnap.data() };
-                } catch (err) {
-                  console.warn(`⚠️ Could not fetch user data for ${uid}:`, err);
-                }
-              }
-              return merged;
-            })
-          );
-        }
-
-        // Fallback: check users with isFeatured flag
-        if (!tempHosts.length) {
-          console.warn("⚠️ No featuredHosts found; checking users with isFeatured flag...");
-          const usersSnap = await getDocs(query(collection(db, "users"), where("isFeatured", "==", true)));
-          if (!usersSnap.empty) {
-            tempHosts = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (hostData.userId || hostData.chatId) {
+          try {
+            const userRef = doc(db, "users", hostData.userId || hostData.chatId);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+              merged = { ...merged, ...userSnap.data() };
+            }
+          } catch (err) {
+            console.warn("⚠️ Could not fetch user for host:", hostData.userId || hostData.chatId, err);
           }
         }
 
-        hosts = tempHosts;
-
-        if (!hosts.length) {
-          console.warn("⚠️ No featured hosts available.");
-          showNoHostsMessage();
-          return;
-        }
-
-        console.log("✅ Featured hosts loaded:", hosts.length);
-        renderHostAvatars();
-        loadHost(currentIndex >= hosts.length ? 0 : currentIndex);
-      },
-      (error) => {
-        console.error("❌ Error listening to featuredHosts:", error);
-        showNoHostsMessage();
+        tempHosts.push(merged);
       }
-    );
-  } catch (err) {
-    console.error("🔥 fetchFeaturedHosts() failed:", err);
-    showNoHostsMessage();
-  }
-}
 
-/* ---------- Show Message If No Hosts ---------- */
-function showNoHostsMessage() {
-  const container = document.getElementById("featuredHostVideo");
-  if (!container) return;
-  container.innerHTML = `<p style="color:#aaa;text-align:center;padding:20px;">No featured hosts available yet!</p>`;
+      hosts = tempHosts;
+
+      if (!hosts.length) {
+        console.warn("⚠️ No featured hosts found.");
+        return;
+      }
+
+      console.log("✅ Loaded hosts:", hosts.length);
+      renderHostAvatars();
+      loadHost(currentIndex >= hosts.length ? 0 : currentIndex);
+    });
+  } catch (err) {
+    console.error("❌ Error fetching hosts:", err);
+  }
 }
 
 /* ---------- Render Avatars ---------- */
@@ -1773,12 +1710,15 @@ function renderHostAvatars() {
     img.classList.add("featured-avatar");
     if (idx === currentIndex) img.classList.add("active");
 
-    img.addEventListener("click", () => loadHost(idx));
+    img.addEventListener("click", () => {
+      loadHost(idx);
+    });
+
     hostListEl.appendChild(img);
   });
 }
 
-/* ---------- Load Host (Smooth Video + Bio) ---------- */
+/* ---------- Load Host (Faster Video Loading) ---------- */
 async function loadHost(idx) {
   const host = hosts[idx];
   if (!host) return;
@@ -1803,12 +1743,13 @@ async function loadHost(idx) {
     muted: true,
     loop: true,
     playsInline: true,
-    preload: "auto",
+    preload: "auto", // preload more data
     style: "width:100%;height:100%;object-fit:cover;border-radius:8px;display:none;cursor:pointer;"
   });
   videoEl.setAttribute("webkit-playsinline", "true");
   videoContainer.appendChild(videoEl);
 
+  // Force video to start loading immediately
   videoEl.load();
 
   // Hint overlay
@@ -1817,15 +1758,15 @@ async function loadHost(idx) {
   hint.textContent = "Tap to unmute";
   videoContainer.appendChild(hint);
 
-  const showHint = (msg, timeout = 1400) => {
+  function showHint(msg, timeout = 1400) {
     hint.textContent = msg;
     hint.classList.add("show");
     clearTimeout(hint._t);
     hint._t = setTimeout(() => hint.classList.remove("show"), timeout);
-  };
+  }
 
   let lastTap = 0;
-  const onTapEvent = () => {
+  function onTapEvent() {
     const now = Date.now();
     if (now - lastTap < 300) {
       document.fullscreenElement ? document.exitFullscreen?.() : videoEl.requestFullscreen?.();
@@ -1834,8 +1775,7 @@ async function loadHost(idx) {
       showHint(videoEl.muted ? "Tap to unmute" : "Sound on", 1200);
     }
     lastTap = now;
-  };
-
+  }
   videoEl.addEventListener("click", onTapEvent);
   videoEl.addEventListener("touchend", (ev) => {
     if (ev.changedTouches.length < 2) {
@@ -1844,6 +1784,7 @@ async function loadHost(idx) {
     }
   }, { passive: false });
 
+  // Show video as soon as it can play
   videoEl.addEventListener("canplay", () => {
     shimmer.style.display = "none";
     videoEl.style.display = "block";
@@ -1851,49 +1792,51 @@ async function loadHost(idx) {
     videoEl.play().catch(() => {});
   });
 
-  // ---------- Host Info ----------
-  usernameEl.textContent = (host.chatId || "Unknown Host")
-    .toLowerCase()
-    .replace(/\b\w/g, c => c.toUpperCase());
+/* ---------- Host Info ---------- */
+usernameEl.textContent = (host.chatId || "Unknown Host")
+  .toLowerCase()
+  .replace(/\b\w/g, char => char.toUpperCase());
 
-  const gender = (host.gender || "person").toLowerCase();
-  const pronoun = gender === "male" ? "his" : "her";
-  const ageGroup = !host.age ? "20s" : host.age >= 30 ? "30s" : "20s";
-  const flair = gender === "male" ? "😎" : "💋";
-  const fruit = host.fruitPick || "🍇";
-  const nature = host.naturePick || "cool";
-  const city = host.location || "Lagos";
-  const country = host.country || "Nigeria";
+const gender = (host.gender || "person").toLowerCase();
+const pronoun = gender === "male" ? "his" : "her";
+const ageGroup = !host.age ? "20s" : host.age >= 30 ? "30s" : "20s";
+const flair = gender === "male" ? "😎" : "💋";
+const fruit = host.fruitPick || "🍇";
+const nature = host.naturePick || "cool";
+const city = host.location || "Lagos";
+const country = host.country || "Nigeria";
 
-  detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
+detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
 
-  // Typewriter bio
-  if (host.bioPick) {
-    const bioText = host.bioPick.length > 160 ? host.bioPick.slice(0, 160) + "…" : host.bioPick;
+// Typewriter bio
+if (host.bioPick) {
+  const bioText = host.bioPick.length > 160 ? host.bioPick.slice(0, 160) + "…" : host.bioPick;
 
-    const bioEl = document.createElement("div");
-    bioEl.style.marginTop = "6px";
-    bioEl.style.fontWeight = "600";
-    bioEl.style.fontSize = "0.95em";
-    bioEl.style.whiteSpace = "pre-wrap";
+  // Create a container for bio
+  const bioEl = document.createElement("div");
+  bioEl.style.marginTop = "6px";
+  bioEl.style.fontWeight = "600";  // little bold
+  bioEl.style.fontSize = "0.95em";
+  bioEl.style.whiteSpace = "pre-wrap"; // keep formatting
 
-    const brightColors = ["#FF3B3B", "#FF9500", "#FFEA00", "#00FFAB", "#00D1FF", "#FF00FF", "#FF69B4"];
-    bioEl.style.color = brightColors[Math.floor(Math.random() * brightColors.length)];
+  // Pick a random bright color
+  const brightColors = ["#FF3B3B", "#FF9500", "#FFEA00", "#00FFAB", "#00D1FF", "#FF00FF", "#FF69B4"];
+  bioEl.style.color = brightColors[Math.floor(Math.random() * brightColors.length)];
 
-    detailsEl.appendChild(bioEl);
+  detailsEl.appendChild(bioEl);
 
-    let index = 0;
-    const typeWriter = () => {
-      if (index < bioText.length) {
-        bioEl.textContent += bioText[index];
-        index++;
-        setTimeout(typeWriter, 40);
-      }
-    };
-    typeWriter();
+  // Typewriter effect
+  let index = 0;
+  function typeWriter() {
+    if (index < bioText.length) {
+      bioEl.textContent += bioText[index];
+      index++;
+      setTimeout(typeWriter, 40); // typing speed (ms)
+    }
   }
+  typeWriter();
 }
-   /* ---------- Meet Button ---------- */
+/* ---------- Meet Button ---------- */
 let meetBtn = document.getElementById("meetBtn");
 if (!meetBtn) {
   meetBtn = document.createElement("button");
@@ -2112,43 +2055,17 @@ giftSlider.addEventListener("input", () => {
   giftSlider.style.background = randomFieryGradient(); // change fiery color as it slides
 });
 
-
-/* ---------- Safe Star Hosts Modal Open ---------- */
+/* ---------- Modal open (new color each popup) ---------- */
 openBtn.addEventListener("click", () => {
-  if (!hosts.length) {
-    showGiftAlert("⚠️ No featured hosts available yet!");
-    return;
-  }
-
-  // Load the current host safely
-  loadHost(currentIndex);
-
-  // Show modal centered
   modal.style.display = "flex";
   modal.style.justifyContent = "center";
   modal.style.alignItems = "center";
 
-  // Optional: fiery gradient for gift slider
-  if (giftSlider) {
-    giftSlider.style.background = randomFieryGradient();
-  }
-
+  // Give it a fiery flash on open
+  giftSlider.style.background = randomFieryGradient();
   console.log("📺 Modal opened");
 });
 
-/* ---------- Close modal logic ---------- */
-closeModal.addEventListener("click", () => {
-  modal.style.display = "none";
-  console.log("❎ Modal closed");
-});
-
-// Click outside modal closes it
-window.addEventListener("click", (e) => {
-  if (e.target === modal) {
-    modal.style.display = "none";
-    console.log("🪟 Modal dismissed");
-  }
-});
 /* ===============================
    🎁 Send Gift + Dual Notification
 ================================= */
@@ -2236,7 +2153,25 @@ nextBtn.addEventListener("click", e => {
   loadHost((currentIndex + 1) % hosts.length);
 });
 
+/* ---------- Modal control ---------- */
+openBtn.addEventListener("click", () => {
+  modal.style.display = "flex";
+  modal.style.justifyContent = "center";
+  modal.style.alignItems = "center";
+  console.log("📺 Modal opened");
+});
 
+closeModal.addEventListener("click", () => {
+  modal.style.display = "none";
+  console.log("❎ Modal closed");
+});
+
+window.addEventListener("click", e => {
+  if (e.target === modal) {
+    modal.style.display = "none";
+    console.log("🪟 Modal dismissed");
+  }
+});
 /* ---------- Init ---------- */
 fetchFeaturedHosts();
 
@@ -3076,181 +3011,237 @@ await addDoc(notifRef, {
 })(); // ✅ closes IIFE
 
 
+// ========== 🟣 HOST SETTINGS LOGIC ==========
 const isHost = true; // <-- later dynamic
+const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
+const hostModal = document.getElementById("hostModal");
+const hostSettingsBtn = document.getElementById("hostSettingsBtn");
+const closeModal = hostModal?.querySelector(".close");
 
-if (isHost) {
-  document.addEventListener("DOMContentLoaded", () => {
-    
-    
-    // 🟣 HOST SETTINGS LOGIC
-    const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
-    const hostModal = document.getElementById("hostModal");
-    const hostSettingsBtn = document.getElementById("hostSettingsBtn");
-    const closeModal = hostModal?.querySelector(".close");
+if (isHost && hostSettingsWrapper) hostSettingsWrapper.style.display = "block";
 
-    if (hostSettingsWrapper) hostSettingsWrapper.style.display = "block";
+if (hostSettingsBtn && hostModal && closeModal) {
+  hostSettingsBtn.onclick = async () => {
+    hostModal.style.display = "block";
 
-    if (hostSettingsBtn && hostModal && closeModal) {
-      hostSettingsBtn.onclick = async () => {
-        hostModal.style.display = "block";
+    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
 
-        if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
+    // Populate fields from Firestore (kept blank until user edits)
+    const userRef = doc(db, "users", currentUser.uid);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) return showStarPopup("⚠️ User data not found.");
 
-        const userRef = doc(db, "users", currentUser.uid);
-        const snap = await getDoc(userRef);
-        if (!snap.exists()) return showStarPopup("⚠️ User data not found.");
+    const data = snap.data();
+    document.getElementById("fullName").value = data.fullName || "";
+    document.getElementById("city").value = data.city || "";
+    document.getElementById("location").value = data.location || "";
+    document.getElementById("bio").value = data.bioPick || "";
+    document.getElementById("bankAccountNumber").value = data.bankAccountNumber || "";
+    document.getElementById("bankName").value = data.bankName || "";
+    document.getElementById("telegram").value = data.telegram || "";
+    document.getElementById("tiktok").value = data.tiktok || "";
+    document.getElementById("whatsapp").value = data.whatsapp || "";
+    document.getElementById("instagram").value = data.instagram || "";
 
-        const data = snap.data();
-        const ids = ["fullName","city","location","bio","bankAccountNumber","bankName","telegram","tiktok","whatsapp","instagram"];
-        ids.forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.value = data[id] || data[id+"Pick"] || "";
-        });
-
-        if (data.popupPhoto) {
-          const photoPreview = document.getElementById("photoPreview");
-          const photoPlaceholder = document.getElementById("photoPlaceholder");
-          if (photoPreview && photoPlaceholder) {
-            photoPreview.src = data.popupPhoto;
-            photoPreview.style.display = "block";
-            photoPlaceholder.style.display = "none";
-          }
-        }
-      };
-
-      closeModal.onclick = () => hostModal.style.display = "none";
-      window.onclick = (e) => { if (e.target === hostModal) hostModal.style.display = "none"; };
+    // Update photo preview if exists
+    if (data.popupPhoto) {
+      const photoPreview = document.getElementById("photoPreview");
+      const photoPlaceholder = document.getElementById("photoPlaceholder");
+      photoPreview.src = data.popupPhoto;
+      photoPreview.style.display = "block";
+      photoPlaceholder.style.display = "none";
     }
+  };
 
-    // 🟠 TAB LOGIC
-    document.querySelectorAll(".tab-btn").forEach((btn) => {
-      btn.onclick = () => {
-        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-        document.querySelectorAll(".tab-content").forEach(tab => tab.style.display = "none");
-        btn.classList.add("active");
-        const tabContent = document.getElementById(btn.dataset.tab);
-        if (tabContent) tabContent.style.display = "block";
-      };
-    });
+  closeModal.onclick = () => (hostModal.style.display = "none");
+  window.onclick = (e) => {
+    if (e.target === hostModal) hostModal.style.display = "none";
+  };
+}
 
-    // 🖼️ PHOTO PREVIEW
-    document.addEventListener("change", (e) => {
-      if (e.target.id === "popupPhoto") {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          const photoPreview = document.getElementById("photoPreview");
-          const photoPlaceholder = document.getElementById("photoPlaceholder");
-          if (photoPreview && photoPlaceholder) {
-            photoPreview.src = reader.result;
-            photoPreview.style.display = "block";
-            photoPlaceholder.style.display = "none";
-          }
-        };
-        reader.readAsDataURL(file);
+// ========== 🟠 TAB LOGIC ==========
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.onclick = () => {
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach((tab) => (tab.style.display = "none"));
+    btn.classList.add("active");
+    document.getElementById(btn.dataset.tab).style.display = "block";
+  };
+});
+
+// ========== 🖼️ PHOTO PREVIEW ==========
+document.addEventListener("change", (e) => {
+  if (e.target.id === "popupPhoto") {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const photoPreview = document.getElementById("photoPreview");
+      const photoPlaceholder = document.getElementById("photoPlaceholder");
+      if (photoPreview && photoPlaceholder) {
+        photoPreview.src = reader.result;
+        photoPreview.style.display = "block";
+        photoPlaceholder.style.display = "none";
       }
-    });
+    };
+    reader.readAsDataURL(file);
+  }
+});
 
-    // 📝 SAVE INFO & MEDIA HANDLER
-    const saveInfoBtn = document.getElementById("saveInfo");
-    const saveMediaBtn = document.getElementById("saveMedia");
+// ========== 📝 SAVE INFO & MEDIA HANDLER ==========
+const saveInfoBtn = document.getElementById("saveInfo");
+const saveMediaBtn = document.getElementById("saveMedia");
 
-    async function updateFirestoreDoc(userId, data) {
-      const userRef = doc(db, "users", userId);
-      const filteredData = Object.fromEntries(
-        Object.entries(data).filter(([_, value]) => value !== undefined)
-      );
-      await updateDoc(userRef, { ...filteredData, lastUpdated: serverTimestamp() });
 
-      const hostRef = doc(db, "featuredHosts", userId);
-      const hostSnap = await getDoc(hostRef);
-      if (hostSnap.exists()) {
-        await updateDoc(hostRef, { ...filteredData, lastUpdated: serverTimestamp() });
+// -------- Firestore update helper --------
+async function updateFirestoreDoc(userId, data) {
+  const userRef = doc(db, "users", userId);
+
+  // Only filter undefined (allow clearing fields to "")
+  const filteredData = Object.fromEntries(
+    Object.entries(data).filter(([_, value]) => value !== undefined)
+  );
+
+  await updateDoc(userRef, { ...filteredData, lastUpdated: serverTimestamp() });
+
+  // Sync to featuredHosts if doc exists
+  const hostRef = doc(db, "featuredHosts", userId);
+  const hostSnap = await getDoc(hostRef);
+  if (hostSnap.exists()) {
+    await updateDoc(hostRef, { ...filteredData, lastUpdated: serverTimestamp() });
+  }
+}
+
+// -------- Save Info --------
+if (saveInfoBtn) {
+  saveInfoBtn.onclick = async () => {
+    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
+
+    const fullName = document.getElementById("fullName")?.value || "";
+    const city = document.getElementById("city")?.value || "";
+    const location = document.getElementById("location")?.value || "";
+    const bio = document.getElementById("bio")?.value || "";
+    const bankAccountNumber = document.getElementById("bankAccountNumber")?.value || "";
+    const bankName = document.getElementById("bankName")?.value || "";
+    const telegram = document.getElementById("telegram")?.value || "";
+    const tiktok = document.getElementById("tiktok")?.value || "";
+    const whatsapp = document.getElementById("whatsapp")?.value || "";
+    const instagram = document.getElementById("instagram")?.value || "";
+    const naturePickEl = document.getElementById("naturePick");
+    const fruitPickEl = document.getElementById("fruitPick");
+    const naturePick = naturePickEl?.value || "";
+    const fruitPick = fruitPickEl?.value || "";
+
+    if (bankAccountNumber && !/^\d{1,11}$/.test(bankAccountNumber)) {
+      return showStarPopup("⚠️ Bank account number must be digits only (max 11).");
+    }
+    if (whatsapp && !/^\d+$/.test(whatsapp)) {
+      return showStarPopup("⚠️ WhatsApp number must be numbers only.");
+    }
+
+    const dataToUpdate = {
+      fullName: fullName ? fullName.replace(/\b\w/g, l => l.toUpperCase()) : "",
+      city,
+      location,
+      bioPick: bio,
+      bankAccountNumber,
+      bankName,
+      telegram,
+      tiktok,
+      whatsapp,
+      instagram,
+      naturePick,
+      fruitPick
+    };
+
+    // ---------- Tiny centered spinner ----------
+    const originalHTML = saveInfoBtn.innerHTML;
+    saveInfoBtn.innerHTML = `
+      <div class="spinner" style="
+        width:12px;
+        height:12px;
+        border:2px solid #fff;
+        border-top-color:transparent;
+        border-radius:50%;
+        animation: spin 0.6s linear infinite;
+        margin:auto;
+      "></div>
+    `;
+    saveInfoBtn.disabled = true;
+    saveInfoBtn.style.display = "flex";
+    saveInfoBtn.style.alignItems = "center";
+    saveInfoBtn.style.justifyContent = "center";
+
+    try {
+      await updateFirestoreDoc(currentUser.uid, dataToUpdate);
+      showStarPopup("✅ Profile updated successfully!");
+
+      // Keep dropdown selections visible
+      if (naturePickEl) naturePickEl.value = naturePick;
+      if (fruitPickEl) fruitPickEl.value = fruitPick;
+
+      document.querySelectorAll("#mediaTab input, #mediaTab textarea, #mediaTab select")
+              .forEach(input => input.blur());
+    } catch (err) {
+      console.error("❌ Error updating Firestore:", err);
+      showStarPopup("⚠️ Failed to update info. Please try again.");
+    } finally {
+      saveInfoBtn.innerHTML = originalHTML;
+      saveInfoBtn.disabled = false;
+      saveInfoBtn.style.display = "";
+      saveInfoBtn.style.alignItems = "";
+      saveInfoBtn.style.justifyContent = "";
+    }
+  };
+}
+
+// -------- Save Media --------
+if (saveMediaBtn) {
+  saveMediaBtn.onclick = async () => {
+    if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
+
+    const popupPhotoFile = document.getElementById("popupPhoto")?.files[0];
+    const uploadVideoFile = document.getElementById("uploadVideo")?.files[0];
+
+    if (!popupPhotoFile && !uploadVideoFile) {
+      return showStarPopup("⚠️ Please select a photo or video to upload.");
+    }
+
+    try {
+      showStarPopup("⏳ Uploading media...");
+
+      const formData = new FormData();
+      if (popupPhotoFile) formData.append("photo", popupPhotoFile);
+      if (uploadVideoFile) formData.append("video", uploadVideoFile);
+
+      const res = await fetch("/api/uploadShopify", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed. Check your network.");
+
+      const data = await res.json(); // { photoUrl: "...", videoUrl: "..." }
+
+      await updateFirestoreDoc(currentUser.uid, {
+        ...(data.photoUrl && { popupPhoto: data.photoUrl }),
+        ...(data.videoUrl && { videoUrl: data.videoUrl }),
+      });
+
+      // Update preview if photo exists
+      if (data.photoUrl) {
+        const photoPreview = document.getElementById("photoPreview");
+        const photoPlaceholder = document.getElementById("photoPlaceholder");
+        photoPreview.src = data.photoUrl;
+        photoPreview.style.display = "block";
+        photoPlaceholder.style.display = "none";
       }
+
+      showStarPopup("✅ Media uploaded successfully!");
+      hostModal.style.display = "none";
+
+    } catch (err) {
+      console.error("❌ Media upload error:", err);
+      showStarPopup(`⚠️ Failed to upload media: ${err.message}`);
     }
-
-    if (saveInfoBtn) {
-      saveInfoBtn.onclick = async () => {
-        if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
-        const fields = ["fullName","city","location","bio","bankAccountNumber","bankName","telegram","tiktok","whatsapp","instagram","naturePick","fruitPick"];
-        const dataToUpdate = {};
-        fields.forEach(f => {
-          const el = document.getElementById(f);
-          if (el) dataToUpdate[f==="bio"?"bioPick":f] = el.value || "";
-        });
-
-        if (dataToUpdate.bankAccountNumber && !/^\d{1,11}$/.test(dataToUpdate.bankAccountNumber))
-          return showStarPopup("⚠️ Bank account number must be digits only (max 11).");
-        if (dataToUpdate.whatsapp && !/^\d+$/.test(dataToUpdate.whatsapp))
-          return showStarPopup("⚠️ WhatsApp number must be numbers only.");
-
-        const originalHTML = saveInfoBtn.innerHTML;
-        saveInfoBtn.innerHTML = `<div class="spinner" style="width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation: spin 0.6s linear infinite;margin:auto;"></div>`;
-        saveInfoBtn.disabled = true;
-        saveInfoBtn.style.display = "flex";
-        saveInfoBtn.style.alignItems = "center";
-        saveInfoBtn.style.justifyContent = "center";
-
-        try {
-          await updateFirestoreDoc(currentUser.uid, dataToUpdate);
-          showStarPopup("✅ Profile updated successfully!");
-        } catch (err) {
-          console.error("❌ Error updating Firestore:", err);
-          showStarPopup("⚠️ Failed to update info. Please try again.");
-        } finally {
-          saveInfoBtn.innerHTML = originalHTML;
-          saveInfoBtn.disabled = false;
-          saveInfoBtn.style.display = "";
-          saveInfoBtn.style.alignItems = "";
-          saveInfoBtn.style.justifyContent = "";
-        }
-      };
-    }
-
-    if (saveMediaBtn) {
-      saveMediaBtn.onclick = async () => {
-        if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
-        const popupPhotoFile = document.getElementById("popupPhoto")?.files[0];
-        const uploadVideoFile = document.getElementById("uploadVideo")?.files[0];
-        if (!popupPhotoFile && !uploadVideoFile) return showStarPopup("⚠️ Please select a photo or video to upload.");
-
-        try {
-          showStarPopup("⏳ Uploading media...");
-          const formData = new FormData();
-          if (popupPhotoFile) formData.append("photo", popupPhotoFile);
-          if (uploadVideoFile) formData.append("video", uploadVideoFile);
-          const res = await fetch("/api/uploadShopify", { method: "POST", body: formData });
-          if (!res.ok) throw new Error("Upload failed. Check your network.");
-          const data = await res.json();
-          await updateFirestoreDoc(currentUser.uid, {
-            ...(data.photoUrl && { popupPhoto: data.photoUrl }),
-            ...(data.videoUrl && { videoUrl: data.videoUrl }),
-          });
-
-          if (data.photoUrl) {
-            const photoPreview = document.getElementById("photoPreview");
-            const photoPlaceholder = document.getElementById("photoPlaceholder");
-            if (photoPreview && photoPlaceholder) {
-              photoPreview.src = data.photoUrl;
-              photoPreview.style.display = "block";
-              photoPlaceholder.style.display = "none";
-            }
-          }
-
-          showStarPopup("✅ Media uploaded successfully!");
-          hostModal.style.display = "none";
-
-        } catch (err) {
-          console.error("❌ Media upload error:", err);
-          showStarPopup(`⚠️ Failed to upload media: ${err.message}`);
-        }
-      };
-    }
-
-  }); // DOMContentLoaded
-} // end isHost
-
+  };
+}
 
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
@@ -3313,10 +3304,10 @@ checkScroll(); // initial check
 }); // ✅ closes DOMContentLoaded event listener
 
 
-/* ---------- Highlights Button ---------- */
+// ---------- Highlights Button ----------
 highlightsBtn.onclick = async () => {
   try {
-    if (!currentUser?.uid) {
+    if (!currentUser || !currentUser.uid) {
       showGoldAlert("Please log in to view highlights 🔒");
       return;
     }
@@ -3330,25 +3321,30 @@ highlightsBtn.onclick = async () => {
       return;
     }
 
-    const videos = snapshot.docs.map(docSnap => {
-      const d = docSnap.data();
-      const uploaderName = d.uploaderName || d.chatId || d.displayName || d.username || "Anonymous";
-      return {
-        id: docSnap.id,
-        highlightVideo: d.highlightVideo,
-        highlightVideoPrice: d.highlightVideoPrice || 0,
-        title: d.title || "Untitled",
-        uploaderName,
-        uploaderId: d.uploaderId || "",
-        uploaderEmail: d.uploaderEmail || "unknown",
-        description: d.description || "",
-        thumbnail: d.thumbnail || "",
-        createdAt: d.createdAt || null,
-        unlockedBy: d.unlockedBy || [],
-        previewClip: d.previewClip || ""
-      };
-    });
+const videos = snapshot.docs.map(docSnap => {
+  const d = docSnap.data();
 
+  // 💎 Make sure uploaderName is resolved from multiple possible fields
+  const uploaderName =
+    d.uploaderName ||
+    d.chatId ||
+    d.displayName ||
+    d.username ||
+    "Anonymous";
+
+  return {
+    id: docSnap.id,
+    highlightVideo: d.highlightVideo,
+    highlightVideoPrice: d.highlightVideoPrice || 0,
+    title: d.title || "Untitled",
+    uploaderName, // ✅ keep consistent key used in renderCards()
+    uploaderId: d.uploaderId || "",
+    uploaderEmail: d.uploaderEmail || "unknown",
+    description: d.description || "",
+    thumbnail: d.thumbnail || "",
+    createdAt: d.createdAt || null,
+  };
+});
     showHighlightsModal(videos);
   } catch (err) {
     console.error("🔥 Error fetching highlights:", err);
@@ -3356,10 +3352,12 @@ highlightsBtn.onclick = async () => {
   }
 };
 
-/* ---------- Highlights Modal ---------- */
+// ---------- Highlights Modal ----------
 function showHighlightsModal(videos) {
+  // Remove any existing modal
   document.getElementById("highlightsModal")?.remove();
 
+  // 🪩 Main modal wrapper
   const modal = document.createElement("div");
   modal.id = "highlightsModal";
   Object.assign(modal.style, {
@@ -3376,41 +3374,58 @@ function showHighlightsModal(videos) {
     zIndex: "999999",
     overflowY: "auto",
     padding: "20px",
-    boxSizing: "border-box"
+    boxSizing: "border-box",
   });
 
-  // Sticky intro
+  // 🪄 Sticky Intro Message
   const intro = document.createElement("div");
   intro.innerHTML = `
-    <div style="text-align:center;color:#ccc;max-width:640px;margin:0 auto;line-height:1.6;font-size:14px;
-      background:rgba(255,255,255,0.06);padding:14px 20px;border-radius:10px;backdrop-filter:blur(5px);
-      box-shadow:0 0 12px rgba(255,255,255,0.08);">
-      <p style="margin:0;">🎬 <b>Highlights</b> are exclusive creator moments.<br>
-      Unlock premium clips with ⭐ Stars to support your favorite creators.</p>
-    </div>`;
-  Object.assign(intro.style, { position: "sticky", top: "10px", zIndex: "1001", marginBottom: "12px", transition: "opacity 0.3s ease" });
+    <div style="
+      text-align:center;
+      color:#ccc;
+      max-width:640px;
+      margin:0 auto;
+      line-height:1.6;
+      font-size:14px;
+      background:rgba(255,255,255,0.06);
+      padding:14px 20px;
+      border-radius:10px;
+      backdrop-filter:blur(5px);
+      box-shadow:0 0 12px rgba(255,255,255,0.08);
+    ">
+      <p style="margin:0;">
+        🎬 <b>Highlights</b> are exclusive creator moments.<br>
+        Unlock premium clips with ⭐ Stars to support your favorite creators.
+      </p>
+    </div>
+  `;
+  Object.assign(intro.style, {
+    position: "sticky",
+    top: "10px",
+    zIndex: "1001",
+    marginBottom: "12px",
+    transition: "opacity 0.3s ease",
+  });
   modal.appendChild(intro);
 
+  // 🧠 Fade intro slightly when scrolling
   modal.addEventListener("scroll", () => {
     intro.style.opacity = modal.scrollTop > 50 ? "0.7" : "1";
   });
 
-  // Search + toggle container (vertical stack)
-  const searchWrap = document.createElement("div");
-  Object.assign(searchWrap.style, {
-    position: "sticky",
-    top: "84px",
-    zIndex: "1001",
-    marginBottom: "20px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "6px"
-  });
+  // 🩵 Search Bar (Sticky + Functional)
+const searchWrap = document.createElement("div");
+Object.assign(searchWrap.style, {
+  position: "sticky",
+  top: "84px",
+  zIndex: "1001",
+  marginBottom: "20px",
+  display: "flex",
+  justifyContent: "center",
+});
 
-  // Search input
-  const searchInputWrap = document.createElement("div");
-  searchInputWrap.style.cssText = `
+searchWrap.innerHTML = `
+  <div style="
     display:flex;
     align-items:center;
     background:rgba(255,255,255,0.08);
@@ -3419,218 +3434,225 @@ function showHighlightsModal(videos) {
     width:280px;
     backdrop-filter:blur(6px);
     box-shadow:0 0 10px rgba(0,0,0,0.25);
-  `;
-  searchInputWrap.innerHTML = `
+  ">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M15 15L21 21M10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10C17 13.866 13.866 17 10 17Z" stroke="#999999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
-    <input id="highlightSearchInput" type="text" placeholder="Search by creator..." style="flex:1;background:transparent;border:none;outline:none;color:#fff;font-size:13px;letter-spacing:0.3px;"/>
-  `;
-  searchWrap.appendChild(searchInputWrap);
+    <input 
+      id="highlightSearchInput"
+      type="text"
+      placeholder="Search by creator..."
+      style="
+        flex:1;
+        background:transparent;
+        border:none;
+        outline:none;
+        color:#fff;
+        font-size:13px;
+        letter-spacing:0.3px;
+      "
+    />
+  </div>
+`;
+modal.appendChild(searchWrap);
 
-  // Tiny toggle button below
-  const toggleBtn = document.createElement("button");
-  toggleBtn.id = "toggleLocked";
-  toggleBtn.textContent = "Show Unlocked";
-  Object.assign(toggleBtn.style, {
-    padding: "4px 10px",
-    borderRadius: "6px",
-    background: "#444",
-    color: "#fff",
-    border: "none",
-    fontSize: "12px",
-    cursor: "pointer"
-  });
-  searchWrap.appendChild(toggleBtn);
-  modal.appendChild(searchWrap);
-
-  // Content container
+  // 🧱 Inner container (horizontal scroll)
   const content = document.createElement("div");
   Object.assign(content.style, {
-    display:"flex",
-    gap:"16px",
-    flexWrap:"nowrap",
-    overflowX:"auto",
-    paddingBottom:"40px",
-    scrollBehavior:"smooth",
-    width:"100%",
-    justifyContent:"flex-start"
+    display: "flex",
+    gap: "16px",
+    flexWrap: "nowrap",
+    overflowX: "auto",
+    paddingBottom: "40px",
+    scrollBehavior: "smooth",
+    width: "100%",
+    justifyContent: "flex-start",
   });
-  modal.appendChild(content);
 
-  let unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
-  let showUnlockedOnly = false;
-
-function renderCards(videosToRender) {
-  content.innerHTML = "";
-  const filtered = videosToRender.filter(v => !showUnlockedOnly || unlockedVideos.includes(v.id));
-
-  filtered.forEach(video => {
-    // Card container
-    const card = document.createElement("div");
-    card.classList.add("videoCard");
-    Object.assign(card.style, {
-      minWidth: "230px",
-      maxWidth: "230px",
-      background: "#1b1b1b",
-      borderRadius: "12px",
-      overflow: "hidden",
-      display: "flex",
-      flexDirection: "column",
-      justifyContent: "space-between",
-      cursor: "pointer",
-      flexShrink: 0,
-      boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
-      transition: "transform 0.2s ease"
-    });
-    card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
-    card.setAttribute("data-title", video.title || "");
-
-    card.onmouseenter = () => card.style.transform = "scale(1.03)";
-    card.onmouseleave = () => card.style.transform = "scale(1)";
-
-    // Video container
-    const videoContainer = document.createElement("div");
-    Object.assign(videoContainer.style, { height: "320px", overflow: "hidden", position: "relative" });
-
-    const videoEl = document.createElement("video");
-    videoEl.src = video.previewClip || video.highlightVideo;
-    videoEl.muted = true;
-    videoEl.loop = true;
-    videoEl.controls = false;
-    videoEl.preload = "metadata";
-    videoEl.poster = video.thumbnail || `https://image-thumbnails-service/?video=${encodeURIComponent(video.highlightVideo)}&blur=10`;
-    Object.assign(videoEl.style, { width: "100%", height: "100%", objectFit: "cover" });
-
-    videoContainer.appendChild(videoEl);
-
-    videoContainer.onmouseenter = () => {
-      if (!unlockedVideos.includes(video.id)) videoEl.play();
-    };
-    videoContainer.onmouseleave = () => {
-      videoEl.pause();
-      videoEl.currentTime = 0;
-    };
-
-    videoContainer.onclick = (e) => {
-      e.stopPropagation();
-      if (unlockedVideos.includes(video.id)) playFullVideo(video);
-      else showUnlockConfirm(video, () => {
-        unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
-        renderCards(videos);
+  // 🎥 Function to render cards dynamically
+  function renderCards(filteredVideos) {
+    content.innerHTML = ""; // clear previous
+    filteredVideos.forEach(video => {
+      const card = document.createElement("div");
+      Object.assign(card.style, {
+        minWidth: "230px",
+        maxWidth: "230px",
+        background: "#1b1b1b",
+        borderRadius: "12px",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        cursor: "pointer",
+        flexShrink: 0,
+        boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
+        transition: "transform 0.2s ease",
       });
-    };
+      card.onmouseenter = () => (card.style.transform = "scale(1.03)");
+      card.onmouseleave = () => (card.style.transform = "scale(1)");
+// 🏷️ Add searchable attributes
+card.classList.add("videoCard");
+card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
+card.setAttribute("data-title", video.title || "");
 
-    // Info panel
-    const infoPanel = document.createElement("div");
-    Object.assign(infoPanel.style, {
-      background: "#111",
-      padding: "10px",
-      display: "flex",
-      flexDirection: "column",
-      textAlign: "left",
-      gap: "4px"
-    });
+      const videoContainer = document.createElement("div");
+      Object.assign(videoContainer.style, {
+        height: "320px",
+        overflow: "hidden",
+        position: "relative",
+      });
 
-    const vidTitle = document.createElement("div");
-    vidTitle.textContent = video.title || "Untitled";
-    Object.assign(vidTitle.style, { fontWeight: "700", color: "#fff", fontSize: "14px" });
+      const videoEl = document.createElement("video");
+      videoEl.src = video.previewClip || video.highlightVideo;
+      videoEl.muted = true;
+      videoEl.controls = false;
+      videoEl.loop = true;
+      videoEl.preload = "metadata";
+      videoEl.poster =
+        video.thumbnail ||
+        `https://image-thumbnails-service/?video=${encodeURIComponent(video.highlightVideo)}&blur=10`;
+      Object.assign(videoEl.style, {
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+      });
 
-    const uploader = document.createElement("div");
-    uploader.textContent = `By: ${video.uploaderName || "Anonymous"}`;
-    Object.assign(uploader.style, { fontSize: "12px", color: "#bbb" });
+      videoContainer.appendChild(videoEl);
 
-    const unlockBtn = document.createElement("button");
-    const unlocked = unlockedVideos.includes(video.id);
-    unlockBtn.textContent = unlocked ? "Unlocked ✅" : `Unlock ${video.highlightVideoPrice || 100} ⭐`;
-    Object.assign(unlockBtn.style, {
-      background: unlocked ? "#444" : "#ff006e",
-      border: "none",
-      borderRadius: "6px",
-      padding: "8px 0",
-      fontWeight: "600",
-      color: "#fff",
-      cursor: unlocked ? "default" : "pointer",
-      transition: "background 0.2s"
-    });
+      videoContainer.onmouseenter = () => {
+        const unlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
+        if (!unlocked) videoEl.play();
+      };
+      videoContainer.onmouseleave = () => {
+        videoEl.pause();
+        videoEl.currentTime = 0;
+      };
 
-    if (!unlocked) {
-      unlockBtn.addEventListener("mouseenter", () => unlockBtn.style.background = "#ff3385");
-      unlockBtn.addEventListener("mouseleave", () => unlockBtn.style.background = "#ff006e");
-      unlockBtn.addEventListener("click", (e) => {
+      videoContainer.onclick = (e) => {
         e.stopPropagation();
-        if (!currentUser?.uid) return showGoldAlert("Please log in to unlock content 🔒");
-        showUnlockConfirm(video, () => {
-          unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
-          renderCards(videos);
-        });
+        const unlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
+        if (unlocked) playFullVideo(video);
+        else showUnlockConfirm(video);
+      };
+
+      const infoPanel = document.createElement("div");
+      Object.assign(infoPanel.style, {
+        background: "#111",
+        padding: "10px",
+        display: "flex",
+        flexDirection: "column",
+        textAlign: "left",
+        gap: "4px",
       });
-    } else unlockBtn.disabled = true;
 
-    infoPanel.append(vidTitle, uploader, unlockBtn);
-    card.append(videoContainer, infoPanel);
-    content.appendChild(card);
-  });
-}
+      const vidTitle = document.createElement("div");
+      vidTitle.textContent = video.title || "Untitled";
+      Object.assign(vidTitle.style, { fontWeight: "700", color: "#fff", fontSize: "14px" });
 
+      const uploader = document.createElement("div");
+      uploader.textContent = `By: ${video.uploaderName || "Anonymous"}`;
+      Object.assign(uploader.style, { fontSize: "12px", color: "#bbb" });
+
+      const unlockBtn = document.createElement("button");
+      const isUnlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
+      unlockBtn.textContent = isUnlocked ? "Unlocked ✅" : `Unlock ${video.highlightVideoPrice || 100} ⭐`;
+      Object.assign(unlockBtn.style, {
+        background: isUnlocked ? "#444" : "#ff006e",
+        border: "none",
+        borderRadius: "6px",
+        padding: "8px 0",
+        fontWeight: "600",
+        color: "#fff",
+        cursor: isUnlocked ? "default" : "pointer",
+        transition: "background 0.2s",
+      });
+
+      if (!isUnlocked) {
+        unlockBtn.onmouseenter = () => (unlockBtn.style.background = "#ff3385");
+        unlockBtn.onmouseleave = () => (unlockBtn.style.background = "#ff006e");
+        unlockBtn.onclick = (e) => {
+          e.stopPropagation();
+          if (!currentUser || !currentUser.uid)
+            return showGoldAlert("Please log in to unlock content 🔒");
+          showUnlockConfirm(video);
+        };
+      } else unlockBtn.disabled = true;
+
+      infoPanel.appendChild(vidTitle);
+      infoPanel.appendChild(uploader);
+      infoPanel.appendChild(unlockBtn);
+
+      card.appendChild(videoContainer);
+      card.appendChild(infoPanel);
+      content.appendChild(card);
+    });
+  }
+
+  // Initial render
   renderCards(videos);
 
-  // Search filter
-  searchInputWrap.querySelector("#highlightSearchInput").addEventListener("input", e => {
-    const term = e.target.value.trim().toLowerCase();
-    content.querySelectorAll(".videoCard").forEach(card => {
-      const uploader = card.getAttribute("data-uploader")?.toLowerCase() || "";
-      const title = card.getAttribute("data-title")?.toLowerCase() || "";
-      card.style.display = (uploader.includes(term) || title.includes(term)) ? "flex" : "none";
-    });
-  });
+// 🔎 Live Search Filter (No re-render — hides/shows instantly)
+const searchInput = searchWrap.querySelector("#highlightSearchInput");
 
-  // Toggle button
-  toggleBtn.addEventListener("click", () => {
-    showUnlockedOnly = !showUnlockedOnly;
-    toggleBtn.textContent = showUnlockedOnly ? "Show All" : "Show Unlocked";
-    renderCards(videos);
-  });
+searchInput.addEventListener("input", (e) => {
+  const term = e.target.value.trim().toLowerCase();
 
-  // Close button
+  // Loop through all visible video cards
+  content.querySelectorAll(".videoCard").forEach(card => {
+    const uploader = card.getAttribute("data-uploader")?.toLowerCase() || "";
+    const title = card.getAttribute("data-title")?.toLowerCase() || "";
+
+    card.style.display =
+      uploader.includes(term) || title.includes(term) ? "flex" : "none";
+  });
+});
+
+  // ❌ Close button
   const closeBtn = document.createElement("div");
   closeBtn.innerHTML = "&times;";
-  Object.assign(closeBtn.style, { position: "fixed", top: "20px", right: "28px", fontSize: "32px", color: "#fff", fontWeight: "700", cursor: "pointer", zIndex: "1000000" });
+  Object.assign(closeBtn.style, {
+    position: "fixed",
+    top: "20px",
+    right: "28px",
+    fontSize: "32px",
+    color: "#fff",
+    fontWeight: "700",
+    cursor: "pointer",
+    zIndex: "1000000",
+  });
   closeBtn.onclick = () => modal.remove();
-  modal.appendChild(closeBtn);
 
+  // Add everything
+  modal.appendChild(content);
+  modal.appendChild(closeBtn);
   document.body.appendChild(modal);
 }
 
-/* ---------- Sorting helper ---------- */
-function sortVideos(videos, mode="all"){
-  const unlockedIds = JSON.parse(localStorage.getItem("userUnlockedVideos")||"[]");
-  if(mode==="unlocked") return videos.filter(v=>unlockedIds.includes(v.id));
-  if(mode==="locked") return videos.filter(v=>!unlockedIds.includes(v.id));
-  return videos;
-}
-
-/* ---------- Unlock Confirm Modal ---------- */
-function showUnlockConfirm(video, onUnlockCallback) {
+// ---------- Unlock Confirmation ----------
+function showUnlockConfirm(video) {
+  // 🛑 Stop any video that might be playing behind
   document.querySelectorAll("video").forEach(v => v.pause());
+
+  // Remove any existing unlock modal
   document.getElementById("unlockConfirmModal")?.remove();
 
   const modal = document.createElement("div");
-  modal.id = "unlockConfirmModal";
-  Object.assign(modal.style, {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100vw",
-    height: "100vh",
-    background: "rgba(0,0,0,0.93)",
-    backdropFilter: "blur(8px)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: "1000001",
-    opacity: "1",
-  });
+ modal.id = "unlockConfirmModal";
+Object.assign(modal.style, {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100vw",
+  height: "100vh",
+  background: "rgba(0,0,0,0.93)", // darker and more opaque
+  backdropFilter: "blur(8px)",    // thicker blur = more glassy
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: "1000001",
+  transition: "opacity 0.3s ease",
+  opacity: "1",
+});
 
   modal.innerHTML = `
     <div style="background:#111;padding:20px;border-radius:12px;text-align:center;color:#fff;max-width:320px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
@@ -3644,36 +3666,29 @@ function showUnlockConfirm(video, onUnlockCallback) {
   `;
 
   document.body.appendChild(modal);
-
   modal.querySelector("#cancelUnlock").onclick = () => modal.remove();
   modal.querySelector("#confirmUnlock").onclick = async () => {
     modal.remove();
     await handleUnlockVideo(video);
-    if (onUnlockCallback) onUnlockCallback();
   };
 }
 
-/* ---------- Unlock Logic ---------- */
+// ---------- Deduct Stars + Credit Uploader ----------
 async function handleUnlockVideo(video) {
   try {
     const senderId = currentUser.uid;
     const receiverId = video.uploaderId;
     const starsToDeduct = parseInt(video.highlightVideoPrice, 10) || 0;
 
-    if (!starsToDeduct || starsToDeduct <= 0)
-      return showGoldAlert("Invalid unlock price ❌");
-    if (senderId === receiverId)
-      return showGoldAlert("You can’t unlock your own video 😅");
+    if (!starsToDeduct || starsToDeduct <= 0) return showGoldAlert("Invalid unlock price ❌");
+    if (senderId === receiverId) return showGoldAlert("You can’t unlock your own video 😅");
 
     const senderRef = doc(db, "users", senderId);
     const receiverRef = doc(db, "users", receiverId);
-    const videoRef = doc(db, "highlightVideos", video.id);
 
     await runTransaction(db, async (tx) => {
       const senderSnap = await tx.get(senderRef);
       const receiverSnap = await tx.get(receiverRef);
-      const videoSnap = await tx.get(videoRef);
-
       if (!senderSnap.exists()) throw new Error("User record not found.");
       if (!receiverSnap.exists()) tx.set(receiverRef, { stars: 0 }, { merge: true });
 
@@ -3681,91 +3696,42 @@ async function handleUnlockVideo(video) {
       if ((senderData.stars || 0) < starsToDeduct)
         throw new Error("Insufficient stars ⭐");
 
-      // Deduct and add stars
       tx.update(senderRef, { stars: increment(-starsToDeduct) });
       tx.update(receiverRef, { stars: increment(starsToDeduct) });
-
-      // Add sender info to video unlockedBy using client timestamp
-      tx.update(videoRef, {
-        unlockedBy: arrayUnion({
-          userId: senderId,
-          chatId: currentUser.chatId || "unknown",
-          unlockedAt: new Date() // <-- replace serverTimestamp()
-        })
-      });
-
-      // Add video to user unlockedVideos
-      tx.update(senderRef, { unlockedVideos: arrayUnion(video.id) });
     });
 
-    // Update localStorage for UI
-    const unlockedIds = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
-    if (!unlockedIds.includes(video.id)) unlockedIds.push(video.id);
-    localStorage.setItem("userUnlockedVideos", JSON.stringify(unlockedIds));
+    // ✅ Remember unlock
     localStorage.setItem(`unlocked_${video.id}`, "true");
+    showGoldAlert(`✅ You unlocked ${video.uploader}'s video for ${starsToDeduct} ⭐`);
 
-    showGoldAlert(`✅ You unlocked ${video.uploaderName}'s video for ${starsToDeduct} ⭐`);
+    // ✅ Refresh modal to show unlock state
     document.getElementById("highlightsModal")?.remove();
     showHighlightsModal([video]);
-
   } catch (err) {
     console.error("❌ Unlock failed:", err);
     showGoldAlert(`⚠️ ${err.message}`);
   }
 }
-// ---------- Play Full Video Modal with Zoom Animation ----------
+
+// ---------- Play Full Video Modal ----------
 function playFullVideo(video) {
   const modal = document.createElement("div");
   Object.assign(modal.style, {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100vw",
-    height: "100vh",
+    position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
     background: "rgba(0,0,0,0.95)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: "1000002",
-    overflow: "hidden",
-    opacity: "0",
-    transition: "opacity 0.25s ease"
-  });
-
-  const vidWrapper = document.createElement("div");
-  Object.assign(vidWrapper.style, {
-    transform: "scale(0.7)",         // start smaller
-    transformOrigin: "center center",
-    transition: "transform 0.25s ease",
-    borderRadius: "12px",
-    overflow: "hidden"
+    display: "flex", alignItems: "center", justifyContent: "center",
+    zIndex: "1000002"
   });
 
   const vid = document.createElement("video");
   vid.src = video.highlightVideo;
   vid.controls = true;
   vid.autoplay = true;
-  vid.style.maxWidth = "96%";
-  vid.style.maxHeight = "96%";
-  vid.style.display = "block";
+  vid.style.maxWidth = "90%";
+  vid.style.maxHeight = "90%";
+  vid.style.borderRadius = "12px";
 
-  vidWrapper.appendChild(vid);
-  modal.appendChild(vidWrapper);
+  modal.appendChild(vid);
+  modal.onclick = () => modal.remove();
   document.body.appendChild(modal);
-
-  // Animate in
-  requestAnimationFrame(() => {
-    modal.style.opacity = "1";
-    vidWrapper.style.transform = "scale(0.85)";  // 85% zoom
-  });
-
-  // Click outside video closes modal
-  modal.onclick = (e) => {
-    if (e.target === modal) {
-      // Animate out
-      vidWrapper.style.transform = "scale(0.7)";
-      modal.style.opacity = "0";
-      setTimeout(() => modal.remove(), 250);
-    }
-  };
 }
