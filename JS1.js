@@ -3395,7 +3395,9 @@ highlightsBtn.onclick = async () => {
 };
 
 // ---------- Highlights Modal ----------
+// ---------- Highlights Modal ----------
 function showHighlightsModal(videos) {
+  // Remove existing modal
   document.getElementById("highlightsModal")?.remove();
 
   const modal = document.createElement("div");
@@ -3417,20 +3419,27 @@ function showHighlightsModal(videos) {
     boxSizing: "border-box",
   });
 
-  // Intro
+  // Sticky intro
   const intro = document.createElement("div");
   intro.innerHTML = `
-    <div style="text-align:center;color:#ccc;max-width:640px;margin:0 auto;line-height:1.6;font-size:14px;background:rgba(255,255,255,0.06);padding:14px 20px;border-radius:10px;backdrop-filter:blur(5px);box-shadow:0 0 12px rgba(255,255,255,0.08);">
-      <p style="margin:0;">🎬 <b>Highlights</b> are exclusive creator moments.<br>Unlock premium clips with ⭐ Stars to support your favorite creators.</p>
-    </div>
-  `;
+    <div style="
+      text-align:center;color:#ccc;max-width:640px;margin:0 auto;
+      line-height:1.6;font-size:14px;background:rgba(255,255,255,0.06);
+      padding:14px 20px;border-radius:10px;backdrop-filter:blur(5px);
+      box-shadow:0 0 12px rgba(255,255,255,0.08);">
+      <p style="margin:0;">🎬 <b>Highlights</b> are exclusive creator moments.<br>
+      Unlock premium clips with ⭐ Stars to support your favorite creators.</p>
+    </div>`;
   Object.assign(intro.style, { position: "sticky", top: "10px", zIndex: "1001", marginBottom: "12px", transition: "opacity 0.3s ease" });
   modal.appendChild(intro);
-  modal.addEventListener("scroll", () => intro.style.opacity = modal.scrollTop > 50 ? "0.7" : "1");
 
-  // Search bar
+  modal.addEventListener("scroll", () => {
+    intro.style.opacity = modal.scrollTop > 50 ? "0.7" : "1";
+  });
+
+  // Search + Toggle Bar
   const searchWrap = document.createElement("div");
-  Object.assign(searchWrap.style, { position: "sticky", top: "84px", zIndex: "1001", marginBottom: "12px", display: "flex", justifyContent: "center" });
+  Object.assign(searchWrap.style, { position: "sticky", top: "84px", zIndex: "1001", marginBottom: "20px", display: "flex", gap: "8px", justifyContent: "center" });
   searchWrap.innerHTML = `
     <div style="display:flex;align-items:center;background:rgba(255,255,255,0.08);border-radius:30px;padding:8px 14px;width:280px;backdrop-filter:blur(6px);box-shadow:0 0 10px rgba(0,0,0,0.25);">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -3438,93 +3447,118 @@ function showHighlightsModal(videos) {
       </svg>
       <input id="highlightSearchInput" type="text" placeholder="Search by creator..." style="flex:1;background:transparent;border:none;outline:none;color:#fff;font-size:13px;letter-spacing:0.3px;"/>
     </div>
+    <button id="toggleLocked" style="padding:6px 12px;border-radius:8px;background:#444;color:#fff;border:none;font-size:13px;cursor:pointer;">Show Unlocked</button>
   `;
   modal.appendChild(searchWrap);
 
-  // Toggle (All / Unlocked / Locked)
-  const toggleWrap = document.createElement("div");
-  Object.assign(toggleWrap.style, { display: "flex", justifyContent: "center", gap: "12px", marginBottom: "16px", position: "sticky", top: "130px", zIndex: "1001" });
-  ["All","Unlocked","Locked"].forEach(mode => {
-    const btn = document.createElement("button");
-    btn.textContent = mode === "Unlocked" ? "🔓 Unlocked" : mode === "Locked" ? "🔒 Locked" : "All";
-    Object.assign(btn.style, { padding:"6px 16px", borderRadius:"20px", border:"none", cursor:"pointer", fontWeight:500, background: mode==="All"?"#ff006e":"#333", color:"#fff", transition:"background 0.2s" });
-    btn.onclick = () => {
-      toggleWrap.querySelectorAll("button").forEach(b => b.style.background="#333");
-      btn.style.background="#ff006e";
-      renderCards(sortVideos(videos, mode.toLowerCase()));
-    };
-    toggleWrap.appendChild(btn);
-  });
-  modal.appendChild(toggleWrap);
-
-  // Video content container
   const content = document.createElement("div");
   Object.assign(content.style, { display:"flex", gap:"16px", flexWrap:"nowrap", overflowX:"auto", paddingBottom:"40px", scrollBehavior:"smooth", width:"100%", justifyContent:"flex-start" });
+  modal.appendChild(content);
 
-  // Render function
-  function renderCards(filteredVideos) {
+  // Load unlocked videos from localStorage
+  let unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos")||"[]");
+  let showUnlockedOnly = false;
+
+  function renderCards(videosToRender) {
     content.innerHTML = "";
-    filteredVideos.forEach(video => {
-      const unlocked = JSON.parse(localStorage.getItem("userUnlockedVideos")||"[]").includes(video.id);
-      if(unlocked) localStorage.setItem(`unlocked_${video.id}`, "true");
+    const filteredVideos = videosToRender.filter(v => !showUnlockedOnly || unlockedVideos.includes(v.id));
 
+    filteredVideos.forEach(video => {
       const card = document.createElement("div");
-      Object.assign(card.style,{minWidth:"230px",maxWidth:"230px",background:"#1b1b1b",borderRadius:"12px",overflow:"hidden",display:"flex",flexDirection:"column",justifyContent:"space-between",cursor:"pointer",flexShrink:0,boxShadow:"0 2px 12px rgba(0,0,0,0.5)",transition:"transform 0.2s"});
-      card.onmouseenter=()=>card.style.transform="scale(1.03)";
-      card.onmouseleave=()=>card.style.transform="scale(1)";
+      Object.assign(card.style, { minWidth:"230px", maxWidth:"230px", background:"#1b1b1b", borderRadius:"12px", overflow:"hidden", display:"flex", flexDirection:"column", justifyContent:"space-between", cursor:"pointer", flexShrink:0, boxShadow:"0 2px 12px rgba(0,0,0,0.5)", transition:"transform 0.2s ease" });
+      card.onmouseenter = () => card.style.transform="scale(1.03)";
+      card.onmouseleave = () => card.style.transform="scale(1)";
+
       card.classList.add("videoCard");
-      card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
-      card.setAttribute("data-title", video.title || "");
+      card.setAttribute("data-uploader", video.uploaderName||"Anonymous");
+      card.setAttribute("data-title", video.title||"");
 
       const videoContainer = document.createElement("div");
-      Object.assign(videoContainer.style,{height:"320px",overflow:"hidden",position:"relative"});
+      Object.assign(videoContainer.style, { height:"320px", overflow:"hidden", position:"relative" });
 
       const videoEl = document.createElement("video");
       videoEl.src = video.previewClip||video.highlightVideo;
-      videoEl.muted = true; videoEl.controls=false; videoEl.loop=true; videoEl.preload="metadata";
+      videoEl.muted=true; videoEl.controls=false; videoEl.loop=true; videoEl.preload="metadata";
       videoEl.poster = video.thumbnail||`https://image-thumbnails-service/?video=${encodeURIComponent(video.highlightVideo)}&blur=10`;
-      Object.assign(videoEl.style,{width:"100%",height:"100%",objectFit:"cover"});
+      Object.assign(videoEl.style,{ width:"100%", height:"100%", objectFit:"cover" });
       videoContainer.appendChild(videoEl);
 
-      videoContainer.onmouseenter=()=>{if(!localStorage.getItem(`unlocked_${video.id}`)) videoEl.play();}
-      videoContainer.onmouseleave=()=>{videoEl.pause();videoEl.currentTime=0;}
-      videoContainer.onclick=(e)=>{e.stopPropagation();localStorage.getItem(`unlocked_${video.id}`)?playFullVideo(video):showUnlockConfirm(video);};
+      videoContainer.onmouseenter = () => { if(!unlockedVideos.includes(video.id)) videoEl.play(); };
+      videoContainer.onmouseleave = () => { videoEl.pause(); videoEl.currentTime=0; };
+
+      videoContainer.onclick = (e) => {
+        e.stopPropagation();
+        if(unlockedVideos.includes(video.id)) playFullVideo(video);
+        else showUnlockConfirm(video, () => renderCards(videos));
+      };
 
       const infoPanel = document.createElement("div");
-      Object.assign(infoPanel.style,{background:"#111",padding:"10px",display:"flex",flexDirection:"column",textAlign:"left",gap:"4px"});
-      const vidTitle = document.createElement("div"); vidTitle.textContent=video.title||"Untitled"; Object.assign(vidTitle.style,{fontWeight:"700",color:"#fff",fontSize:"14px"});
-      const uploader = document.createElement("div"); uploader.textContent=`By: ${video.uploaderName||"Anonymous"}`; Object.assign(uploader.style,{fontSize:"12px",color:"#bbb"});
-      const unlockBtn = document.createElement("button"); unlockBtn.textContent=unlocked?"Unlocked ✅":`Unlock ${video.highlightVideoPrice||100} ⭐`;
-      Object.assign(unlockBtn.style,{background:unlocked?"#444":"#ff006e",border:"none",borderRadius:"6px",padding:"8px 0",fontWeight:"600",color:"#fff",cursor:unlocked?"default":"pointer",transition:"background 0.2s"});
-      if(!unlocked){unlockBtn.onmouseenter=()=>unlockBtn.style.background="#ff3385";unlockBtn.onmouseleave=()=>unlockBtn.style.background="#ff006e";unlockBtn.onclick=(e)=>{e.stopPropagation();if(!currentUser?.uid)return showGoldAlert("Please log in to unlock content 🔒"); showUnlockConfirm(video);};}else unlockBtn.disabled=true;
+      Object.assign(infoPanel.style, { background:"#111", padding:"10px", display:"flex", flexDirection:"column", textAlign:"left", gap:"4px" });
 
-      infoPanel.appendChild(vidTitle); infoPanel.appendChild(uploader); infoPanel.appendChild(unlockBtn);
-      card.appendChild(videoContainer); card.appendChild(infoPanel);
+      const vidTitle = document.createElement("div");
+      vidTitle.textContent = video.title||"Untitled";
+      Object.assign(vidTitle.style,{ fontWeight:"700", color:"#fff", fontSize:"14px" });
+
+      const uploader = document.createElement("div");
+      uploader.textContent = `By: ${video.uploaderName||"Anonymous"}`;
+      Object.assign(uploader.style,{ fontSize:"12px", color:"#bbb" });
+
+      const unlockBtn = document.createElement("button");
+      const unlocked = unlockedVideos.includes(video.id);
+      unlockBtn.textContent = unlocked ? "Unlocked ✅" : `Unlock ${video.highlightVideoPrice||100} ⭐`;
+      Object.assign(unlockBtn.style,{ background:unlocked?"#444":"#ff006e", border:"none", borderRadius:"6px", padding:"8px 0", fontWeight:"600", color:"#fff", cursor:unlocked?"default":"pointer", transition:"background 0.2s" });
+
+      if(!unlocked){
+        unlockBtn.addEventListener("mouseenter",()=>unlockBtn.style.background="#ff3385");
+        unlockBtn.addEventListener("mouseleave",()=>unlockBtn.style.background="#ff006e");
+        unlockBtn.addEventListener("click", async (e)=>{
+          e.stopPropagation();
+          if(!currentUser?.uid) return showGoldAlert("Please log in to unlock content 🔒");
+          await showUnlockConfirm(video, () => {
+            unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos")||"[]");
+            renderCards(videos);
+          });
+        });
+      } else unlockBtn.disabled=true;
+
+      infoPanel.appendChild(vidTitle);
+      infoPanel.appendChild(uploader);
+      infoPanel.appendChild(unlockBtn);
+
+      card.appendChild(videoContainer);
+      card.appendChild(infoPanel);
       content.appendChild(card);
     });
   }
 
-  // Initial render
   renderCards(videos);
 
-  // Live search
+  // Search filter
   const searchInput = searchWrap.querySelector("#highlightSearchInput");
-  searchInput.addEventListener("input",(e)=>{
-    const term=e.target.value.trim().toLowerCase();
+  searchInput.addEventListener("input", e=>{
+    const term = e.target.value.trim().toLowerCase();
     content.querySelectorAll(".videoCard").forEach(card=>{
-      const uploader=card.getAttribute("data-uploader")?.toLowerCase()||"";
-      const title=card.getAttribute("data-title")?.toLowerCase()||"";
-      card.style.display = uploader.includes(term)||title.includes(term)?"flex":"none";
+      const uploader = card.getAttribute("data-uploader")?.toLowerCase()||"";
+      const title = card.getAttribute("data-title")?.toLowerCase()||"";
+      card.style.display = (uploader.includes(term)||title.includes(term))?"flex":"none";
     });
   });
 
-  // Close
-  const closeBtn=document.createElement("div");
-  closeBtn.innerHTML="&times;";
-  Object.assign(closeBtn.style,{position:"fixed",top:"20px",right:"28px",fontSize:"32px",color:"#fff",fontWeight:"700",cursor:"pointer",zIndex:"1000000"});
-  closeBtn.onclick=()=>modal.remove();
+  // Toggle button
+  const toggleBtn = searchWrap.querySelector("#toggleLocked");
+  toggleBtn.addEventListener("click", ()=>{
+    showUnlockedOnly = !showUnlockedOnly;
+    toggleBtn.textContent = showUnlockedOnly?"Show All":"Show Unlocked";
+    renderCards(videos);
+  });
 
-  modal.appendChild(content); modal.appendChild(closeBtn);
+  // Close button
+  const closeBtn = document.createElement("div");
+  closeBtn.innerHTML = "&times;";
+  Object.assign(closeBtn.style,{ position:"fixed", top:"20px", right:"28px", fontSize:"32px", color:"#fff", fontWeight:"700", cursor:"pointer", zIndex:"1000000" });
+  closeBtn.onclick=()=>modal.remove();
+  modal.appendChild(closeBtn);
+
   document.body.appendChild(modal);
 }
 
