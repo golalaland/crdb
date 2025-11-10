@@ -1692,50 +1692,79 @@ let hosts = [];
 let currentIndex = 0;
 
 /* ---------- Fetch + Listen to featuredHosts ---------- */
-/* ---------- Fetch + Listen to featuredHosts + users merge ---------- */
+/* ---------- Fetch + Listen to Featured Hosts + Merge with Users ---------- */
 async function fetchFeaturedHosts() {
   try {
-    const q = collection(db, "featuredHosts");
-    onSnapshot(q, async snapshot => {
-      const tempHosts = [];
+    console.log("🔄 Fetching featured hosts...");
 
-      for (const docSnap of snapshot.docs) {
-        const hostData = { id: docSnap.id, ...docSnap.data() };
-        let merged = { ...hostData };
+    const featuredRef = collection(db, "featuredHosts");
 
-        if (hostData.userId || hostData.chatId) {
-          try {
-            const userRef = doc(db, "users", hostData.userId || hostData.chatId);
-            const userSnap = await getDoc(userRef);
-            if (userSnap.exists()) {
-              merged = { ...merged, ...userSnap.data() };
+    onSnapshot(
+      featuredRef,
+      async (snapshot) => {
+        let tempHosts = [];
+
+        if (!snapshot.empty) {
+          for (const docSnap of snapshot.docs) {
+            const hostData = { id: docSnap.id, ...docSnap.data() };
+            let merged = { ...hostData };
+
+            const uid = hostData.userId || hostData.chatId;
+            if (uid) {
+              try {
+                const userSnap = await getDoc(doc(db, "users", uid));
+                if (userSnap.exists()) merged = { ...merged, ...userSnap.data() };
+              } catch (err) {
+                console.warn(`⚠️ Could not fetch user for host ${uid}:`, err);
+              }
             }
-          } catch (err) {
-            console.warn("⚠️ Could not fetch user for host:", hostData.userId || hostData.chatId, err);
+
+            tempHosts.push(merged);
           }
         }
 
-        tempHosts.push(merged);
+        // Fallback: check users marked as featured
+        if (!tempHosts.length) {
+          console.warn("⚠️ No featuredHosts found; checking users with isFeatured flag...");
+          const usersSnap = await getDocs(query(collection(db, "users"), where("isFeatured", "==", true)));
+          if (!usersSnap.empty) {
+            tempHosts = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          }
+        }
+
+        hosts = tempHosts;
+
+        if (!hosts.length) {
+          console.warn("⚠️ No featured hosts available.");
+          showNoHostsMessage();
+          return;
+        }
+
+        console.log("✅ Featured hosts loaded:", hosts.length);
+        renderHostAvatars();
+        loadHost(currentIndex >= hosts.length ? 0 : currentIndex);
+      },
+      (error) => {
+        console.error("❌ Error listening to featuredHosts:", error);
+        showNoHostsMessage();
       }
-
-      hosts = tempHosts;
-
-      if (!hosts.length) {
-        console.warn("⚠️ No featured hosts found.");
-        return;
-      }
-
-      console.log("✅ Loaded hosts:", hosts.length);
-      renderHostAvatars();
-      loadHost(currentIndex >= hosts.length ? 0 : currentIndex);
-    });
+    );
   } catch (err) {
-    console.error("❌ Error fetching hosts:", err);
+    console.error("🔥 fetchFeaturedHosts() failed:", err);
+    showNoHostsMessage();
   }
 }
 
-/* ---------- Render Avatars ---------- */
+/* ---------- Show No Hosts Message ---------- */
+function showNoHostsMessage() {
+  const container = document.getElementById("featuredHostVideo");
+  if (!container) return;
+  container.innerHTML = `<p style="color:#aaa;text-align:center;padding:20px;">No featured hosts available yet!</p>`;
+}
+
+/* ---------- Render Host Avatars ---------- */
 function renderHostAvatars() {
+  if (!hostListEl) return;
   hostListEl.innerHTML = "";
   hosts.forEach((host, idx) => {
     const img = document.createElement("img");
@@ -1744,15 +1773,12 @@ function renderHostAvatars() {
     img.classList.add("featured-avatar");
     if (idx === currentIndex) img.classList.add("active");
 
-    img.addEventListener("click", () => {
-      loadHost(idx);
-    });
-
+    img.addEventListener("click", () => loadHost(idx));
     hostListEl.appendChild(img);
   });
 }
 
-/* ---------- Load Host (Faster Video Loading) ---------- */
+/* ---------- Load Host (Video + Info) ---------- */
 async function loadHost(idx) {
   const host = hosts[idx];
   if (!host) return;
@@ -1777,13 +1803,11 @@ async function loadHost(idx) {
     muted: true,
     loop: true,
     playsInline: true,
-    preload: "auto", // preload more data
+    preload: "auto",
     style: "width:100%;height:100%;object-fit:cover;border-radius:8px;display:none;cursor:pointer;"
   });
   videoEl.setAttribute("webkit-playsinline", "true");
   videoContainer.appendChild(videoEl);
-
-  // Force video to start loading immediately
   videoEl.load();
 
   // Hint overlay
@@ -1810,15 +1834,15 @@ async function loadHost(idx) {
     }
     lastTap = now;
   }
+
   videoEl.addEventListener("click", onTapEvent);
-  videoEl.addEventListener("touchend", (ev) => {
+  videoEl.addEventListener("touchend", ev => {
     if (ev.changedTouches.length < 2) {
       ev.preventDefault?.();
       onTapEvent();
     }
   }, { passive: false });
 
-  // Show video as soon as it can play
   videoEl.addEventListener("canplay", () => {
     shimmer.style.display = "none";
     videoEl.style.display = "block";
@@ -1826,51 +1850,42 @@ async function loadHost(idx) {
     videoEl.play().catch(() => {});
   });
 
-/* ---------- Host Info ---------- */
-usernameEl.textContent = (host.chatId || "Unknown Host")
-  .toLowerCase()
-  .replace(/\b\w/g, char => char.toUpperCase());
+  // ---------- Host Info ----------
+  usernameEl.textContent = (host.chatId || "Unknown Host")
+    .toLowerCase()
+    .replace(/\b\w/g, char => char.toUpperCase());
 
-const gender = (host.gender || "person").toLowerCase();
-const pronoun = gender === "male" ? "his" : "her";
-const ageGroup = !host.age ? "20s" : host.age >= 30 ? "30s" : "20s";
-const flair = gender === "male" ? "😎" : "💋";
-const fruit = host.fruitPick || "🍇";
-const nature = host.naturePick || "cool";
-const city = host.location || "Lagos";
-const country = host.country || "Nigeria";
+  const gender = (host.gender || "person").toLowerCase();
+  const pronoun = gender === "male" ? "his" : "her";
+  const ageGroup = !host.age ? "20s" : host.age >= 30 ? "30s" : "20s";
+  const flair = gender === "male" ? "😎" : "💋";
+  const fruit = host.fruitPick || "🍇";
+  const nature = host.naturePick || "cool";
+  const city = host.location || "Lagos";
+  const country = host.country || "Nigeria";
 
-detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
+  detailsEl.innerHTML = `A ${fruit} ${nature} ${gender} in ${pronoun} ${ageGroup}, currently in ${city}, ${country}. ${flair}`;
 
-// Typewriter bio
-if (host.bioPick) {
-  const bioText = host.bioPick.length > 160 ? host.bioPick.slice(0, 160) + "…" : host.bioPick;
+  // Typewriter bio
+  if (host.bioPick) {
+    const bioText = host.bioPick.length > 160 ? host.bioPick.slice(0, 160) + "…" : host.bioPick;
+    const bioEl = document.createElement("div");
+    bioEl.style.marginTop = "6px";
+    bioEl.style.fontWeight = "600";
+    bioEl.style.fontSize = "0.95em";
+    bioEl.style.whiteSpace = "pre-wrap";
+    const brightColors = ["#FF3B3B", "#FF9500", "#FFEA00", "#00FFAB", "#00D1FF", "#FF00FF", "#FF69B4"];
+    bioEl.style.color = brightColors[Math.floor(Math.random() * brightColors.length)];
+    detailsEl.appendChild(bioEl);
 
-  // Create a container for bio
-  const bioEl = document.createElement("div");
-  bioEl.style.marginTop = "6px";
-  bioEl.style.fontWeight = "600";  // little bold
-  bioEl.style.fontSize = "0.95em";
-  bioEl.style.whiteSpace = "pre-wrap"; // keep formatting
-
-  // Pick a random bright color
-  const brightColors = ["#FF3B3B", "#FF9500", "#FFEA00", "#00FFAB", "#00D1FF", "#FF00FF", "#FF69B4"];
-  bioEl.style.color = brightColors[Math.floor(Math.random() * brightColors.length)];
-
-  detailsEl.appendChild(bioEl);
-
-  // Typewriter effect
-  let index = 0;
-  function typeWriter() {
-    if (index < bioText.length) {
-      bioEl.textContent += bioText[index];
-      index++;
-      setTimeout(typeWriter, 40); // typing speed (ms)
-    }
-  }
-  typeWriter();
-}
-/* ---------- Meet Button ---------- */
+    let index = 0;
+    (function typeWriter() {
+      if (index < bioText.length) {
+        bioEl.textContent += bioText[index];
+        index++;
+        setTimeout(typeWriter, 40);
+      }
+   /* ---------- Meet Button ---------- */
 let meetBtn = document.getElementById("meetBtn");
 if (!meetBtn) {
   meetBtn = document.createElement("button");
