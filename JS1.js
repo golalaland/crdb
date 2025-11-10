@@ -1141,18 +1141,17 @@ function updateUIAfterAuth(user) {
   const roomDescText = document.querySelector(".room-desc .text");
   const hostsBtn = document.getElementById("openHostsBtn");
 
+  // Keep Star Hosts button always visible
+  if (hostsBtn) hostsBtn.style.display = "block";
+
   if (user) {
-    // Hide intro texts and show host button
     if (subtitle) subtitle.style.display = "none";
     if (helloText) helloText.style.display = "none";
     if (roomDescText) roomDescText.style.display = "none";
-    if (hostsBtn) hostsBtn.style.display = "block";
   } else {
-    // Restore intro texts and hide host button
     if (subtitle) subtitle.style.display = "block";
     if (helloText) helloText.style.display = "block";
     if (roomDescText) roomDescText.style.display = "block";
-    if (hostsBtn) hostsBtn.style.display = "none";
   }
 }
 
