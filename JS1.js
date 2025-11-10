@@ -572,21 +572,22 @@ function showTapModal(targetEl, msgData) {
   setTimeout(() => tapModalEl?.remove(), 3000);
 }
 
-// Confetti / glow for banners
+// Banner glow only (no confetti)
 function triggerBannerEffect(bannerEl) {
   bannerEl.style.animation = "bannerGlow 1s ease-in-out infinite alternate";
-  // Optional: simple confetti particles
-  const confetti = document.createElement("div");
-  confetti.className = "confetti";
-  confetti.style.position = "absolute";
-  confetti.style.top = "-4px";
-  confetti.style.left = "50%";
-  confetti.style.width = "6px";
-  confetti.style.height = "6px";
-  confetti.style.background = "#fff";
-  confetti.style.borderRadius = "50%";
-  bannerEl.appendChild(confetti);
-  setTimeout(() => confetti.remove(), 1500);
+
+  // ✅ Confetti removed
+  // const confetti = document.createElement("div");
+  // confetti.className = "confetti";
+  // confetti.style.position = "absolute";
+  // confetti.style.top = "-4px";
+  // confetti.style.left = "50%";
+  // confetti.style.width = "6px";
+  // confetti.style.height = "6px";
+  // confetti.style.background = "#fff";
+  // confetti.style.borderRadius = "50%";
+  // bannerEl.appendChild(confetti);
+  // setTimeout(() => confetti.remove(), 1500);
 }
 
 // Render messages
