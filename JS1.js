@@ -1691,8 +1691,7 @@ const nextBtn = document.getElementById("nextHost");
 let hosts = [];
 let currentIndex = 0;
 
-/* ---------- Fetch + Listen to featuredHosts ---------- */
-/* ---------- Fetch + Listen to Featured Hosts + Merge with Users ---------- */
+/* ---------- Fetch + Listen to Featured Hosts + Merge Users ---------- */
 async function fetchFeaturedHosts() {
   try {
     console.log("🔄 Fetching featured hosts...");
@@ -1705,25 +1704,27 @@ async function fetchFeaturedHosts() {
         let tempHosts = [];
 
         if (!snapshot.empty) {
-          for (const docSnap of snapshot.docs) {
-            const hostData = { id: docSnap.id, ...docSnap.data() };
-            let merged = { ...hostData };
+          // Merge host + user data in parallel
+          tempHosts = await Promise.all(
+            snapshot.docs.map(async (docSnap) => {
+              const hostData = { id: docSnap.id, ...docSnap.data() };
+              const uid = hostData.userId || hostData.chatId;
+              let merged = { ...hostData };
 
-            const uid = hostData.userId || hostData.chatId;
-            if (uid) {
-              try {
-                const userSnap = await getDoc(doc(db, "users", uid));
-                if (userSnap.exists()) merged = { ...merged, ...userSnap.data() };
-              } catch (err) {
-                console.warn(`⚠️ Could not fetch user for host ${uid}:`, err);
+              if (uid) {
+                try {
+                  const userSnap = await getDoc(doc(db, "users", uid));
+                  if (userSnap.exists()) merged = { ...merged, ...userSnap.data() };
+                } catch (err) {
+                  console.warn(`⚠️ Could not fetch user data for ${uid}:`, err);
+                }
               }
-            }
-
-            tempHosts.push(merged);
-          }
+              return merged;
+            })
+          );
         }
 
-        // Fallback: check users marked as featured
+        // Fallback: check users with isFeatured flag
         if (!tempHosts.length) {
           console.warn("⚠️ No featuredHosts found; checking users with isFeatured flag...");
           const usersSnap = await getDocs(query(collection(db, "users"), where("isFeatured", "==", true)));
@@ -1755,16 +1756,15 @@ async function fetchFeaturedHosts() {
   }
 }
 
-/* ---------- Show No Hosts Message ---------- */
+/* ---------- Show Message If No Hosts ---------- */
 function showNoHostsMessage() {
   const container = document.getElementById("featuredHostVideo");
   if (!container) return;
   container.innerHTML = `<p style="color:#aaa;text-align:center;padding:20px;">No featured hosts available yet!</p>`;
 }
 
-/* ---------- Render Host Avatars ---------- */
+/* ---------- Render Avatars ---------- */
 function renderHostAvatars() {
-  if (!hostListEl) return;
   hostListEl.innerHTML = "";
   hosts.forEach((host, idx) => {
     const img = document.createElement("img");
@@ -1778,7 +1778,7 @@ function renderHostAvatars() {
   });
 }
 
-/* ---------- Load Host (Video + Info) ---------- */
+/* ---------- Load Host (Smooth Video + Bio) ---------- */
 async function loadHost(idx) {
   const host = hosts[idx];
   if (!host) return;
@@ -1808,6 +1808,7 @@ async function loadHost(idx) {
   });
   videoEl.setAttribute("webkit-playsinline", "true");
   videoContainer.appendChild(videoEl);
+
   videoEl.load();
 
   // Hint overlay
@@ -1816,15 +1817,15 @@ async function loadHost(idx) {
   hint.textContent = "Tap to unmute";
   videoContainer.appendChild(hint);
 
-  function showHint(msg, timeout = 1400) {
+  const showHint = (msg, timeout = 1400) => {
     hint.textContent = msg;
     hint.classList.add("show");
     clearTimeout(hint._t);
     hint._t = setTimeout(() => hint.classList.remove("show"), timeout);
-  }
+  };
 
   let lastTap = 0;
-  function onTapEvent() {
+  const onTapEvent = () => {
     const now = Date.now();
     if (now - lastTap < 300) {
       document.fullscreenElement ? document.exitFullscreen?.() : videoEl.requestFullscreen?.();
@@ -1833,10 +1834,10 @@ async function loadHost(idx) {
       showHint(videoEl.muted ? "Tap to unmute" : "Sound on", 1200);
     }
     lastTap = now;
-  }
+  };
 
   videoEl.addEventListener("click", onTapEvent);
-  videoEl.addEventListener("touchend", ev => {
+  videoEl.addEventListener("touchend", (ev) => {
     if (ev.changedTouches.length < 2) {
       ev.preventDefault?.();
       onTapEvent();
@@ -1853,7 +1854,7 @@ async function loadHost(idx) {
   // ---------- Host Info ----------
   usernameEl.textContent = (host.chatId || "Unknown Host")
     .toLowerCase()
-    .replace(/\b\w/g, char => char.toUpperCase());
+    .replace(/\b\w/g, c => c.toUpperCase());
 
   const gender = (host.gender || "person").toLowerCase();
   const pronoun = gender === "male" ? "his" : "her";
@@ -1869,22 +1870,29 @@ async function loadHost(idx) {
   // Typewriter bio
   if (host.bioPick) {
     const bioText = host.bioPick.length > 160 ? host.bioPick.slice(0, 160) + "…" : host.bioPick;
+
     const bioEl = document.createElement("div");
     bioEl.style.marginTop = "6px";
     bioEl.style.fontWeight = "600";
     bioEl.style.fontSize = "0.95em";
     bioEl.style.whiteSpace = "pre-wrap";
+
     const brightColors = ["#FF3B3B", "#FF9500", "#FFEA00", "#00FFAB", "#00D1FF", "#FF00FF", "#FF69B4"];
     bioEl.style.color = brightColors[Math.floor(Math.random() * brightColors.length)];
+
     detailsEl.appendChild(bioEl);
 
     let index = 0;
-    (function typeWriter() {
+    const typeWriter = () => {
       if (index < bioText.length) {
         bioEl.textContent += bioText[index];
         index++;
         setTimeout(typeWriter, 40);
       }
+    };
+    typeWriter();
+  }
+}
    /* ---------- Meet Button ---------- */
 let meetBtn = document.getElementById("meetBtn");
 if (!meetBtn) {
