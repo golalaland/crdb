@@ -3330,52 +3330,10 @@ const scrollArrow = document.getElementById('scrollArrow');
 checkScroll(); // initial check
 }); // ✅ closes DOMContentLoaded event listener
 
-/* ---------- Highlights Button ---------- */
-highlightsBtn.onclick = async () => {
-  try {
-    if (!currentUser?.uid) {
-      showGoldAlert("Please log in to view highlights 🔒");
-      return;
-    }
-
-    const highlightsRef = collection(db, "highlightVideos");
-    const q = query(highlightsRef, orderBy("createdAt", "desc"));
-    const snapshot = await getDocs(q);
-
-    if (snapshot.empty) {
-      showGoldAlert("No highlights uploaded yet ⚡");
-      return;
-    }
-
-    const videos = snapshot.docs.map(docSnap => {
-      const d = docSnap.data();
-      const uploaderName = d.uploaderName || d.chatId || d.displayName || d.username || "Anonymous";
-      return {
-        id: docSnap.id,
-        highlightVideo: d.highlightVideo,
-        highlightVideoPrice: d.highlightVideoPrice || 0,
-        title: d.title || "Untitled",
-        uploaderName,
-        uploaderId: d.uploaderId || "",
-        uploaderEmail: d.uploaderEmail || "unknown",
-        description: d.description || "",
-        thumbnail: d.thumbnail || "",
-        createdAt: d.createdAt || null,
-        unlockedBy: d.unlockedBy || [],
-        previewClip: d.previewClip || ""
-      };
-    });
-
-    showHighlightsModal(videos);
-  } catch (err) {
-    console.error("🔥 Error fetching highlights:", err);
-    showGoldAlert("Error fetching highlights — please try again.");
-  }
-};
 
 /* ---------- Highlights Modal ---------- */
-function showHighlightsModal(videos) {
-  // Remove any existing modal
+async function showHighlightsModal(videos) {
+  // Remove existing modal if any
   document.getElementById("highlightsModal")?.remove();
 
   const modal = document.createElement("div");
@@ -3480,14 +3438,15 @@ function showHighlightsModal(videos) {
   let unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
   let showUnlockedOnly = false;
 
-  // Toggle unlocked filter
-  toggleBtn.onclick = () => {
-    showUnlockedOnly = !showUnlockedOnly;
-    toggleBtn.textContent = showUnlockedOnly ? "Show All" : "Show Unlocked";
+  // Helper to unlock video & refresh
+  async function unlockVideoAndRefresh(video) {
+    if (!currentUser?.uid) return showGoldAlert("Please log in to unlock content 🔒");
+    await handleUnlockVideo(video);
+    unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
     renderCards(videos);
-  };
+  }
 
-  // Render cards
+  // Render all video cards
   function renderCards(videosToRender) {
     content.innerHTML = "";
     const filtered = videosToRender.filter(v => !showUnlockedOnly || unlockedVideos.includes(v.id));
@@ -3510,7 +3469,13 @@ function showHighlightsModal(videos) {
         transition: "transform 0.2s ease"
       });
 
-      // Video container
+      card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
+      card.setAttribute("data-title", video.title || "");
+
+      card.onmouseenter = () => card.style.transform = "scale(1.03)";
+      card.onmouseleave = () => card.style.transform = "scale(1)";
+
+      // Video preview
       const videoContainer = document.createElement("div");
       Object.assign(videoContainer.style, { height: "320px", overflow: "hidden", position: "relative" });
 
@@ -3522,20 +3487,40 @@ function showHighlightsModal(videos) {
       videoEl.preload = "metadata";
       videoEl.poster = video.thumbnail || `https://image-thumbnails-service/?video=${encodeURIComponent(video.highlightVideo)}&blur=10`;
       Object.assign(videoEl.style, { width: "100%", height: "100%", objectFit: "cover" });
-
       videoContainer.appendChild(videoEl);
       card.appendChild(videoContainer);
 
-      // Unlock button
+      // Info panel
+      const infoPanel = document.createElement("div");
+      Object.assign(infoPanel.style, {
+        background: "#111",
+        padding: "10px",
+        display: "flex",
+        flexDirection: "column",
+        textAlign: "left",
+        gap: "4px"
+      });
+
+      const vidTitle = document.createElement("div");
+      vidTitle.textContent = video.title || "Untitled";
+      Object.assign(vidTitle.style, { fontWeight: "700", color: "#fff", fontSize: "14px" });
+
+      const uploader = document.createElement("div");
+      uploader.textContent = `By: ${video.uploaderName || "Anonymous"}`;
+      Object.assign(uploader.style, { fontSize: "12px", color: "#bbb" });
+
       const btn = document.createElement("button");
-      btn.style.cssText = `
-        margin:8px 12px 12px;
-        padding:6px 10px;
-        border:none;
-        border-radius:6px;
-        font-size:13px;
-        cursor:pointer;
-      `;
+      Object.assign(btn.style, {
+        background: "#ff9800",
+        color: "#000",
+        border: "none",
+        borderRadius: "6px",
+        padding: "6px 10px",
+        marginTop: "6px",
+        fontWeight: "600",
+        cursor: "pointer",
+        fontSize: "13px",
+      });
 
       function updateButton() {
         if (unlockedVideos.includes(video.id)) {
@@ -3552,85 +3537,25 @@ function showHighlightsModal(videos) {
       }
       updateButton();
 
-      btn.onclick = async (e) => {
+      btn.onclick = (e) => {
         e.stopPropagation();
-        if (!unlockedVideos.includes(video.id)) {
-          await handleUnlockVideo(video); // Deduct stars and credit uploader
-          unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
-          updateButton();
-        }
+        if (!unlockedVideos.includes(video.id)) unlockVideoAndRefresh(video);
       };
 
-      card.appendChild(btn);
-      content.appendChild(card);
+      infoPanel.append(vidTitle, uploader, btn);
+      card.appendChild(infoPanel);
 
-      // Hover behavior
+      // Hover/play behavior
       videoContainer.onmouseenter = () => { if (!unlockedVideos.includes(video.id)) videoEl.play(); };
       videoContainer.onmouseleave = () => { videoEl.pause(); videoEl.currentTime = 0; };
       videoContainer.onclick = () => {
         if (unlockedVideos.includes(video.id)) playFullVideo(video);
-        else btn.click(); // Trigger unlock
+        else unlockVideoAndRefresh(video);
       };
+
+      content.appendChild(card);
     });
   }
-
-  renderCards(videos);
-  document.body.appendChild(modal);
-}
-
-
-    // Info panel
-    const infoPanel = document.createElement("div");
-    Object.assign(infoPanel.style, {
-      background: "#111",
-      padding: "10px",
-      display: "flex",
-      flexDirection: "column",
-      textAlign: "left",
-      gap: "4px"
-    });
-
-    const vidTitle = document.createElement("div");
-    vidTitle.textContent = video.title || "Untitled";
-    Object.assign(vidTitle.style, { fontWeight: "700", color: "#fff", fontSize: "14px" });
-
-    const uploader = document.createElement("div");
-    uploader.textContent = `By: ${video.uploaderName || "Anonymous"}`;
-    Object.assign(uploader.style, { fontSize: "12px", color: "#bbb" });
-
-    const unlockBtn = document.createElement("button");
-    const unlocked = unlockedVideos.includes(video.id);
-    unlockBtn.textContent = unlocked ? "Unlocked ✅" : `Unlock ${video.highlightVideoPrice || 100} ⭐`;
-    Object.assign(unlockBtn.style, {
-      background: unlocked ? "#444" : "#ff006e",
-      border: "none",
-      borderRadius: "6px",
-      padding: "8px 0",
-      fontWeight: "600",
-      color: "#fff",
-      cursor: unlocked ? "default" : "pointer",
-      transition: "background 0.2s"
-    });
-
-    if (!unlocked) {
-      unlockBtn.addEventListener("mouseenter", () => unlockBtn.style.background = "#ff3385");
-      unlockBtn.addEventListener("mouseleave", () => unlockBtn.style.background = "#ff006e");
-      unlockBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (!currentUser?.uid) return showGoldAlert("Please log in to unlock content 🔒");
-        showUnlockConfirm(video, () => {
-          unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
-          renderCards(videos);
-        });
-      });
-    } else unlockBtn.disabled = true;
-
-    infoPanel.append(vidTitle, uploader, unlockBtn);
-    card.append(videoContainer, infoPanel);
-    content.appendChild(card);
-  });
-}
-
 
   renderCards(videos);
 
@@ -3644,48 +3569,54 @@ function showHighlightsModal(videos) {
     });
   });
 
-  // Toggle button
-  toggleBtn.addEventListener("click", () => {
+  // Toggle unlocked filter
+  toggleBtn.onclick = () => {
     showUnlockedOnly = !showUnlockedOnly;
     toggleBtn.textContent = showUnlockedOnly ? "Show All" : "Show Unlocked";
     renderCards(videos);
-  });
+  };
 
   // Close button
   const closeBtn = document.createElement("div");
   closeBtn.innerHTML = "&times;";
-  Object.assign(closeBtn.style, { position: "fixed", top: "20px", right: "28px", fontSize: "32px", color: "#fff", fontWeight: "700", cursor: "pointer", zIndex: "1000000" });
+  Object.assign(closeBtn.style, {
+    position: "fixed",
+    top: "20px",
+    right: "28px",
+    fontSize: "32px",
+    color: "#fff",
+    fontWeight: "700",
+    cursor: "pointer",
+    zIndex: "1000000"
+  });
   closeBtn.onclick = () => modal.remove();
   modal.appendChild(closeBtn);
 
   document.body.appendChild(modal);
 }
 
-// ---------- Unlock Confirmation ----------
+/* ---------- Unlock Confirmation ---------- */
 function showUnlockConfirm(video) {
-  // 🛑 Stop any video that might be playing behind
   document.querySelectorAll("video").forEach(v => v.pause());
-
-  // Remove any existing unlock modal
   document.getElementById("unlockConfirmModal")?.remove();
 
   const modal = document.createElement("div");
- modal.id = "unlockConfirmModal";
-Object.assign(modal.style, {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "100vw",
-  height: "100vh",
-  background: "rgba(0,0,0,0.93)", // darker and more opaque
-  backdropFilter: "blur(8px)",    // thicker blur = more glassy
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: "1000001",
-  transition: "opacity 0.3s ease",
-  opacity: "1",
-});
+  modal.id = "unlockConfirmModal";
+  Object.assign(modal.style, {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    background: "rgba(0,0,0,0.93)",
+    backdropFilter: "blur(8px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: "1000001",
+    transition: "opacity 0.3s ease",
+    opacity: "1"
+  });
 
   modal.innerHTML = `
     <div style="background:#111;padding:20px;border-radius:12px;text-align:center;color:#fff;max-width:320px;box-shadow:0 0 20px rgba(0,0,0,0.5);">
@@ -3697,12 +3628,12 @@ Object.assign(modal.style, {
       </div>
     </div>
   `;
-
   document.body.appendChild(modal);
+
   modal.querySelector("#cancelUnlock").onclick = () => modal.remove();
   modal.querySelector("#confirmUnlock").onclick = async () => {
     modal.remove();
-    await handleUnlockVideo(video);
+    await unlockVideoAndRefresh(video);
   };
 }
 
