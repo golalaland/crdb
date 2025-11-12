@@ -2,86 +2,91 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" 
+<meta name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Tap Master Game</title>
+<title>Tap Master</title>
 <style>
   body {
+    margin: 0;
     font-family: Arial, sans-serif;
     background: #0e0e0e;
-    color: white;
-    margin: 0;
+    color: #fff;
     touch-action: manipulation;
     overflow: hidden;
   }
-
-  .center {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-  }
-
   h1 {
     color: #00e676;
-    text-shadow: 0 0 10px #00e67655;
+    text-shadow: 0 0 10px #00e67666;
   }
-
   button {
-    cursor: pointer;
     border: none;
-    border-radius: 10px;
-    font-size: 18px;
-    padding: 12px 30px;
+    cursor: pointer;
   }
 
   /* --- Start Page --- */
   #startPage {
-    text-align: center;
+    position: relative;
+    height: 100vh;
+    background: url('https://via.placeholder.com/600x1000?text=Tap+Master+Image')
+                center/cover no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
   }
   #startBtn {
+    position: absolute;
+    bottom: 120px;
+    padding: 15px 40px;
+    font-size: 22px;
+    font-weight: bold;
     background: linear-gradient(90deg, #00e676, #00b0ff);
     color: #000;
-    font-weight: bold;
+    border-radius: 10px;
+  }
+  footer {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    text-align: center;
+    font-size: 14px;
+    opacity: 0.7;
   }
 
   /* --- Modal --- */
-  #modal {
+  #modal, #spinner, #resultModal {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.7);
+    background: rgba(0,0,0,0.8);
     display: none;
     align-items: center;
     justify-content: center;
+    flex-direction: column;
   }
-  .modal-content {
+  .modal-box {
     background: #1e1e1e;
-    padding: 30px;
+    padding: 25px;
     border-radius: 12px;
     text-align: center;
     width: 80%;
     max-width: 320px;
   }
-  .modal-content button {
+  .modal-box button {
     margin: 10px;
+    padding: 10px 25px;
+    font-weight: bold;
+    border-radius: 8px;
   }
 
   /* --- Spinner --- */
-  #spinner {
-    display: none;
-  }
   .loader {
     border: 6px solid #333;
     border-top: 6px solid #00e676;
     border-radius: 50%;
-    width: 60px;
-    height: 60px;
+    width: 60px; height: 60px;
     animation: spin 1s linear infinite;
   }
-  @keyframes spin {
-    100% { transform: rotate(360deg); }
-  }
+  @keyframes spin {100%{transform: rotate(360deg);}}
 
   /* --- Game Page --- */
   #gamePage {
@@ -98,98 +103,103 @@
     text-align: center;
   }
 
+  #bonusContainer {
+    width: 280px;
+    height: 22px;
+    background: #333;
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 20px auto 10px;
+    box-shadow: 0 0 10px #00e67644;
+  }
+  #bonusBar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #00e676, #00b0ff);
+    transition: width 0.2s;
+  }
+
   #tapButton {
-    width: 150px;
-    height: 150px;
+    width: 150px; height: 150px;
     border-radius: 50%;
     background: radial-gradient(circle at top left, #00e676, #00b0ff);
+    font-size: 22px; font-weight: bold;
     color: #000;
-    font-weight: bold;
-    font-size: 22px;
-    box-shadow: 0 0 20px #00e676aa;
-    transition: transform 0.1s, box-shadow 0.2s;
+    box-shadow: 0 0 25px #00e676aa;
     animation: pulse 1.5s infinite;
   }
-
-  #tapButton:active {
-    transform: scale(0.95);
-    box-shadow: 0 0 10px #00e67666;
-  }
-
   @keyframes pulse {
-    0% { box-shadow: 0 0 10px #00e67666; transform: scale(1); }
-    50% { box-shadow: 0 0 25px #00e676cc; transform: scale(1.05); }
-    100% { box-shadow: 0 0 10px #00e67666; transform: scale(1); }
+    0% {box-shadow:0 0 10px #00e67666;transform:scale(1);}
+    50% {box-shadow:0 0 25px #00e676cc;transform:scale(1.05);}
+    100% {box-shadow:0 0 10px #00e67666;transform:scale(1);}
   }
+  #tapButton:active {transform:scale(0.95);}
 
-  /* Coin flash */
-  .coin {
+  /* Floating +₦1.00 */
+  .floatText {
     position: absolute;
-    font-size: 24px;
-    color: gold;
+    color: #00ff95;
+    font-weight: bold;
+    font-size: 20px;
     opacity: 0;
-    animation: coinRise 0.8s ease-out forwards;
+    animation: floatUp 0.8s ease-out forwards;
+  }
+  @keyframes floatUp {
+    0% {opacity:1; transform:translate(0,0);}
+    100% {opacity:0; transform:translate(var(--x,0px), -80px);}
   }
 
-  @keyframes coinRise {
-    0% { transform: translateY(0); opacity: 1; }
-    100% { transform: translateY(-80px); opacity: 0; }
-  }
-
-  /* --- Result Modal --- */
-  #resultModal {
+  /* Confetti simple */
+  .confetti {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.8);
-    display: none;
-    align-items: center;
-    justify-content: center;
+    width: 8px; height: 8px;
+    background: var(--color);
+    top: 50%; left: 50%;
+    opacity: 0.9;
+    animation: confettiFall 1s ease-out forwards;
   }
-  #resultModal .modal-content {
-    background: #1e1e1e;
-    padding: 25px;
-    border-radius: 12px;
+  @keyframes confettiFall {
+    to {transform: translate(var(--x), var(--y)) rotate(720deg); opacity:0;}
   }
 
-  /* --- Leaderboard --- */
-  #leaderboard {
-    margin-top: 10px;
-    text-align: left;
-  }
-
+  #leaderboard {text-align:left; width:90%; max-width:320px;}
+  #leaderboard ol {padding-left:20px;}
 </style>
 </head>
 <body>
 
-<!-- START PAGE -->
-<div id="startPage" class="center">
-  <h1>⭐️ TAP MASTER ⭐️</h1>
-  <p>Show your tapping power. Beat the timer, earn cash, and climb the leaderboard!</p>
+<!-- Start Page -->
+<div id="startPage">
+  <h1>TAP MASTER</h1>
   <button id="startBtn">Play</button>
+  <footer>© 2025 Tap Master Studios</footer>
 </div>
 
-<!-- MODAL CONFIRMATION -->
-<div id="modal" class="center">
-  <div class="modal-content">
+<!-- Modal -->
+<div id="modal">
+  <div class="modal-box">
     <p>Play <b>Tap Master</b> for <b>200 ⭐️</b>?</p>
     <button id="yesBtn">Yes</button>
     <button id="noBtn">Cancel</button>
   </div>
 </div>
 
-<!-- SPINNER / LOADING -->
-<div id="spinner" class="center">
+<!-- Spinner -->
+<div id="spinner">
   <div class="loader"></div>
   <p>Loading Tap Arena...</p>
 </div>
 
-<!-- GAME PAGE -->
+<!-- Game Page -->
 <div id="gamePage">
   <div class="stats">
-    <p>⏱️ Time Left: <span id="timer">60</span>s</p>
+    <p>⏱ Time Left: <span id="timer">60</span>s</p>
     <p>👆 Taps: <span id="tapCount">0</span></p>
     <p>💵 Earnings: ₦<span id="earnings">0.00</span></p>
-    <p>⚡ Level: <span id="level">1</span></p>
+  </div>
+
+  <div id="bonusContainer">
+    <div id="bonusBar"></div>
   </div>
 
   <button id="tapButton">TAP</button>
@@ -200,9 +210,9 @@
   </div>
 </div>
 
-<!-- RESULT MODAL -->
-<div id="resultModal" class="center">
-  <div class="modal-content">
+<!-- Result Modal -->
+<div id="resultModal">
+  <div class="modal-box">
     <h2>Time’s Up!</h2>
     <p>👆 Taps: <span id="finalTaps">0</span></p>
     <p>💵 Cash Earned: ₦<span id="finalEarnings">0.00</span></p>
@@ -210,118 +220,139 @@
   </div>
 </div>
 
+<audio id="tapSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
+
 <script>
 const startPage = document.getElementById('startPage');
 const modal = document.getElementById('modal');
 const spinner = document.getElementById('spinner');
 const gamePage = document.getElementById('gamePage');
 const resultModal = document.getElementById('resultModal');
-
-const startBtn = document.getElementById('startBtn');
 const yesBtn = document.getElementById('yesBtn');
 const noBtn = document.getElementById('noBtn');
-const playAgainBtn = document.getElementById('playAgain');
-
+const startBtn = document.getElementById('startBtn');
+const playAgain = document.getElementById('playAgain');
 const tapButton = document.getElementById('tapButton');
+const tapSound = document.getElementById('tapSound');
 const timerEl = document.getElementById('timer');
 const tapCountEl = document.getElementById('tapCount');
 const earningsEl = document.getElementById('earnings');
-const levelEl = document.getElementById('level');
+const bonusBar = document.getElementById('bonusBar');
 const finalTapsEl = document.getElementById('finalTaps');
 const finalEarningsEl = document.getElementById('finalEarnings');
-const scoresList = document.getElementById('scores');
+const scoresEl = document.getElementById('scores');
 
-let taps = 0, earnings = 0, level = 1, tapsNeeded = 1, timer = 60, timerInterval;
+let taps=0, earnings=0, timer=60, timerInterval, bonusProgress=0, bonusTriggered=false;
 
-// Open modal on Play
-startBtn.onclick = () => modal.style.display = 'flex';
+startBtn.onclick=()=>modal.style.display='flex';
+noBtn.onclick=()=>modal.style.display='none';
 
-// Cancel modal
-noBtn.onclick = () => modal.style.display = 'none';
-
-// Confirm start
-yesBtn.onclick = () => {
-  modal.style.display = 'none';
-  spinner.style.display = 'flex';
-  setTimeout(() => {
-    spinner.style.display = 'none';
+yesBtn.onclick=()=>{
+  modal.style.display='none';
+  spinner.style.display='flex';
+  setTimeout(()=>{
+    spinner.style.display='none';
     startGame();
-  }, 2000);
+  },2000);
 };
 
-// Start game logic
-function startGame() {
-  taps = 0; earnings = 0; level = 1; tapsNeeded = 1; timer = 60;
+function startGame(){
+  taps=0; earnings=0; bonusProgress=0; bonusTriggered=false; timer=60;
+  startPage.style.display='none';
+  gamePage.style.display='flex';
   updateStats();
-  gamePage.style.display = 'flex';
-  startPage.style.display = 'none';
-
-  timerInterval = setInterval(() => {
+  timerInterval=setInterval(()=>{
     timer--;
-    timerEl.textContent = timer;
-    if (timer <= 0) endGame();
-  }, 1000);
+    timerEl.textContent=timer;
+    if(timer<=0) endGame();
+  },1000);
 }
 
-tapButton.onclick = (e) => {
+tapButton.onclick=(e)=>{
+  if(timer<=0) return;
   taps++;
-  tapCountEl.textContent = taps;
+  earnings++;
+  tapCountEl.textContent=taps;
+  earningsEl.textContent=earnings.toFixed(2);
+  tapSound.currentTime=0;
+  tapSound.play().catch(()=>{});
+  if (navigator.vibrate) navigator.vibrate(20);
 
-  // coin animation
-  const coin = document.createElement('div');
-  coin.classList.add('coin');
-  coin.textContent = "🪙";
-  document.body.appendChild(coin);
+  // floating +₦1
+  const float = document.createElement('div');
+  float.classList.add('floatText');
+  float.textContent = "+₦1.00";
   const rect = tapButton.getBoundingClientRect();
-  coin.style.left = rect.left + rect.width/2 - 10 + "px";
-  coin.style.top = rect.top - 20 + "px";
-  setTimeout(()=>coin.remove(), 800);
+  const angle = Math.random()*360;
+  const radius = 30 + Math.random()*40;
+  const x = Math.cos(angle)*radius;
+  float.style.setProperty('--x', `${x}px`);
+  float.style.left = rect.left + rect.width/2 + "px";
+  float.style.top = rect.top + rect.height/2 + "px";
+  document.body.appendChild(float);
+  setTimeout(()=>float.remove(),800);
 
-  // Progress difficulty
-  if (taps % tapsNeeded === 0) {
-    earnings += 1;
-    earningsEl.textContent = earnings.toFixed(2);
-  }
-
-  if (earnings % 500 === 0 && earnings !== 0) {
-    level++;
-    tapsNeeded += 2;
-    levelEl.textContent = level;
+  // bonus bar
+  if(!bonusTriggered){
+    bonusProgress += 1; // 100 taps to fill
+    if(bonusProgress>=100){
+      bonusTriggered=true;
+      bonusProgress=100;
+      triggerBonus();
+    }
+    bonusBar.style.width=bonusProgress+"%";
   }
 };
 
-function endGame() {
+function triggerBonus(){
+  earnings += 500;
+  earningsEl.textContent=earnings.toFixed(2);
+  confettiBurst();
+}
+
+function confettiBurst(){
+  for(let i=0;i<30;i++){
+    const c=document.createElement('div');
+    c.classList.add('confetti');
+    c.style.setProperty('--color', `hsl(${Math.random()*360},100%,60%)`);
+    c.style.setProperty('--x', `${(Math.random()-0.5)*600}px`);
+    c.style.setProperty('--y', `${(Math.random()-0.5)*400}px`);
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),1000);
+  }
+}
+
+function endGame(){
   clearInterval(timerInterval);
-  gamePage.style.display = 'none';
-  resultModal.style.display = 'flex';
-  finalTapsEl.textContent = taps;
-  finalEarningsEl.textContent = earnings.toFixed(2);
-  saveScore(taps, earnings);
+  gamePage.style.display='none';
+  resultModal.style.display='flex';
+  finalTapsEl.textContent=taps;
+  finalEarningsEl.textContent=earnings.toFixed(2);
+  saveScore(taps,earnings);
   showLeaderboard();
 }
 
-function updateStats() {
-  tapCountEl.textContent = 0;
-  earningsEl.textContent = "0.00";
-  levelEl.textContent = 1;
-  timerEl.textContent = 60;
-}
-
-playAgainBtn.onclick = () => {
-  resultModal.style.display = 'none';
-  startPage.style.display = 'flex';
+playAgain.onclick=()=>{
+  resultModal.style.display='none';
+  startPage.style.display='flex';
 };
 
-function saveScore(taps, earnings) {
-  let scores = JSON.parse(localStorage.getItem('tapScores')) || [];
-  scores.push({ taps, earnings, date: new Date().toLocaleString() });
-  scores.sort((a,b)=>b.taps - a.taps);
-  localStorage.setItem('tapScores', JSON.stringify(scores.slice(0,5))); // top 5
+function updateStats(){
+  timerEl.textContent=timer;
+  tapCountEl.textContent=taps;
+  earningsEl.textContent=earnings.toFixed(2);
+  bonusBar.style.width='0%';
 }
 
-function showLeaderboard() {
-  let scores = JSON.parse(localStorage.getItem('tapScores')) || [];
-  scoresList.innerHTML = scores.map(
+function saveScore(taps,earnings){
+  let scores=JSON.parse(localStorage.getItem('tapScores'))||[];
+  scores.push({taps,earnings,date:new Date().toLocaleString()});
+  scores.sort((a,b)=>b.taps-a.taps);
+  localStorage.setItem('tapScores',JSON.stringify(scores.slice(0,5)));
+}
+function showLeaderboard(){
+  let scores=JSON.parse(localStorage.getItem('tapScores'))||[];
+  scoresEl.innerHTML=scores.map(
     (s,i)=>`<li>#${i+1} - ${s.taps} taps (₦${s.earnings.toFixed(2)})</li>`
   ).join('');
 }
