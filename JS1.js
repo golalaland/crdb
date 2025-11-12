@@ -3329,12 +3329,10 @@ const scrollArrow = document.getElementById('scrollArrow');
   
 checkScroll(); // initial check
 }); // ✅ closes DOMContentLoaded event listener
-
-
-// ---------- Highlights Button ----------
+/* ---------- Highlights Button ---------- */
 highlightsBtn.onclick = async () => {
   try {
-    if (!currentUser || !currentUser.uid) {
+    if (!currentUser?.uid) {
       showGoldAlert("Please log in to view highlights 🔒");
       return;
     }
@@ -3348,30 +3346,25 @@ highlightsBtn.onclick = async () => {
       return;
     }
 
-const videos = snapshot.docs.map(docSnap => {
-  const d = docSnap.data();
+    const videos = snapshot.docs.map(docSnap => {
+      const d = docSnap.data();
+      const uploaderName = d.uploaderName || d.chatId || d.displayName || d.username || "Anonymous";
+      return {
+        id: docSnap.id,
+        highlightVideo: d.highlightVideo,
+        highlightVideoPrice: d.highlightVideoPrice || 0,
+        title: d.title || "Untitled",
+        uploaderName,
+        uploaderId: d.uploaderId || "",
+        uploaderEmail: d.uploaderEmail || "unknown",
+        description: d.description || "",
+        thumbnail: d.thumbnail || "",
+        createdAt: d.createdAt || null,
+        unlockedBy: d.unlockedBy || [],
+        previewClip: d.previewClip || ""
+      };
+    });
 
-  // 💎 Make sure uploaderName is resolved from multiple possible fields
-  const uploaderName =
-    d.uploaderName ||
-    d.chatId ||
-    d.displayName ||
-    d.username ||
-    "Anonymous";
-
-  return {
-    id: docSnap.id,
-    highlightVideo: d.highlightVideo,
-    highlightVideoPrice: d.highlightVideoPrice || 0,
-    title: d.title || "Untitled",
-    uploaderName, // ✅ keep consistent key used in renderCards()
-    uploaderId: d.uploaderId || "",
-    uploaderEmail: d.uploaderEmail || "unknown",
-    description: d.description || "",
-    thumbnail: d.thumbnail || "",
-    createdAt: d.createdAt || null,
-  };
-});
     showHighlightsModal(videos);
   } catch (err) {
     console.error("🔥 Error fetching highlights:", err);
@@ -3379,12 +3372,10 @@ const videos = snapshot.docs.map(docSnap => {
   }
 };
 
-// ---------- Highlights Modal ----------
+/* ---------- Highlights Modal ---------- */
 function showHighlightsModal(videos) {
-  // Remove any existing modal
   document.getElementById("highlightsModal")?.remove();
 
-  // 🪩 Main modal wrapper
   const modal = document.createElement("div");
   modal.id = "highlightsModal";
   Object.assign(modal.style, {
@@ -3401,58 +3392,41 @@ function showHighlightsModal(videos) {
     zIndex: "999999",
     overflowY: "auto",
     padding: "20px",
-    boxSizing: "border-box",
+    boxSizing: "border-box"
   });
 
-  // 🪄 Sticky Intro Message
+  // Sticky intro
   const intro = document.createElement("div");
   intro.innerHTML = `
-    <div style="
-      text-align:center;
-      color:#ccc;
-      max-width:640px;
-      margin:0 auto;
-      line-height:1.6;
-      font-size:14px;
-      background:rgba(255,255,255,0.06);
-      padding:14px 20px;
-      border-radius:10px;
-      backdrop-filter:blur(5px);
-      box-shadow:0 0 12px rgba(255,255,255,0.08);
-    ">
-      <p style="margin:0;">
-        🎬 <b>Highlights</b> are exclusive creator moments.<br>
-        Unlock premium clips with ⭐ Stars to support your favorite creators.
-      </p>
-    </div>
-  `;
-  Object.assign(intro.style, {
-    position: "sticky",
-    top: "10px",
-    zIndex: "1001",
-    marginBottom: "12px",
-    transition: "opacity 0.3s ease",
-  });
+    <div style="text-align:center;color:#ccc;max-width:640px;margin:0 auto;line-height:1.6;font-size:14px;
+      background:rgba(255,255,255,0.06);padding:14px 20px;border-radius:10px;backdrop-filter:blur(5px);
+      box-shadow:0 0 12px rgba(255,255,255,0.08);">
+      <p style="margin:0;">🎬 <b>Highlights</b> are exclusive creator moments.<br>
+      Unlock premium clips with ⭐ Stars to support your favorite creators.</p>
+    </div>`;
+  Object.assign(intro.style, { position: "sticky", top: "10px", zIndex: "1001", marginBottom: "12px", transition: "opacity 0.3s ease" });
   modal.appendChild(intro);
 
-  // 🧠 Fade intro slightly when scrolling
   modal.addEventListener("scroll", () => {
     intro.style.opacity = modal.scrollTop > 50 ? "0.7" : "1";
   });
 
-  // 🩵 Search Bar (Sticky + Functional)
-const searchWrap = document.createElement("div");
-Object.assign(searchWrap.style, {
-  position: "sticky",
-  top: "84px",
-  zIndex: "1001",
-  marginBottom: "20px",
-  display: "flex",
-  justifyContent: "center",
-});
+  // Search + toggle container (vertical stack)
+  const searchWrap = document.createElement("div");
+  Object.assign(searchWrap.style, {
+    position: "sticky",
+    top: "84px",
+    zIndex: "1001",
+    marginBottom: "20px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "6px"
+  });
 
-searchWrap.innerHTML = `
-  <div style="
+  // Search input
+  const searchInputWrap = document.createElement("div");
+  searchInputWrap.style.cssText = `
     display:flex;
     align-items:center;
     background:rgba(255,255,255,0.08);
@@ -3461,116 +3435,86 @@ searchWrap.innerHTML = `
     width:280px;
     backdrop-filter:blur(6px);
     box-shadow:0 0 10px rgba(0,0,0,0.25);
-  ">
+  `;
+  searchInputWrap.innerHTML = `
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M15 15L21 21M10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10C17 13.866 13.866 17 10 17Z" stroke="#999999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
-    <input 
-      id="highlightSearchInput"
-      type="text"
-      placeholder="Search by creator..."
-      style="
-        flex:1;
-        background:transparent;
-        border:none;
-        outline:none;
-        color:#fff;
-        font-size:13px;
-        letter-spacing:0.3px;
-      "
-    />
-  </div>
-`;
-modal.appendChild(searchWrap);
+    <input id="highlightSearchInput" type="text" placeholder="Search by creator..." style="flex:1;background:transparent;border:none;outline:none;color:#fff;font-size:13px;letter-spacing:0.3px;"/>
+  `;
+  searchWrap.appendChild(searchInputWrap);
 
-  // 🧱 Inner container (horizontal scroll)
+  // Tiny toggle button below
+  const toggleBtn = document.createElement("button");
+  toggleBtn.id = "toggleLocked";
+  toggleBtn.textContent = "Show Unlocked";
+  Object.assign(toggleBtn.style, {
+    padding: "4px 10px",
+    borderRadius: "6px",
+    background: "#444",
+    color: "#fff",
+    border: "none",
+    fontSize: "12px",
+    cursor: "pointer"
+  });
+  searchWrap.appendChild(toggleBtn);
+  modal.appendChild(searchWrap);
+
+  // Content container
   const content = document.createElement("div");
   Object.assign(content.style, {
-    display: "flex",
-    gap: "16px",
-    flexWrap: "nowrap",
-    overflowX: "auto",
-    paddingBottom: "40px",
-    scrollBehavior: "smooth",
-    width: "100%",
-    justifyContent: "flex-start",
+    display:"flex",
+    gap:"16px",
+    flexWrap:"nowrap",
+    overflowX:"auto",
+    paddingBottom:"40px",
+    scrollBehavior:"smooth",
+    width:"100%",
+    justifyContent:"flex-start"
   });
+  modal.appendChild(content);
 
-  // 🎥 Function to render cards dynamically
-  function renderCards(filteredVideos) {
-    content.innerHTML = ""; // clear previous
-    filteredVideos.forEach(video => {
+  let unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
+  let showUnlockedOnly = false;
+
+  function renderCards(videosToRender) {
+    content.innerHTML = "";
+    const filtered = videosToRender.filter(v => !showUnlockedOnly || unlockedVideos.includes(v.id));
+
+    filtered.forEach(video => {
       const card = document.createElement("div");
       Object.assign(card.style, {
-        minWidth: "230px",
-        maxWidth: "230px",
-        background: "#1b1b1b",
-        borderRadius: "12px",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        cursor: "pointer",
-        flexShrink: 0,
-        boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
-        transition: "transform 0.2s ease",
+        minWidth: "230px", maxWidth: "230px", background: "#1b1b1b", borderRadius: "12px",
+        overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between",
+        cursor: "pointer", flexShrink: 0, boxShadow: "0 2px 12px rgba(0,0,0,0.5)", transition: "transform 0.2s ease"
       });
-      card.onmouseenter = () => (card.style.transform = "scale(1.03)");
-      card.onmouseleave = () => (card.style.transform = "scale(1)");
-// 🏷️ Add searchable attributes
-card.classList.add("videoCard");
-card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
-card.setAttribute("data-title", video.title || "");
+      card.onmouseenter = () => card.style.transform = "scale(1.03)";
+      card.onmouseleave = () => card.style.transform = "scale(1)";
+      card.classList.add("videoCard");
+      card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
+      card.setAttribute("data-title", video.title || "");
 
       const videoContainer = document.createElement("div");
-      Object.assign(videoContainer.style, {
-        height: "320px",
-        overflow: "hidden",
-        position: "relative",
-      });
+      Object.assign(videoContainer.style, { height: "320px", overflow: "hidden", position: "relative" });
 
       const videoEl = document.createElement("video");
       videoEl.src = video.previewClip || video.highlightVideo;
-      videoEl.muted = true;
-      videoEl.controls = false;
-      videoEl.loop = true;
-      videoEl.preload = "metadata";
-      videoEl.poster =
-        video.thumbnail ||
-        `https://image-thumbnails-service/?video=${encodeURIComponent(video.highlightVideo)}&blur=10`;
-      Object.assign(videoEl.style, {
-        width: "100%",
-        height: "100%",
-        objectFit: "cover",
-      });
-
+      videoEl.muted = true; videoEl.controls = false; videoEl.loop = true; videoEl.preload = "metadata";
+      videoEl.poster = video.thumbnail || `https://image-thumbnails-service/?video=${encodeURIComponent(video.highlightVideo)}&blur=10`;
+      Object.assign(videoEl.style, { width: "100%", height: "100%", objectFit: "cover" });
       videoContainer.appendChild(videoEl);
 
-      videoContainer.onmouseenter = () => {
-        const unlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
-        if (!unlocked) videoEl.play();
-      };
-      videoContainer.onmouseleave = () => {
-        videoEl.pause();
-        videoEl.currentTime = 0;
-      };
+      videoContainer.onmouseenter = () => { if(!unlockedVideos.includes(video.id)) videoEl.play(); };
+      videoContainer.onmouseleave = () => { videoEl.pause(); videoEl.currentTime = 0; };
 
       videoContainer.onclick = (e) => {
         e.stopPropagation();
-        const unlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
-        if (unlocked) playFullVideo(video);
-        else showUnlockConfirm(video);
+        if (unlockedVideos.includes(video.id)) playFullVideo(video);
+        else showUnlockConfirm(video, () => renderCards(videos));
       };
 
       const infoPanel = document.createElement("div");
-      Object.assign(infoPanel.style, {
-        background: "#111",
-        padding: "10px",
-        display: "flex",
-        flexDirection: "column",
-        textAlign: "left",
-        gap: "4px",
-      });
+      Object.assign(infoPanel.style, { background: "#111", padding: "10px", display: "flex", flexDirection: "column", textAlign: "left", gap: "4px" });
 
       const vidTitle = document.createElement("div");
       vidTitle.textContent = video.title || "Untitled";
@@ -3581,77 +3525,64 @@ card.setAttribute("data-title", video.title || "");
       Object.assign(uploader.style, { fontSize: "12px", color: "#bbb" });
 
       const unlockBtn = document.createElement("button");
-      const isUnlocked = localStorage.getItem(`unlocked_${video.id}`) === "true";
-      unlockBtn.textContent = isUnlocked ? "Unlocked ✅" : `Unlock ${video.highlightVideoPrice || 100} ⭐`;
+      const unlocked = unlockedVideos.includes(video.id);
+      unlockBtn.textContent = unlocked ? "Unlocked ✅" : `Unlock ${video.highlightVideoPrice || 100} ⭐`;
       Object.assign(unlockBtn.style, {
-        background: isUnlocked ? "#444" : "#ff006e",
+        background: unlocked ? "#444" : "#ff006e",
         border: "none",
         borderRadius: "6px",
         padding: "8px 0",
         fontWeight: "600",
         color: "#fff",
-        cursor: isUnlocked ? "default" : "pointer",
-        transition: "background 0.2s",
+        cursor: unlocked ? "default" : "pointer",
+        transition: "background 0.2s"
       });
 
-      if (!isUnlocked) {
-        unlockBtn.onmouseenter = () => (unlockBtn.style.background = "#ff3385");
-        unlockBtn.onmouseleave = () => (unlockBtn.style.background = "#ff006e");
-        unlockBtn.onclick = (e) => {
+      if (!unlocked) {
+        unlockBtn.addEventListener("mouseenter", () => unlockBtn.style.background = "#ff3385");
+        unlockBtn.addEventListener("mouseleave", () => unlockBtn.style.background = "#ff006e");
+        unlockBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          if (!currentUser || !currentUser.uid)
-            return showGoldAlert("Please log in to unlock content 🔒");
-          showUnlockConfirm(video);
-        };
+          if (!currentUser?.uid) return showGoldAlert("Please log in to unlock content 🔒");
+          showUnlockConfirm(video, () => {
+            unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
+            renderCards(videos);
+          });
+        });
       } else unlockBtn.disabled = true;
 
-      infoPanel.appendChild(vidTitle);
-      infoPanel.appendChild(uploader);
-      infoPanel.appendChild(unlockBtn);
-
-      card.appendChild(videoContainer);
-      card.appendChild(infoPanel);
+      infoPanel.append(vidTitle, uploader, unlockBtn);
+      card.append(videoContainer, infoPanel);
       content.appendChild(card);
     });
   }
 
-  // Initial render
   renderCards(videos);
 
-// 🔎 Live Search Filter (No re-render — hides/shows instantly)
-const searchInput = searchWrap.querySelector("#highlightSearchInput");
-
-searchInput.addEventListener("input", (e) => {
-  const term = e.target.value.trim().toLowerCase();
-
-  // Loop through all visible video cards
-  content.querySelectorAll(".videoCard").forEach(card => {
-    const uploader = card.getAttribute("data-uploader")?.toLowerCase() || "";
-    const title = card.getAttribute("data-title")?.toLowerCase() || "";
-
-    card.style.display =
-      uploader.includes(term) || title.includes(term) ? "flex" : "none";
+  // Search filter
+  searchInputWrap.querySelector("#highlightSearchInput").addEventListener("input", e => {
+    const term = e.target.value.trim().toLowerCase();
+    content.querySelectorAll(".videoCard").forEach(card => {
+      const uploader = card.getAttribute("data-uploader")?.toLowerCase() || "";
+      const title = card.getAttribute("data-title")?.toLowerCase() || "";
+      card.style.display = (uploader.includes(term) || title.includes(term)) ? "flex" : "none";
+    });
   });
-});
 
-  // ❌ Close button
+  // Toggle button
+  toggleBtn.addEventListener("click", () => {
+    showUnlockedOnly = !showUnlockedOnly;
+    toggleBtn.textContent = showUnlockedOnly ? "Show All" : "Show Unlocked";
+    renderCards(videos);
+  });
+
+  // Close button
   const closeBtn = document.createElement("div");
   closeBtn.innerHTML = "&times;";
-  Object.assign(closeBtn.style, {
-    position: "fixed",
-    top: "20px",
-    right: "28px",
-    fontSize: "32px",
-    color: "#fff",
-    fontWeight: "700",
-    cursor: "pointer",
-    zIndex: "1000000",
-  });
+  Object.assign(closeBtn.style, { position: "fixed", top: "20px", right: "28px", fontSize: "32px", color: "#fff", fontWeight: "700", cursor: "pointer", zIndex: "1000000" });
   closeBtn.onclick = () => modal.remove();
-
-  // Add everything
-  modal.appendChild(content);
   modal.appendChild(closeBtn);
+
   document.body.appendChild(modal);
 }
 
