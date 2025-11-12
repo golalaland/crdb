@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" 
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Tapping Power Game</title>
 <style>
   body {
@@ -14,50 +15,75 @@
     align-items: center;
     justify-content: center;
     height: 100vh;
+    margin: 0;
+    touch-action: manipulation; /* prevent zoom or double-tap issues */
   }
-  h1 { color: #00e676; }
+
+  h1 {
+    color: #00e676;
+    margin-bottom: 30px;
+    text-shadow: 0 0 10px #00e67655;
+  }
+
   #tapButton {
-    padding: 20px 50px;
-    font-size: 24px;
-    background: linear-gradient(90deg, #00e676, #00b0ff);
+    width: 140px;
+    height: 140px;
+    font-size: 22px;
+    font-weight: bold;
     color: #000;
+    background: radial-gradient(circle at top left, #00e676, #00b0ff);
     border: none;
-    border-radius: 10px;
+    border-radius: 50%;
     cursor: pointer;
-    transition: transform 0.1s;
+    box-shadow: 0 0 20px #00e676aa;
+    transition: transform 0.1s, box-shadow 0.2s;
   }
+
   #tapButton:active {
     transform: scale(0.95);
+    box-shadow: 0 0 10px #00e67666;
   }
+
   .stats {
-    margin-top: 20px;
+    margin-top: 25px;
     font-size: 18px;
+    text-align: center;
   }
+
   #progressContainer {
-    width: 300px;
-    height: 25px;
+    width: 280px;
+    height: 20px;
     background: #333;
     border-radius: 12px;
     overflow: hidden;
-    margin-top: 15px;
+    margin-top: 20px;
   }
+
   #progressBar {
     height: 100%;
     width: 0%;
     background: #00e676;
     transition: width 0.2s;
   }
+
+  @media (max-width: 480px) {
+    #tapButton {
+      width: 120px;
+      height: 120px;
+      font-size: 18px;
+    }
+  }
 </style>
 </head>
 <body>
 
 <h1>💰 Tap the Bag 💰</h1>
-<button id="tapButton">TAP!</button>
+<button id="tapButton">TAP</button>
 
 <div class="stats">
   <p>💵 Your Earnings: ₦<span id="earnings">0.00</span></p>
   <p>🎒 Bag Remaining: ₦<span id="pot">50000.00</span></p>
-  <p>⚡ Level Difficulty: <span id="level">1</span></p>
+  <p>⚡ Difficulty Level: <span id="level">1</span></p>
 </div>
 
 <div id="progressContainer">
@@ -69,22 +95,22 @@ let earnings = 0;
 let pot = 50000;
 let progress = 0;
 let level = 1;
-let tapsNeeded = 1; // base taps to earn ₦1
-let progressBar = document.getElementById("progressBar");
-
+let tapsNeeded = 1; // base taps for ₦1
 const tapButton = document.getElementById("tapButton");
+const progressBar = document.getElementById("progressBar");
+
 tapButton.addEventListener("click", handleTap);
 
 function handleTap() {
   if (pot <= 0) {
     tapButton.disabled = true;
-    tapButton.innerText = "💸 Bag Empty!";
+    tapButton.innerText = "💸 Empty!";
     return;
   }
 
   progress++;
-  let progressPercent = (progress / tapsNeeded) * 100;
-  progressBar.style.width = progressPercent + "%";
+  let percent = (progress / tapsNeeded) * 100;
+  progressBar.style.width = percent + "%";
 
   if (progress >= tapsNeeded) {
     progress = 0;
@@ -94,16 +120,16 @@ function handleTap() {
     document.getElementById("earnings").innerText = earnings.toFixed(2);
     document.getElementById("pot").innerText = pot.toFixed(2);
 
-    // Increase difficulty every ₦500
+    // Make it harder every ₦500 earned
     if (earnings % 500 === 0) {
       level++;
-      tapsNeeded += 2; // make it harder
+      tapsNeeded += 2;
       document.getElementById("level").innerText = level;
     }
 
     if (pot <= 0) {
       tapButton.disabled = true;
-      tapButton.innerText = "💸 Bag Empty!";
+      tapButton.innerText = "💸 Empty!";
     }
   }
 }
