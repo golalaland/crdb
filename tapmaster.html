@@ -1,216 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <meta name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Tap Master</title>
+      content="width=device-width, maximum-scale=1.0, user-scalable=no" />
+<title>Tap Master Online</title>
 <style>
-  body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #0e0e0e;
-    color: #fff;
-    touch-action: manipulation;
-    overflow: hidden;
-  }
-  h1 {
-    color: #00e676;
-    text-shadow: 0 0 10px #00e67666;
-  }
-  button {
-    border: none;
-    cursor: pointer;
-  }
-
-  /* --- Start Page --- */
-  #startPage {
-    position: relative;
-    height: 100vh;
-    background: url('https://via.placeholder.com/600x1000?text=Tap+Master+Image')
-                center/cover no-repeat;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-  }
-  #startBtn {
-    position: absolute;
-    bottom: 120px;
-    padding: 15px 40px;
-    font-size: 22px;
-    font-weight: bold;
-    background: linear-gradient(90deg, #00e676, #00b0ff);
-    color: #000;
-    border-radius: 10px;
-  }
-  footer {
-    position: absolute;
-    bottom: 20px;
-    width: 100%;
-    text-align: center;
-    font-size: 14px;
-    opacity: 0.7;
-  }
-
-  /* --- Modal --- */
-  #modal, #spinner, #resultModal {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.8);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-  }
-  .modal-box {
-    background: #1e1e1e;
-    padding: 25px;
-    border-radius: 12px;
-    text-align: center;
-    width: 80%;
-    max-width: 320px;
-  }
-  .modal-box button {
-    margin: 10px;
-    padding: 10px 25px;
-    font-weight: bold;
-    border-radius: 8px;
-  }
-
-  /* --- Spinner --- */
-  .loader {
-    border: 6px solid #333;
-    border-top: 6px solid #00e676;
-    border-radius: 50%;
-    width: 60px; height: 60px;
-    animation: spin 1s linear infinite;
-  }
-  @keyframes spin {100%{transform: rotate(360deg);}}
-
-  /* --- Game Page --- */
-  #gamePage {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
-    height: 100vh;
-    padding: 20px;
-    box-sizing: border-box;
-  }
-
-  .stats {
-    text-align: center;
-  }
-
-  #bonusContainer {
-    width: 280px;
-    height: 22px;
-    background: #333;
-    border-radius: 12px;
-    overflow: hidden;
-    margin: 20px auto 10px;
-    box-shadow: 0 0 10px #00e67644;
-  }
-  #bonusBar {
-    height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, #00e676, #00b0ff);
-    transition: width 0.2s;
-  }
-
-  #tapButton {
-    width: 150px; height: 150px;
-    border-radius: 50%;
-    background: radial-gradient(circle at top left, #00e676, #00b0ff);
-    font-size: 22px; font-weight: bold;
-    color: #000;
-    box-shadow: 0 0 25px #00e676aa;
-    animation: pulse 1.5s infinite;
-  }
-  @keyframes pulse {
-    0% {box-shadow:0 0 10px #00e67666;transform:scale(1);}
-    50% {box-shadow:0 0 25px #00e676cc;transform:scale(1.05);}
-    100% {box-shadow:0 0 10px #00e67666;transform:scale(1);}
-  }
-  #tapButton:active {transform:scale(0.95);}
-
-  /* Floating +₦1.00 */
-  .floatText {
-    position: absolute;
-    color: #00ff95;
-    font-weight: bold;
-    font-size: 20px;
-    opacity: 0;
-    animation: floatUp 0.8s ease-out forwards;
-  }
-  @keyframes floatUp {
-    0% {opacity:1; transform:translate(0,0);}
-    100% {opacity:0; transform:translate(var(--x,0px), -80px);}
-  }
-
-  /* Confetti simple */
-  .confetti {
-    position: fixed;
-    width: 8px; height: 8px;
-    background: var(--color);
-    top: 50%; left: 50%;
-    opacity: 0.9;
-    animation: confettiFall 1s ease-out forwards;
-  }
-  @keyframes confettiFall {
-    to {transform: translate(var(--x), var(--y)) rotate(720deg); opacity:0;}
-  }
-
-  #leaderboard {text-align:left; width:90%; max-width:320px;}
-  #leaderboard ol {padding-left:20px;}
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#0e0e0e;color:#fff;
+       touch-action:manipulation;overflow:hidden;text-align:center}
+  h1{color:#00e676;text-shadow:0 0 10px #00e67666;margin-top:40px}
+  button{border:none;cursor:pointer}
+  #startPage{height:100vh;background:url('https://via.placeholder.com/600x1000?text=Tap+Master+Image')center/cover no-repeat;
+             display:flex;flex-direction:column;align-items:center;justify-content:center}
+  #startBtn{margin-top:300px;padding:15px 40px;font-size:22px;font-weight:bold;
+            background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;border-radius:10px}
+  footer{position:absolute;bottom:20px;width:100%;font-size:14px;opacity:.7}
+  #modal,#spinner,#resultModal{position:fixed;inset:0;background:rgba(0,0,0,.8);
+                               display:none;align-items:center;justify-content:center;flex-direction:column}
+  .modal-box{background:#1e1e1e;padding:25px;border-radius:12px;width:80%;max-width:320px}
+  .modal-box button{margin:10px;padding:10px 25px;font-weight:bold;border-radius:8px}
+  .loader{border:6px solid #333;border-top:6px solid #00e676;border-radius:50%;
+          width:60px;height:60px;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #gamePage{display:none;flex-direction:column;align-items:center;justify-content:space-between;
+            height:100vh;padding:20px;box-sizing:border-box}
+  #bonusContainer{width:280px;height:22px;background:#333;border-radius:12px;
+                  overflow:hidden;margin:20px auto 10px;box-shadow:0 0 10px #00e67644}
+  #bonusBar{height:100%;width:0;background:linear-gradient(90deg,#00e676,#00b0ff);
+            transition:width .2s}
+  #tapButton{width:150px;height:150px;border-radius:50%;
+             background:radial-gradient(circle at top left,#00e676,#00b0ff);
+             font-size:22px;font-weight:bold;color:#000;box-shadow:0 0 25px #00e676aa;
+             animation:pulse 1.5s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 10px #00e67666;transform:scale(1)}
+                   50%{box-shadow:0 0 25px #00e676cc;transform:scale(1.05)}
+                   100%{box-shadow:0 0 10px #00e67666;transform:scale(1)}}
+  #tapButton:active{transform:scale(.95)}
+  .floatText{position:absolute;color:#00ff95;font-weight:bold;font-size:20px;opacity:0;
+             animation:floatUp .8s ease-out forwards}
+  @keyframes floatUp{0%{opacity:1;transform:translate(0,0)}
+                     100%{opacity:0;transform:translate(var(--x,0px),-80px)}}
+  .confetti{position:fixed;width:8px;height:8px;background:var(--color);
+            top:50%;left:50%;opacity:.9;animation:confettiFall 1s ease-out forwards}
+  @keyframes confettiFall{to{transform:translate(var(--x),var(--y)) rotate(720deg);opacity:0}}
+  @keyframes fadeOut{to{opacity:0;transform:translate(-50%,-60%) scale(1.2)}}
+  #leaderboard{text-align:left;width:90%;max-width:320px;margin:auto}
+  #leaderboard ol{padding-left:20px}
 </style>
 </head>
 <body>
 
-<!-- Start Page -->
 <div id="startPage">
-  <h1>TAP MASTER</h1>
+  <h1>TAP MASTER ONLINE</h1>
   <button id="startBtn">Play</button>
   <footer>© 2025 Tap Master Studios</footer>
 </div>
 
-<!-- Modal -->
 <div id="modal">
   <div class="modal-box">
-    <p>Play <b>Tap Master</b> for <b>200 ⭐️</b>?</p>
-    <button id="yesBtn">Yes</button>
-    <button id="noBtn">Cancel</button>
+    <p>Play <b>Tap Master</b> for <b>200⭐</b>?</p>
+    <button id="yesBtn">Yes</button><button id="noBtn">Cancel</button>
   </div>
 </div>
 
-<!-- Spinner -->
-<div id="spinner">
-  <div class="loader"></div>
-  <p>Loading Tap Arena...</p>
-</div>
+<div id="spinner"><div class="loader"></div><p>Loading Tap Arena…</p></div>
 
-<!-- Game Page -->
 <div id="gamePage">
-  <div class="stats">
+  <div>
     <p>⏱ Time Left: <span id="timer">60</span>s</p>
     <p>👆 Taps: <span id="tapCount">0</span></p>
     <p>💵 Earnings: ₦<span id="earnings">0.00</span></p>
   </div>
-
-  <div id="bonusContainer">
-    <div id="bonusBar"></div>
-  </div>
-
+  <div id="bonusContainer"><div id="bonusBar"></div></div>
   <button id="tapButton">TAP</button>
-
   <div id="leaderboard">
-    <h3>🏆 Leaderboard</h3>
+    <h3>🏆 Top Tappers (This Hour)</h3>
     <ol id="scores"></ol>
   </div>
 </div>
 
-<!-- Result Modal -->
 <div id="resultModal">
   <div class="modal-box">
     <h2>Time’s Up!</h2>
@@ -222,120 +90,104 @@
 
 <audio id="tapSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
 
-<script>
-const startPage = document.getElementById('startPage');
-const modal = document.getElementById('modal');
-const spinner = document.getElementById('spinner');
-const gamePage = document.getElementById('gamePage');
-const resultModal = document.getElementById('resultModal');
-const yesBtn = document.getElementById('yesBtn');
-const noBtn = document.getElementById('noBtn');
-const startBtn = document.getElementById('startBtn');
-const playAgain = document.getElementById('playAgain');
-const tapButton = document.getElementById('tapButton');
-const tapSound = document.getElementById('tapSound');
-const timerEl = document.getElementById('timer');
-const tapCountEl = document.getElementById('tapCount');
-const earningsEl = document.getElementById('earnings');
-const bonusBar = document.getElementById('bonusBar');
-const finalTapsEl = document.getElementById('finalTaps');
-const finalEarningsEl = document.getElementById('finalEarnings');
-const scoresEl = document.getElementById('scores');
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-let taps=0, earnings=0, timer=60, timerInterval, bonusProgress=0, bonusTriggered=false;
+// 🔥 your config ↓
+const firebaseConfig = {
+  // ← replace with your own firebaseConfig
+};
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// ---------- UI ----------
+const startPage=document.getElementById('startPage'),
+      modal=document.getElementById('modal'),
+      spinner=document.getElementById('spinner'),
+      gamePage=document.getElementById('gamePage'),
+      resultModal=document.getElementById('resultModal'),
+      startBtn=document.getElementById('startBtn'),
+      yesBtn=document.getElementById('yesBtn'),
+      noBtn=document.getElementById('noBtn'),
+      playAgain=document.getElementById('playAgain'),
+      tapButton=document.getElementById('tapButton'),
+      tapSound=document.getElementById('tapSound'),
+      timerEl=document.getElementById('timer'),
+      tapCountEl=document.getElementById('tapCount'),
+      earningsEl=document.getElementById('earnings'),
+      bonusBar=document.getElementById('bonusBar'),
+      finalTapsEl=document.getElementById('finalTaps'),
+      finalEarningsEl=document.getElementById('finalEarnings'),
+      scoresEl=document.getElementById('scores');
+
+let taps=0, earnings=0, timer=60, interval;
+let bonusLevel=1, progress=0, tapsForNext=100;
 
 startBtn.onclick=()=>modal.style.display='flex';
 noBtn.onclick=()=>modal.style.display='none';
-
 yesBtn.onclick=()=>{
   modal.style.display='none';
   spinner.style.display='flex';
-  setTimeout(()=>{
-    spinner.style.display='none';
-    startGame();
-  },2000);
+  setTimeout(()=>{spinner.style.display='none';startGame();},1500);
 };
 
 function startGame(){
-  taps=0; earnings=0; bonusProgress=0; bonusTriggered=false; timer=60;
-  startPage.style.display='none';
-  gamePage.style.display='flex';
-  updateStats();
-  timerInterval=setInterval(()=>{
-    timer--;
-    timerEl.textContent=timer;
-    if(timer<=0) endGame();
+  taps=0;earnings=0;timer=60;bonusLevel=1;progress=0;tapsForNext=100;
+  startPage.style.display='none';gamePage.style.display='flex';
+  updateStats();loadTop5();
+  interval=setInterval(()=>{
+    timer--;timerEl.textContent=timer;
+    if(timer<=0){endGame();}
   },1000);
 }
 
 tapButton.onclick=(e)=>{
-  if(timer<=0) return;
-  taps++;
-  earnings++;
+  if(timer<=0)return;
+  taps++;earnings++;
   tapCountEl.textContent=taps;
   earningsEl.textContent=earnings.toFixed(2);
-  tapSound.currentTime=0;
-  tapSound.play().catch(()=>{});
-  if (navigator.vibrate) navigator.vibrate(20);
-
-  // floating +₦1
-  const float = document.createElement('div');
-  float.classList.add('floatText');
-  float.textContent = "+₦1.00";
-  const rect = tapButton.getBoundingClientRect();
-  const angle = Math.random()*360;
-  const radius = 30 + Math.random()*40;
-  const x = Math.cos(angle)*radius;
-  float.style.setProperty('--x', `${x}px`);
-  float.style.left = rect.left + rect.width/2 + "px";
-  float.style.top = rect.top + rect.height/2 + "px";
-  document.body.appendChild(float);
-  setTimeout(()=>float.remove(),800);
-
-  // bonus bar
-  if(!bonusTriggered){
-    bonusProgress += 1; // 100 taps to fill
-    if(bonusProgress>=100){
-      bonusTriggered=true;
-      bonusProgress=100;
-      triggerBonus();
-    }
-    bonusBar.style.width=bonusProgress+"%";
+  tapSound.currentTime=0;tapSound.play().catch(()=>{});
+  if(navigator.vibrate)navigator.vibrate(15);
+  const f=document.createElement('div');
+  f.className='floatText';f.textContent='+₦1.00';
+  const r=tapButton.getBoundingClientRect();
+  const x=(Math.random()-.5)*80;
+  f.style.setProperty('--x',`${x}px`);
+  f.style.left=r.left+r.width/2+'px';
+  f.style.top=r.top+r.height/2+'px';
+  document.body.appendChild(f);setTimeout(()=>f.remove(),800);
+  progress++;
+  if(progress>=tapsForNext){
+    progress=0;bonusLevel++;tapsForNext=100+(bonusLevel-1)*50;
+    showTapPro();
   }
+  bonusBar.style.width=(progress/tapsForNext*100)+'%';
 };
 
-function triggerBonus(){
-  earnings += 500;
-  earningsEl.textContent=earnings.toFixed(2);
+function showTapPro(){
   confettiBurst();
+  const msg=document.createElement('div');
+  msg.textContent='TAP PRO!';
+  Object.assign(msg.style,{
+    position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',
+    fontSize:'48px',fontWeight:'bold',color:'#00e676',
+    textShadow:'0 0 20px #00e676',animation:'fadeOut 2s forwards',zIndex:1000});
+  document.body.appendChild(msg);
+  setTimeout(()=>msg.remove(),2000);
 }
 
 function confettiBurst(){
   for(let i=0;i<30;i++){
     const c=document.createElement('div');
     c.classList.add('confetti');
-    c.style.setProperty('--color', `hsl(${Math.random()*360},100%,60%)`);
-    c.style.setProperty('--x', `${(Math.random()-0.5)*600}px`);
-    c.style.setProperty('--y', `${(Math.random()-0.5)*400}px`);
-    document.body.appendChild(c);
-    setTimeout(()=>c.remove(),1000);
+    c.style.setProperty('--color',`hsl(${Math.random()*360},100%,60%)`);
+    c.style.setProperty('--x',`${(Math.random()-0.5)*600}px`);
+    c.style.setProperty('--y',`${(Math.random()-0.5)*400}px`);
+    document.body.appendChild(c);setTimeout(()=>c.remove(),1000);
   }
 }
-
-function endGame(){
-  clearInterval(timerInterval);
-  gamePage.style.display='none';
-  resultModal.style.display='flex';
-  finalTapsEl.textContent=taps;
-  finalEarningsEl.textContent=earnings.toFixed(2);
-  saveScore(taps,earnings);
-  showLeaderboard();
-}
-
-playAgain.onclick=()=>{
-  resultModal.style.display='none';
-  startPage.style.display='flex';
-};
 
 function updateStats(){
   timerEl.textContent=timer;
@@ -344,19 +196,32 @@ function updateStats(){
   bonusBar.style.width='0%';
 }
 
-function saveScore(taps,earnings){
-  let scores=JSON.parse(localStorage.getItem('tapScores'))||[];
-  scores.push({taps,earnings,date:new Date().toLocaleString()});
-  scores.sort((a,b)=>b.taps-a.taps);
-  localStorage.setItem('tapScores',JSON.stringify(scores.slice(0,5)));
+async function endGame(){
+  clearInterval(interval);
+  gamePage.style.display='none';
+  resultModal.style.display='flex';
+  finalTapsEl.textContent=taps;
+  finalEarningsEl.textContent=earnings.toFixed(2);
+  try{
+    await addDoc(collection(db,"tapSessions"),{
+      taps,earnings,timestamp:serverTimestamp()
+    });
+  }catch(err){console.error("Save failed",err);}
+  loadTop5();
 }
-function showLeaderboard(){
-  let scores=JSON.parse(localStorage.getItem('tapScores'))||[];
-  scoresEl.innerHTML=scores.map(
-    (s,i)=>`<li>#${i+1} - ${s.taps} taps (₦${s.earnings.toFixed(2)})</li>`
-  ).join('');
+
+playAgain.onclick=()=>{resultModal.style.display='none';startPage.style.display='flex';};
+
+async function loadTop5(){
+  const oneHourAgo=Timestamp.fromDate(new Date(Date.now()-60*60*1000));
+  const q=query(collection(db,"tapSessions"),
+                where("timestamp",">",oneHourAgo),
+                orderBy("taps","desc"),limit(5));
+  const snap=await getDocs(q);
+  scoresEl.innerHTML=snap.docs.map((d,i)=>{
+    const s=d.data();return `<li>#${i+1} — ${s.taps} taps (₦${s.earnings?.toFixed?.(2)||s.earnings})</li>`;
+  }).join('');
 }
-showLeaderboard();
 </script>
 </body>
 </html>
