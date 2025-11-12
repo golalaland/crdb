@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tapping Power Game</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #121212;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+  }
+  h1 { color: #00e676; }
+  #tapButton {
+    padding: 20px 50px;
+    font-size: 24px;
+    background: linear-gradient(90deg, #00e676, #00b0ff);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  #tapButton:active {
+    transform: scale(0.95);
+  }
+  .stats {
+    margin-top: 20px;
+    font-size: 18px;
+  }
+  #progressContainer {
+    width: 300px;
+    height: 25px;
+    background: #333;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 15px;
+  }
+  #progressBar {
+    height: 100%;
+    width: 0%;
+    background: #00e676;
+    transition: width 0.2s;
+  }
+</style>
+</head>
+<body>
+
+<h1>💰 Tap the Bag 💰</h1>
+<button id="tapButton">TAP!</button>
+
+<div class="stats">
+  <p>💵 Your Earnings: ₦<span id="earnings">0.00</span></p>
+  <p>🎒 Bag Remaining: ₦<span id="pot">50000.00</span></p>
+  <p>⚡ Level Difficulty: <span id="level">1</span></p>
+</div>
+
+<div id="progressContainer">
+  <div id="progressBar"></div>
+</div>
+
+<script>
+let earnings = 0;
+let pot = 50000;
+let progress = 0;
+let level = 1;
+let tapsNeeded = 1; // base taps to earn ₦1
+let progressBar = document.getElementById("progressBar");
+
+const tapButton = document.getElementById("tapButton");
+tapButton.addEventListener("click", handleTap);
+
+function handleTap() {
+  if (pot <= 0) {
+    tapButton.disabled = true;
+    tapButton.innerText = "💸 Bag Empty!";
+    return;
+  }
+
+  progress++;
+  let progressPercent = (progress / tapsNeeded) * 100;
+  progressBar.style.width = progressPercent + "%";
+
+  if (progress >= tapsNeeded) {
+    progress = 0;
+    progressBar.style.width = "0%";
+    earnings += 1;
+    pot -= 1;
+    document.getElementById("earnings").innerText = earnings.toFixed(2);
+    document.getElementById("pot").innerText = pot.toFixed(2);
+
+    // Increase difficulty every ₦500
+    if (earnings % 500 === 0) {
+      level++;
+      tapsNeeded += 2; // make it harder
+      document.getElementById("level").innerText = level;
+    }
+
+    if (pot <= 0) {
+      tapButton.disabled = true;
+      tapButton.innerText = "💸 Bag Empty!";
+    }
+  }
+}
+</script>
+
+</body>
+</html>
