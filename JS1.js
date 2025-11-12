@@ -1724,7 +1724,7 @@ const nextBtn = document.getElementById("nextHost");
 let hosts = [];
 let currentIndex = 0;
 
-/* ---------- Fetch + Listen to featuredHosts ---------- */
+
 /* ---------- Fetch + Listen to featuredHosts + users merge ---------- */
 async function fetchFeaturedHosts() {
   try {
@@ -2122,7 +2122,10 @@ giftSlider.addEventListener("input", () => {
   giftSlider.style.background = randomFieryGradient(); // change fiery color as it slides
 });
 
-/* ---------- Modal open (new color each popup) ---------- */
+/*
+=========================================
+🚫 COMMENTED OUT: Duplicate modal opener
+=========================================
 openBtn.addEventListener("click", () => {
   modal.style.display = "flex";
   modal.style.justifyContent = "center";
@@ -2132,6 +2135,8 @@ openBtn.addEventListener("click", () => {
   giftSlider.style.background = randomFieryGradient();
   console.log("📺 Modal opened");
 });
+*/
+
 
 /* ===============================
    🎁 Send Gift + Dual Notification
@@ -3269,6 +3274,7 @@ if (isHost) {
 
   }); // DOMContentLoaded
 } // end isHost
+
 
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
