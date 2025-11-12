@@ -4,74 +4,108 @@
 <meta charset="UTF-8">
 <meta name="viewport" 
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Tapping Power Game</title>
+<title>Tap Master Game</title>
 <style>
   body {
     font-family: Arial, sans-serif;
     background: #0e0e0e;
     color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
-    height: 100vh;
     margin: 0;
-    touch-action: manipulation; /* Prevent zoom */
+    touch-action: manipulation;
     overflow: hidden;
   }
 
-  header {
-    text-align: center;
-    padding-top: 40px;
+  .center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
   }
 
   h1 {
     color: #00e676;
-    margin-bottom: 20px;
     text-shadow: 0 0 10px #00e67655;
   }
 
-  .stats {
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
     font-size: 18px;
+    padding: 12px 30px;
+  }
+
+  /* --- Start Page --- */
+  #startPage {
     text-align: center;
-    margin-bottom: 15px;
+  }
+  #startBtn {
+    background: linear-gradient(90deg, #00e676, #00b0ff);
+    color: #000;
+    font-weight: bold;
   }
 
-  #progressContainer {
-    width: 280px;
-    height: 20px;
-    background: #333;
-    border-radius: 12px;
-    overflow: hidden;
-    margin: 0 auto;
-  }
-
-  #progressBar {
-    height: 100%;
-    width: 0%;
-    background: #00e676;
-    transition: width 0.2s;
-  }
-
-  main {
-    flex-grow: 1;
-    display: flex;
-    align-items: flex-end;
+  /* --- Modal --- */
+  #modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    align-items: center;
     justify-content: center;
-    padding-bottom: 50px;
-    position: relative;
+  }
+  .modal-content {
+    background: #1e1e1e;
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    width: 80%;
+    max-width: 320px;
+  }
+  .modal-content button {
+    margin: 10px;
+  }
+
+  /* --- Spinner --- */
+  #spinner {
+    display: none;
+  }
+  .loader {
+    border: 6px solid #333;
+    border-top: 6px solid #00e676;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    100% { transform: rotate(360deg); }
+  }
+
+  /* --- Game Page --- */
+  #gamePage {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+
+  .stats {
+    text-align: center;
   }
 
   #tapButton {
     width: 150px;
     height: 150px;
-    font-size: 20px;
-    font-weight: bold;
-    color: #000;
-    background: radial-gradient(circle at top left, #00e676, #00b0ff);
-    border: none;
     border-radius: 50%;
-    cursor: pointer;
+    background: radial-gradient(circle at top left, #00e676, #00b0ff);
+    color: #000;
+    font-weight: bold;
+    font-size: 22px;
     box-shadow: 0 0 20px #00e676aa;
     transition: transform 0.1s, box-shadow 0.2s;
     animation: pulse 1.5s infinite;
@@ -88,7 +122,7 @@
     100% { box-shadow: 0 0 10px #00e67666; transform: scale(1); }
   }
 
-  /* Coin flash effect */
+  /* Coin flash */
   .coin {
     position: absolute;
     font-size: 24px;
@@ -102,91 +136,196 @@
     100% { transform: translateY(-80px); opacity: 0; }
   }
 
-  @media (max-width: 480px) {
-    #tapButton {
-      width: 120px;
-      height: 120px;
-      font-size: 18px;
-    }
+  /* --- Result Modal --- */
+  #resultModal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
   }
+  #resultModal .modal-content {
+    background: #1e1e1e;
+    padding: 25px;
+    border-radius: 12px;
+  }
+
+  /* --- Leaderboard --- */
+  #leaderboard {
+    margin-top: 10px;
+    text-align: left;
+  }
+
 </style>
 </head>
 <body>
 
-<header>
-  <h1>💰 Tap the Bag 💰</h1>
+<!-- START PAGE -->
+<div id="startPage" class="center">
+  <h1>⭐️ TAP MASTER ⭐️</h1>
+  <p>Show your tapping power. Beat the timer, earn cash, and climb the leaderboard!</p>
+  <button id="startBtn">Play</button>
+</div>
 
+<!-- MODAL CONFIRMATION -->
+<div id="modal" class="center">
+  <div class="modal-content">
+    <p>Play <b>Tap Master</b> for <b>200 ⭐️</b>?</p>
+    <button id="yesBtn">Yes</button>
+    <button id="noBtn">Cancel</button>
+  </div>
+</div>
+
+<!-- SPINNER / LOADING -->
+<div id="spinner" class="center">
+  <div class="loader"></div>
+  <p>Loading Tap Arena...</p>
+</div>
+
+<!-- GAME PAGE -->
+<div id="gamePage">
   <div class="stats">
-    <p>💵 Your Earnings: ₦<span id="earnings">0.00</span></p>
-    <p>🎒 Bag Remaining: ₦<span id="pot">50000.00</span></p>
-    <p>⚡ Difficulty Level: <span id="level">1</span></p>
+    <p>⏱️ Time Left: <span id="timer">60</span>s</p>
+    <p>👆 Taps: <span id="tapCount">0</span></p>
+    <p>💵 Earnings: ₦<span id="earnings">0.00</span></p>
+    <p>⚡ Level: <span id="level">1</span></p>
   </div>
 
-  <div id="progressContainer">
-    <div id="progressBar"></div>
-  </div>
-</header>
-
-<main>
   <button id="tapButton">TAP</button>
-</main>
+
+  <div id="leaderboard">
+    <h3>🏆 Leaderboard</h3>
+    <ol id="scores"></ol>
+  </div>
+</div>
+
+<!-- RESULT MODAL -->
+<div id="resultModal" class="center">
+  <div class="modal-content">
+    <h2>Time’s Up!</h2>
+    <p>👆 Taps: <span id="finalTaps">0</span></p>
+    <p>💵 Cash Earned: ₦<span id="finalEarnings">0.00</span></p>
+    <button id="playAgain">Play Again</button>
+  </div>
+</div>
 
 <script>
-let earnings = 0;
-let pot = 50000;
-let progress = 0;
-let level = 1;
-let tapsNeeded = 1; // base taps per ₦1
-const tapButton = document.getElementById("tapButton");
-const progressBar = document.getElementById("progressBar");
+const startPage = document.getElementById('startPage');
+const modal = document.getElementById('modal');
+const spinner = document.getElementById('spinner');
+const gamePage = document.getElementById('gamePage');
+const resultModal = document.getElementById('resultModal');
 
-tapButton.addEventListener("click", handleTap);
+const startBtn = document.getElementById('startBtn');
+const yesBtn = document.getElementById('yesBtn');
+const noBtn = document.getElementById('noBtn');
+const playAgainBtn = document.getElementById('playAgain');
 
-function handleTap(e) {
-  if (pot <= 0) {
-    tapButton.disabled = true;
-    tapButton.innerText = "💸 Empty!";
-    tapButton.style.animation = "none";
-    return;
-  }
+const tapButton = document.getElementById('tapButton');
+const timerEl = document.getElementById('timer');
+const tapCountEl = document.getElementById('tapCount');
+const earningsEl = document.getElementById('earnings');
+const levelEl = document.getElementById('level');
+const finalTapsEl = document.getElementById('finalTaps');
+const finalEarningsEl = document.getElementById('finalEarnings');
+const scoresList = document.getElementById('scores');
 
-  // Small coin flash animation
-  const coin = document.createElement("div");
-  coin.classList.add("coin");
-  coin.innerText = "🪙";
+let taps = 0, earnings = 0, level = 1, tapsNeeded = 1, timer = 60, timerInterval;
+
+// Open modal on Play
+startBtn.onclick = () => modal.style.display = 'flex';
+
+// Cancel modal
+noBtn.onclick = () => modal.style.display = 'none';
+
+// Confirm start
+yesBtn.onclick = () => {
+  modal.style.display = 'none';
+  spinner.style.display = 'flex';
+  setTimeout(() => {
+    spinner.style.display = 'none';
+    startGame();
+  }, 2000);
+};
+
+// Start game logic
+function startGame() {
+  taps = 0; earnings = 0; level = 1; tapsNeeded = 1; timer = 60;
+  updateStats();
+  gamePage.style.display = 'flex';
+  startPage.style.display = 'none';
+
+  timerInterval = setInterval(() => {
+    timer--;
+    timerEl.textContent = timer;
+    if (timer <= 0) endGame();
+  }, 1000);
+}
+
+tapButton.onclick = (e) => {
+  taps++;
+  tapCountEl.textContent = taps;
+
+  // coin animation
+  const coin = document.createElement('div');
+  coin.classList.add('coin');
+  coin.textContent = "🪙";
   document.body.appendChild(coin);
   const rect = tapButton.getBoundingClientRect();
   coin.style.left = rect.left + rect.width/2 - 10 + "px";
   coin.style.top = rect.top - 20 + "px";
-  setTimeout(() => coin.remove(), 800);
+  setTimeout(()=>coin.remove(), 800);
 
-  progress++;
-  let percent = (progress / tapsNeeded) * 100;
-  progressBar.style.width = percent + "%";
-
-  if (progress >= tapsNeeded) {
-    progress = 0;
-    progressBar.style.width = "0%";
+  // Progress difficulty
+  if (taps % tapsNeeded === 0) {
     earnings += 1;
-    pot -= 1;
-    document.getElementById("earnings").innerText = earnings.toFixed(2);
-    document.getElementById("pot").innerText = pot.toFixed(2);
-
-    // Increase difficulty every ₦500
-    if (earnings % 500 === 0) {
-      level++;
-      tapsNeeded += 2;
-      document.getElementById("level").innerText = level;
-    }
-
-    if (pot <= 0) {
-      tapButton.disabled = true;
-      tapButton.innerText = "💸 Empty!";
-      tapButton.style.animation = "none";
-    }
+    earningsEl.textContent = earnings.toFixed(2);
   }
-}
-</script>
 
+  if (earnings % 500 === 0 && earnings !== 0) {
+    level++;
+    tapsNeeded += 2;
+    levelEl.textContent = level;
+  }
+};
+
+function endGame() {
+  clearInterval(timerInterval);
+  gamePage.style.display = 'none';
+  resultModal.style.display = 'flex';
+  finalTapsEl.textContent = taps;
+  finalEarningsEl.textContent = earnings.toFixed(2);
+  saveScore(taps, earnings);
+  showLeaderboard();
+}
+
+function updateStats() {
+  tapCountEl.textContent = 0;
+  earningsEl.textContent = "0.00";
+  levelEl.textContent = 1;
+  timerEl.textContent = 60;
+}
+
+playAgainBtn.onclick = () => {
+  resultModal.style.display = 'none';
+  startPage.style.display = 'flex';
+};
+
+function saveScore(taps, earnings) {
+  let scores = JSON.parse(localStorage.getItem('tapScores')) || [];
+  scores.push({ taps, earnings, date: new Date().toLocaleString() });
+  scores.sort((a,b)=>b.taps - a.taps);
+  localStorage.setItem('tapScores', JSON.stringify(scores.slice(0,5))); // top 5
+}
+
+function showLeaderboard() {
+  let scores = JSON.parse(localStorage.getItem('tapScores')) || [];
+  scoresList.innerHTML = scores.map(
+    (s,i)=>`<li>#${i+1} - ${s.taps} taps (₦${s.earnings.toFixed(2)})</li>`
+  ).join('');
+}
+showLeaderboard();
+</script>
 </body>
 </html>
