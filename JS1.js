@@ -493,7 +493,7 @@ async function reportMessage(msgData) {
     if (reportSnap.exists()) {
       const data = reportSnap.data();
       if ((data.reportedBy || []).includes(reporterChatId)) {
-        return alert("You’ve already reported this message.");
+        return showStarPopup("You’ve already reported this message.", { type: "info" });
       }
       await updateDoc(reportRef, {
         reportCount: increment(1),
@@ -514,10 +514,14 @@ async function reportMessage(msgData) {
         status: "pending"
       });
     }
-    alert("✅ Report submitted!");
+
+    // ✅ Success popup
+    showStarPopup("✅ Report submitted!", { type: "success" });
+
   } catch (err) {
     console.error(err);
-    alert("❌ Error reporting message.");
+    // ❌ Error popup
+    showStarPopup("❌ Error reporting message.", { type: "error" });
   }
 }
 
@@ -568,21 +572,24 @@ function showTapModal(targetEl, msgData) {
 }
 
 // Confetti / glow for banners
+// Banner glow only (no confetti)
 function triggerBannerEffect(bannerEl) {
   bannerEl.style.animation = "bannerGlow 1s ease-in-out infinite alternate";
-  // Optional: simple confetti particles
-  const confetti = document.createElement("div");
-  confetti.className = "confetti";
-  confetti.style.position = "absolute";
-  confetti.style.top = "-4px";
-  confetti.style.left = "50%";
-  confetti.style.width = "6px";
-  confetti.style.height = "6px";
-  confetti.style.background = "#fff";
-  confetti.style.borderRadius = "50%";
-  bannerEl.appendChild(confetti);
-  setTimeout(() => confetti.remove(), 1500);
+
+  // ✅ Confetti removed
+  // const confetti = document.createElement("div");
+  // confetti.className = "confetti";
+  // confetti.style.position = "absolute";
+  // confetti.style.top = "-4px";
+  // confetti.style.left = "50%";
+  // confetti.style.width = "6px";
+  // confetti.style.height = "6px";
+  // confetti.style.background = "#fff";
+  // confetti.style.borderRadius = "50%";
+  // bannerEl.appendChild(confetti);
+  // setTimeout(() => confetti.remove(), 1500);
 }
+
 
 // Render messages
 function renderMessagesFromArray(messages) {
