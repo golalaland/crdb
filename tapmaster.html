@@ -8,46 +8,33 @@
 <style>
   body {
     font-family: Arial, sans-serif;
-    background: #121212;
+    background: #0e0e0e;
     color: white;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     height: 100vh;
     margin: 0;
-    touch-action: manipulation; /* prevent zoom or double-tap issues */
+    touch-action: manipulation; /* Prevent zoom */
+    overflow: hidden;
+  }
+
+  header {
+    text-align: center;
+    padding-top: 40px;
   }
 
   h1 {
     color: #00e676;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     text-shadow: 0 0 10px #00e67655;
   }
 
-  #tapButton {
-    width: 140px;
-    height: 140px;
-    font-size: 22px;
-    font-weight: bold;
-    color: #000;
-    background: radial-gradient(circle at top left, #00e676, #00b0ff);
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 0 20px #00e676aa;
-    transition: transform 0.1s, box-shadow 0.2s;
-  }
-
-  #tapButton:active {
-    transform: scale(0.95);
-    box-shadow: 0 0 10px #00e67666;
-  }
-
   .stats {
-    margin-top: 25px;
     font-size: 18px;
     text-align: center;
+    margin-bottom: 15px;
   }
 
   #progressContainer {
@@ -56,7 +43,7 @@
     background: #333;
     border-radius: 12px;
     overflow: hidden;
-    margin-top: 20px;
+    margin: 0 auto;
   }
 
   #progressBar {
@@ -64,6 +51,55 @@
     width: 0%;
     background: #00e676;
     transition: width 0.2s;
+  }
+
+  main {
+    flex-grow: 1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 50px;
+    position: relative;
+  }
+
+  #tapButton {
+    width: 150px;
+    height: 150px;
+    font-size: 20px;
+    font-weight: bold;
+    color: #000;
+    background: radial-gradient(circle at top left, #00e676, #00b0ff);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 20px #00e676aa;
+    transition: transform 0.1s, box-shadow 0.2s;
+    animation: pulse 1.5s infinite;
+  }
+
+  #tapButton:active {
+    transform: scale(0.95);
+    box-shadow: 0 0 10px #00e67666;
+  }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 0 10px #00e67666; transform: scale(1); }
+    50% { box-shadow: 0 0 25px #00e676cc; transform: scale(1.05); }
+    100% { box-shadow: 0 0 10px #00e67666; transform: scale(1); }
+  }
+
+  /* Coin flash effect */
+  .coin {
+    position: absolute;
+    font-size: 24px;
+    color: gold;
+    opacity: 0;
+    animation: coinRise 0.8s ease-out forwards;
+  }
+
+  @keyframes coinRise {
+    0% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(-80px); opacity: 0; }
   }
 
   @media (max-width: 480px) {
@@ -77,36 +113,52 @@
 </head>
 <body>
 
-<h1>💰 Tap the Bag 💰</h1>
-<button id="tapButton">TAP</button>
+<header>
+  <h1>💰 Tap the Bag 💰</h1>
 
-<div class="stats">
-  <p>💵 Your Earnings: ₦<span id="earnings">0.00</span></p>
-  <p>🎒 Bag Remaining: ₦<span id="pot">50000.00</span></p>
-  <p>⚡ Difficulty Level: <span id="level">1</span></p>
-</div>
+  <div class="stats">
+    <p>💵 Your Earnings: ₦<span id="earnings">0.00</span></p>
+    <p>🎒 Bag Remaining: ₦<span id="pot">50000.00</span></p>
+    <p>⚡ Difficulty Level: <span id="level">1</span></p>
+  </div>
 
-<div id="progressContainer">
-  <div id="progressBar"></div>
-</div>
+  <div id="progressContainer">
+    <div id="progressBar"></div>
+  </div>
+</header>
+
+<main>
+  <button id="tapButton">TAP</button>
+</main>
 
 <script>
 let earnings = 0;
 let pot = 50000;
 let progress = 0;
 let level = 1;
-let tapsNeeded = 1; // base taps for ₦1
+let tapsNeeded = 1; // base taps per ₦1
 const tapButton = document.getElementById("tapButton");
 const progressBar = document.getElementById("progressBar");
 
 tapButton.addEventListener("click", handleTap);
 
-function handleTap() {
+function handleTap(e) {
   if (pot <= 0) {
     tapButton.disabled = true;
     tapButton.innerText = "💸 Empty!";
+    tapButton.style.animation = "none";
     return;
   }
+
+  // Small coin flash animation
+  const coin = document.createElement("div");
+  coin.classList.add("coin");
+  coin.innerText = "🪙";
+  document.body.appendChild(coin);
+  const rect = tapButton.getBoundingClientRect();
+  coin.style.left = rect.left + rect.width/2 - 10 + "px";
+  coin.style.top = rect.top - 20 + "px";
+  setTimeout(() => coin.remove(), 800);
 
   progress++;
   let percent = (progress / tapsNeeded) * 100;
@@ -120,7 +172,7 @@ function handleTap() {
     document.getElementById("earnings").innerText = earnings.toFixed(2);
     document.getElementById("pot").innerText = pot.toFixed(2);
 
-    // Make it harder every ₦500 earned
+    // Increase difficulty every ₦500
     if (earnings % 500 === 0) {
       level++;
       tapsNeeded += 2;
@@ -130,6 +182,7 @@ function handleTap() {
     if (pot <= 0) {
       tapButton.disabled = true;
       tapButton.innerText = "💸 Empty!";
+      tapButton.style.animation = "none";
     }
   }
 }
