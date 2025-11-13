@@ -3101,180 +3101,280 @@ await addDoc(notifRef, {
 })(); // ✅ closes IIFE
 
 
-// ========== 🟣 HOST SETTINGS LOGIC ==========
-document.addEventListener("DOMContentLoaded", () => {
-  const isHost = true; // <-- later dynamic
+// ---------- DEBUGGABLE HOST INIT (drop-in) ----------
+(function () {
+  // Toggle this dynamically in your app
+  const isHost = true; // <-- make sure this equals true at runtime for hosts
 
-  if (!isHost) return; // stop here for non-hosts
-
-  const hostSettingsWrapper = document.getElementById("hostSettingsWrapper");
-  const hostModal = document.getElementById("hostModal");
-  const hostSettingsBtn = document.getElementById("hostSettingsBtn");
-  const closeModal = hostModal?.querySelector(".close");
-
-  // Show Host Settings button
-  if (hostSettingsWrapper) hostSettingsWrapper.style.display = "block";
-
-  // --- Modal Open / Close ---
-  if (hostSettingsBtn && hostModal && closeModal) {
-    hostSettingsBtn.onclick = async () => {
-      hostModal.style.display = "block";
-      if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
-
-      const userRef = doc(db, "users", currentUser.uid);
-      const snap = await getDoc(userRef);
-      if (!snap.exists()) return showStarPopup("⚠️ User data not found.");
-
-      const data = snap.data();
-      document.getElementById("fullName").value = data.fullName || "";
-      document.getElementById("city").value = data.city || "";
-      document.getElementById("location").value = data.location || "";
-      document.getElementById("bio").value = data.bioPick || "";
-      document.getElementById("bankAccountNumber").value = data.bankAccountNumber || "";
-      document.getElementById("bankName").value = data.bankName || "";
-      document.getElementById("telegram").value = data.telegram || "";
-      document.getElementById("tiktok").value = data.tiktok || "";
-      document.getElementById("whatsapp").value = data.whatsapp || "";
-      document.getElementById("instagram").value = data.instagram || "";
-
-      if (data.popupPhoto) {
-        const photoPreview = document.getElementById("photoPreview");
-        const photoPlaceholder = document.getElementById("photoPlaceholder");
-        photoPreview.src = data.popupPhoto;
-        photoPreview.style.display = "block";
-        photoPlaceholder.style.display = "none";
-      }
-    };
-
-    closeModal.onclick = () => (hostModal.style.display = "none");
-    window.onclick = (e) => {
-      if (e.target === hostModal) hostModal.style.display = "none";
-    };
+  // Small helper: wait for a set of elements to exist (polling)
+  function waitForElements(selectors = [], { timeout = 5000, interval = 80 } = {}) {
+    const start = Date.now();
+    return new Promise((resolve, reject) => {
+      (function poll() {
+        const found = selectors.map(s => document.querySelector(s));
+        if (found.every(el => el)) return resolve(found);
+        if (Date.now() - start > timeout) return reject(new Error("waitForElements timeout: " + selectors.join(", ")));
+        setTimeout(poll, interval);
+      })();
+    });
   }
 
-  // --- TAB LOGIC ---
-  document.querySelectorAll(".tab-btn").forEach((btn) => {
-    btn.onclick = () => {
-      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
-      document.querySelectorAll(".tab-content").forEach((tab) => (tab.style.display = "none"));
-      btn.classList.add("active");
-      document.getElementById(btn.dataset.tab).style.display = "block";
-    };
-  });
+  // Safe getter w/ default
+  const $ = (sel) => document.querySelector(sel);
 
-  // --- PHOTO PREVIEW ---
-  document.addEventListener("change", (e) => {
-    if (e.target.id === "popupPhoto") {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const photoPreview = document.getElementById("photoPreview");
-        const photoPlaceholder = document.getElementById("photoPlaceholder");
-        if (photoPreview && photoPlaceholder) {
-          photoPreview.src = reader.result;
-          photoPreview.style.display = "block";
-          photoPlaceholder.style.display = "none";
-        }
-      };
-      reader.readAsDataURL(file);
+  // run everything after DOM ready (and still robust if DOM already loaded)
+  function ready(fn) {
+    if (document.readyState === "complete" || document.readyState === "interactive") {
+      setTimeout(fn, 0);
+    } else {
+      document.addEventListener("DOMContentLoaded", fn);
     }
-  });
-
-  // --- SAVE INFO & MEDIA HANDLER ---
-  const saveInfoBtn = document.getElementById("saveInfo");
-  const saveMediaBtn = document.getElementById("saveMedia");
-
-  async function updateFirestoreDoc(userId, data) {
-    const userRef = doc(db, "users", userId);
-    const filteredData = Object.fromEntries(Object.entries(data).filter(([_, v]) => v !== undefined));
-    await updateDoc(userRef, { ...filteredData, lastUpdated: serverTimestamp() });
-
-    const hostRef = doc(db, "featuredHosts", userId);
-    const hostSnap = await getDoc(hostRef);
-    if (hostSnap.exists()) await updateDoc(hostRef, { ...filteredData, lastUpdated: serverTimestamp() });
   }
 
-  // --- SAVE INFO ---
-  if (saveInfoBtn) {
-    saveInfoBtn.onclick = async () => {
-      if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
-      const getVal = (id) => document.getElementById(id)?.value || "";
+  ready(async () => {
+    console.log("[host-init] DOM ready. isHost =", isHost);
 
-      const dataToUpdate = {
-        fullName: getVal("fullName").replace(/\b\w/g, (l) => l.toUpperCase()),
-        city: getVal("city"),
-        location: getVal("location"),
-        bioPick: getVal("bio"),
-        bankAccountNumber: getVal("bankAccountNumber"),
-        bankName: getVal("bankName"),
-        telegram: getVal("telegram"),
-        tiktok: getVal("tiktok"),
-        whatsapp: getVal("whatsapp"),
-        instagram: getVal("instagram"),
-        naturePick: getVal("naturePick"),
-        fruitPick: getVal("fruitPick"),
-      };
+    if (!isHost) {
+      console.log("[host-init] not a host. exiting host init.");
+      return;
+    }
 
-      const originalHTML = saveInfoBtn.innerHTML;
-      saveInfoBtn.innerHTML = `<div class="spinner" style="width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation: spin 0.6s linear infinite;margin:auto;"></div>`;
-      saveInfoBtn.disabled = true;
+    // 1) Wait for the most important elements that must exist for host flow.
+    try {
+      const [
+        hostSettingsWrapperEl,
+        hostModalEl,
+        hostSettingsBtnEl,
+      ] = await waitForElements(
+        ["#hostSettingsWrapper", "#hostModal", "#hostSettingsBtn"],
+        { timeout: 7000 }
+      );
 
-      try {
-        await updateFirestoreDoc(currentUser.uid, dataToUpdate);
-        showStarPopup("✅ Profile updated successfully!");
-      } catch (err) {
-        console.error("❌ Error updating Firestore:", err);
-        showStarPopup("⚠️ Failed to update info. Please try again.");
-      } finally {
-        saveInfoBtn.innerHTML = originalHTML;
-        saveInfoBtn.disabled = false;
+      console.log("[host-init] Found host elements:", {
+        hostSettingsWrapper: !!hostSettingsWrapperEl,
+        hostModal: !!hostModalEl,
+        hostSettingsBtn: !!hostSettingsBtnEl,
+      });
+
+      // Show wrapper/button
+      hostSettingsWrapperEl.style.display = "block";
+
+      // close button - optional but preferred
+      const closeModalEl = hostModalEl.querySelector(".close");
+      if (!closeModalEl) {
+        console.warn("[host-init] close button (.close) not found inside #hostModal.");
       }
-    };
-  }
 
-  // --- SAVE MEDIA ---
-  if (saveMediaBtn) {
-    saveMediaBtn.onclick = async () => {
-      if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
-
-      const popupPhotoFile = document.getElementById("popupPhoto")?.files[0];
-      const uploadVideoFile = document.getElementById("uploadVideo")?.files[0];
-
-      if (!popupPhotoFile && !uploadVideoFile) return showStarPopup("⚠️ Please select a photo or video to upload.");
-
-      try {
-        showStarPopup("⏳ Uploading media...");
-        const formData = new FormData();
-        if (popupPhotoFile) formData.append("photo", popupPhotoFile);
-        if (uploadVideoFile) formData.append("video", uploadVideoFile);
-
-        const res = await fetch("/api/uploadShopify", { method: "POST", body: formData });
-        if (!res.ok) throw new Error("Upload failed.");
-        const data = await res.json();
-
-        await updateFirestoreDoc(currentUser.uid, {
-          ...(data.photoUrl && { popupPhoto: data.photoUrl }),
-          ...(data.videoUrl && { videoUrl: data.videoUrl }),
+      // --- attach tab init (shared across modals)
+      function initTabsForModal(modalEl) {
+        modalEl.querySelectorAll(".tab-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            modalEl.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+            // Hide only tab-content referenced by dataset or global shared notifications
+            document.querySelectorAll(".tab-content").forEach((tab) => (tab.style.display = "none"));
+            btn.classList.add("active");
+            const target = document.getElementById(btn.dataset.tab);
+            if (target) target.style.display = "block";
+            else console.warn("[host-init] tab target not found:", btn.dataset.tab);
+          });
         });
-
-        if (data.photoUrl) {
-          const photoPreview = document.getElementById("photoPreview");
-          const photoPlaceholder = document.getElementById("photoPlaceholder");
-          photoPreview.src = data.photoUrl;
-          photoPreview.style.display = "block";
-          photoPlaceholder.style.display = "none";
-        }
-
-        showStarPopup("✅ Media uploaded successfully!");
-        hostModal.style.display = "none";
-      } catch (err) {
-        console.error("❌ Media upload error:", err);
-        showStarPopup(`⚠️ Failed to upload media: ${err.message}`);
       }
-    };
-  }
-});
+      initTabsForModal(hostModalEl);
+
+      // --- host button click: show modal + populate
+      hostSettingsBtnEl.addEventListener("click", async () => {
+        try {
+          hostModalEl.style.display = "block";
+
+          if (!currentUser?.uid) {
+            console.warn("[host-init] currentUser.uid missing");
+            return showStarPopup("⚠️ Please log in first.");
+          }
+
+          const userRef = doc(db, "users", currentUser.uid);
+          const snap = await getDoc(userRef);
+          if (!snap.exists()) {
+            console.warn("[host-init] user doc not found for uid:", currentUser.uid);
+            return showStarPopup("⚠️ User data not found.");
+          }
+          const data = snap.data() || {};
+          // populate safely (guard each element)
+          const safeSet = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.value = value ?? "";
+          };
+
+          safeSet("fullName", data.fullName || "");
+          safeSet("city", data.city || "");
+          safeSet("location", data.location || "");
+          safeSet("bio", data.bioPick || "");
+          safeSet("bankAccountNumber", data.bankAccountNumber || "");
+          safeSet("bankName", data.bankName || "");
+          safeSet("telegram", data.telegram || "");
+          safeSet("tiktok", data.tiktok || "");
+          safeSet("whatsapp", data.whatsapp || "");
+          safeSet("instagram", data.instagram || "");
+          // picks
+          const natureEl = document.getElementById("naturePick");
+          if (natureEl) natureEl.value = data.naturePick || "";
+          const fruitEl = document.getElementById("fruitPick");
+          if (fruitEl) fruitEl.value = data.fruitPick || "";
+
+          // preview photo
+          if (data.popupPhoto) {
+            const photoPreview = document.getElementById("photoPreview");
+            const photoPlaceholder = document.getElementById("photoPlaceholder");
+            if (photoPreview) {
+              photoPreview.src = data.popupPhoto;
+              photoPreview.style.display = "block";
+            }
+            if (photoPlaceholder) photoPlaceholder.style.display = "none";
+          } else {
+            // ensure preview hidden if no photo
+            const photoPreview = document.getElementById("photoPreview");
+            const photoPlaceholder = document.getElementById("photoPlaceholder");
+            if (photoPreview) photoPreview.style.display = "none";
+            if (photoPlaceholder) photoPlaceholder.style.display = "inline-block";
+          }
+
+        } catch (err) {
+          console.error("[host-init] error in hostSettingsBtn click:", err);
+          showStarPopup("⚠️ Failed to open settings. Check console.");
+        }
+      });
+
+      // --- close handlers
+      if (closeModalEl) {
+        closeModalEl.addEventListener("click", () => (hostModalEl.style.display = "none"));
+      }
+      window.addEventListener("click", (e) => {
+        if (e.target === hostModalEl) hostModalEl.style.display = "none";
+      });
+
+      // --- photo preview handler (delegated)
+      document.addEventListener("change", (e) => {
+        if (e.target && e.target.id === "popupPhoto") {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            const photoPreview = document.getElementById("photoPreview");
+            const photoPlaceholder = document.getElementById("photoPlaceholder");
+            if (photoPreview) {
+              photoPreview.src = reader.result;
+              photoPreview.style.display = "block";
+            }
+            if (photoPlaceholder) photoPlaceholder.style.display = "none";
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      // --- save info button (safe)
+      const maybeSaveInfo = document.getElementById("saveInfo");
+      if (maybeSaveInfo) {
+        maybeSaveInfo.addEventListener("click", async () => {
+          if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
+          const getVal = id => document.getElementById(id)?.value ?? "";
+
+          const dataToUpdate = {
+            fullName: (getVal("fullName") || "").replace(/\b\w/g, l => l.toUpperCase()),
+            city: getVal("city"),
+            location: getVal("location"),
+            bioPick: getVal("bio"),
+            bankAccountNumber: getVal("bankAccountNumber"),
+            bankName: getVal("bankName"),
+            telegram: getVal("telegram"),
+            tiktok: getVal("tiktok"),
+            whatsapp: getVal("whatsapp"),
+            instagram: getVal("instagram"),
+            naturePick: getVal("naturePick"),
+            fruitPick: getVal("fruitPick"),
+          };
+
+          if (dataToUpdate.bankAccountNumber && !/^\d{1,11}$/.test(dataToUpdate.bankAccountNumber))
+            return showStarPopup("⚠️ Bank account number must be digits only (max 11).");
+          if (dataToUpdate.whatsapp && dataToUpdate.whatsapp && !/^\d+$/.test(dataToUpdate.whatsapp))
+            return showStarPopup("⚠️ WhatsApp number must be numbers only.");
+
+          const originalHTML = maybeSaveInfo.innerHTML;
+          maybeSaveInfo.innerHTML = `<div class="spinner" style="width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation: spin 0.6s linear infinite;margin:auto;"></div>`;
+          maybeSaveInfo.disabled = true;
+
+          try {
+            const userRef = doc(db, "users", currentUser.uid);
+            const filteredData = Object.fromEntries(Object.entries(dataToUpdate).filter(([_, v]) => v !== undefined));
+            await updateDoc(userRef, { ...filteredData, lastUpdated: serverTimestamp() });
+            // mirror to featuredHosts if exists
+            const hostRef = doc(db, "featuredHosts", currentUser.uid);
+            const hostSnap = await getDoc(hostRef);
+            if (hostSnap.exists()) await updateDoc(hostRef, { ...filteredData, lastUpdated: serverTimestamp() });
+
+            showStarPopup("✅ Profile updated successfully!");
+            // blur inputs for UX
+            document.querySelectorAll("#mediaTab input, #mediaTab textarea, #mediaTab select").forEach(i => i.blur());
+          } catch (err) {
+            console.error("[host-init] saveInfo error:", err);
+            showStarPopup("⚠️ Failed to update info. Please try again.");
+          } finally {
+            maybeSaveInfo.innerHTML = originalHTML;
+            maybeSaveInfo.disabled = false;
+          }
+        });
+      } else {
+        console.warn("[host-init] saveInfo button not found.");
+      }
+
+      // --- save media button (optional)
+      const maybeSaveMedia = document.getElementById("saveMedia");
+      if (maybeSaveMedia) {
+        maybeSaveMedia.addEventListener("click", async () => {
+          if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
+          const popupPhotoFile = document.getElementById("popupPhoto")?.files?.[0];
+          const uploadVideoFile = document.getElementById("uploadVideo")?.files?.[0];
+          if (!popupPhotoFile && !uploadVideoFile) return showStarPopup("⚠️ Please select a photo or video to upload.");
+          try {
+            showStarPopup("⏳ Uploading media...");
+            const formData = new FormData();
+            if (popupPhotoFile) formData.append("photo", popupPhotoFile);
+            if (uploadVideoFile) formData.append("video", uploadVideoFile);
+            const res = await fetch("/api/uploadShopify", { method: "POST", body: formData });
+            if (!res.ok) throw new Error("Upload failed.");
+            const data = await res.json();
+            const userRef = doc(db, "users", currentUser.uid);
+            await updateDoc(userRef, {
+              ...(data.photoUrl && { popupPhoto: data.photoUrl }),
+              ...(data.videoUrl && { videoUrl: data.videoUrl }),
+              lastUpdated: serverTimestamp()
+            });
+            if (data.photoUrl) {
+              const photoPreview = document.getElementById("photoPreview");
+              const photoPlaceholder = document.getElementById("photoPlaceholder");
+              if (photoPreview) {
+                photoPreview.src = data.photoUrl;
+                photoPreview.style.display = "block";
+              }
+              if (photoPlaceholder) photoPlaceholder.style.display = "none";
+            }
+            showStarPopup("✅ Media uploaded successfully!");
+            hostModalEl.style.display = "none";
+          } catch (err) {
+            console.error("[host-init] media upload error:", err);
+            showStarPopup(`⚠️ Failed to upload media: ${err.message}`);
+          }
+        });
+      } else {
+        console.info("[host-init] saveMedia button not present (ok if VIP-only UI).");
+      }
+
+      console.log("[host-init] Host logic initialized successfully.");
+    } catch (err) {
+      console.error("[host-init] Could not find required host elements:", err);
+      // helpful message for debugging during development:
+      showStarPopup("⚠️ Host UI failed to initialize. Check console for details.");
+    }
+  }); // ready
+})();
 
 
 
