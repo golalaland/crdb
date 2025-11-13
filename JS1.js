@@ -3101,77 +3101,76 @@ await addDoc(notifRef, {
 })(); // ✅ closes IIFE
 
 
-// ---------- DEBUGGABLE HOST INIT (drop-in) ----------
-(function () {
-  // Toggle this dynamically in your app
-  const isHost = true; // <-- make sure this equals true at runtime for hosts
+//<!-- ✅ HOST INIT HANDLER (supports shared notifications + dynamic Boolean isHost) -->//
+(async function () {
+  // --- wait for DOM ready
+  function ready(fn) {
+    if (document.readyState === "complete" || document.readyState === "interactive") setTimeout(fn, 0);
+    else document.addEventListener("DOMContentLoaded", fn);
+  }
 
-  // Small helper: wait for a set of elements to exist (polling)
+  // --- wait for elements helper
   function waitForElements(selectors = [], { timeout = 5000, interval = 80 } = {}) {
     const start = Date.now();
     return new Promise((resolve, reject) => {
       (function poll() {
         const found = selectors.map(s => document.querySelector(s));
-        if (found.every(el => el)) return resolve(found);
-        if (Date.now() - start > timeout) return reject(new Error("waitForElements timeout: " + selectors.join(", ")));
+        if (found.every(Boolean)) return resolve(found);
+        if (Date.now() - start > timeout) return reject(new Error("Timeout: " + selectors.join(", ")));
         setTimeout(poll, interval);
       })();
     });
   }
 
-  // Safe getter w/ default
-  const $ = (sel) => document.querySelector(sel);
-
-  // run everything after DOM ready (and still robust if DOM already loaded)
-  function ready(fn) {
-    if (document.readyState === "complete" || document.readyState === "interactive") {
-      setTimeout(fn, 0);
-    } else {
-      document.addEventListener("DOMContentLoaded", fn);
-    }
-  }
-
   ready(async () => {
-    console.log("[host-init] DOM ready. isHost =", isHost);
+    console.log("[host-init] Checking user host status…");
+
+    // 1️⃣ Fetch user status (or use global currentUser)
+    let isHost = false;
+
+    try {
+      if (typeof currentUser?.uid === "string") {
+        const userRef = doc(db, "users", currentUser.uid);
+        const snap = await getDoc(userRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          isHost = !!data.isHost; // ensure Boolean
+          console.log("[host-init] Fetched isHost:", isHost);
+        }
+      } else {
+        console.warn("[host-init] No currentUser.uid found");
+      }
+    } catch (err) {
+      console.error("[host-init] Error fetching user doc:", err);
+    }
 
     if (!isHost) {
-      console.log("[host-init] not a host. exiting host init.");
-      return;
+      console.log("[host-init] Not a host, exiting init.");
+      return; // gracefully exit for non-host users
     }
 
-    // 1) Wait for the most important elements that must exist for host flow.
+    // 2️⃣ Wait for modal + trigger elements
     try {
-      const [
-        hostSettingsWrapperEl,
-        hostModalEl,
-        hostSettingsBtnEl,
-      ] = await waitForElements(
+      const [hostSettingsWrapperEl, hostModalEl, hostSettingsBtnEl] = await waitForElements(
         ["#hostSettingsWrapper", "#hostModal", "#hostSettingsBtn"],
         { timeout: 7000 }
       );
 
-      console.log("[host-init] Found host elements:", {
-        hostSettingsWrapper: !!hostSettingsWrapperEl,
-        hostModal: !!hostModalEl,
-        hostSettingsBtn: !!hostSettingsBtnEl,
-      });
+      console.log("[host-init] Host elements ready ✅");
 
-      // Show wrapper/button
       hostSettingsWrapperEl.style.display = "block";
 
-      // close button - optional but preferred
+      // close button
       const closeModalEl = hostModalEl.querySelector(".close");
-      if (!closeModalEl) {
-        console.warn("[host-init] close button (.close) not found inside #hostModal.");
-      }
+      if (!closeModalEl) console.warn("[host-init] close button missing.");
 
-      // --- attach tab init (shared across modals)
-      function initTabsForModal(modalEl) {
-        modalEl.querySelectorAll(".tab-btn").forEach((btn) => {
+      // 3️⃣ Shared tab logic (use shared notificationsTab)
+      function initTabs(modalEl) {
+        modalEl.querySelectorAll(".tab-btn").forEach(btn => {
           btn.addEventListener("click", () => {
-            modalEl.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
-            // Hide only tab-content referenced by dataset or global shared notifications
-            document.querySelectorAll(".tab-content").forEach((tab) => (tab.style.display = "none"));
+            modalEl.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".tab-content").forEach(tab => tab.style.display = "none");
+
             btn.classList.add("active");
             const target = document.getElementById(btn.dataset.tab);
             if (target) target.style.display = "block";
@@ -3179,78 +3178,66 @@ await addDoc(notifRef, {
           });
         });
       }
-      initTabsForModal(hostModalEl);
+      initTabs(hostModalEl);
 
-      // --- host button click: show modal + populate
+      // 4️⃣ Host button click → show + populate modal
       hostSettingsBtnEl.addEventListener("click", async () => {
+        hostModalEl.style.display = "block";
+
         try {
-          hostModalEl.style.display = "block";
-
-          if (!currentUser?.uid) {
-            console.warn("[host-init] currentUser.uid missing");
-            return showStarPopup("⚠️ Please log in first.");
-          }
-
+          if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
           const userRef = doc(db, "users", currentUser.uid);
           const snap = await getDoc(userRef);
-          if (!snap.exists()) {
-            console.warn("[host-init] user doc not found for uid:", currentUser.uid);
-            return showStarPopup("⚠️ User data not found.");
-          }
+          if (!snap.exists()) return showStarPopup("⚠️ User data not found.");
+
           const data = snap.data() || {};
-          // populate safely (guard each element)
-          const safeSet = (id, value) => {
+          const setValue = (id, val) => {
             const el = document.getElementById(id);
-            if (el) el.value = value ?? "";
+            if (el) el.value = val ?? "";
           };
 
-          safeSet("fullName", data.fullName || "");
-          safeSet("city", data.city || "");
-          safeSet("location", data.location || "");
-          safeSet("bio", data.bioPick || "");
-          safeSet("bankAccountNumber", data.bankAccountNumber || "");
-          safeSet("bankName", data.bankName || "");
-          safeSet("telegram", data.telegram || "");
-          safeSet("tiktok", data.tiktok || "");
-          safeSet("whatsapp", data.whatsapp || "");
-          safeSet("instagram", data.instagram || "");
-          // picks
-          const natureEl = document.getElementById("naturePick");
-          if (natureEl) natureEl.value = data.naturePick || "";
-          const fruitEl = document.getElementById("fruitPick");
-          if (fruitEl) fruitEl.value = data.fruitPick || "";
+          setValue("fullName", data.fullName);
+          setValue("city", data.city);
+          setValue("location", data.location);
+          setValue("bio", data.bioPick);
+          setValue("bankAccountNumber", data.bankAccountNumber);
+          setValue("bankName", data.bankName);
+          setValue("telegram", data.telegram);
+          setValue("tiktok", data.tiktok);
+          setValue("whatsapp", data.whatsapp);
+          setValue("instagram", data.instagram);
+          if (document.getElementById("naturePick")) document.getElementById("naturePick").value = data.naturePick || "";
+          if (document.getElementById("fruitPick")) document.getElementById("fruitPick").value = data.fruitPick || "";
 
-          // preview photo
-          if (data.popupPhoto) {
-            const photoPreview = document.getElementById("photoPreview");
-            const photoPlaceholder = document.getElementById("photoPlaceholder");
-            if (photoPreview) {
-              photoPreview.src = data.popupPhoto;
-              photoPreview.style.display = "block";
-            }
-            if (photoPlaceholder) photoPlaceholder.style.display = "none";
-          } else {
-            // ensure preview hidden if no photo
-            const photoPreview = document.getElementById("photoPreview");
-            const photoPlaceholder = document.getElementById("photoPlaceholder");
-            if (photoPreview) photoPreview.style.display = "none";
-            if (photoPlaceholder) photoPlaceholder.style.display = "inline-block";
+          // --- handle photo preview
+          const preview = document.getElementById("photoPreview");
+          const placeholder = document.getElementById("photoPlaceholder");
+          if (data.popupPhoto && preview) {
+            preview.src = data.popupPhoto;
+            preview.style.display = "block";
+            if (placeholder) placeholder.style.display = "none";
+          } else if (placeholder) {
+            placeholder.style.display = "inline-block";
+            if (preview) preview.style.display = "none";
           }
 
         } catch (err) {
-          console.error("[host-init] error in hostSettingsBtn click:", err);
-          showStarPopup("⚠️ Failed to open settings. Check console.");
+          console.error("[host-init] modal populate error:", err);
+          showStarPopup("⚠️ Failed to load settings.");
         }
       });
 
-      // --- close handlers
-      if (closeModalEl) {
-        closeModalEl.addEventListener("click", () => (hostModalEl.style.display = "none"));
-      }
+      // 5️⃣ Modal close + overlay click
+      if (closeModalEl) closeModalEl.addEventListener("click", () => hostModalEl.style.display = "none");
       window.addEventListener("click", (e) => {
         if (e.target === hostModalEl) hostModalEl.style.display = "none";
       });
 
+    } catch (err) {
+      console.error("[host-init] host modal setup failed:", err);
+    }
+  });
+})();
       // --- photo preview handler (delegated)
       document.addEventListener("change", (e) => {
         if (e.target && e.target.id === "popupPhoto") {
