@@ -3101,158 +3101,141 @@ await addDoc(notifRef, {
 })(); // ✅ closes IIFE
 
 
-//<!-- ✅ HOST INIT HANDLER (clean working version) -->//
+// ⚙️ HOST / VIP AUTO INIT — realtime reactive, no imports needed
 
-(async function () {
-  // --- Helper: wait for DOM ready
-  const ready = (fn) => {
-    if (document.readyState === "complete" || document.readyState === "interactive") setTimeout(fn, 0);
-    else document.addEventListener("DOMContentLoaded", fn);
-  };
+// --- Helper: wait for DOM ready
+function ready(fn) {
+  if (document.readyState === "complete" || document.readyState === "interactive") setTimeout(fn, 0);
+  else document.addEventListener("DOMContentLoaded", fn);
+}
 
-  // --- Helper: wait for elements to exist
-  const waitForElements = (selectors = [], { timeout = 6000, interval = 100 } = {}) => {
-    const start = Date.now();
-    return new Promise((resolve, reject) => {
-      (function poll() {
-        const found = selectors.map(sel => document.querySelector(sel));
-        if (found.every(Boolean)) return resolve(found);
-        if (Date.now() - start > timeout) return reject(new Error("Timeout waiting for: " + selectors.join(", ")));
-        setTimeout(poll, interval);
-      })();
-    });
-  };
+// --- Helper: wait for elements to appear
+function waitForElements(selectors = [], { timeout = 6000, interval = 100 } = {}) {
+  const start = Date.now();
+  return new Promise((resolve, reject) => {
+    (function poll() {
+      const found = selectors.map(sel => document.querySelector(sel));
+      if (found.every(Boolean)) return resolve(found);
+      if (Date.now() - start > timeout) return reject(new Error("Timeout waiting for: " + selectors.join(", ")));
+      setTimeout(poll, interval);
+    })();
+  });
+}
 
-  // --- Helper: safe element value setter
-  const setValue = (id, value) => {
-    const el = document.getElementById(id);
-    if (el) el.value = value ?? "";
-  };
+// --- Helper: safe set
+function setVal(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.value = value ?? "";
+}
 
-  // --- Helper: star-style popup message
-  const showStarPopup = (msg) => {
-    alert(msg); // replace this with your themed popup if available
-  };
+// --- Helper: basic alert (replace later with your popup)
+function showStarPopup(msg) {
+  alert(msg);
+}
 
-  ready(async () => {
-    console.log("[HostInit] DOM ready... Checking host status.");
+ready(async () => {
+  console.log("[HostInit] DOM ready... waiting for currentUser");
 
-    // 🔹 Get user info
-    let isHost = false;
-    try {
-      if (typeof currentUser?.uid === "string") {
-        const userRef = doc(db, "users", currentUser.uid);
-        const snap = await getDoc(userRef);
-        if (snap.exists()) {
-          const data = snap.data();
-          isHost = !!data.isHost; // Boolean cast
-          console.log("[HostInit] Host status:", isHost);
-        } else {
-          console.warn("[HostInit] User document not found.");
+  // Wait for Firebase to load user
+  const waitForUser = () =>
+    new Promise((resolve) => {
+      const check = setInterval(() => {
+        if (window.currentUser?.uid) {
+          clearInterval(check);
+          resolve(window.currentUser);
         }
-      } else {
-        console.warn("[HostInit] currentUser.uid not available yet.");
-      }
-    } catch (err) {
-      console.error("[HostInit] Error fetching user document:", err);
-    }
+      }, 200);
+    });
 
-    // 🔸 If user is not host, stop here
+  const user = await waitForUser();
+  console.log("[HostInit] Found user:", user.uid);
+
+  // --- realtime listener for isHost
+  const userRef = doc(db, "users", user.uid);
+  onSnapshot(userRef, async (snap) => {
+    if (!snap.exists()) return console.warn("[HostInit] No user doc.");
+    const data = snap.data();
+    const isHost = !!data.isHost;
+    console.log("[HostInit] isHost:", isHost);
+
+    const [hostSettingsWrapper, hostModal, hostSettingsBtn] = await waitForElements([
+      "#hostSettingsWrapper",
+      "#hostModal",
+      "#hostSettingsBtn",
+    ]);
+
+    // reset visibility
+    hostSettingsWrapper.style.display = "none";
+
     if (!isHost) {
-      console.log("[HostInit] Not a host. Skipping host setup.");
+      console.log("[HostInit] Not a host — hiding host panel.");
       return;
     }
 
-    // 🔹 Wait for modal and button elements
-    let hostSettingsWrapperEl, hostModalEl, hostSettingsBtnEl;
-    try {
-      [hostSettingsWrapperEl, hostModalEl, hostSettingsBtnEl] = await waitForElements(
-        ["#hostSettingsWrapper", "#hostModal", "#hostSettingsBtn"]
-      );
-      console.log("[HostInit] Host UI elements found.");
-    } catch (err) {
-      console.error("[HostInit] Required elements not found:", err);
-      return;
-    }
+    // Show host panel
+    hostSettingsWrapper.style.display = "block";
 
-    // 🔹 Show the host settings button
-    hostSettingsWrapperEl.style.display = "block";
-
-    // 🔹 Tab logic (uses global notifications tab)
+    // Tab buttons (including shared notifications tab)
     function initTabs(modalEl) {
       modalEl.querySelectorAll(".tab-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
           modalEl.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
           document.querySelectorAll(".tab-content").forEach((tab) => (tab.style.display = "none"));
           btn.classList.add("active");
-
           const target = document.getElementById(btn.dataset.tab);
           if (target) target.style.display = "block";
           else console.warn("[HostInit] Missing tab:", btn.dataset.tab);
         });
       });
     }
-    initTabs(hostModalEl);
+    initTabs(hostModal);
 
-    // 🔹 Host button click → open + populate modal
-    hostSettingsBtnEl.addEventListener("click", async () => {
-      hostModalEl.style.display = "block";
-
+    // Open host settings modal
+    hostSettingsBtn.onclick = async () => {
+      hostModal.style.display = "block";
       try {
-        if (!currentUser?.uid) return showStarPopup("⚠️ Please log in first.");
-        const userRef = doc(db, "users", currentUser.uid);
         const snap = await getDoc(userRef);
         if (!snap.exists()) return showStarPopup("⚠️ User data not found.");
+        const d = snap.data();
 
-        const data = snap.data() || {};
-        console.log("[HostInit] Populating modal for:", data.fullName);
+        setVal("fullName", d.fullName);
+        setVal("city", d.city);
+        setVal("location", d.location);
+        setVal("bio", d.bioPick);
+        setVal("bankAccountNumber", d.bankAccountNumber);
+        setVal("bankName", d.bankName);
+        setVal("telegram", d.telegram);
+        setVal("tiktok", d.tiktok);
+        setVal("whatsapp", d.whatsapp);
+        setVal("instagram", d.instagram);
+        if (document.getElementById("naturePick")) document.getElementById("naturePick").value = d.naturePick || "";
+        if (document.getElementById("fruitPick")) document.getElementById("fruitPick").value = d.fruitPick || "";
 
-        setValue("fullName", data.fullName);
-        setValue("city", data.city);
-        setValue("location", data.location);
-        setValue("bio", data.bioPick);
-        setValue("bankAccountNumber", data.bankAccountNumber);
-        setValue("bankName", data.bankName);
-        setValue("telegram", data.telegram);
-        setValue("tiktok", data.tiktok);
-        setValue("whatsapp", data.whatsapp);
-        setValue("instagram", data.instagram);
-
-        if (document.getElementById("naturePick")) document.getElementById("naturePick").value = data.naturePick || "";
-        if (document.getElementById("fruitPick")) document.getElementById("fruitPick").value = data.fruitPick || "";
-
-        // --- Photo handling
+        // Photo preview
         const preview = document.getElementById("photoPreview");
         const placeholder = document.getElementById("photoPlaceholder");
-        if (data.popupPhoto && preview) {
-          preview.src = data.popupPhoto;
+        if (d.popupPhoto && preview) {
+          preview.src = d.popupPhoto;
           preview.style.display = "block";
           if (placeholder) placeholder.style.display = "none";
         } else {
           if (preview) preview.style.display = "none";
           if (placeholder) placeholder.style.display = "inline-block";
         }
-
       } catch (err) {
-        console.error("[HostInit] Error loading modal data:", err);
-        showStarPopup("⚠️ Could not load host settings.");
+        console.error("[HostInit] Error populating modal:", err);
+        showStarPopup("⚠️ Could not load host info.");
       }
-    });
+    };
 
-    // 🔹 Close modal when clicking X or outside
-    const closeModalEl = hostModalEl.querySelector(".close");
-    if (closeModalEl) {
-      closeModalEl.addEventListener("click", () => (hostModalEl.style.display = "none"));
-    }
-
-    window.addEventListener("click", (e) => {
-      if (e.target === hostModalEl) hostModalEl.style.display = "none";
-    });
-
-    console.log("[HostInit] ✅ Host setup complete.");
+    // Close modal
+    const closeModal = hostModal.querySelector(".close");
+    if (closeModal) closeModal.onclick = () => (hostModal.style.display = "none");
+    window.onclick = (e) => {
+      if (e.target === hostModal) hostModal.style.display = "none";
+    };
   });
-})();
-
+});
 
 // 🌤️ Dynamic Host Panel Greeting
 function capitalizeFirstLetter(str) {
