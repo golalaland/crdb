@@ -144,9 +144,16 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
     <div id="scrambleText">TAP MASTER</div>
   </div>
   
-  <!-- Play Confirmation Modal -->
-<div id="playModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;justify-content:center;align-items:center;">
-  <div class="modal" style="background:#111;color:#fff;padding:20px;border-radius:12px;width:90%;max-width:320px;text-align:center;">
+
+<!-- Start Page -->
+<div id="startPage" style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:18px;">
+  <button id="startBtn" style="padding:12px 22px;border-radius:12px;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:800;font-size:16px;border:none;cursor:pointer;">Play</button>
+  <img id="posterImg" src="https://via.placeholder.com/420x200?text=Poster+Here" alt="Poster" style="width:90%;max-width:420px;margin:12px auto;border-radius:12px;">
+</div>
+
+<!-- Play Confirmation Modal -->
+<div id="playModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;justify-content:center;align-items:center;display:flex;">
+  <div style="background:#111;color:#fff;padding:20px;border-radius:12px;width:90%;max-width:320px;text-align:center;">
     <h3 style="margin-bottom:12px;">Confirm Play</h3>
     <p>Spend <strong>10 ⭐</strong> to start this game?</p>
     <div style="display:flex;justify-content:space-between;margin-top:18px;">
@@ -156,18 +163,13 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
   </div>
 </div>
 
-  <!-- Start / join flow -->
-  <div id="startPage" style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:18px;">
-    <button id="startBtn" style="padding:12px 22px;border-radius:12px;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:800;font-size:16px;border:none;cursor:pointer;">Play</button>
-    <!-- Poster only visible on start page -->
-    <img id="posterImg" src="https://via.placeholder.com/420x200?text=Poster+Here" alt="Poster" style="width:90%;max-width:420px;margin:12px auto;border-radius:12px;">
-  </div>
-
   <!-- Spinner (loading animation) -->
   <div id="spinner" class="hidden" style="margin-top:18px;">
     <div style="width:44px;height:44px;border-radius:50%;border:6px solid #222;border-top:6px solid #00e676; animation:spin 1s linear infinite;margin:0 auto"></div>
     <div style="margin-top:10px;color:#aaa;font-size:13px">Loading Tap Arena…</div>
   </div>
+  
+  
 
   <!-- Game UI -->
   <div id="gamePage" class="hidden" style="width:100%;display:flex;flex-direction:column;align-items:center;">
@@ -279,6 +281,9 @@ const db = getFirestore(app);
 
 // ---------- UI refs ----------
 const startBtn = document.getElementById('startBtn');
+const playModal = document.getElementById('playModal');
+const cancelPlay = document.getElementById('cancelPlay');
+const confirmPlay = document.getElementById('confirmPlay');
 const spinner = document.getElementById('spinner');
 const startPage = document.getElementById('startPage');
 const gamePage = document.getElementById('gamePage');
@@ -305,41 +310,48 @@ const posterImg = document.getElementById('posterImg');
 const starCountEl = document.getElementById('starCount');
 
 // ---------- State ----------
-let taps = 0, earnings = 0, timer = 60, duration = 60, intervalId = null, running = false;
-let bonusLevel = 1, progress = 0, tapsForNext = 100;
+let taps = 0,
+    earnings = 0,
+    timer = 60,
+    duration = 60,
+    intervalId = null,
+    running = false;
+let bonusLevel = 1,
+    progress = 0,
+    tapsForNext = 100;
 const tapEvent = ('ontouchstart' in window) ? 'touchstart' : 'click';
 
-// unlock audio on first touch for iOS
+// Unlock audio on first touch (iOS)
 document.body.addEventListener('touchstart', () => { tapSound.play().catch(()=>{}); }, { once:true });
 
 // ---------- Start flow ----------
+
+// Show confirmation modal
 startBtn.addEventListener('click', () => {
-  // Show confirmation modal
-  const playModal = document.getElementById('playModal');
   playModal.style.display = 'flex';
 });
 
 // Cancel button
-document.getElementById('cancelPlay').addEventListener('click', () => {
-  document.getElementById('playModal').style.display = 'none';
+cancelPlay.addEventListener('click', () => {
+  playModal.style.display = 'none';
 });
 
 // Confirm play button
-document.getElementById('confirmPlay').addEventListener('click', () => {
-  const stars = parseInt(starCountEl.textContent, 10);
+confirmPlay.addEventListener('click', () => {
+  let stars = parseInt(starCountEl.textContent, 10);
   if(stars < 10){
     alert("Not enough stars to play!");
     return;
   }
   starCountEl.textContent = stars - 10;
-  document.getElementById('playModal').style.display = 'none';
 
-  // Hide poster + start page
+  // Hide modal + poster + start page
+  playModal.style.display = 'none';
   posterImg.style.display = 'none';
   startPage.style.display = 'none';
   spinner.classList.remove('hidden');
 
-  // Start game after spinner
+  // Start game after brief spinner
   setTimeout(() => {
     spinner.classList.add('hidden');
     gamePage.classList.remove('hidden');
