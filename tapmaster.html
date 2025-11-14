@@ -1,105 +1,268 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport"
-      content="width=device-width, maximum-scale=1.0, user-scalable=no" />
-<title>Tap Master Online</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Tap Master</title>
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
+
 <style>
-  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#0e0e0e;color:#fff;
-       touch-action:manipulation;overflow:hidden;text-align:center}
-  h1{color:#00e676;text-shadow:0 0 10px #00e67666;margin-top:40px}
-  button{border:none;cursor:pointer}
-  #startPage{height:100vh;background:url('https://via.placeholder.com/600x1000?text=Tap+Master+Image')center/cover no-repeat;
-             display:flex;flex-direction:column;align-items:center;justify-content:center}
-  #startBtn{margin-top:300px;padding:15px 40px;font-size:22px;font-weight:bold;
-            background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;border-radius:10px}
-  footer{position:absolute;bottom:20px;width:100%;font-size:14px;opacity:.7}
-  #modal,#spinner,#resultModal{position:fixed;inset:0;background:rgba(0,0,0,.8);
-                               display:none;align-items:center;justify-content:center;flex-direction:column}
-  .modal-box{background:#1e1e1e;padding:25px;border-radius:12px;width:80%;max-width:320px}
-  .modal-box button{margin:10px;padding:10px 25px;font-weight:bold;border-radius:8px}
-  .loader{border:6px solid #333;border-top:6px solid #00e676;border-radius:50%;
-          width:60px;height:60px;animation:spin 1s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  #gamePage{display:none;flex-direction:column;align-items:center;justify-content:space-between;
-            height:100vh;padding:20px;box-sizing:border-box}
-  #bonusContainer{width:280px;height:22px;background:#333;border-radius:12px;
-                  overflow:hidden;margin:20px auto 10px;box-shadow:0 0 10px #00e67644}
-  #bonusBar{height:100%;width:0;background:linear-gradient(90deg,#00e676,#00b0ff);
-            transition:width .2s}
-  #tapButton{width:150px;height:150px;border-radius:50%;
-             background:radial-gradient(circle at top left,#00e676,#00b0ff);
-             font-size:22px;font-weight:bold;color:#000;box-shadow:0 0 25px #00e676aa;
-             animation:pulse 1.5s infinite}
-  @keyframes pulse{0%{box-shadow:0 0 10px #00e67666;transform:scale(1)}
-                   50%{box-shadow:0 0 25px #00e676cc;transform:scale(1.05)}
-                   100%{box-shadow:0 0 10px #00e67666;transform:scale(1)}}
-  #tapButton:active{transform:scale(.95)}
-  .floatText{position:absolute;color:#00ff95;font-weight:bold;font-size:20px;opacity:0;
-             animation:floatUp .8s ease-out forwards}
-  @keyframes floatUp{0%{opacity:1;transform:translate(0,0)}
-                     100%{opacity:0;transform:translate(var(--x,0px),-80px)}}
-  .confetti{position:fixed;width:8px;height:8px;background:var(--color);
-            top:50%;left:50%;opacity:.9;animation:confettiFall 1s ease-out forwards}
-  @keyframes confettiFall{to{transform:translate(var(--x),var(--y)) rotate(720deg);opacity:0}}
-  @keyframes fadeOut{to{opacity:0;transform:translate(-50%,-60%) scale(1.2)}}
-  #leaderboard{text-align:left;width:90%;max-width:320px;margin:auto}
-  #leaderboard ol{padding-left:20px}
+:root{
+  --bg:#0e0e0e;
+  --glass-bg: rgba(255,255,255,0.04);
+  --accent1:#FF1493;
+  --accent2:#FF8C00;
+  --green1:#00e676;
+  --muted:#aaa;
+  --glass-border: rgba(255,255,255,0.08);
+}
+
+*{box-sizing:border-box}
+html,body {height:100%;margin:0;background:var(--bg);color:#fff;font-family:'Montserrat',sans-serif; -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body {display:flex;justify-content:center;align-items:flex-start;padding:18px 0 120px; touch-action:manipulation; -webkit-tap-highlight-color: transparent; overflow-x:hidden;}
+#appWrapper {width:100%;max-width:480px;display:flex;flex-direction:column;align-items:center;}
+
+/* header */
+#gameHeader{text-align:center;margin-top:6px;}
+#welcomeText{font-family:'Press Start 2P',cursive;font-size:11px;color:var(--accent1)}
+#scrambleText{font-family:'Press Start 2P',cursive;font-size:20px;color:var(--accent1);margin-top:4px}
+
+/* glass terminal (tap stats + timer etc) */
+.glass-terminal {
+  width: 90%;
+  max-width: 420px;
+  margin: 18px auto;
+  padding: 14px 16px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 0 20px rgba(0,0,0,0.6);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+.terminal-header { text-align:center; color:var(--accent1); font-size:11px; letter-spacing:2px; margin-bottom:8px; font-weight:700; }
+.terminal-line { font-size:13px; line-height:1.6; letter-spacing:1px; color:#fff; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; }
+.terminal-line span { color:#00FF99; text-shadow:0 0 6px rgba(0,255,153,0.08); font-weight:700; }
+
+/* train bar (timer visual) */
+#trainBarContainer {
+  width:100%;
+  height:14px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 999px;
+  overflow:hidden;
+  margin-top:8px;
+}
+#trainBar {
+  height:100%;
+  width:100%;
+  background: linear-gradient(90deg, var(--accent1), var(--accent2));
+  transform-origin: left center;
+  transition: width 0.2s linear;
+}
+
+/* stats row inside terminal */
+.stats-row { display:flex; justify-content:space-between; gap:12px; margin-top:8px; align-items:center; }
+.stat { flex:1; background: rgba(255,255,255,0.02); padding:8px; border-radius:8px; text-align:center; }
+.stat .label { font-size:11px; color:var(--muted); }
+.stat .value { font-size:16px; font-weight:800; color:#fff; }
+
+/* bonus bar (progress toward next bonus level) */
+#bonusContainer { width:100%; height:10px; background:#111; border-radius:999px; overflow:hidden; margin-top:12px; box-shadow:0 6px 16px rgba(0,0,0,0.6) inset; }
+#bonusBar { height:100%; width:0%; background:linear-gradient(90deg,var(--green1),#00b0ff); transition:width .15s linear; }
+
+/* TAP button - small round, far from terminal */
+#tapButton {
+  width:64px;
+  height:64px;
+  border-radius:50%;
+  background: radial-gradient(circle at 25% 25%, var(--green1), #00b0ff);
+  border: none;
+  margin-top:36px; /* far from terminal */
+  box-shadow: 0 8px 30px rgba(0,230,118,0.14);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:800;
+  color:#000;
+  font-size:18px;
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* tap hover/active */
+#tapButton:active { transform: scale(.96); }
+
+/* tap count + earnings small status (below button) */
+#miniStats { margin-top:12px; color:#fff; font-weight:700; }
+
+/* leaderboard button */
+#leaderboardBtn {
+  margin-top:14px;
+  padding:10px 14px;
+  border-radius:10px;
+  background: linear-gradient(90deg,#FFD700,#FF8C00);
+  color:#111;
+  font-weight:800;
+  border:none;
+  cursor:pointer;
+  font-size:14px;
+}
+
+/* modal (normal fade-in centered) */
+.modal-backdrop {
+  position:fixed; inset:0; background: rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:9999;
+}
+.modal {
+  width:92%; max-width:420px; background:#0f0f0f; border-radius:12px; padding:16px; border:1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
+.modal h3{ margin:0 0 8px 0; color:var(--accent1); font-size:16px; }
+.modal .list { text-align:left; margin-top:12px; max-height:320px; overflow:auto; }
+.modal .list li { padding:8px 6px; border-bottom:1px dashed rgba(255,255,255,0.03); font-weight:700; }
+
+/* result panel (small) */
+#resultModalInner { display:none; margin-top:18px; }
+
+/* small helpers */
+.hidden { display:none!important; }
+button, input { font-size:16px; } /* prevents iOS zoom on tap */
 </style>
 </head>
 <body>
+<div id="appWrapper">
 
-<div id="startPage">
-  <h1>TAP MASTER ONLINE</h1>
-  <button id="startBtn">Play</button>
-  <footer>© 2025 Tap Master Studios</footer>
+  <!-- Header -->
+  <div id="gameHeader">
+    <div id="welcomeText">WELCOME TO</div>
+    <div id="scrambleText">TAP MASTER</div>
+  </div>
+  
+
+<!-- Start Page -->
+<div id="startPage" style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:18px;">
+  <button id="startBtn" style="padding:12px 22px;border-radius:12px;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:800;font-size:16px;border:none;cursor:pointer;">Play</button>
+  <img id="posterImg" src="https://via.placeholder.com/420x200?text=Poster+Here" alt="Poster" style="width:90%;max-width:420px;margin:12px auto;border-radius:12px;">
 </div>
 
-<div id="modal">
-  <div class="modal-box">
-    <p>Play <b>Tap Master</b> for <b>200⭐</b>?</p>
-    <button id="yesBtn">Yes</button><button id="noBtn">Cancel</button>
+<!-- Play Confirmation Modal -->
+<div id="playModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;justify-content:center;align-items:center;display:flex;">
+  <div style="background:#111;color:#fff;padding:20px;border-radius:12px;width:90%;max-width:320px;text-align:center;">
+    <h3 style="margin-bottom:12px;">Confirm Play</h3>
+    <p>Spend <strong>10 ⭐</strong> to start this game?</p>
+    <div style="display:flex;justify-content:space-between;margin-top:18px;">
+      <button id="cancelPlay" style="flex:1;margin-right:6px;padding:10px 12px;border:none;border-radius:8px;background:#444;color:#fff;font-weight:700;cursor:pointer;">Cancel</button>
+      <button id="confirmPlay" style="flex:1;margin-left:6px;padding:10px 12px;border:none;border-radius:8px;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:700;cursor:pointer;">Confirm</button>
+    </div>
   </div>
 </div>
 
-<div id="spinner"><div class="loader"></div><p>Loading Tap Arena…</p></div>
-
-<div id="gamePage">
-  <div>
-    <p>⏱ Time Left: <span id="timer">60</span>s</p>
-    <p>👆 Taps: <span id="tapCount">0</span></p>
-    <p>💵 Earnings: ₦<span id="earnings">0.00</span></p>
+  <!-- Spinner (loading animation) -->
+  <div id="spinner" class="hidden" style="margin-top:18px;">
+    <div style="width:44px;height:44px;border-radius:50%;border:6px solid #222;border-top:6px solid #00e676; animation:spin 1s linear infinite;margin:0 auto"></div>
+    <div style="margin-top:10px;color:#aaa;font-size:13px">Loading Tap Arena…</div>
   </div>
-  <div id="bonusContainer"><div id="bonusBar"></div></div>
-  <button id="tapButton">TAP</button>
-  <div id="leaderboard">
-    <h3>🏆 Top Tappers (This Hour)</h3>
-    <ol id="scores"></ol>
+  
+  
+
+  <!-- Game UI -->
+  <div id="gamePage" class="hidden" style="width:100%;display:flex;flex-direction:column;align-items:center;">
+
+    <!-- Glass terminal -->
+    <div id="tapTerminal" class="glass-terminal" aria-live="polite">
+      <div class="terminal-header">TAP TERMINAL</div>
+
+      <div class="terminal-line">
+        <div>⏱ Time Left</div>
+        <div><span id="timer">60</span>s</div>
+      </div>
+
+      <div class="terminal-line">
+        <div>👆 Taps</div>
+        <div><span id="tapCount">0</span></div>
+      </div>
+
+      <div class="terminal-line">
+        <div>💵 Earnings</div>
+        <div>₦<span id="earnings">0.00</span></div>
+      </div>
+
+      <div id="trainBarContainer" style="margin-top:10px;">
+        <div id="trainBar" style="width:100%"></div>
+      </div>
+
+      <div class="stats-row" style="margin-top:10px">
+        <div class="stat">
+          <div class="label">BONUS LVL</div>
+          <div class="value" id="bonusLevelVal">1</div>
+        </div>
+        <div class="stat">
+          <div class="label">SPEED</div>
+          <div class="value" id="speedVal">—</div>
+        </div>
+      </div>
+
+      <div id="bonusContainer" style="margin-top:12px;">
+        <div id="bonusBar"></div>
+      </div>
+    </div>
+
+    <!-- TAP button -->
+    <button id="tapButton" aria-label="Tap" title="Tap fast!">TAP</button>
+
+    <!-- Mini stats -->
+    <div id="miniStats" aria-hidden="false">Taps: <strong id="miniTapCount">0</strong> · Earnings: ₦<span id="miniEarnings">0.00</span></div>
+
+    <!-- Result modal -->
+<div id="resultModal" class="modal-backdrop" style="display:none;align-items:center;justify-content:center;">
+  <div class="modal" style="padding:16px;border-radius:12px;max-width:380px;text-align:center;position:relative;">
+    <button id="closeResult" style="position:absolute;top:8px;right:8px;font-size:18px;border:none;background:none;cursor:pointer;">✖</button>
+    <div id="resultMessage" style="margin-top:10px;font-size:16px;font-weight:600;"></div>
+    <button id="playAgainBtn" style="margin-top:16px;padding:10px 16px;border-radius:8px;border:none;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:800;cursor:pointer;">Play Again</button>
   </div>
 </div>
 
-<div id="resultModal">
-  <div class="modal-box">
-    <h2>Time’s Up!</h2>
-    <p>👆 Taps: <span id="finalTaps">0</span></p>
-    <p>💵 Cash Earned: ₦<span id="finalEarnings">0.00</span></p>
-    <button id="playAgain">Play Again</button>
+  </div> <!-- end gamePage -->
+
+  <!-- Fixed bottom profile + leaderboard button -->
+  <div id="bottomBar" style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:1000;">
+    <div class="profile-card" style="background:rgba(255,255,255,0.04);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);text-align:center;">
+      <div class="profile-name" id="profileName">GUEST 0000</div>
+      <div class="profile-info">STARS COLLECTED: <span id="starCount">50</span>⭐</div>
+      <div class="profile-info">CASH EARNED: <span id="cashCount">0</span></div>
+    </div>
+    <button id="leaderboardBtn" style="padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#FFD700,#FF8C00);color:#111;font-weight:800;border:none;cursor:pointer;font-size:14px;">View Leaderboard 🏆</button>
   </div>
+
+  <!-- Leaderboard modal -->
+  <div id="leaderboardModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3>Top Tappers — This Hour</h3>
+      <ol id="leaderboardList" class="list" style="list-style:none;padding-left:0;margin:0;"></ol>
+      <div style="margin-top:12px;text-align:right;">
+        <button id="closeLeaderboard" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#FF1493,#FF8C00);color:#fff;font-weight:800;cursor:pointer">Close</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
+<!-- Audio -->
 <audio id="tapSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
 
-<!-- Firebase SDKs -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { 
-  getFirestore, collection, addDoc,
-  query, where, orderBy, limit, getDocs,
-  serverTimestamp, Timestamp
+import {
+  getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-// 🔥 Firebase config
+// ---------- Firebase config ----------
 const firebaseConfig = {
   apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
@@ -110,191 +273,192 @@ const firebaseConfig = {
   measurementId: "G-S77BMC266C",
   databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-window.addEventListener("DOMContentLoaded", () => {
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp, Timestamp
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-  // -------- ELEMENTS ----------
-  const startPage = document.getElementById('startPage');
-  const modal = document.getElementById('modal');
-  const spinner = document.getElementById('spinner');
-  const gamePage = document.getElementById('gamePage');
-  const resultModal = document.getElementById('resultModal');
-  const startBtn = document.getElementById('startBtn');
-  const yesBtn = document.getElementById('yesBtn');
-  const noBtn = document.getElementById('noBtn');
-  const playAgain = document.getElementById('playAgainBtn');
-  const tapButton = document.getElementById('tapButton');
-  const tapSound = document.getElementById('tapSound');
-  const timerEl = document.getElementById('timer');
-  const tapCountEl = document.getElementById('tapCount');
-  const earningsEl = document.getElementById('earnings');
-  const bonusBar = document.getElementById('bonusBar');
-  const finalTapsEl = document.getElementById('finalTaps');
-  const finalEarningsEl = document.getElementById('finalEarnings');
-  const resultMessageEl = document.getElementById('resultMessage');
-  const scoresEl = document.getElementById('scores');
+// ---------- Firebase config ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
+  authDomain: "metaverse-1010.firebaseapp.com",
+  projectId: "metaverse-1010",
+  storageBucket: "metaverse-1010.appspot.com",
+  messagingSenderId: "1044064238233",
+  appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
+  measurementId: "G-S77BMC266C",
+  databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-  // -------- STATE ----------
-  let taps = 0, earnings = 0, timer = 60, interval;
-  let bonusLevel = 1, progress = 0, tapsForNext = 100;
+// ---------- UI refs ----------
+const startBtn = document.getElementById('startBtn');
+const spinner = document.getElementById('spinner');
+const startPage = document.getElementById('startPage');
+const gamePage = document.getElementById('gamePage');
+const tapButton = document.getElementById('tapButton');
+const tapSound = document.getElementById('tapSound');
+const timerEl = document.getElementById('timer');
+const tapCountEl = document.getElementById('tapCount');
+const earningsEl = document.getElementById('earnings');
+const bonusBar = document.getElementById('bonusBar');
+const trainBar = document.getElementById('trainBar');
+const bonusLevelVal = document.getElementById('bonusLevelVal');
+const speedVal = document.getElementById('speedVal');
+const miniTapCount = document.getElementById('miniTapCount');
+const miniEarnings = document.getElementById('miniEarnings');
+const leaderboardBtn = document.getElementById('leaderboardBtn');
+const leaderboardModal = document.getElementById('leaderboardModal');
+const leaderboardList = document.getElementById('leaderboardList');
+const closeLeaderboard = document.getElementById('closeLeaderboard');
+const resultInner = document.getElementById('resultModalInner');
+const finalTapsEl = document.getElementById('finalTaps');
+const finalPlaceEl = document.getElementById('finalPlace');
+const playAgain = document.getElementById('playAgain');
+const posterImg = document.getElementById('posterImg');
+const starCountEl = document.getElementById('starCount');
 
-  // Unlock audio for iOS autoplay
-  document.body.addEventListener("touchstart", () => {
-    tapSound.play().catch(()=>{});
-  }, { once:true });
+// ---------- State ----------
+let taps = 0, earnings = 0, timer = 60, duration = 60, intervalId = null, running = false;
+let bonusLevel = 1, progress = 0, tapsForNext = 100;
+const tapEvent = ('ontouchstart' in window) ? 'touchstart' : 'click';
 
-  // ---------- START FLOW ----------
-  startBtn.addEventListener("click", () => modal.style.display = "flex");
-  noBtn.addEventListener("click", () => modal.style.display = "none");
+// unlock audio on first touch for iOS
+document.body.addEventListener('touchstart', () => { tapSound.play().catch(()=>{}); }, { once:true });
 
-  yesBtn.addEventListener("click", () => {
-    modal.style.display = "none";
-    spinner.style.display = "flex";
-    setTimeout(() => {
-      spinner.style.display = "none";
-      startGame();
-    }, 1200);
-  });
-
-  // ---------- GAME ----------
-  function startGame() {
-    taps = 0; earnings = 0; timer = 60;
-    bonusLevel = 1; progress = 0; tapsForNext = 100;
-
-    startPage.style.display = "none";
-    resultModal.style.display = "none";
-    gamePage.style.display = "flex";
-
-    updateStats();
-    loadTop5();
-
-    interval = setInterval(() => {
-      timer--;
-      timerEl.textContent = timer;
-
-      if(timer <= 0) endGame();
-    }, 1000);
+// ---------- Start Game ----------
+startBtn.addEventListener('click', () => {
+  let stars = parseInt(starCountEl.textContent,10);
+  if(stars < 10){
+    alert("Not enough stars to play!");
+    return;
   }
+  stars -= 10;
+  starCountEl.textContent = stars;
 
-  // Tap event
-  const tapEvent = ("ontouchstart" in window) ? "touchstart" : "click";
-  tapButton.addEventListener(tapEvent, (e) => {
-    e.preventDefault();
-    if(timer <= 0) return;
+  // hide poster + start page
+  posterImg.style.display = 'none';
+  startPage.style.display = 'none';
+  spinner.classList.remove('hidden');
 
-    taps++;
-    earnings++;
-    tapCountEl.textContent = taps;
-    earningsEl.textContent = earnings.toFixed(2);
-
-    tapSound.currentTime = 0;
-    tapSound.play().catch(()=>{});
-    if(navigator.vibrate) navigator.vibrate(15);
-
-    showFloatText("+₦1.00");
-    progress++;
-    if(progress >= tapsForNext) {
-      progress = 0;
-      bonusLevel++;
-      tapsForNext = 100 + (bonusLevel - 1) * 50;
-      showTapPro();
-    }
-    bonusBar.style.width = (progress/tapsForNext*100) + "%";
-  });
-
-  function showFloatText(text) {
-    const f = document.createElement('div');
-    f.className = 'floatText';
-    f.textContent = text;
-    const r = tapButton.getBoundingClientRect();
-    const x = (Math.random()-0.5) * 80;
-    f.style.setProperty("--x", `${x}px`);
-    f.style.left = (r.left + r.width/2) + "px";
-    f.style.top = (r.top + r.height/2) + "px";
-    document.body.appendChild(f);
-    setTimeout(()=>f.remove(), 800);
-  }
-
-  function showTapPro() {
-    confettiBurst();
-    const msg = document.createElement('div');
-    msg.textContent = "TAP PRO!";
-    Object.assign(msg.style, {
-      position:"fixed", top:"50%", left:"50%",
-      transform:"translate(-50%,-50%)", fontSize:"48px",
-      fontWeight:"bold", color:"#00e676", textShadow:"0 0 20px #00e676",
-      animation:"fadeOut 2s forwards", zIndex:2000
-    });
-    document.body.appendChild(msg);
-    setTimeout(()=>msg.remove(), 2000);
-  }
-
-  function confettiBurst() {
-    for(let i=0;i<30;i++){
-      const c = document.createElement("div");
-      c.classList.add("confetti");
-      c.style.setProperty("--color", `hsl(${Math.random()*360},100%,60%)`);
-      c.style.setProperty("--x", `${(Math.random()-0.5)*600}px`);
-      c.style.setProperty("--y", `${(Math.random()-0.5)*400}px`);
-      document.body.appendChild(c);
-      setTimeout(()=>c.remove(),900);
-    }
-  }
-
-  function updateStats() {
-    timerEl.textContent = timer;
-    tapCountEl.textContent = taps;
-    earningsEl.textContent = earnings.toFixed(2);
-    bonusBar.style.width = "0%";
-  }
-
-  // ---------- END GAME ----------
-  async function endGame() {
-    clearInterval(interval);
-    gamePage.style.display = "none";
-    resultModal.style.display = "flex";
-
-    finalTapsEl.textContent = taps;
-    finalEarningsEl.textContent = earnings.toFixed(2);
-    resultMessageEl.textContent = `You earned ₦${earnings} and made ${taps} taps! Check your leaderboard position below.`;
-
-    try {
-      await addDoc(collection(db,"tapSessions"),{
-        taps, earnings, timestamp: serverTimestamp()
-      });
-    } catch(err){ console.error("Save failed", err); }
-
-    loadTop5();
-  }
-
-  // Play again
-  playAgain.addEventListener("click", () => {
-    resultModal.style.display = "none";
-    startPage.style.display = "flex";
-  });
-
-  // ---------- LOAD TOP 5 ----------
-  async function loadTop5() {
-    const oneHourAgo = Timestamp.fromDate(new Date(Date.now() - 3600000));
-    const q = query(
-      collection(db,"tapSessions"),
-      where("timestamp", ">", oneHourAgo),
-      orderBy("taps","desc"),
-      limit(5)
-    );
-
-    const snap = await getDocs(q);
-    scoresEl.innerHTML = snap.docs
-      .map((d,i)=>{
-        const s = d.data();
-        return `<li>#${i+1} — ${s.taps} taps (₦${(s.earnings||0).toFixed(2)})</li>`;
-      }).join("");
-  }
-
+  setTimeout(() => {
+    spinner.classList.add('hidden');
+    gamePage.classList.remove('hidden');
+    startSession();
+  }, 700);
 });
+
+// ---------- Session ----------
+function startSession(){
+  taps = 0; earnings = 0; timer = duration; bonusLevel = 1; progress = 0; tapsForNext = 100;
+  running = true;
+  updateUI();
+  trainBar.style.width = '100%';
+
+  intervalId = setInterval(() => {
+    timer--;
+    updateUI();
+    trainBar.style.width = Math.max(0,(timer/duration)*100)+'%';
+    if(timer <=0) endSession();
+  }, 1000);
+}
+
+// ---------- Tap handler ----------
+tapButton.addEventListener(tapEvent, e=>{
+  e.preventDefault();
+  if(!running) return;
+
+  taps++; earnings+=1; progress++;
+  if(progress>=tapsForNext){
+    progress=0; bonusLevel++; tapsForNext=100+(bonusLevel-1)*50;
+    showTempMessage('TAP PRO!');
+  }
+
+  updateUI();
+  tapSound.currentTime=0; tapSound.play().catch(()=>{});
+  if(navigator.vibrate) navigator.vibrate(10);
+});
+
+// ---------- UI update ----------
+function updateUI(){
+  timerEl.textContent = timer;
+  tapCountEl.textContent = taps;
+  earningsEl.textContent = earnings.toFixed(2);
+  bonusBar.style.width = ((progress/tapsForNext)*100)+'%';
+  bonusLevelVal.textContent = bonusLevel;
+  speedVal.textContent = (taps>0 && duration-timer>0) ? Math.round(taps/(duration-timer))+'/s' : '—';
+  miniTapCount.textContent = taps;
+  miniEarnings.textContent = earnings.toFixed(2);
+}
+
+// ---------- End session ----------
+async function endSession(){
+  if(!running) return;
+  running=false;
+  clearInterval(intervalId); intervalId=null;
+
+  finalTapsEl.textContent = taps;
+
+  try{
+    await addDoc(collection(db,'tapSessions'), {taps, earnings, timestamp:serverTimestamp()});
+  }catch(e){ console.error(e); }
+
+  // Compute place locally
+  try{
+    const oneHourAgo = Timestamp.fromDate(new Date(Date.now()-3600*1000));
+    const q = query(collection(db,'tapSessions'), where('timestamp','>',oneHourAgo), orderBy('taps','desc'), limit(10));
+    const snap = await getDocs(q);
+    const arr = snap.docs.map(d=>d.data().taps||0);
+    const all = arr.slice(); all.push(taps); all.sort((a,b)=>b-a);
+    finalPlaceEl.textContent = `#${all.indexOf(taps)+1}`;
+  }catch(e){ finalPlaceEl.textContent='—'; console.warn(e); }
+
+  resultInner.classList.remove('hidden');
+  tapButton.disabled=true;
+}
+
+// ---------- Play again ----------
+playAgain.addEventListener('click', ()=>{
+  resultInner.classList.add('hidden');
+  tapButton.disabled=false;
+  startSession();
+});
+
+// ---------- Leaderboard ----------
+leaderboardBtn.addEventListener('click', async ()=>{
+  leaderboardList.innerHTML='<li style="color:#aaa">Loading…</li>';
+  leaderboardModal.style.display='flex';
+  try{
+    const oneHourAgo = Timestamp.fromDate(new Date(Date.now()-3600*1000));
+    const q = query(collection(db,'tapSessions'), where('timestamp','>',oneHourAgo), orderBy('taps','desc'), limit(10));
+    const snap = await getDocs(q);
+    if(snap.empty) leaderboardList.innerHTML='<li style="color:#aaa">No scores this hour</li>';
+    else leaderboardList.innerHTML = snap.docs.map((d,i)=>{
+      const data=d.data(); const t=data.taps||0; const earn=(data.earnings||0).toFixed(2);
+      const when = data.timestamp?.toDate ? data.timestamp.toDate().toLocaleTimeString() : '';
+      return `<li><strong>#${i+1}</strong> — ${t} taps &nbsp; (₦${earn}) <div style="font-size:11px;color:#aaa">${when}</div></li>`;
+    }).join('');
+  }catch(e){ leaderboardList.innerHTML='<li style="color:#f88">Failed to load</li>'; console.error(e); }
+});
+
+closeLeaderboard.addEventListener('click', ()=>leaderboardModal.style.display='none');
+leaderboardModal.addEventListener('click', e=>{ if(e.target===leaderboardModal) leaderboardModal.style.display='none'; });
+
+// ---------- Temporary message ----------
+function showTempMessage(txt){
+  const msg=document.createElement('div'); msg.textContent=txt;
+  Object.assign(msg.style,{position:'fixed',left:'50%',top:'30%',transform:'translateX(-50%)',background:'#000',padding:'10px 16px',borderRadius:'8px',border:'1px solid rgba(255,255,255,0.06)',zIndex:9999});
+  document.body.appendChild(msg);
+  setTimeout(()=>{ msg.style.transition='opacity .4s'; msg.style.opacity=0; setTimeout(()=>msg.remove(),400); },900);
+}
+
+// Prevent double-tap zoom
+document.addEventListener('gesturestart', e=>e.preventDefault(), {passive:false});
 </script>
 </body>
 </html>
