@@ -92,136 +92,223 @@
 
 <!-- Firebase SDKs -->
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import {
+  getFirestore, collection, addDoc,
+  query, where, orderBy, limit, getDocs,
+  serverTimestamp, Timestamp
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 // 🔥 your config ↓
 const firebaseConfig = {
-  // ← replace with your own firebaseConfig
+  apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
+  authDomain: "metaverse-1010.firebaseapp.com",
+  projectId: "metaverse-1010",
+  storageBucket: "metaverse-1010.appspot.com",
+  messagingSenderId: "1044064238233",
+  appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
+  measurementId: "G-S77BMC266C",
+  databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
 };
 const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
+const db = getFirestore(app);
 
-// ---------- UI ----------
-const startPage=document.getElementById('startPage'),
-      modal=document.getElementById('modal'),
-      spinner=document.getElementById('spinner'),
-      gamePage=document.getElementById('gamePage'),
-      resultModal=document.getElementById('resultModal'),
-      startBtn=document.getElementById('startBtn'),
-      yesBtn=document.getElementById('yesBtn'),
-      noBtn=document.getElementById('noBtn'),
-      playAgain=document.getElementById('playAgain'),
-      tapButton=document.getElementById('tapButton'),
-      tapSound=document.getElementById('tapSound'),
-      timerEl=document.getElementById('timer'),
-      tapCountEl=document.getElementById('tapCount'),
-      earningsEl=document.getElementById('earnings'),
-      bonusBar=document.getElementById('bonusBar'),
-      finalTapsEl=document.getElementById('finalTaps'),
-      finalEarningsEl=document.getElementById('finalEarnings'),
-      scoresEl=document.getElementById('scores');
+window.addEventListener("DOMContentLoaded", () => {
 
-let taps=0, earnings=0, timer=60, interval;
-let bonusLevel=1, progress=0, tapsForNext=100;
+  // -------- ELEMENTS ----------
+  const startPage = document.getElementById('startPage');
+  const modal = document.getElementById('modal');
+  const spinner = document.getElementById('spinner');
+  const gamePage = document.getElementById('gamePage');
+  const resultModal = document.getElementById('resultModal');
+  const startBtn = document.getElementById('startBtn');
+  const yesBtn = document.getElementById('yesBtn');
+  const noBtn = document.getElementById('noBtn');
+  const playAgain = document.getElementById('playAgain');
+  const tapButton = document.getElementById('tapButton');
+  const tapSound = document.getElementById('tapSound');
+  const timerEl = document.getElementById('timer');
+  const tapCountEl = document.getElementById('tapCount');
+  const earningsEl = document.getElementById('earnings');
+  const bonusBar = document.getElementById('bonusBar');
+  const finalTapsEl = document.getElementById('finalTaps');
+  const finalEarningsEl = document.getElementById('finalEarnings');
+  const scoresEl = document.getElementById('scores');
 
-startBtn.onclick=()=>modal.style.display='flex';
-noBtn.onclick=()=>modal.style.display='none';
-yesBtn.onclick=()=>{
-  modal.style.display='none';
-  spinner.style.display='flex';
-  setTimeout(()=>{spinner.style.display='none';startGame();},1500);
-};
+  let taps = 0, earnings = 0, timer = 60, interval;
+  let bonusLevel = 1, progress = 0, tapsForNext = 100;
 
-function startGame(){
-  taps=0;earnings=0;timer=60;bonusLevel=1;progress=0;tapsForNext=100;
-  startPage.style.display='none';gamePage.style.display='flex';
-  updateStats();loadTop5();
-  interval=setInterval(()=>{
-    timer--;timerEl.textContent=timer;
-    if(timer<=0){endGame();}
-  },1000);
-}
+  // Unlock audio early for iOS autoplay
+  document.body.addEventListener("touchstart", () => {
+    tapSound.play().catch(() => {});
+  }, { once: true });
 
-tapButton.onclick=(e)=>{
-  if(timer<=0)return;
-  taps++;earnings++;
-  tapCountEl.textContent=taps;
-  earningsEl.textContent=earnings.toFixed(2);
-  tapSound.currentTime=0;tapSound.play().catch(()=>{});
-  if(navigator.vibrate)navigator.vibrate(15);
-  const f=document.createElement('div');
-  f.className='floatText';f.textContent='+₦1.00';
-  const r=tapButton.getBoundingClientRect();
-  const x=(Math.random()-.5)*80;
-  f.style.setProperty('--x',`${x}px`);
-  f.style.left=r.left+r.width/2+'px';
-  f.style.top=r.top+r.height/2+'px';
-  document.body.appendChild(f);setTimeout(()=>f.remove(),800);
-  progress++;
-  if(progress>=tapsForNext){
-    progress=0;bonusLevel++;tapsForNext=100+(bonusLevel-1)*50;
-    showTapPro();
+  // ---------- START FLOW ----------
+  startBtn.addEventListener("click", () => modal.style.display = "flex");
+  noBtn.addEventListener("click", () => modal.style.display = "none");
+
+  yesBtn.addEventListener("click", () => {
+    modal.style.display = "none";
+    spinner.style.display = "flex";
+    setTimeout(() => {
+      spinner.style.display = "none";
+      startGame();
+    }, 1200);
+  });
+
+  function startGame() {
+    taps = 0; earnings = 0; timer = 60;
+    bonusLevel = 1; progress = 0; tapsForNext = 100;
+
+    startPage.style.display = "none";
+    resultModal.style.display = "none";
+    gamePage.style.display = "flex";
+
+    updateStats();
+    loadTop5();
+
+    interval = setInterval(() => {
+      timer--;
+      timerEl.textContent = timer;
+
+      if (timer <= 0) {
+        endGame();
+      }
+    }, 1000);
   }
-  bonusBar.style.width=(progress/tapsForNext*100)+'%';
-};
 
-function showTapPro(){
-  confettiBurst();
-  const msg=document.createElement('div');
-  msg.textContent='TAP PRO!';
-  Object.assign(msg.style,{
-    position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',
-    fontSize:'48px',fontWeight:'bold',color:'#00e676',
-    textShadow:'0 0 20px #00e676',animation:'fadeOut 2s forwards',zIndex:1000});
-  document.body.appendChild(msg);
-  setTimeout(()=>msg.remove(),2000);
-}
+  // ---------- TAP HANDLER ----------
+  // Faster: combine click + touchstart
+  const tapEvent = ("ontouchstart" in window) ? "touchstart" : "click";
 
-function confettiBurst(){
-  for(let i=0;i<30;i++){
-    const c=document.createElement('div');
-    c.classList.add('confetti');
-    c.style.setProperty('--color',`hsl(${Math.random()*360},100%,60%)`);
-    c.style.setProperty('--x',`${(Math.random()-0.5)*600}px`);
-    c.style.setProperty('--y',`${(Math.random()-0.5)*400}px`);
-    document.body.appendChild(c);setTimeout(()=>c.remove(),1000);
-  }
-}
+  tapButton.addEventListener(tapEvent, (e) => {
+    e.preventDefault();
+    if (timer <= 0) return;
 
-function updateStats(){
-  timerEl.textContent=timer;
-  tapCountEl.textContent=taps;
-  earningsEl.textContent=earnings.toFixed(2);
-  bonusBar.style.width='0%';
-}
+    taps++;
+    earnings++;
+    tapCountEl.textContent = taps;
+    earningsEl.textContent = earnings.toFixed(2);
 
-async function endGame(){
-  clearInterval(interval);
-  gamePage.style.display='none';
-  resultModal.style.display='flex';
-  finalTapsEl.textContent=taps;
-  finalEarningsEl.textContent=earnings.toFixed(2);
-  try{
-    await addDoc(collection(db,"tapSessions"),{
-      taps,earnings,timestamp:serverTimestamp()
+    tapSound.currentTime = 0;
+    tapSound.play().catch(() => {});
+
+    if (navigator.vibrate) navigator.vibrate(15);
+
+    // ----- FLOAT TEXT -----
+    const f = document.createElement('div');
+    f.className = 'floatText';
+    f.textContent = '+₦1.00';
+    const r = tapButton.getBoundingClientRect();
+    const x = (Math.random() - 0.5) * 80;
+    f.style.setProperty("--x", `${x}px`);
+    f.style.left = (r.left + r.width / 2) + "px";
+    f.style.top = (r.top + r.height / 2) + "px";
+    document.body.appendChild(f);
+    setTimeout(() => f.remove(), 800);
+
+    // ----- BONUS BAR -----
+    progress++;
+    if (progress >= tapsForNext) {
+      progress = 0;
+      bonusLevel++;
+      tapsForNext = 100 + (bonusLevel - 1) * 50;
+      showTapPro();
+    }
+    bonusBar.style.width = (progress / tapsForNext * 100) + "%";
+  });
+
+  // ---------- TAP PRO ----------
+  function showTapPro() {
+    confettiBurst();
+    const msg = document.createElement('div');
+    msg.textContent = "TAP PRO!";
+    Object.assign(msg.style, {
+      position: "fixed",
+      top: "50%", left: "50%",
+      transform: "translate(-50%,-50%)",
+      fontSize: "48px",
+      fontWeight: "bold",
+      color: "#00e676",
+      textShadow: "0 0 20px #00e676",
+      animation: "fadeOut 2s forwards",
+      zIndex: 2000
     });
-  }catch(err){console.error("Save failed",err);}
-  loadTop5();
-}
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 2000);
+  }
 
-playAgain.onclick=()=>{resultModal.style.display='none';startPage.style.display='flex';};
+  function confettiBurst() {
+    for (let i = 0; i < 30; i++) {
+      const c = document.createElement("div");
+      c.classList.add("confetti");
+      c.style.setProperty("--color", `hsl(${Math.random() * 360},100%,60%)`);
+      c.style.setProperty("--x", `${(Math.random() - 0.5) * 600}px`);
+      c.style.setProperty("--y", `${(Math.random() - 0.5) * 400}px`);
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 900);
+    }
+  }
 
-async function loadTop5(){
-  const oneHourAgo=Timestamp.fromDate(new Date(Date.now()-60*60*1000));
-  const q=query(collection(db,"tapSessions"),
-                where("timestamp",">",oneHourAgo),
-                orderBy("taps","desc"),limit(5));
-  const snap=await getDocs(q);
-  scoresEl.innerHTML=snap.docs.map((d,i)=>{
-    const s=d.data();return `<li>#${i+1} — ${s.taps} taps (₦${s.earnings?.toFixed?.(2)||s.earnings})</li>`;
-  }).join('');
-}
+  function updateStats() {
+    timerEl.textContent = timer;
+    tapCountEl.textContent = taps;
+    earningsEl.textContent = earnings.toFixed(2);
+    bonusBar.style.width = "0%";
+  }
+
+  // ---------- END GAME ----------
+  async function endGame() {
+    clearInterval(interval);
+    gamePage.style.display = "none";
+    resultModal.style.display = "flex";
+
+    finalTapsEl.textContent = taps;
+    finalEarningsEl.textContent = earnings.toFixed(2);
+
+    try {
+      await addDoc(collection(db, "tapSessions"), {
+        taps,
+        earnings,
+        timestamp: serverTimestamp()
+      });
+    } catch (err) {
+      console.error("Save failed", err);
+    }
+
+    loadTop5();
+  }
+
+  playAgain.addEventListener("click", () => {
+    resultModal.style.display = "none";
+    startPage.style.display = "flex";
+  });
+
+  // ---------- LOAD TOP 5 ----------
+  async function loadTop5() {
+    const oneHourAgo = Timestamp.fromDate(new Date(Date.now() - 3600000));
+
+    const q = query(
+      collection(db, "tapSessions"),
+      where("timestamp", ">", oneHourAgo),
+      orderBy("timestamp", "desc"),  // SAFE
+      orderBy("taps", "desc"),
+      limit(5)
+    );
+
+    const snap = await getDocs(q);
+
+    scoresEl.innerHTML = snap.docs
+      .map((doc, i) => {
+        const s = doc.data();
+        return `<li>#${i + 1} — ${s.taps} taps (₦${(s.earnings || 0).toFixed(2)})</li>`;
+      })
+      .join("");
+  }
+
+});
 </script>
 </body>
 </html>
