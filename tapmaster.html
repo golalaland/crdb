@@ -352,37 +352,34 @@ function initializePot(){
 }
 
 async function loadCurrentUserForGame() {
-  try {
-    const vipRaw = localStorage.getItem('vipUser');
-    const hostRaw = localStorage.getItem('hostUser');
-    const storedUser = vipRaw ? JSON.parse(vipRaw) : hostRaw ? JSON.parse(hostRaw) : null;
+  const vipRaw = localStorage.getItem('vipUser');
+  const hostRaw = localStorage.getItem('hostUser');
+  const storedUser = vipRaw ? JSON.parse(vipRaw) : hostRaw ? JSON.parse(hostRaw) : null;
 
-    if (!storedUser?.uid) {
-      currentUser = null;
-      if (DOM.profileNameEl) DOM.profileNameEl.textContent = 'GUEST 0000';
-      if (DOM.starCountEl) DOM.starCountEl.textContent = DOM.starCountEl.textContent || '50';
-      return;
-    }
-
-    const snap = await getDoc(doc(db, 'users', storedUser.uid));
-    currentUser = snap.exists() ? { uid: storedUser.uid, ...snap.data() } : {
-      uid: storedUser.uid,
-      chatId: storedUser.displayName || storedUser.email.split('@')[0],
-      stars: 0,
-      cash: 0,
-      email: storedUser.email
-    };
-
-    if (DOM.profileNameEl) DOM.profileNameEl.textContent = currentUser.chatId || storedUser.displayName || storedUser.email.split('@')[0];
-    if (DOM.starCountEl) DOM.starCountEl.textContent = String(currentUser.stars ?? 0);
-  } catch (err) {
-    console.warn('loadCurrentUserForGame error:', err);
+  if (!storedUser || !storedUser.uid) {
     currentUser = null;
-    if (DOM.profileNameEl) DOM.profileNameEl.textContent = 'GUEST 0000';
-    if (DOM.starCountEl) DOM.starCountEl.textContent = DOM.starCountEl.textContent || '50';
+    DOM.profileNameEl && (DOM.profileNameEl.textContent = 'GUEST 0000');
+    DOM.starCountEl && (DOM.starCountEl.textContent = '50');
+    return;
+  }
+
+  try {
+    const uDoc = await getDoc(doc(db, 'users', storedUser.uid));
+    if (!uDoc.exists()) throw new Error('User not found in Firestore');
+
+    currentUser = { uid: storedUser.uid, ...uDoc.data() };
+
+    // Update UI
+    DOM.profileNameEl && (DOM.profileNameEl.textContent = currentUser.chatId || storedUser.displayName || 'GUEST');
+    DOM.starCountEl && (DOM.starCountEl.textContent = String(currentUser.stars ?? 0));
+    DOM.starCountEl && (DOM.starCountEl.textContent = String(currentUser.cash ?? 0));
+  } catch (err) {
+    console.warn('User load error:', err);
+    currentUser = null;
+    DOM.profileNameEl && (DOM.profileNameEl.textContent = 'GUEST 0000');
+    DOM.starCountEl && (DOM.starCountEl.textContent = '50');
   }
 }
-
 async function tryDeductStarsForJoin(cost) {
   if (!currentUser?.uid) return { ok:false, message:'You are not logged in' };
   try {
