@@ -369,43 +369,50 @@ function initializePot(){
 // helper random
 function randomInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
 
-// ---------- User loader (mirrors Money Train) ----------
+
+// ---------- User loader (Google Auth compatible) ----------
 let currentUser = null;
-async function loadCurrentUserForGame(){
+
+async function loadCurrentUserForGame() {
   try {
     const vipRaw = localStorage.getItem('vipUser');
     const hostRaw = localStorage.getItem('hostUser');
     const storedUser = vipRaw ? JSON.parse(vipRaw) : hostRaw ? JSON.parse(hostRaw) : null;
 
-    if (!storedUser?.email){
+    if (!storedUser?.uid) {
       currentUser = null;
-      // populate UI defaults
       if (profileNameEl) profileNameEl.textContent = 'GUEST 0000';
       if (starCountEl) starCountEl.textContent = starCountEl.textContent || '50';
       return;
     }
 
-    // sanitize email to doc id
-    const uid = String(storedUser.email).replace(/[.#$[\]]/g, ',');
-    const userRef = doc(db, 'users', uid);
+    // Fetch user document by Firebase UID
+    const userRef = doc(db, 'users', storedUser.uid);
     const snap = await getDoc(userRef);
-    if (!snap.exists()){
-      currentUser = { uid, chatId: storedUser.displayName || storedUser.email.split('@')[0], stars:0, cash:0, email: storedUser.email };
-      if (profileNameEl) profileNameEl.textContent = currentUser.chatId;
-      if (starCountEl) starCountEl.textContent = String(currentUser.stars);
-      return;
+
+    if (!snap.exists()) {
+      currentUser = { 
+        uid: storedUser.uid, 
+        chatId: storedUser.displayName || storedUser.email.split('@')[0], 
+        stars: 0, 
+        cash: 0, 
+        email: storedUser.email 
+      };
+    } else {
+      currentUser = { uid: storedUser.uid, ...snap.data() };
     }
-    currentUser = { uid, ...snap.data() };
-    // update UI
+
+    // Update UI
     if (profileNameEl) profileNameEl.textContent = currentUser.chatId || storedUser.displayName || storedUser.email.split('@')[0];
     if (starCountEl) starCountEl.textContent = String(currentUser.stars ?? 0);
-  } catch (err){
+
+  } catch (err) {
     console.warn('loadCurrentUserForGame error', err);
   }
 }
 
-// Atomic star deduction
-async function tryDeductStarsForJoin(cost){
+// ---------- Atomic star deduction ----------
+async function tryDeductStarsForJoin(cost) {
   if (!currentUser?.uid) return { ok:false, message:'You are not logged in' };
   const userRef = doc(db, 'users', currentUser.uid);
   try {
@@ -423,10 +430,10 @@ async function tryDeductStarsForJoin(cost){
   }
 }
 
-// Add cash to user (transactional) when an award occurs
-async function giveCashToUser(amount){
+// ---------- Add cash to user (transactional) ----------
+async function giveCashToUser(amount) {
   if (!currentUser?.uid) {
-    // if guest: update local UI only
+    // guest: update local UI only
     if (miniEarnings) miniEarnings.textContent = (parseFloat(miniEarnings.textContent || '0') + amount).toFixed(2);
     return { ok:true };
   }
@@ -451,7 +458,7 @@ initializePot();
 loadCurrentUserForGame();
 
 // prevent double-tap zoom on iOS
-document.addEventListener('gesturestart', function(e){ e.preventDefault(); }, { passive:false });
+document.addEventListener('gesturestart', e => e.preventDefault(), { passive:false });
 
 // unlock audio on first touch for iOS
 document.body.addEventListener('touchstart', () => { tapSound?.play().catch(()=>{}); }, { once:true });
@@ -460,17 +467,11 @@ document.body.addEventListener('touchstart', () => { tapSound?.play().catch(()=>
 function initGameUI() {
   // Start button click: show confirmation modal
   startBtn?.addEventListener('click', async () => {
-    // ensure user is loaded before showing modal
+    if (!currentUser) await loadCurrentUserForGame();
     if (!currentUser) {
-      await loadCurrentUserForGame();
-    }
-
-    if (!currentUser) {
-      // fallback guest
       if (profileNameEl) profileNameEl.textContent = 'GUEST 0000';
       if (starCountEl) starCountEl.textContent = starCountEl.textContent || '50';
     }
-
     if (playModal) playModal.style.display = 'flex';
   });
 
@@ -481,38 +482,23 @@ function initGameUI() {
 
   // Confirm button: deduct stars & start session
   confirmPlay?.addEventListener('click', async () => {
-    // ensure user is loaded
-    if (!currentUser) {
-      await loadCurrentUserForGame();
-    }
-
+    if (!currentUser) await loadCurrentUserForGame();
     let localStars = parseInt(starCountEl?.textContent || '0', 10);
 
     if (currentUser?.uid) {
-      // logged-in: try transactional deduction
       const r = await tryDeductStarsForJoin(STAR_COST);
-      if (!r.ok) {
-        alert(r.message || 'Not enough stars');
-        return;
-      }
-      // update UI optimistically
+      if (!r.ok) { alert(r.message || 'Not enough stars'); return; }
       if (starCountEl) starCountEl.textContent = String(Math.max(0, localStars - STAR_COST));
     } else {
-      // guest: deduct from UI only
-      if (localStars < STAR_COST) {
-        alert('Not enough stars to play!');
-        return;
-      }
+      if (localStars < STAR_COST) { alert('Not enough stars to play!'); return; }
       if (starCountEl) starCountEl.textContent = String(localStars - STAR_COST);
     }
 
-    // hide modal + poster + start page, show spinner
     if (playModal) playModal.style.display = 'none';
     if (posterImg) posterImg.style.display = 'none';
     if (startPage) startPage.style.display = 'none';
     if (spinner) spinner.classList.remove('hidden');
 
-    // short delay then show game page
     setTimeout(() => {
       if (spinner) spinner.classList.add('hidden');
       if (gamePage) gamePage.classList.remove('hidden');
