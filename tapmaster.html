@@ -364,7 +364,6 @@ async function loadCurrentUserForGame() {
 
   console.log("📦 Stored user:", storedUser);
 
-  // Handle guest fallback
   if (!storedUser?.email) {
     console.warn("⚠️ No valid stored user found.");
     currentUser = null;
@@ -374,31 +373,38 @@ async function loadCurrentUserForGame() {
   }
 
   try {
-    // Convert email to a safe Firestore ID
-    const uid = (storedUser.id || storedUser.email.replace(/[.#$[\]]/g, "_").toLowerCase());
+    // Convert email to safe Firestore ID
+    const uid = storedUser.id || storedUser.email.replace(/[.#$[\]]/g, "_").toLowerCase();
     console.log("🔑 Fetching user doc:", uid);
 
     const userDocRef = doc(db, "users", uid);
     const uDoc = await getDoc(userDocRef);
 
     if (!uDoc.exists()) {
-      console.warn("⚠️ User document not found in Firestore, creating guest fallback");
-      currentUser = {
-        uid,
-        email: storedUser.email,
-        fullName: storedUser.fullName || storedUser.vipName || 'PLAYER',
-        stars: 50,
-        cash: 0,
-      };
-    } else {
-      currentUser = { uid, ...uDoc.data() };
+      console.warn("⚠️ User not found in Firestore:", uid);
+      currentUser = null;
+
+      // This triggers TapMaster “user not found” properly
+      if (DOM.profileNameEl) DOM.profileNameEl.textContent = 'GUEST 0000';
+      if (DOM.starCountEl) DOM.starCountEl.textContent = '50';
+      return;
     }
 
-    // Update UI safely
-    if (DOM.profileNameEl) DOM.profileNameEl.textContent = currentUser.fullName || 'PLAYER';
-    if (DOM.starCountEl) DOM.starCountEl.textContent = currentUser.stars ?? 0;
+    // Pull actual data from Firestore
+    const userData = uDoc.data();
+    currentUser = {
+      id: uid,
+      email: userData.email || storedUser.email,
+      fullName: userData.fullName || userData.vipName || 'PLAYER',
+      stars: userData.stars ?? 0,
+      cash: userData.cash ?? 0,
+    };
 
-    console.log("✅ User Loaded:", currentUser);
+    // Update UI
+    if (DOM.profileNameEl) DOM.profileNameEl.textContent = currentUser.fullName;
+    if (DOM.starCountEl) DOM.starCountEl.textContent = currentUser.stars;
+
+    console.log("✅ User loaded successfully:", currentUser);
 
   } catch (err) {
     console.error("🔥 ERROR loading user:", err);
