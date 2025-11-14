@@ -1,406 +1,491 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
 <title>Money Train — Tap Master</title>
 
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
+
 <style>
-  :root{
-    --glass: rgba(255,255,255,0.04);
-    --accent:#FF8C00;
-  }
+:root{
+  --bg:#0e0e0e;
+  --glass-bg: rgba(255,255,255,0.04);
+  --accent1:#FF1493;
+  --accent2:#FF8C00;
+  --green1:#00e676;
+  --muted:#aaa;
+  --glass-border: rgba(255,255,255,0.08);
+}
 
-  body {
-    margin: 0;
-    font-family: Arial, Helvetica, sans-serif;
-    background: #0e0e0e;
-    color: #fff;
-    text-align: center;
-    touch-action: manipulation;
-    overflow-x: hidden;
-  }
+*{box-sizing:border-box}
+html,body {height:100%;margin:0;background:var(--bg);color:#fff;font-family:'Montserrat',sans-serif; -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body {display:flex;justify-content:center;align-items:flex-start;padding:18px 0 120px; touch-action:manipulation; -webkit-tap-highlight-color: transparent; overflow-x:hidden;}
+#appWrapper {width:100%;max-width:480px;display:flex;flex-direction:column;align-items:center;}
 
-  h1 {
-    color: #00e676;
-    text-shadow: 0 0 10px #00e67666;
-    margin: 20px 0 10px;
-    font-size: 22px;
-  }
+/* header */
+#gameHeader{text-align:center;margin-top:6px;}
+#welcomeText{font-family:'Press Start 2P',cursive;font-size:11px;color:var(--accent1)}
+#scrambleText{font-family:'Press Start 2P',cursive;font-size:20px;color:var(--accent1);margin-top:4px}
 
-  /* ---------- Start Page ---------- */
-  #startPage {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding-top: 20px;
-    background: #0e0e0e;
-  }
+/* glass terminal (tap stats + timer etc) */
+.glass-terminal {
+  width: 90%;
+  max-width: 420px;
+  margin: 18px auto;
+  padding: 14px 16px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 0 20px rgba(0,0,0,0.6);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+.terminal-header { text-align:center; color:var(--accent1); font-size:11px; letter-spacing:2px; margin-bottom:8px; font-weight:700; }
+.terminal-line { font-size:13px; line-height:1.6; letter-spacing:1px; color:#fff; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; }
+.terminal-line span { color:#00FF99; text-shadow:0 0 6px rgba(0,255,153,0.08); font-weight:700; }
 
-  #posterImg {
-    width: 90%;
-    max-width: 420px;
-    border-radius: 12px;
-    margin: 12px auto;
-  }
+/* train bar (timer visual) */
+#trainBarContainer {
+  width:100%;
+  height:14px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 999px;
+  overflow:hidden;
+  margin-top:8px;
+}
+#trainBar {
+  height:100%;
+  width:100%;
+  background: linear-gradient(90deg, var(--accent1), var(--accent2));
+  transform-origin: left center;
+  transition: width 0.2s linear;
+}
 
-  #startBtn {
-    margin-top: 20px;
-    padding: 14px 36px;
-    font-size: 20px;
-    font-weight: bold;
-    background: linear-gradient(90deg,#00e676,#00b0ff);
-    color: #000;
-    border-radius: 12px;
-    cursor: pointer;
-    border: none;
-    box-shadow: 0 0 15px #00e676aa;
-  }
+/* stats row inside terminal */
+.stats-row { display:flex; justify-content:space-between; gap:12px; margin-top:8px; align-items:center; }
+.stat { flex:1; background: rgba(255,255,255,0.02); padding:8px; border-radius:8px; text-align:center; }
+.stat .label { font-size:11px; color:var(--muted); }
+.stat .value { font-size:16px; font-weight:800; color:#fff; }
 
-  /* ---------- Profile Panel ---------- */
-  .profile {
-    position: fixed;
-    bottom: var(--profile-bottom, 140px);
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    max-width: 480px;
-    display: flex;
-    justify-content: center;
-    z-index: 1000;
-    pointer-events: auto;
-    transition: bottom 0.3s ease;
-  }
+/* bonus bar (progress toward next bonus level) */
+#bonusContainer { width:100%; height:10px; background:#111; border-radius:999px; overflow:hidden; margin-top:12px; box-shadow:0 6px 16px rgba(0,0,0,0.6) inset; }
+#bonusBar { height:100%; width:0%; background:linear-gradient(90deg,var(--green1),#00b0ff); transition:width .15s linear; }
 
-  .profile-card {
-    background: var(--glass);
-    padding: 10px;
-    border-radius: 10px;
-    border: 1px solid rgba(255,255,255,0.04);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    text-align: center;
-  }
+/* TAP button - small round, far from terminal */
+#tapButton {
+  width:64px;
+  height:64px;
+  border-radius:50%;
+  background: radial-gradient(circle at 25% 25%, var(--green1), #00b0ff);
+  border: none;
+  margin-top:36px; /* far from terminal */
+  box-shadow: 0 8px 30px rgba(0,230,118,0.14);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:800;
+  color:#000;
+  font-size:18px;
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-tap-highlight-color: transparent;
+}
 
-  .profile-name {
-    font-weight: 800;
-    font-size: 14px;
-    color: var(--accent);
-  }
+/* tap hover/active */
+#tapButton:active { transform: scale(.96); }
 
-  .profile-info {
-    font-size: 12px;
-    color: #fff;
-  }
+/* tap count + earnings small status (below button) */
+#miniStats { margin-top:12px; color:#fff; font-weight:700; }
 
-  /* ---------- Glass Terminal ---------- */
-  .glass-terminal {
-    width: 90%;
-    max-width: 420px;
-    margin: 12px auto;
-    padding: 14px 18px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 14px;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow: 0 0 18px rgba(255,20,147,0.18);
-    font-family: 'Press Start 2P', cursive;
-    color: #FF8C00;
-    text-align: left;
-    position: relative;
-    overflow: hidden;
-  }
-  .glass-terminal::before { content:''; position:absolute; top:0; left:0; width:100%; height:100%; border-radius:14px; background:linear-gradient(120deg, rgba(255,20,147,0.18), rgba(255,140,0,0.12)); pointer-events:none; opacity:0.28; }
-  .terminal-header { text-align:center; color:#FF1493; font-size:10px; letter-spacing:2px; margin-bottom:8px; text-shadow:0 0 8px #FF1493aa; }
-  .terminal-line { font-size:11px; line-height:1.6; letter-spacing:1px; color:#fff; margin-bottom:4px; display:flex; justify-content:space-between; }
-  .terminal-line span { color:#00FF99; text-shadow:0 0 6px #00FF99; }
+/* leaderboard button */
+#leaderboardBtn {
+  margin-top:14px;
+  padding:10px 14px;
+  border-radius:10px;
+  background: linear-gradient(90deg,#FFD700,#FF8C00);
+  color:#111;
+  font-weight:800;
+  border:none;
+  cursor:pointer;
+  font-size:14px;
+}
 
-  /* ---------- Game Page ---------- */
-  #gamePage {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
-    height: 100vh;
-    padding: 20px;
-    box-sizing: border-box;
-  }
+/* modal (normal fade-in centered) */
+.modal-backdrop {
+  position:fixed; inset:0; background: rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:9999;
+}
+.modal {
+  width:92%; max-width:420px; background:#0f0f0f; border-radius:12px; padding:16px; border:1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
+.modal h3{ margin:0 0 8px 0; color:var(--accent1); font-size:16px; }
+.modal .list { text-align:left; margin-top:12px; max-height:320px; overflow:auto; }
+.modal .list li { padding:8px 6px; border-bottom:1px dashed rgba(255,255,255,0.03); font-weight:700; }
 
-  #tapButton {
-    width: 130px;
-    height: 130px;
-    border-radius: 50%;
-    background: radial-gradient(circle at top left,#00e676,#00b0ff);
-    font-size: 22px;
-    font-weight: bold;
-    color: #000;
-    box-shadow: 0 0 25px #00e676aa;
-    border: none;
-    cursor: pointer;
-    margin: 20px 0;
-    transition: transform 0.1s ease, box-shadow 0.1s ease;
-  }
+/* result panel (small) */
+#resultModalInner { display:none; margin-top:18px; }
 
-  #tapButton.glow {
-    box-shadow: 0 0 30px #00e676, 0 0 40px #00b0ff;
-    transform: scale(1.08);
-  }
-
-  /* Bonus Bar */
-  #bonusContainer {
-    width: 280px;
-    height: 22px;
-    background:#333;
-    border-radius:12px;
-    overflow:hidden;
-    margin:10px auto 10px;
-    box-shadow:0 0 10px #00e67644;
-  }
-  #bonusBar {
-    height:100%;
-    width:0;
-    background:linear-gradient(90deg,#00e676,#00b0ff);
-    transition:width .2s;
-  }
-
-  /* Modal */
-  #modal,#leaderboardModal,#resultModal {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.8);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-  }
-
-  .modal-box {
-    background:#1e1e1e;
-    padding:25px;
-    border-radius:12px;
-    width:80%;
-    max-width:320px;
-  }
-
-  .modal-box button{
-    margin:10px;
-    padding:10px 25px;
-    font-weight:bold;
-    border-radius:8px;
-    cursor:pointer;
-  }
-
-  /* Leaderboard */
-  #leaderboardBtn {
-    padding:10px 25px;
-    border-radius:10px;
-    border:none;
-    margin-top:10px;
-    font-weight:bold;
-    background: linear-gradient(90deg,#FF1493,#FF8C00);
-    color:#000;
-    cursor:pointer;
-  }
-
+/* small helpers */
+.hidden { display:none!important; }
+button, input { font-size:16px; } /* prevents iOS zoom on tap */
 </style>
 </head>
 <body>
+<div id="appWrapper">
 
-<!-- Start Page -->
-<div id="startPage">
-  <h1>WELCOME TO<br>MONEY TRAIN — TAP MASTER</h1>
-  <img id="posterImg" src="https://via.placeholder.com/420x200?text=Poster+Here" alt="Poster">
-  <button id="startBtn">Play</button>
-</div>
-
-<!-- Profile Panel -->
-<div class="profile" id="profilePanel">
-  <div class="profile-card">
-    <div class="profile-name" id="profileName">GUEST 0000</div>
-    <div class="profile-info">STARS COLLECTED: <span id="starCount">50</span>⭐</div>
-    <div class="profile-info">CASH EARNED: <span id="cashCount">0</span></div>
-  </div>
-</div>
-
-<!-- Modals -->
-<div id="modal">
-  <div class="modal-box">
-    <p>Play <b>Tap Master</b> for <b>10⭐</b>?</p>
-    <button id="yesBtn">Yes</button>
-    <button id="noBtn">Cancel</button>
-  </div>
-</div>
-
-<div id="leaderboardModal">
-  <div class="modal-box">
-    <h3>🏆 Top Tappers</h3>
-    <ol id="scores"></ol>
-    <button id="closeLeaderboard">Close</button>
-  </div>
-</div>
-
-<div id="resultModal">
-  <div class="modal-box">
-    <h2>Time’s Up!</h2>
-    <p>👆 Taps: <span id="finalTaps">0</span></p>
-    <p>💵 Cash Earned: ₦<span id="finalEarnings">0.00</span></p>
-    <button id="playAgain">Play Again</button>
-  </div>
-</div>
-
-<!-- Game Page -->
-<div id="gamePage">
-  <div class="glass-terminal">
-    <div class="terminal-header">TAP TERMINAL</div>
-    <div class="terminal-line">⏱ Time Left: <span id="timer">60</span>s</div>
-    <div class="terminal-line">👆 Taps: <span id="tapCount">0</span></div>
-    <div class="terminal-line">💵 Earnings: ₦<span id="earnings">0.00</span></div>
-    <div id="bonusContainer"><div id="bonusBar"></div></div>
+  <div id="gameHeader">
+    <div id="welcomeText">WELCOME TO</div>
+    <div id="scrambleText">MONEY TRAIN — TAP MASTER</div>
   </div>
 
-  <button id="tapButton">TAP</button>
-  <button id="leaderboardBtn">View Leaderboard</button>
+  <!-- start / join flow (keeps same layout) -->
+  <div id="startPage" style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:18px;">
+    <button id="startBtn" style="padding:12px 22px;border-radius:12px;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:800;font-size:16px;border:none;cursor:pointer;">Play</button>
+  </div>
+
+  <!-- spinner -->
+  <div id="spinner" class="hidden" style="margin-top:18px;">
+    <div style="width:44px;height:44px;border-radius:50%;border:6px solid #222;border-top:6px solid #00e676; animation:spin 1s linear infinite;margin:0 auto"></div>
+    <div style="margin-top:10px;color:#aaa;font-size:13px">Loading Tap Arena…</div>
+  </div>
+
+  <!-- GAME UI -->
+  <div id="gamePage" class="hidden" style="width:100%;display:flex;flex-direction:column;align-items:center;">
+
+    <!-- Glass terminal (timer, taps, earnings, bonus inside) -->
+    <div id="tapTerminal" class="glass-terminal" aria-live="polite">
+      <div class="terminal-header">TAP TERMINAL</div>
+
+      <div class="terminal-line">
+        <div>⏱ Time Left</div>
+        <div><span id="timer">60</span>s</div>
+      </div>
+
+      <div class="terminal-line">
+        <div>👆 Taps</div>
+        <div><span id="tapCount">0</span></div>
+      </div>
+
+      <div class="terminal-line">
+        <div>💵 Earnings</div>
+        <div>₦<span id="earnings">0.00</span></div>
+      </div>
+
+      <div id="trainBarContainer" style="margin-top:10px;">
+        <div id="trainBar" style="width:100%"></div>
+      </div>
+
+      <div class="stats-row" style="margin-top:10px">
+        <div class="stat">
+          <div class="label">BONUS LVL</div>
+          <div class="value" id="bonusLevelVal">1</div>
+        </div>
+        <div class="stat">
+          <div class="label">SPEED</div>
+          <div class="value" id="speedVal">—</div>
+        </div>
+      </div>
+
+      <div id="bonusContainer" style="margin-top:12px;">
+        <div id="bonusBar"></div>
+      </div>
+
+    </div> <!-- end glass terminal -->
+
+    <!-- small round TAP button (far from terminal) -->
+    <button id="tapButton" aria-label="Tap" title="Tap fast!">TAP</button>
+
+    <div id="miniStats" aria-hidden="false">Taps: <strong id="miniTapCount">0</strong> · Earnings: ₦<span id="miniEarnings">0.00</span></div>
+
+    <!-- Leaderboard button -->
+    <button id="leaderboardBtn">View Leaderboard 🏆</button>
+
+    <!-- result (inline) -->
+    <div id="resultModalInner" class="hidden">
+      <div style="margin-top:14px; background:rgba(255,255,255,0.02); padding:12px; border-radius:8px;">
+        <div style="font-weight:800;color:var(--accent1)">Time's Up!</div>
+        <div style="margin-top:6px">Final taps: <strong id="finalTaps">0</strong></div>
+        <div style="margin-top:6px">Your place: <strong id="finalPlace">—</strong></div>
+        <div style="margin-top:10px"><button id="playAgain" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:800;cursor:pointer">Play Again</button></div>
+      </div>
+    </div>
+
+  </div> <!-- end gamePage -->
+
+  <!-- Leaderboard modal -->
+  <div id="leaderboardModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3>Top Tappers — This Hour</h3>
+      <ol id="leaderboardList" class="list" style="list-style:none;padding-left:0;margin:0;"></ol>
+      <div style="margin-top:12px;text-align:right;">
+        <button id="closeLeaderboard" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#FF1493,#FF8C00);color:#fff;font-weight:800;cursor:pointer">Close</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
+<!-- audio -->
 <audio id="tapSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
 
+<!-- Firebase SDKs + script -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import {
+  getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp, Timestamp
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
+// ---------- CONFIG: replace with your own firebase config if needed ----------
 const firebaseConfig = {
   apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
   projectId: "metaverse-1010",
   storageBucket: "metaverse-1010.appspot.com",
   messagingSenderId: "1044064238233",
-  appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608"
+  appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
+  measurementId: "G-S77BMC266C",
+  databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-window.addEventListener("DOMContentLoaded", () => {
-  const startPage = document.getElementById('startPage');
-  const gamePage = document.getElementById('gamePage');
-  const modal = document.getElementById('modal');
-  const resultModal = document.getElementById('resultModal');
-  const leaderboardModal = document.getElementById('leaderboardModal');
-  const startBtn = document.getElementById('startBtn');
-  const yesBtn = document.getElementById('yesBtn');
-  const noBtn = document.getElementById('noBtn');
-  const playAgain = document.getElementById('playAgain');
-  const tapButton = document.getElementById('tapButton');
-  const tapSound = document.getElementById('tapSound');
-  const timerEl = document.getElementById('timer');
-  const tapCountEl = document.getElementById('tapCount');
-  const earningsEl = document.getElementById('earnings');
-  const bonusBar = document.getElementById('bonusBar');
-  const finalTapsEl = document.getElementById('finalTaps');
-  const finalEarningsEl = document.getElementById('finalEarnings');
-  const scoresEl = document.getElementById('scores');
-  const leaderboardBtn = document.getElementById('leaderboardBtn');
-  const closeLeaderboard = document.getElementById('closeLeaderboard');
+// ---------- UI refs ----------
+const startBtn = document.getElementById('startBtn');
+const spinner = document.getElementById('spinner');
+const startPage = document.getElementById('startPage');
+const gamePage = document.getElementById('gamePage');
+const tapButton = document.getElementById('tapButton');
+const tapSound = document.getElementById('tapSound');
+const timerEl = document.getElementById('timer');
+const tapCountEl = document.getElementById('tapCount');
+const earningsEl = document.getElementById('earnings');
+const bonusBar = document.getElementById('bonusBar');
+const trainBar = document.getElementById('trainBar');
+const bonusLevelVal = document.getElementById('bonusLevelVal');
+const speedVal = document.getElementById('speedVal');
+const miniTapCount = document.getElementById('miniTapCount');
+const miniEarnings = document.getElementById('miniEarnings');
+const leaderboardBtn = document.getElementById('leaderboardBtn');
+const leaderboardModal = document.getElementById('leaderboardModal');
+const leaderboardList = document.getElementById('leaderboardList');
+const closeLeaderboard = document.getElementById('closeLeaderboard');
+const resultInner = document.getElementById('resultModalInner');
+const finalTapsEl = document.getElementById('finalTaps');
+const finalPlaceEl = document.getElementById('finalPlace');
+const playAgain = document.getElementById('playAgain');
 
-  let taps = 0, earnings = 0, timer = 60, interval;
-  let bonusLevel = 1, progress = 0, tapsForNext = 100;
+// ---------- state ----------
+let taps = 0;
+let earnings = 0.00;
+let timer = 60;             // seconds
+let duration = 60;          // session length (seconds)
+let intervalId = null;
+let running = false;
+let bonusLevel = 1;
+let progress = 0;
+let tapsForNext = 100;
 
-  document.body.addEventListener("touchstart", () => {
-    tapSound.play().catch(()=>{});
-  }, { once:true });
+// choose appropriate tap event
+const tapEvent = ('ontouchstart' in window) ? 'touchstart' : 'click';
 
-  startBtn.addEventListener("click", ()=>modal.style.display="flex");
-  noBtn.addEventListener("click", ()=>modal.style.display="none");
+// unlock audio on first touch to satisfy iOS autoplay
+document.body.addEventListener('touchstart', () => { tapSound.play().catch(()=>{}); }, { once:true });
 
-  yesBtn.addEventListener("click", ()=>{
-    modal.style.display="none";
-    startPage.style.display="none";
-    startGame();
-  });
+// ---------- Start flow ----------
+startBtn.addEventListener('click', () => {
+  // show spinner briefly
+  startPage.style.display = 'none';
+  spinner.classList.remove('hidden');
+  setTimeout(()=> {
+    spinner.classList.add('hidden');
+    gamePage.classList.remove('hidden');
+    startSession();
+  }, 700);
+});
 
-  function startGame(){
-    taps = 0; earnings = 0; timer = 60;
-    bonusLevel=1; progress=0; tapsForNext=100;
+function startSession(){
+  // reset
+  taps = 0; earnings = 0; timer = duration; bonusLevel = 1; progress = 0; tapsForNext = 100;
+  running = true;
+  updateUI();
 
-    gamePage.style.display="flex";
-    updateStats();
-    loadTop5();
+  // reset train bar full width then shrink over time
+  trainBar.style.width = '100%';
+  // start countdown interval
+  intervalId = setInterval(()=>{
+    timer--;
+    if (timer < 0) timer = 0;
+    updateUI();
 
-    interval = setInterval(()=>{
-      timer--;
-      timerEl.textContent=timer;
-      if(timer<=0) endGame();
-    },1000);
-  }
+    // update train bar width (percent)
+    const pct = Math.max(0, (timer / duration) * 100);
+    trainBar.style.width = pct + '%';
 
-  const tapEvent=("ontouchstart" in window)?"touchstart":"click";
-
-  tapButton.addEventListener(tapEvent,(e)=>{
-    e.preventDefault();
-    if(timer<=0) return;
-
-    taps++; earnings++;
-    tapCountEl.textContent=taps;
-    earningsEl.textContent=earnings.toFixed(2);
-
-    tapSound.currentTime=0; tapSound.play().catch(()=>{});
-
-    tapButton.classList.add("glow");
-    setTimeout(()=>tapButton.classList.remove("glow"),120);
-
-    // BONUS BAR
-    progress++;
-    if(progress>=tapsForNext){
-      progress=0;
-      bonusLevel++;
-      tapsForNext=100+(bonusLevel-1)*50;
+    if (timer === 0) {
+      endSession();
     }
-    bonusBar.style.width=(progress/tapsForNext*100)+"%";
-  });
+  }, 1000);
+}
 
-  async function endGame(){
-    clearInterval(interval);
-    gamePage.style.display="none";
-    resultModal.style.display="flex";
+// ---------- Tap Handler ----------
+tapButton.addEventListener(tapEvent, (e) => {
+  e.preventDefault();
+  if (!running) return;
 
-    finalTapsEl.textContent=taps;
-    finalEarningsEl.textContent=earnings.toFixed(2);
+  taps++;
+  earnings += 1.00; // 1 naira per tap (adjust as needed)
+  progress++;
 
-    try{
-      await addDoc(collection(db,"tapSessions"),{taps,earnings,timestamp:serverTimestamp()});
-    }catch(err){console.error(err);}
-    loadTop5();
+  // update bonus and progress
+  if (progress >= tapsForNext) {
+    progress = 0;
+    bonusLevel++;
+    tapsForNext = 100 + (bonusLevel - 1) * 50;
+    // tiny confetti/pro notification (kept minimal)
+    showTempMessage('TAP PRO!');
   }
 
-  playAgain.addEventListener("click", ()=>{
-    resultModal.style.display="none";
-    startPage.style.display="flex";
-  });
+  // update UI fast
+  updateUI();
 
-  leaderboardBtn.addEventListener("click", ()=>leaderboardModal.style.display="flex");
-  closeLeaderboard.addEventListener("click", ()=>leaderboardModal.style.display="none");
+  // play sound (non-blocking)
+  tapSound.currentTime = 0;
+  tapSound.play().catch(()=>{});
 
-  async function loadTop5(){
-    const oneHourAgo = Timestamp.fromDate(new Date(Date.now()-3600000));
-    const q=query(
-      collection(db,"tapSessions"),
-      where("timestamp",">",oneHourAgo),
-      orderBy("timestamp","desc"),
-      orderBy("taps","desc"),
-      limit(5)
+  // tiny vibration
+  if (navigator.vibrate) navigator.vibrate(10);
+});
+
+// ---------- update UI ----------
+function updateUI(){
+  timerEl.textContent = String(timer);
+  tapCountEl.textContent = String(taps);
+  earningsEl.textContent = earnings.toFixed(2);
+  bonusBar.style.width = ((progress / tapsForNext) * 100) + '%';
+  bonusLevelVal.textContent = String(bonusLevel);
+  speedVal.textContent = (taps > 0 && duration - timer > 0) ? Math.round(taps / Math.max(1, (duration - timer))) + '/s' : '—';
+  miniTapCount.textContent = String(taps);
+  miniEarnings.textContent = earnings.toFixed(2);
+}
+
+// ---------- end session (save to Firestore) ----------
+async function endSession(){
+  if (!running) return;
+  running = false;
+  clearInterval(intervalId);
+  intervalId = null;
+
+  // show result inline
+  finalTapsEl.textContent = String(taps);
+
+  // save to Firestore
+  try {
+    await addDoc(collection(db, 'tapSessions'), {
+      taps: taps,
+      earnings: earnings,
+      timestamp: serverTimestamp()
+    });
+  } catch (err) {
+    console.error('Failed to save session', err);
+  }
+
+  // compute place by querying top 10 and placing our value among them
+  try {
+    const oneHourAgo = Timestamp.fromDate(new Date(Date.now() - 3600 * 1000));
+    const q = query(
+      collection(db, 'tapSessions'),
+      where('timestamp', '>', oneHourAgo),
+      orderBy('taps', 'desc'),
+      limit(10)
     );
-
     const snap = await getDocs(q);
+    const arr = snap.docs.map(d => d.data().taps || 0);
+    // insert our taps into a local clone and compute place
+    const all = arr.slice();
+    all.push(taps);
+    all.sort((a,b)=>b-a);
+    const place = all.indexOf(taps) + 1;
+    finalPlaceEl.textContent = `#${place}`;
+  } catch (err) {
+    console.warn('Could not compute place', err);
+    finalPlaceEl.textContent = '—';
+  }
 
-    scoresEl.innerHTML = snap.docs.map((doc,i)=>{
-      const s = doc.data();
-      return `<li>#${i+1} — ${s.taps} taps (₦${(s.earnings||0).toFixed(2)})</li>`;
-    }).join("");
+  // show result panel
+  resultInner.classList.remove('hidden');
+  // stop interactions (disable tap)
+  tapButton.disabled = true;
+}
+
+// restart
+playAgain.addEventListener('click', () => {
+  resultInner.classList.add('hidden');
+  tapButton.disabled = false;
+  // show start page again (or restart)
+  // we'll restart session immediately to keep flow
+  startSession();
+});
+
+// ---------- leaderboard modal ----------
+leaderboardBtn.addEventListener('click', async () => {
+  leaderboardList.innerHTML = '<li style="color:#aaa">Loading…</li>';
+  leaderboardModal.style.display = 'flex';
+  try {
+    const oneHourAgo = Timestamp.fromDate(new Date(Date.now() - 3600 * 1000));
+    const q = query(
+      collection(db, 'tapSessions'),
+      where('timestamp', '>', oneHourAgo),
+      orderBy('taps', 'desc'),
+      limit(10)
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      leaderboardList.innerHTML = '<li style="color:#aaa">No scores this hour</li>';
+      return;
+    }
+    leaderboardList.innerHTML = snap.docs.map((d,i) => {
+      const data = d.data();
+      const t = data.taps || 0;
+      const earn = (data.earnings || 0).toFixed(2);
+      // use timestamp if exists
+      const when = data.timestamp && data.timestamp.toDate ? data.timestamp.toDate().toLocaleTimeString() : '';
+      return `<li><strong>#${i+1}</strong> — ${t} taps &nbsp; (₦${earn}) <div style="font-size:11px;color:#aaa">${when}</div></li>`;
+    }).join('');
+  } catch (err) {
+    console.error('Leaderboard load failed', err);
+    leaderboardList.innerHTML = '<li style="color:#f88">Failed to load</li>';
   }
 });
+
+closeLeaderboard.addEventListener('click', () => {
+  leaderboardModal.style.display = 'none';
+});
+// allow clicking backdrop to close
+leaderboardModal.addEventListener('click', (e) => {
+  if (e.target === leaderboardModal) leaderboardModal.style.display = 'none';
+});
+
+// small temporary message
+function showTempMessage(txt){
+  const msg = document.createElement('div');
+  msg.textContent = txt;
+  Object.assign(msg.style, {
+    position: 'fixed', left: '50%', top: '30%', transform:'translateX(-50%)',
+    background:'#000', padding:'10px 16px', borderRadius:'8px', border:'1px solid rgba(255,255,255,0.06)', zIndex:9999
+  });
+  document.body.appendChild(msg);
+  setTimeout(()=> { msg.style.transition='opacity .4s'; msg.style.opacity=0; setTimeout(()=>msg.remove(),400); }, 900);
+}
+
+// prevent double-tap to zoom on iOS by blocking gesturestart (extra guard)
+document.addEventListener('gesturestart', function(e){ e.preventDefault(); }, { passive:false });
+
 </script>
+
 </body>
 </html>
