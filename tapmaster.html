@@ -92,16 +92,14 @@
 
 <!-- Firebase SDKs -->
 <script type="module">
-import {
-  initializeApp
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import {
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { 
   getFirestore, collection, addDoc,
   query, where, orderBy, limit, getDocs,
   serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-// 🔥 your config ↓
+// 🔥 Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
@@ -112,6 +110,7 @@ const firebaseConfig = {
   measurementId: "G-S77BMC266C",
   databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
@@ -126,7 +125,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const startBtn = document.getElementById('startBtn');
   const yesBtn = document.getElementById('yesBtn');
   const noBtn = document.getElementById('noBtn');
-  const playAgain = document.getElementById('playAgain');
+  const playAgain = document.getElementById('playAgainBtn');
   const tapButton = document.getElementById('tapButton');
   const tapSound = document.getElementById('tapSound');
   const timerEl = document.getElementById('timer');
@@ -135,15 +134,17 @@ window.addEventListener("DOMContentLoaded", () => {
   const bonusBar = document.getElementById('bonusBar');
   const finalTapsEl = document.getElementById('finalTaps');
   const finalEarningsEl = document.getElementById('finalEarnings');
+  const resultMessageEl = document.getElementById('resultMessage');
   const scoresEl = document.getElementById('scores');
 
+  // -------- STATE ----------
   let taps = 0, earnings = 0, timer = 60, interval;
   let bonusLevel = 1, progress = 0, tapsForNext = 100;
 
-  // Unlock audio early for iOS autoplay
+  // Unlock audio for iOS autoplay
   document.body.addEventListener("touchstart", () => {
-    tapSound.play().catch(() => {});
-  }, { once: true });
+    tapSound.play().catch(()=>{});
+  }, { once:true });
 
   // ---------- START FLOW ----------
   startBtn.addEventListener("click", () => modal.style.display = "flex");
@@ -158,6 +159,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }, 1200);
   });
 
+  // ---------- GAME ----------
   function startGame() {
     taps = 0; earnings = 0; timer = 60;
     bonusLevel = 1; progress = 0; tapsForNext = 100;
@@ -173,19 +175,15 @@ window.addEventListener("DOMContentLoaded", () => {
       timer--;
       timerEl.textContent = timer;
 
-      if (timer <= 0) {
-        endGame();
-      }
+      if(timer <= 0) endGame();
     }, 1000);
   }
 
-  // ---------- TAP HANDLER ----------
-  // Faster: combine click + touchstart
+  // Tap event
   const tapEvent = ("ontouchstart" in window) ? "touchstart" : "click";
-
   tapButton.addEventListener(tapEvent, (e) => {
     e.preventDefault();
-    if (timer <= 0) return;
+    if(timer <= 0) return;
 
     taps++;
     earnings++;
@@ -193,62 +191,56 @@ window.addEventListener("DOMContentLoaded", () => {
     earningsEl.textContent = earnings.toFixed(2);
 
     tapSound.currentTime = 0;
-    tapSound.play().catch(() => {});
+    tapSound.play().catch(()=>{});
+    if(navigator.vibrate) navigator.vibrate(15);
 
-    if (navigator.vibrate) navigator.vibrate(15);
-
-    // ----- FLOAT TEXT -----
-    const f = document.createElement('div');
-    f.className = 'floatText';
-    f.textContent = '+₦1.00';
-    const r = tapButton.getBoundingClientRect();
-    const x = (Math.random() - 0.5) * 80;
-    f.style.setProperty("--x", `${x}px`);
-    f.style.left = (r.left + r.width / 2) + "px";
-    f.style.top = (r.top + r.height / 2) + "px";
-    document.body.appendChild(f);
-    setTimeout(() => f.remove(), 800);
-
-    // ----- BONUS BAR -----
+    showFloatText("+₦1.00");
     progress++;
-    if (progress >= tapsForNext) {
+    if(progress >= tapsForNext) {
       progress = 0;
       bonusLevel++;
       tapsForNext = 100 + (bonusLevel - 1) * 50;
       showTapPro();
     }
-    bonusBar.style.width = (progress / tapsForNext * 100) + "%";
+    bonusBar.style.width = (progress/tapsForNext*100) + "%";
   });
 
-  // ---------- TAP PRO ----------
+  function showFloatText(text) {
+    const f = document.createElement('div');
+    f.className = 'floatText';
+    f.textContent = text;
+    const r = tapButton.getBoundingClientRect();
+    const x = (Math.random()-0.5) * 80;
+    f.style.setProperty("--x", `${x}px`);
+    f.style.left = (r.left + r.width/2) + "px";
+    f.style.top = (r.top + r.height/2) + "px";
+    document.body.appendChild(f);
+    setTimeout(()=>f.remove(), 800);
+  }
+
   function showTapPro() {
     confettiBurst();
     const msg = document.createElement('div');
     msg.textContent = "TAP PRO!";
     Object.assign(msg.style, {
-      position: "fixed",
-      top: "50%", left: "50%",
-      transform: "translate(-50%,-50%)",
-      fontSize: "48px",
-      fontWeight: "bold",
-      color: "#00e676",
-      textShadow: "0 0 20px #00e676",
-      animation: "fadeOut 2s forwards",
-      zIndex: 2000
+      position:"fixed", top:"50%", left:"50%",
+      transform:"translate(-50%,-50%)", fontSize:"48px",
+      fontWeight:"bold", color:"#00e676", textShadow:"0 0 20px #00e676",
+      animation:"fadeOut 2s forwards", zIndex:2000
     });
     document.body.appendChild(msg);
-    setTimeout(() => msg.remove(), 2000);
+    setTimeout(()=>msg.remove(), 2000);
   }
 
   function confettiBurst() {
-    for (let i = 0; i < 30; i++) {
+    for(let i=0;i<30;i++){
       const c = document.createElement("div");
       c.classList.add("confetti");
-      c.style.setProperty("--color", `hsl(${Math.random() * 360},100%,60%)`);
-      c.style.setProperty("--x", `${(Math.random() - 0.5) * 600}px`);
-      c.style.setProperty("--y", `${(Math.random() - 0.5) * 400}px`);
+      c.style.setProperty("--color", `hsl(${Math.random()*360},100%,60%)`);
+      c.style.setProperty("--x", `${(Math.random()-0.5)*600}px`);
+      c.style.setProperty("--y", `${(Math.random()-0.5)*400}px`);
       document.body.appendChild(c);
-      setTimeout(() => c.remove(), 900);
+      setTimeout(()=>c.remove(),900);
     }
   }
 
@@ -267,20 +259,18 @@ window.addEventListener("DOMContentLoaded", () => {
 
     finalTapsEl.textContent = taps;
     finalEarningsEl.textContent = earnings.toFixed(2);
+    resultMessageEl.textContent = `You earned ₦${earnings} and made ${taps} taps! Check your leaderboard position below.`;
 
     try {
-      await addDoc(collection(db, "tapSessions"), {
-        taps,
-        earnings,
-        timestamp: serverTimestamp()
+      await addDoc(collection(db,"tapSessions"),{
+        taps, earnings, timestamp: serverTimestamp()
       });
-    } catch (err) {
-      console.error("Save failed", err);
-    }
+    } catch(err){ console.error("Save failed", err); }
 
     loadTop5();
   }
 
+  // Play again
   playAgain.addEventListener("click", () => {
     resultModal.style.display = "none";
     startPage.style.display = "flex";
@@ -289,23 +279,19 @@ window.addEventListener("DOMContentLoaded", () => {
   // ---------- LOAD TOP 5 ----------
   async function loadTop5() {
     const oneHourAgo = Timestamp.fromDate(new Date(Date.now() - 3600000));
-
     const q = query(
-      collection(db, "tapSessions"),
+      collection(db,"tapSessions"),
       where("timestamp", ">", oneHourAgo),
-      orderBy("timestamp", "desc"),  // SAFE
-      orderBy("taps", "desc"),
+      orderBy("taps","desc"),
       limit(5)
     );
 
     const snap = await getDocs(q);
-
     scoresEl.innerHTML = snap.docs
-      .map((doc, i) => {
-        const s = doc.data();
-        return `<li>#${i + 1} — ${s.taps} taps (₦${(s.earnings || 0).toFixed(2)})</li>`;
-      })
-      .join("");
+      .map((d,i)=>{
+        const s = d.data();
+        return `<li>#${i+1} — ${s.taps} taps (₦${(s.earnings||0).toFixed(2)})</li>`;
+      }).join("");
   }
 
 });
