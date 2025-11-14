@@ -354,112 +354,89 @@ function initializePot(){
 // ---------------------------------------------------------
 // 🔥 FINAL USER LOADER (SANITIZED EMAIL → DOC ID)
 // ---------------------------------------------------------
+let currentUser = null;
+
 async function loadCurrentUserForGame() {
-  console.log("🔍 Loading current user for game...");
-
-  // Get stored user from localStorage
-  const vipRaw = localStorage.getItem('vipUser');
-  const hostRaw = localStorage.getItem('hostUser');
-  const storedUser = vipRaw ? JSON.parse(vipRaw) : hostRaw ? JSON.parse(hostRaw) : null;
-
-  console.log("📦 Stored user:", storedUser);
-
-  // No stored user → guest
-  if (!storedUser || !storedUser.email) {
-    console.warn("⚠️ No valid stored user found.");
-    currentUser = null;
-    if (DOM.profileNameEl) DOM.profileNameEl.textContent = 'GUEST 0000';
-    if (DOM.starCountEl) DOM.starCountEl.textContent = '50';
-    if (DOM.cashCountEl) DOM.cashCountEl.textContent = '0';
-    return;
-  }
-
   try {
-    // Sanitize email to match your document ID (comma instead of dot)
-    const id = storedUser.id || storedUser.email.replace(/@/g, "_").replace(/\./g, ",").toLowerCase();
-    console.log("🔑 Fetching user doc:", id);
+    const vipRaw = localStorage.getItem('vipUser');
+    const hostRaw = localStorage.getItem('hostUser');
+    const storedUser = vipRaw ? JSON.parse(vipRaw) : hostRaw ? JSON.parse(hostRaw) : null;
 
-    const userDocRef = doc(db, "users", id);
-    const uDoc = await getDoc(userDocRef);
-
-    if (!uDoc.exists()) throw new Error("User not found in users collection");
-
-    const userData = uDoc.data();
-    currentUser = { ...userData, id };
-
-    // Update UI
-    if (DOM.profileNameEl) DOM.profileNameEl.textContent = currentUser.fullName || currentUser.vipName || 'PLAYER';
-    if (DOM.starCountEl) DOM.starCountEl.textContent = currentUser.stars ?? 0;
-    if (DOM.cashCountEl) DOM.cashCountEl.textContent = currentUser.cash ?? 0;
-
-    console.log("✅ User Loaded:", currentUser);
-
-    // Optional: whitelist check
-    const whitelistRef = doc(db, "whitelist", storedUser.email);
-    const wlDoc = await getDoc(whitelistRef);
-    if (!wlDoc.exists()) {
-      console.warn("⚠️ User not in whitelist");
-    } else {
-      console.log("✅ User is whitelisted");
+    if (!storedUser?.uid) {
+      currentUser = null;
+      if (profileNameEl) profileNameEl.textContent = 'GUEST 0000';
+      if (starCountEl) starCountEl.textContent = starCountEl.textContent || '50';
+      return;
     }
 
+    // Fetch user document by Firebase UID
+    const userRef = doc(db, 'users', storedUser.uid);
+    const snap = await getDoc(userRef);
+
+    if (!snap.exists()) {
+      // new user fallback
+      currentUser = { 
+        uid: storedUser.uid, 
+        chatId: storedUser.displayName || storedUser.email.split('@')[0], 
+        stars: 0, 
+        cash: 0, 
+        email: storedUser.email 
+      };
+    } else {
+      currentUser = { uid: storedUser.uid, ...snap.data() };
+    }
+
+    // Update UI
+    if (profileNameEl) profileNameEl.textContent = currentUser.chatId || storedUser.displayName || storedUser.email.split('@')[0];
+    if (starCountEl) starCountEl.textContent = String(currentUser.stars ?? 0);
+
   } catch (err) {
-    console.error("🔥 ERROR loading user:", err);
+    console.warn('loadCurrentUserForGame error:', err);
     currentUser = null;
-    if (DOM.profileNameEl) DOM.profileNameEl.textContent = 'GUEST 0000';
-    if (DOM.starCountEl) DOM.starCountEl.textContent = '50';
-    if (DOM.cashCountEl) DOM.cashCountEl.textContent = '0';
+    if (profileNameEl) profileNameEl.textContent = 'GUEST 0000';
+    if (starCountEl) starCountEl.textContent = starCountEl.textContent || '50';
   }
 }
 
-// ---------------------------------------------------------
-// 🔥 FINAL STAR DEDUCTION USING sanitized ID
-// ---------------------------------------------------------
+// ---------- Atomic star deduction ----------
 async function tryDeductStarsForJoin(cost) {
-  if (!currentUser?.id) return { ok:false, message:'You are not logged in' };
-
+  if (!currentUser?.uid) return { ok:false, message:'You are not logged in' };
+  const userRef = doc(db, 'users', currentUser.uid);
   try {
-    await runTransaction(db, async t => {
-      const uRef = doc(db, "users", currentUser.id);
-      const snap = await t.get(uRef);
-      if (!snap.exists()) throw new Error('User not found');
-
-      const stars = Number(snap.data().stars || 0);
-      if (stars < cost) throw new Error("Not enough stars");
-
-      t.update(uRef, { stars: stars - cost });
+    await runTransaction(db, async (t) => {
+      const u = await t.get(userRef);
+      if (!u.exists()) throw new Error('User not found');
+      const udata = u.data();
+      const currentStars = Number(udata.stars || 0);
+      if (currentStars < cost) throw new Error('Not enough stars');
+      t.update(userRef, { stars: currentStars - cost });
     });
-
     return { ok:true };
   } catch (e) {
-    return { ok:false, message:e.message };
+    return { ok:false, message: e.message || 'Could not deduct stars' };
   }
 }
 
-// ---------------------------------------------------------
-// 🔥 FINAL CASH UPDATE USING sanitized ID
-// ---------------------------------------------------------
-async function giveCashToUser(amount){
-  if (!currentUser?.id) {
-    if (DOM.miniEarnings)
-      DOM.miniEarnings.textContent = (parseFloat(DOM.miniEarnings.textContent||'0') + amount).toFixed(2);
+// ---------- Add cash to user (transactional) ----------
+async function giveCashToUser(amount) {
+  if (!currentUser?.uid) {
+    // guest: update local UI only
+    if (miniEarnings) miniEarnings.textContent = (parseFloat(miniEarnings.textContent || '0') + amount).toFixed(2);
     return { ok:true };
   }
-
+  const userRef = doc(db, 'users', currentUser.uid);
   try {
-    await runTransaction(db, async t => {
-      const uRef = doc(db, "users", currentUser.id);
-      const snap = await t.get(uRef);
-      if (!snap.exists()) throw new Error("User not found");
-
-      const newCash = Number(snap.data().cash || 0) + amount;
-      t.update(uRef, { cash: newCash });
+    await runTransaction(db, async (t) => {
+      const u = await t.get(userRef);
+      if (!u.exists()) throw new Error('User not found');
+      const udata = u.data();
+      const newCash = (Number(udata.cash || 0) + Number(amount));
+      t.update(userRef, { cash: newCash });
     });
-
     return { ok:true };
-  } catch(e) {
-    console.error("giveCashToUser error:", e);
-    return { ok:false, message:e.message };
+  } catch (e) {
+    console.error('giveCashToUser error', e);
+    return { ok:false, message: e.message };
   }
 }
 
