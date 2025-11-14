@@ -352,34 +352,69 @@ function initializePot(){
 }
 
 async function loadCurrentUserForGame() {
-  const vipRaw = localStorage.getItem('vipUser');
-  const hostRaw = localStorage.getItem('hostUser');
-  const storedUser = vipRaw ? JSON.parse(vipRaw) : hostRaw ? JSON.parse(hostRaw) : null;
+  console.log("🔍 Loading current user for game...");
 
-  if (!storedUser || !storedUser.uid) {
+  // 1. Pull stored user
+  const vipRaw = localStorage.getItem("vipUser");
+  const hostRaw = localStorage.getItem("hostUser");
+
+  let storedUser = null;
+
+  if (vipRaw) {
+    storedUser = JSON.parse(vipRaw);
+  } else if (hostRaw) {
+    storedUser = JSON.parse(hostRaw);
+  }
+
+  console.log("📦 Stored user:", storedUser);
+
+  // 2. Validate uid and sanitized email
+  if (!storedUser || !storedUser.uid || !storedUser.sanitizedEmail) {
+    console.warn("⚠️ No valid stored user found.");
+
     currentUser = null;
-    DOM.profileNameEl && (DOM.profileNameEl.textContent = 'GUEST 0000');
-    DOM.starCountEl && (DOM.starCountEl.textContent = '50');
+    DOM.profileNameEl && (DOM.profileNameEl.textContent = "GUEST 0000");
+    DOM.starCountEl && (DOM.starCountEl.textContent = "50");
+    DOM.cashCountEl && (DOM.cashCountEl.textContent = "0");
+
     return;
   }
 
   try {
-    const uDoc = await getDoc(doc(db, 'users', storedUser.uid));
-    if (!uDoc.exists()) throw new Error('User not found in Firestore');
+    // 3. Get Firestore doc using sanitized email
+    const userRef = doc(db, "users", storedUser.sanitizedEmail);
+    const uDoc = await getDoc(userRef);
 
-    currentUser = { uid: storedUser.uid, ...uDoc.data() };
+    console.log("📘 Firestore document:", uDoc.exists() ? uDoc.data() : "NOT FOUND");
 
-    // Update UI
-    DOM.profileNameEl && (DOM.profileNameEl.textContent = currentUser.chatId || storedUser.displayName || 'GUEST');
-    DOM.starCountEl && (DOM.starCountEl.textContent = String(currentUser.stars ?? 0));
-    DOM.starCountEl && (DOM.starCountEl.textContent = String(currentUser.cash ?? 0));
+    if (!uDoc.exists()) {
+      throw new Error("User not found in Firestore with sanitized email");
+    }
+
+    // 4. Set currentUser
+    currentUser = {
+      uid: storedUser.uid,
+      sanitizedEmail: storedUser.sanitizedEmail,
+      ...uDoc.data(),
+    };
+
+    // 5. Update UI
+    DOM.profileNameEl && (DOM.profileNameEl.textContent = currentUser.username || "USER");
+    DOM.starCountEl && (DOM.starCountEl.textContent = currentUser.stars ?? 0);
+    DOM.cashCountEl && (DOM.cashCountEl.textContent = currentUser.cash ?? 0);
+
+    console.log("✅ User loaded successfully:", currentUser);
+
   } catch (err) {
-    console.warn('User load error:', err);
+    console.error("❌ Error loading user:", err);
+
     currentUser = null;
-    DOM.profileNameEl && (DOM.profileNameEl.textContent = 'GUEST 0000');
-    DOM.starCountEl && (DOM.starCountEl.textContent = '50');
+    DOM.profileNameEl && (DOM.profileNameEl.textContent = "GUEST 0000");
+    DOM.starCountEl && (DOM.starCountEl.textContent = "50");
+    DOM.cashCountEl && (DOM.cashCountEl.textContent = "0");
   }
 }
+
 async function tryDeductStarsForJoin(cost) {
   if (!currentUser?.uid) return { ok:false, message:'You are not logged in' };
   try {
