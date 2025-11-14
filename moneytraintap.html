@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport"
+      content="width=device-width, maximum-scale=1.0, user-scalable=no" />
+<title>Money Train</title>
+
+<style>
+  body {
+    margin: 0;
+    background: #000;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    user-select: none;
+    touch-action: manipulation;
+  }
+
+  .train-terminal {
+    width: 90%;
+    max-width: 420px;
+    margin: 60px auto 0;
+    padding: 20px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 14px;
+    box-shadow: 0 0 25px #00e67633;
+  }
+
+  .hidden { display: none !important; }
+
+  .scramble-board {
+    margin-top: 20px;
+    padding: 16px;
+    background: #111;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+  }
+</style>
+</head>
+
+<body>
+
+<!-- ======================= HEADER ======================= -->
+<h1 style="text-align:center; margin-top:40px; color:#00e676;">
+  MONEY TRAIN
+</h1>
+
+
+<!-- ======================= TRAIN TERMINAL ======================= -->
+<div id="trainTerminal" class="train-terminal">
+
+  <!-- Terminal header -->
+  <div style="text-align:center; margin-bottom:10px; font-size:20px;">
+    🚆 Solve to Enter the Train
+  </div>
+
+  <!-- Instructions -->
+  <div id="instructionText" style="opacity:0.8; font-size:15px;">
+    Solve the math challenge below to unlock your ticket.
+  </div>
+
+  <!-- 🧮 Problem Board -->
+  <div id="problemBoard" class="scramble-board hidden"></div>
+
+  <!-- Tap Button Mount (INSIDE terminal) -->
+  <div id="tapMount" style="margin-top:15px;"></div>
+
+</div>
+
+
+<!-- ======================= TAP CONTAINER (Hidden by default) ======================= -->
+<div id="tapContainer" class="hidden" style="text-align:center; margin-top:14px;">
+  <button id="submitAnswers" style="
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:12px 20px;
+    border-radius:10px;
+    background:linear-gradient(90deg, #00c853, #b2ff59);
+    color:#000;
+    font-weight:700;
+    font-size:17px;
+    border:none;
+    cursor:pointer;
+    box-shadow:0 0 12px #00e676aa;
+    transition:transform 0.15s ease;">
+    Unlock Ticket
+    <svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none'
+         stroke='#000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
+      <path d='M21 10h-3V7H6v3H3v4h3v3h12v-3h3v-4z'/>
+    </svg>
+  </button>
+</div>
+
+
+
+<!-- ======================= FIREBASE + GAME LOGIC ======================= -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+// 🔥 Your Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
+  authDomain: "metaverse-1010.firebaseapp.com",
+  projectId: "metaverse-1010",
+  storageBucket: "metaverse-1010.appspot.com",
+  messagingSenderId: "1044064238233",
+  appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
+  measurementId: "G-S77BMC266C",
+  databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+
+// ======================= UI ELEMENTS =======================
+const problemBoard     = document.getElementById("problemBoard");
+const submitAnswersBtn = document.getElementById("submitAnswers");
+const tapContainer     = document.getElementById("tapContainer");
+const tapMount         = document.getElementById("tapMount");
+
+
+// ======================= LOAD A PROBLEM =======================
+function loadMathProblem() {
+  const a = Math.floor(Math.random() * 10) + 1;
+  const b = Math.floor(Math.random() * 10) + 1;
+  const answer = a + b;
+
+  problemBoard.innerHTML = `
+    <div style="margin-bottom:8px;">Solve:</div>
+    <div style="font-size:26px; font-weight:bold;">${a} + ${b} = ?</div>
+    <input id="mathAnswer" type="number" placeholder="Your Answer"
+           style="margin-top:12px;padding:10px;width:80%;border-radius:8px;border:none;" />
+  `;
+  problemBoard.classList.remove("hidden");
+
+  return answer;
+}
+
+let correctAnswer = loadMathProblem();
+
+
+// ======================= MOUNT TAP BUTTON INSIDE TRAIN =======================
+function showTapInsideTrain() {
+  tapContainer.classList.remove("hidden");
+  tapMount.appendChild(tapContainer);
+}
+
+
+// ======================= SUBMIT MATH ANSWER =======================
+submitAnswersBtn.onclick = () => {
+  const val = Number(document.getElementById("mathAnswer").value);
+
+  if (val === correctAnswer) {
+    // Correct → Hide math & show TAP inside terminal
+    problemBoard.classList.add("hidden");
+    showTapInsideTrain();
+
+    alert("Correct! Ticket unlocked.");
+  } else {
+    alert("Incorrect. Try again.");
+  }
+};
+
+
+// ======================= AUTO SHOW MATH BOARD AFTER LOAD =======================
+setTimeout(() => {
+  problemBoard.classList.remove("hidden");
+}, 600);
+
+</script>
+
+</body>
+</html>
