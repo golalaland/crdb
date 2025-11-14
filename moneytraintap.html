@@ -219,17 +219,14 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
     <!-- Mini stats -->
     <div id="miniStats" aria-hidden="false">Taps: <strong id="miniTapCount">0</strong> · Earnings: ₦<span id="miniEarnings">0.00</span></div>
 
-    <!-- Result panel -->
-    <div id="resultModalInner" class="hidden">
-      <div style="margin-top:14px; background:rgba(255,255,255,0.02); padding:12px; border-radius:8px;">
-        <div style="font-weight:800;color:var(--accent1)">Time's Up!</div>
-        <div style="margin-top:6px">Final taps: <strong id="finalTaps">0</strong></div>
-        <div style="margin-top:6px">Your place: <strong id="finalPlace">—</strong></div>
-        <div style="margin-top:10px">
-          <button id="playAgain" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:800;cursor:pointer">Play Again</button>
-        </div>
-      </div>
-    </div>
+    <!-- Result modal -->
+<div id="resultModal" class="modal-backdrop" style="display:none;align-items:center;justify-content:center;">
+  <div class="modal" style="padding:16px;border-radius:12px;max-width:380px;text-align:center;position:relative;">
+    <button id="closeResult" style="position:absolute;top:8px;right:8px;font-size:18px;border:none;background:none;cursor:pointer;">✖</button>
+    <div id="resultMessage" style="margin-top:10px;font-size:16px;font-weight:600;"></div>
+    <button id="playAgainBtn" style="margin-top:16px;padding:10px 16px;border-radius:8px;border:none;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:800;cursor:pointer;">Play Again</button>
+  </div>
+</div>
 
   </div> <!-- end gamePage -->
 
@@ -465,6 +462,66 @@ function showTempMessage(txt){
 
 // Prevent double-tap zoom
 document.addEventListener('gesturestart', e=>e.preventDefault(), {passive:false});
+const resultModal = document.getElementById('resultModal');
+const resultMessage = document.getElementById('resultMessage');
+const closeResult = document.getElementById('closeResult');
+const playAgainBtn = document.getElementById('playAgainBtn');
+
+// ---------- end session ----------
+async function endSession() {
+  if (!running) return;
+  running = false;
+  clearInterval(intervalId);
+  intervalId = null;
+
+  // Save session to Firestore
+  let place = null;
+  try {
+    await addDoc(collection(db, 'tapSessions'), {
+      taps: taps,
+      earnings: earnings,
+      timestamp: serverTimestamp()
+    });
+
+    // compute leaderboard position
+    const oneHourAgo = Timestamp.fromDate(new Date(Date.now() - 3600*1000));
+    const q = query(
+      collection(db, 'tapSessions'),
+      where('timestamp', '>', oneHourAgo),
+      orderBy('taps', 'desc'),
+      limit(10)
+    );
+    const snap = await getDocs(q);
+    const allTaps = snap.docs.map(d => d.data().taps || 0);
+    allTaps.push(taps);
+    allTaps.sort((a,b)=>b-a);
+    place = allTaps.indexOf(taps)+1;
+  } catch(err) {
+    console.error('Failed to save session / compute place', err);
+  }
+
+  // Show result modal
+  const username = document.getElementById('profileName').textContent || "Guest";
+  if(place){
+    resultMessage.innerHTML = `${username}, you earned ₦${earnings.toFixed(2)} and made ${taps} taps, you are #${place} on the leaderboard this round.`;
+  } else {
+    resultMessage.innerHTML = `${username}, you earned ₦${earnings.toFixed(2)} and made ${taps} taps. Check your position on the leaderboard table for this round.`;
+  }
+
+  resultModal.style.display = 'flex';
+  tapButton.disabled = true;
+}
+
+// ---------- close / play again ----------
+closeResult.addEventListener('click', () => {
+  resultModal.style.display = 'none';
+});
+
+playAgainBtn.addEventListener('click', () => {
+  resultModal.style.display = 'none';
+  tapButton.disabled = false;
+  startSession();
+});
 </script>
 </body>
 </html>
