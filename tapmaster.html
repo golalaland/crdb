@@ -469,34 +469,41 @@ cancelPlay?.addEventListener('click', () => {
 
 // confirm
 confirmPlay?.addEventListener('click', async () => {
+  // ensure currentUser is loaded
+  if (!currentUser) {
+    await loadCurrentUserForGame();
+  }
+
+  if (!currentUser) {
+    alert('User not found. Please log in again.');
+    return;
+  }
+
   // take star cost via transaction
-  // if user logged in we deduct via Firestore; else we check UI starCountEl
   let localStars = parseInt(starCountEl?.textContent || '0', 10);
-  // if currentUser exists try deduct transactionally
+
   if (currentUser?.uid){
     const r = await tryDeductStarsForJoin(STAR_COST);
     if (!r.ok){
       alert(r.message || 'Not enough stars');
       return;
     }
-    // update UI optimistically
     if (starCountEl) starCountEl.textContent = String(Math.max(0, localStars - STAR_COST));
   } else {
-    // guest: just deduct from UI if enough
     if (localStars < STAR_COST){
       alert('Not enough stars to play!');
       return;
     }
-    starCountEl.textContent = String(localStars - STAR_COST);
+    if (starCountEl) starCountEl.textContent = String(localStars - STAR_COST);
   }
 
-  // hide modal + poster + start and show spinner
+  // hide modal + poster + start, show spinner
   if (playModal) playModal.style.display = 'none';
   if (posterImg) posterImg.style.display = 'none';
   if (startPage) startPage.style.display = 'none';
   if (spinner) spinner.classList.remove('hidden');
 
-  setTimeout(()=> {
+  setTimeout(() => {
     if (spinner) spinner.classList.add('hidden');
     if (gamePage) gamePage.classList.remove('hidden');
     startSession();
