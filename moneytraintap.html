@@ -138,51 +138,29 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
 <body>
 <div id="appWrapper">
 
+  <!-- Header -->
   <div id="gameHeader">
     <div id="welcomeText">WELCOME TO</div>
     <div id="scrambleText">TAP MASTER</div>
   </div>
 
-<!-- start / join flow (keeps same layout) -->
-<div id="startPage" style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:18px;">
-  <button id="startBtn" style="padding:12px 22px;border-radius:12px;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:800;font-size:16px;border:none;cursor:pointer;">Play</button>
-  <!-- Poster only here -->
-  <img id="posterImg" src="https://via.placeholder.com/420x200?text=Poster+Here" alt="Poster" style="width:90%;max-width:420px;margin:12px auto;border-radius:12px;">
-</div>
-
-<!-- Fixed bottom profile + leaderboard -->
-<div id="bottomBar" style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:1000;">
-  <div class="profile-card" style="background:rgba(255,255,255,0.04);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);text-align:center;">
-    <div class="profile-name" id="profileName">GUEST 0000</div>
-    <div class="profile-info">STARS COLLECTED: <span id="starCount">50</span>⭐</div>
-    <div class="profile-info">CASH EARNED: <span id="cashCount">0</span></div>
+  <!-- Start / join flow -->
+  <div id="startPage" style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:18px;">
+    <button id="startBtn" style="padding:12px 22px;border-radius:12px;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:800;font-size:16px;border:none;cursor:pointer;">Play</button>
+    <!-- Poster only visible on start page -->
+    <img id="posterImg" src="https://via.placeholder.com/420x200?text=Poster+Here" alt="Poster" style="width:90%;max-width:420px;margin:12px auto;border-radius:12px;">
   </div>
-  <button id="leaderboardBtn" style="padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#FFD700,#FF8C00);color:#111;font-weight:800;border:none;cursor:pointer;font-size:14px;">View Leaderboard 🏆</button>
-</div>
 
-    
-    <!-- Poster image, only on start page -->
-<img id="posterImg" src="https://via.placeholder.com/420x200?text=Poster+Here" alt="Poster" style="width:90%;max-width:420px;margin:12px auto;border-radius:12px;">
-
-<!-- Profile Panel, fixed above leaderboard -->
-<div class="profile" id="profilePanel" style="position:fixed;bottom:140px;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;justify-content:center;z-index:1000;">
-  <div class="profile-card" style="background:rgba(255,255,255,0.04);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);text-align:center;">
-    <div class="profile-name" id="profileName">GUEST 0000</div>
-    <div class="profile-info">STARS COLLECTED: <span id="starCount">50</span>⭐</div>
-    <div class="profile-info">CASH EARNED: <span id="cashCount">0</span></div>
-  </div>
-</div>
-
-  <!-- spinner -->
+  <!-- Spinner (loading animation) -->
   <div id="spinner" class="hidden" style="margin-top:18px;">
     <div style="width:44px;height:44px;border-radius:50%;border:6px solid #222;border-top:6px solid #00e676; animation:spin 1s linear infinite;margin:0 auto"></div>
     <div style="margin-top:10px;color:#aaa;font-size:13px">Loading Tap Arena…</div>
   </div>
 
-  <!-- GAME UI -->
+  <!-- Game UI -->
   <div id="gamePage" class="hidden" style="width:100%;display:flex;flex-direction:column;align-items:center;">
 
-    <!-- Glass terminal (timer, taps, earnings, bonus inside) -->
+    <!-- Glass terminal -->
     <div id="tapTerminal" class="glass-terminal" aria-live="polite">
       <div class="terminal-header">TAP TERMINAL</div>
 
@@ -219,28 +197,37 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
       <div id="bonusContainer" style="margin-top:12px;">
         <div id="bonusBar"></div>
       </div>
+    </div>
 
-    </div> <!-- end glass terminal -->
-    
-
-
-    <!-- small round TAP button (far from terminal) -->
+    <!-- TAP button -->
     <button id="tapButton" aria-label="Tap" title="Tap fast!">TAP</button>
 
+    <!-- Mini stats -->
     <div id="miniStats" aria-hidden="false">Taps: <strong id="miniTapCount">0</strong> · Earnings: ₦<span id="miniEarnings">0.00</span></div>
 
-    
-    <!-- result (inline) -->
+    <!-- Result panel -->
     <div id="resultModalInner" class="hidden">
       <div style="margin-top:14px; background:rgba(255,255,255,0.02); padding:12px; border-radius:8px;">
         <div style="font-weight:800;color:var(--accent1)">Time's Up!</div>
         <div style="margin-top:6px">Final taps: <strong id="finalTaps">0</strong></div>
         <div style="margin-top:6px">Your place: <strong id="finalPlace">—</strong></div>
-        <div style="margin-top:10px"><button id="playAgain" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:800;cursor:pointer">Play Again</button></div>
+        <div style="margin-top:10px">
+          <button id="playAgain" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:800;cursor:pointer">Play Again</button>
+        </div>
       </div>
     </div>
 
   </div> <!-- end gamePage -->
+
+  <!-- Fixed bottom profile + leaderboard button -->
+  <div id="bottomBar" style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:1000;">
+    <div class="profile-card" style="background:rgba(255,255,255,0.04);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);text-align:center;">
+      <div class="profile-name" id="profileName">GUEST 0000</div>
+      <div class="profile-info">STARS COLLECTED: <span id="starCount">50</span>⭐</div>
+      <div class="profile-info">CASH EARNED: <span id="cashCount">0</span></div>
+    </div>
+    <button id="leaderboardBtn" style="padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#FFD700,#FF8C00);color:#111;font-weight:800;border:none;cursor:pointer;font-size:14px;">View Leaderboard 🏆</button>
+  </div>
 
   <!-- Leaderboard modal -->
   <div id="leaderboardModal" class="modal-backdrop" role="dialog" aria-modal="true">
@@ -255,7 +242,7 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
 
 </div>
 
-<!-- audio -->
+<!-- Audio -->
 <audio id="tapSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
 
 <!-- Firebase SDKs + script -->
