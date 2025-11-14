@@ -457,58 +457,72 @@ document.addEventListener('gesturestart', function(e){ e.preventDefault(); }, { 
 document.body.addEventListener('touchstart', () => { tapSound?.play().catch(()=>{}); }, { once:true });
 
 // ---------- Start flow ----------
-startBtn?.addEventListener('click', () => {
-  // show play confirmation modal
-  if (playModal) playModal.style.display = 'flex';
-});
-
-// cancel
-cancelPlay?.addEventListener('click', () => {
-  if (playModal) playModal.style.display = 'none';
-});
-
-// confirm
-confirmPlay?.addEventListener('click', async () => {
-  // ensure currentUser is loaded
-  if (!currentUser) {
-    await loadCurrentUserForGame();
-  }
-
-  if (!currentUser) {
-    alert('User not found. Please log in again.');
-    return;
-  }
-
-  // take star cost via transaction
-  let localStars = parseInt(starCountEl?.textContent || '0', 10);
-
-  if (currentUser?.uid){
-    const r = await tryDeductStarsForJoin(STAR_COST);
-    if (!r.ok){
-      alert(r.message || 'Not enough stars');
-      return;
+function initGameUI() {
+  // Start button click: show confirmation modal
+  startBtn?.addEventListener('click', async () => {
+    // ensure user is loaded before showing modal
+    if (!currentUser) {
+      await loadCurrentUserForGame();
     }
-    if (starCountEl) starCountEl.textContent = String(Math.max(0, localStars - STAR_COST));
-  } else {
-    if (localStars < STAR_COST){
-      alert('Not enough stars to play!');
-      return;
+
+    if (!currentUser) {
+      // fallback guest
+      if (profileNameEl) profileNameEl.textContent = 'GUEST 0000';
+      if (starCountEl) starCountEl.textContent = starCountEl.textContent || '50';
     }
-    if (starCountEl) starCountEl.textContent = String(localStars - STAR_COST);
-  }
 
-  // hide modal + poster + start, show spinner
-  if (playModal) playModal.style.display = 'none';
-  if (posterImg) posterImg.style.display = 'none';
-  if (startPage) startPage.style.display = 'none';
-  if (spinner) spinner.classList.remove('hidden');
+    if (playModal) playModal.style.display = 'flex';
+  });
 
-  setTimeout(() => {
-    if (spinner) spinner.classList.add('hidden');
-    if (gamePage) gamePage.classList.remove('hidden');
-    startSession();
-  }, 700);
-});
+  // Cancel button hides modal
+  cancelPlay?.addEventListener('click', () => {
+    if (playModal) playModal.style.display = 'none';
+  });
+
+  // Confirm button: deduct stars & start session
+  confirmPlay?.addEventListener('click', async () => {
+    // ensure user is loaded
+    if (!currentUser) {
+      await loadCurrentUserForGame();
+    }
+
+    let localStars = parseInt(starCountEl?.textContent || '0', 10);
+
+    if (currentUser?.uid) {
+      // logged-in: try transactional deduction
+      const r = await tryDeductStarsForJoin(STAR_COST);
+      if (!r.ok) {
+        alert(r.message || 'Not enough stars');
+        return;
+      }
+      // update UI optimistically
+      if (starCountEl) starCountEl.textContent = String(Math.max(0, localStars - STAR_COST));
+    } else {
+      // guest: deduct from UI only
+      if (localStars < STAR_COST) {
+        alert('Not enough stars to play!');
+        return;
+      }
+      if (starCountEl) starCountEl.textContent = String(localStars - STAR_COST);
+    }
+
+    // hide modal + poster + start page, show spinner
+    if (playModal) playModal.style.display = 'none';
+    if (posterImg) posterImg.style.display = 'none';
+    if (startPage) startPage.style.display = 'none';
+    if (spinner) spinner.classList.remove('hidden');
+
+    // short delay then show game page
+    setTimeout(() => {
+      if (spinner) spinner.classList.add('hidden');
+      if (gamePage) gamePage.classList.remove('hidden');
+      startSession();
+    }, 700);
+  });
+}
+
+// initialize start flow
+initGameUI();
 
 // ---------- Session functions ----------
 function startSession(){
