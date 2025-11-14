@@ -245,14 +245,13 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
 <!-- Audio -->
 <audio id="tapSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
 
-<!-- Firebase SDKs + script -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import {
   getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-// ---------- CONFIG: replace with your own firebase config if needed ----------
+// ---------- Firebase config ----------
 const firebaseConfig = {
   apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
@@ -290,245 +289,145 @@ const resultInner = document.getElementById('resultModalInner');
 const finalTapsEl = document.getElementById('finalTaps');
 const finalPlaceEl = document.getElementById('finalPlace');
 const playAgain = document.getElementById('playAgain');
+const posterImg = document.getElementById('posterImg');
+const starCountEl = document.getElementById('starCount');
 
-// ---------- state ----------
-let taps = 0;
-let earnings = 0.00;
-let timer = 60;             // seconds
-let duration = 60;          // session length (seconds)
-let intervalId = null;
-let running = false;
-let bonusLevel = 1;
-let progress = 0;
-let tapsForNext = 100;
-
-// choose appropriate tap event
+// ---------- State ----------
+let taps = 0, earnings = 0, timer = 60, duration = 60, intervalId = null, running = false;
+let bonusLevel = 1, progress = 0, tapsForNext = 100;
 const tapEvent = ('ontouchstart' in window) ? 'touchstart' : 'click';
 
-// unlock audio on first touch to satisfy iOS autoplay
+// unlock audio on first touch for iOS
 document.body.addEventListener('touchstart', () => { tapSound.play().catch(()=>{}); }, { once:true });
 
-// ---------- Start flow (with play confirmation modal) ----------
+// ---------- Start Game ----------
 startBtn.addEventListener('click', () => {
-  // Show play confirmation modal instead of directly starting
-  document.getElementById('playModal').style.display = 'flex';
-});
-
-// Cancel button
-document.getElementById('cancelPlay').addEventListener('click', () => {
-  document.getElementById('playModal').style.display = 'none';
-});
-
-// Confirm play button
-document.getElementById('confirmPlay').addEventListener('click', () => {
-  const starCountEl = document.getElementById('starCount');
-  let stars = parseInt(starCountEl.textContent, 10);
-
-  if(stars >= 10){
-    stars -= 10;
-    starCountEl.textContent = stars;
-    document.getElementById('playModal').style.display = 'none';
-
-    // Hide poster on game start
-    document.getElementById('posterImg').style.display = 'none';
-
-    // show spinner briefly
-    startPage.style.display = 'none';
-    spinner.classList.remove('hidden');
-    setTimeout(() => {
-      spinner.classList.add('hidden');
-      gamePage.classList.remove('hidden');
-      startSession();
-    }, 700);
-  } else {
+  let stars = parseInt(starCountEl.textContent,10);
+  if(stars < 10){
     alert("Not enough stars to play!");
+    return;
   }
+  stars -= 10;
+  starCountEl.textContent = stars;
+
+  // hide poster + start page
+  posterImg.style.display = 'none';
+  startPage.style.display = 'none';
+  spinner.classList.remove('hidden');
+
+  setTimeout(() => {
+    spinner.classList.add('hidden');
+    gamePage.classList.remove('hidden');
+    startSession();
+  }, 700);
 });
 
+// ---------- Session ----------
 function startSession(){
-  // reset session state
-  taps = 0;
-  earnings = 0;
-  timer = duration;
-  bonusLevel = 1;
-  progress = 0;
-  tapsForNext = 100;
+  taps = 0; earnings = 0; timer = duration; bonusLevel = 1; progress = 0; tapsForNext = 100;
   running = true;
   updateUI();
-
-  // reset train bar full width then shrink over time
   trainBar.style.width = '100%';
 
-  // start countdown interval
   intervalId = setInterval(() => {
     timer--;
-    if(timer < 0) timer = 0;
     updateUI();
-
-    // update train bar width (percent)
-    const pct = Math.max(0, (timer / duration) * 100);
-    trainBar.style.width = pct + '%';
-
-    if(timer === 0){
-      endSession();
-    }
+    trainBar.style.width = Math.max(0,(timer/duration)*100)+'%';
+    if(timer <=0) endSession();
   }, 1000);
 }
 
-// ---------- Tap Handler ----------
-tapButton.addEventListener(tapEvent, (e) => {
+// ---------- Tap handler ----------
+tapButton.addEventListener(tapEvent, e=>{
   e.preventDefault();
-  if (!running) return;
+  if(!running) return;
 
-  taps++;
-  earnings += 1.00; // 1 naira per tap (adjust as needed)
-  progress++;
-
-  // update bonus and progress
-  if (progress >= tapsForNext) {
-    progress = 0;
-    bonusLevel++;
-    tapsForNext = 100 + (bonusLevel - 1) * 50;
-    // tiny confetti/pro notification (kept minimal)
+  taps++; earnings+=1; progress++;
+  if(progress>=tapsForNext){
+    progress=0; bonusLevel++; tapsForNext=100+(bonusLevel-1)*50;
     showTempMessage('TAP PRO!');
   }
 
-  // update UI fast
   updateUI();
-
-  // play sound (non-blocking)
-  tapSound.currentTime = 0;
-  tapSound.play().catch(()=>{});
-
-  // tiny vibration
-  if (navigator.vibrate) navigator.vibrate(10);
+  tapSound.currentTime=0; tapSound.play().catch(()=>{});
+  if(navigator.vibrate) navigator.vibrate(10);
 });
 
-// ---------- update UI ----------
+// ---------- UI update ----------
 function updateUI(){
-  timerEl.textContent = String(timer);
-  tapCountEl.textContent = String(taps);
+  timerEl.textContent = timer;
+  tapCountEl.textContent = taps;
   earningsEl.textContent = earnings.toFixed(2);
-  bonusBar.style.width = ((progress / tapsForNext) * 100) + '%';
-  bonusLevelVal.textContent = String(bonusLevel);
-  speedVal.textContent = (taps > 0 && duration - timer > 0) ? Math.round(taps / Math.max(1, (duration - timer))) + '/s' : '—';
-  miniTapCount.textContent = String(taps);
+  bonusBar.style.width = ((progress/tapsForNext)*100)+'%';
+  bonusLevelVal.textContent = bonusLevel;
+  speedVal.textContent = (taps>0 && duration-timer>0) ? Math.round(taps/(duration-timer))+'/s' : '—';
+  miniTapCount.textContent = taps;
   miniEarnings.textContent = earnings.toFixed(2);
 }
 
-// ---------- end session (save to Firestore) ----------
+// ---------- End session ----------
 async function endSession(){
-  if (!running) return;
-  running = false;
-  clearInterval(intervalId);
-  intervalId = null;
+  if(!running) return;
+  running=false;
+  clearInterval(intervalId); intervalId=null;
 
-  // show result inline
-  finalTapsEl.textContent = String(taps);
+  finalTapsEl.textContent = taps;
 
-  // save to Firestore
-  try {
-    await addDoc(collection(db, 'tapSessions'), {
-      taps: taps,
-      earnings: earnings,
-      timestamp: serverTimestamp()
-    });
-  } catch (err) {
-    console.error('Failed to save session', err);
-  }
+  try{
+    await addDoc(collection(db,'tapSessions'), {taps, earnings, timestamp:serverTimestamp()});
+  }catch(e){ console.error(e); }
 
-  // compute place by querying top 10 and placing our value among them
-  try {
-    const oneHourAgo = Timestamp.fromDate(new Date(Date.now() - 3600 * 1000));
-    const q = query(
-      collection(db, 'tapSessions'),
-      where('timestamp', '>', oneHourAgo),
-      orderBy('taps', 'desc'),
-      limit(10)
-    );
+  // Compute place locally
+  try{
+    const oneHourAgo = Timestamp.fromDate(new Date(Date.now()-3600*1000));
+    const q = query(collection(db,'tapSessions'), where('timestamp','>',oneHourAgo), orderBy('taps','desc'), limit(10));
     const snap = await getDocs(q);
-    const arr = snap.docs.map(d => d.data().taps || 0);
-    // insert our taps into a local clone and compute place
-    const all = arr.slice();
-    all.push(taps);
-    all.sort((a,b)=>b-a);
-    const place = all.indexOf(taps) + 1;
-    finalPlaceEl.textContent = `#${place}`;
-  } catch (err) {
-    console.warn('Could not compute place', err);
-    finalPlaceEl.textContent = '—';
-  }
+    const arr = snap.docs.map(d=>d.data().taps||0);
+    const all = arr.slice(); all.push(taps); all.sort((a,b)=>b-a);
+    finalPlaceEl.textContent = `#${all.indexOf(taps)+1}`;
+  }catch(e){ finalPlaceEl.textContent='—'; console.warn(e); }
 
-  // show result panel
   resultInner.classList.remove('hidden');
-  // stop interactions (disable tap)
-  tapButton.disabled = true;
+  tapButton.disabled=true;
 }
 
-// restart
-playAgain.addEventListener('click', () => {
+// ---------- Play again ----------
+playAgain.addEventListener('click', ()=>{
   resultInner.classList.add('hidden');
-  tapButton.disabled = false;
-  // show start page again (or restart)
-  // we'll restart session immediately to keep flow
+  tapButton.disabled=false;
   startSession();
 });
 
-// ---------- leaderboard modal ----------
-leaderboardBtn.addEventListener('click', async () => {
-  leaderboardList.innerHTML = '<li style="color:#aaa">Loading…</li>';
-  leaderboardModal.style.display = 'flex';
-  try {
-    const oneHourAgo = Timestamp.fromDate(new Date(Date.now() - 3600 * 1000));
-    const q = query(
-      collection(db, 'tapSessions'),
-      where('timestamp', '>', oneHourAgo),
-      orderBy('taps', 'desc'),
-      limit(10)
-    );
+// ---------- Leaderboard ----------
+leaderboardBtn.addEventListener('click', async ()=>{
+  leaderboardList.innerHTML='<li style="color:#aaa">Loading…</li>';
+  leaderboardModal.style.display='flex';
+  try{
+    const oneHourAgo = Timestamp.fromDate(new Date(Date.now()-3600*1000));
+    const q = query(collection(db,'tapSessions'), where('timestamp','>',oneHourAgo), orderBy('taps','desc'), limit(10));
     const snap = await getDocs(q);
-    if (snap.empty) {
-      leaderboardList.innerHTML = '<li style="color:#aaa">No scores this hour</li>';
-      return;
-    }
-    leaderboardList.innerHTML = snap.docs.map((d,i) => {
-      const data = d.data();
-      const t = data.taps || 0;
-      const earn = (data.earnings || 0).toFixed(2);
-      // use timestamp if exists
-      const when = data.timestamp && data.timestamp.toDate ? data.timestamp.toDate().toLocaleTimeString() : '';
+    if(snap.empty) leaderboardList.innerHTML='<li style="color:#aaa">No scores this hour</li>';
+    else leaderboardList.innerHTML = snap.docs.map((d,i)=>{
+      const data=d.data(); const t=data.taps||0; const earn=(data.earnings||0).toFixed(2);
+      const when = data.timestamp?.toDate ? data.timestamp.toDate().toLocaleTimeString() : '';
       return `<li><strong>#${i+1}</strong> — ${t} taps &nbsp; (₦${earn}) <div style="font-size:11px;color:#aaa">${when}</div></li>`;
     }).join('');
-  } catch (err) {
-    console.error('Leaderboard load failed', err);
-    leaderboardList.innerHTML = '<li style="color:#f88">Failed to load</li>';
-  }
+  }catch(e){ leaderboardList.innerHTML='<li style="color:#f88">Failed to load</li>'; console.error(e); }
 });
 
-closeLeaderboard.addEventListener('click', () => {
-  leaderboardModal.style.display = 'none';
-});
-// allow clicking backdrop to close
-leaderboardModal.addEventListener('click', (e) => {
-  if (e.target === leaderboardModal) leaderboardModal.style.display = 'none';
-});
+closeLeaderboard.addEventListener('click', ()=>leaderboardModal.style.display='none');
+leaderboardModal.addEventListener('click', e=>{ if(e.target===leaderboardModal) leaderboardModal.style.display='none'; });
 
-// small temporary message
+// ---------- Temporary message ----------
 function showTempMessage(txt){
-  const msg = document.createElement('div');
-  msg.textContent = txt;
-  Object.assign(msg.style, {
-    position: 'fixed', left: '50%', top: '30%', transform:'translateX(-50%)',
-    background:'#000', padding:'10px 16px', borderRadius:'8px', border:'1px solid rgba(255,255,255,0.06)', zIndex:9999
-  });
+  const msg=document.createElement('div'); msg.textContent=txt;
+  Object.assign(msg.style,{position:'fixed',left:'50%',top:'30%',transform:'translateX(-50%)',background:'#000',padding:'10px 16px',borderRadius:'8px',border:'1px solid rgba(255,255,255,0.06)',zIndex:9999});
   document.body.appendChild(msg);
-  setTimeout(()=> { msg.style.transition='opacity .4s'; msg.style.opacity=0; setTimeout(()=>msg.remove(),400); }, 900);
+  setTimeout(()=>{ msg.style.transition='opacity .4s'; msg.style.opacity=0; setTimeout(()=>msg.remove(),400); },900);
 }
 
-// prevent double-tap to zoom on iOS by blocking gesturestart (extra guard)
-document.addEventListener('gesturestart', function(e){ e.preventDefault(); }, { passive:false });
-
+// Prevent double-tap zoom
+document.addEventListener('gesturestart', e=>e.preventDefault(), {passive:false});
 </script>
-
 </body>
 </html>
