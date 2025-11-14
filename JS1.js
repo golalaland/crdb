@@ -1014,9 +1014,14 @@ async function loginWhitelist(email, password) {
       isHost: !!data.isHost
     };
 
-    // Cache credentials
-    localStorage.setItem("vipUser", JSON.stringify({ email, password }));
+    // Sanitize email → doc ID (same pattern as Firestore)
+const sanitizedId = email.replace(/[@.]/g, '_').toLowerCase();
 
+// Cache credentials safely
+localStorage.setItem("vipUser", JSON.stringify({
+  email,
+  id: sanitizedId
+}));
     // Initialize chat + notifications
     updateRedeemLink();
     updateTipLink();
