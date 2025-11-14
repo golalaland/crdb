@@ -276,11 +276,28 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp, Timestamp
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+// ---------- Firebase config ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
+  authDomain: "metaverse-1010.firebaseapp.com",
+  projectId: "metaverse-1010",
+  storageBucket: "metaverse-1010.appspot.com",
+  messagingSenderId: "1044064238233",
+  appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
+  measurementId: "G-S77BMC266C",
+  databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 // ---------- UI refs ----------
 const startBtn = document.getElementById('startBtn');
-const playModal = document.getElementById('playModal');
-const cancelPlay = document.getElementById('cancelPlay');
-const confirmPlay = document.getElementById('confirmPlay');
 const spinner = document.getElementById('spinner');
 const startPage = document.getElementById('startPage');
 const gamePage = document.getElementById('gamePage');
@@ -307,48 +324,28 @@ const posterImg = document.getElementById('posterImg');
 const starCountEl = document.getElementById('starCount');
 
 // ---------- State ----------
-let taps = 0,
-    earnings = 0,
-    timer = 60,
-    duration = 60,
-    intervalId = null,
-    running = false;
-let bonusLevel = 1,
-    progress = 0,
-    tapsForNext = 100;
+let taps = 0, earnings = 0, timer = 60, duration = 60, intervalId = null, running = false;
+let bonusLevel = 1, progress = 0, tapsForNext = 100;
 const tapEvent = ('ontouchstart' in window) ? 'touchstart' : 'click';
 
-// Unlock audio on first touch (iOS)
+// unlock audio on first touch for iOS
 document.body.addEventListener('touchstart', () => { tapSound.play().catch(()=>{}); }, { once:true });
 
-// ---------- Start flow ----------
-
-// Show confirmation modal
+// ---------- Start Game ----------
 startBtn.addEventListener('click', () => {
-  playModal.style.display = 'flex';
-});
-
-// Cancel button
-cancelPlay.addEventListener('click', () => {
-  playModal.style.display = 'none';
-});
-
-// Confirm play button
-confirmPlay.addEventListener('click', () => {
-  let stars = parseInt(starCountEl.textContent, 10);
+  let stars = parseInt(starCountEl.textContent,10);
   if(stars < 10){
     alert("Not enough stars to play!");
     return;
   }
-  starCountEl.textContent = stars - 10;
+  stars -= 10;
+  starCountEl.textContent = stars;
 
-  // Hide modal + poster + start page
-  playModal.style.display = 'none';
+  // hide poster + start page
   posterImg.style.display = 'none';
   startPage.style.display = 'none';
   spinner.classList.remove('hidden');
 
-  // Start game after brief spinner
   setTimeout(() => {
     spinner.classList.add('hidden');
     gamePage.classList.remove('hidden');
@@ -462,66 +459,6 @@ function showTempMessage(txt){
 
 // Prevent double-tap zoom
 document.addEventListener('gesturestart', e=>e.preventDefault(), {passive:false});
-const resultModal = document.getElementById('resultModal');
-const resultMessage = document.getElementById('resultMessage');
-const closeResult = document.getElementById('closeResult');
-const playAgainBtn = document.getElementById('playAgainBtn');
-
-// ---------- end session ----------
-async function endSession() {
-  if (!running) return;
-  running = false;
-  clearInterval(intervalId);
-  intervalId = null;
-
-  // Save session to Firestore
-  let place = null;
-  try {
-    await addDoc(collection(db, 'tapSessions'), {
-      taps: taps,
-      earnings: earnings,
-      timestamp: serverTimestamp()
-    });
-
-    // compute leaderboard position
-    const oneHourAgo = Timestamp.fromDate(new Date(Date.now() - 3600*1000));
-    const q = query(
-      collection(db, 'tapSessions'),
-      where('timestamp', '>', oneHourAgo),
-      orderBy('taps', 'desc'),
-      limit(10)
-    );
-    const snap = await getDocs(q);
-    const allTaps = snap.docs.map(d => d.data().taps || 0);
-    allTaps.push(taps);
-    allTaps.sort((a,b)=>b-a);
-    place = allTaps.indexOf(taps)+1;
-  } catch(err) {
-    console.error('Failed to save session / compute place', err);
-  }
-
-  // Show result modal
-  const username = document.getElementById('profileName').textContent || "Guest";
-  if(place){
-    resultMessage.innerHTML = `${username}, you earned ₦${earnings.toFixed(2)} and made ${taps} taps, you are #${place} on the leaderboard this round.`;
-  } else {
-    resultMessage.innerHTML = `${username}, you earned ₦${earnings.toFixed(2)} and made ${taps} taps. Check your position on the leaderboard table for this round.`;
-  }
-
-  resultModal.style.display = 'flex';
-  tapButton.disabled = true;
-}
-
-// ---------- close / play again ----------
-closeResult.addEventListener('click', () => {
-  resultModal.style.display = 'none';
-});
-
-playAgainBtn.addEventListener('click', () => {
-  resultModal.style.display = 'none';
-  tapButton.disabled = false;
-  startSession();
-});
 </script>
 </body>
 </html>
