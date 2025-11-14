@@ -357,60 +357,58 @@ function initializePot(){
 async function loadCurrentUserForGame() {
   console.log("🔍 Loading current user for game...");
 
-  // Grab stored user from localStorage
+  // Get stored user from localStorage
   const vipRaw = localStorage.getItem('vipUser');
   const hostRaw = localStorage.getItem('hostUser');
   const storedUser = vipRaw ? JSON.parse(vipRaw) : hostRaw ? JSON.parse(hostRaw) : null;
 
   console.log("📦 Stored user:", storedUser);
 
-  if (!storedUser?.email) {
+  // No stored user → guest
+  if (!storedUser || !storedUser.email) {
     console.warn("⚠️ No valid stored user found.");
     currentUser = null;
     if (DOM.profileNameEl) DOM.profileNameEl.textContent = 'GUEST 0000';
     if (DOM.starCountEl) DOM.starCountEl.textContent = '50';
+    if (DOM.cashCountEl) DOM.cashCountEl.textContent = '0';
     return;
   }
 
   try {
-    // Convert email to safe Firestore ID
-    const uid = storedUser.id || storedUser.email.replace(/[.#$[\]]/g, "_").toLowerCase();
-    console.log("🔑 Fetching user doc:", uid);
+    // Sanitize email to match your document ID (comma instead of dot)
+    const id = storedUser.id || storedUser.email.replace(/@/g, "_").replace(/\./g, ",").toLowerCase();
+    console.log("🔑 Fetching user doc:", id);
 
-    const userDocRef = doc(db, "users", uid);
+    const userDocRef = doc(db, "users", id);
     const uDoc = await getDoc(userDocRef);
 
-    if (!uDoc.exists()) {
-      console.warn("⚠️ User not found in Firestore:", uid);
-      currentUser = null;
+    if (!uDoc.exists()) throw new Error("User not found in users collection");
 
-      // This triggers TapMaster “user not found” properly
-      if (DOM.profileNameEl) DOM.profileNameEl.textContent = 'GUEST 0000';
-      if (DOM.starCountEl) DOM.starCountEl.textContent = '50';
-      return;
-    }
-
-    // Pull actual data from Firestore
     const userData = uDoc.data();
-    currentUser = {
-      id: uid,
-      email: userData.email || storedUser.email,
-      fullName: userData.fullName || userData.vipName || 'PLAYER',
-      stars: userData.stars ?? 0,
-      cash: userData.cash ?? 0,
-    };
+    currentUser = { ...userData, id };
 
     // Update UI
-    if (DOM.profileNameEl) DOM.profileNameEl.textContent = currentUser.fullName;
-    if (DOM.starCountEl) DOM.starCountEl.textContent = currentUser.stars;
+    if (DOM.profileNameEl) DOM.profileNameEl.textContent = currentUser.fullName || currentUser.vipName || 'PLAYER';
+    if (DOM.starCountEl) DOM.starCountEl.textContent = currentUser.stars ?? 0;
+    if (DOM.cashCountEl) DOM.cashCountEl.textContent = currentUser.cash ?? 0;
 
-    console.log("✅ User loaded successfully:", currentUser);
+    console.log("✅ User Loaded:", currentUser);
+
+    // Optional: whitelist check
+    const whitelistRef = doc(db, "whitelist", storedUser.email);
+    const wlDoc = await getDoc(whitelistRef);
+    if (!wlDoc.exists()) {
+      console.warn("⚠️ User not in whitelist");
+    } else {
+      console.log("✅ User is whitelisted");
+    }
 
   } catch (err) {
     console.error("🔥 ERROR loading user:", err);
     currentUser = null;
     if (DOM.profileNameEl) DOM.profileNameEl.textContent = 'GUEST 0000';
     if (DOM.starCountEl) DOM.starCountEl.textContent = '50';
+    if (DOM.cashCountEl) DOM.cashCountEl.textContent = '0';
   }
 }
 
