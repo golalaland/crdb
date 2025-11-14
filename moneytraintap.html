@@ -196,6 +196,29 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
       </div>
 
     </div> <!-- end glass terminal -->
+    
+    
+    <!-- Poster image, only on start page -->
+<img id="posterImg" src="https://via.placeholder.com/420x200?text=Poster+Here" alt="Poster" style="width:90%;max-width:420px;margin:12px auto;border-radius:12px;">
+
+<!-- Profile Panel, fixed above leaderboard -->
+<div class="profile" id="profilePanel" style="position:fixed;bottom:140px;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;justify-content:center;z-index:1000;">
+  <div class="profile-card" style="background:rgba(255,255,255,0.04);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);text-align:center;">
+    <div class="profile-name" id="profileName">GUEST 0000</div>
+    <div class="profile-info">STARS COLLECTED: <span id="starCount">50</span>⭐</div>
+    <div class="profile-info">CASH EARNED: <span id="cashCount">0</span></div>
+  </div>
+</div>
+
+<!-- Play confirmation modal -->
+<div id="playModal" class="modal-backdrop" style="display:none;">
+  <div class="modal" style="text-align:center;">
+    <h3>Play Tap Master?</h3>
+    <p>This will cost <strong>10⭐</strong></p>
+    <button id="confirmPlay" style="padding:8px 14px;border-radius:8px;border:none;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:800;cursor:pointer;">Yes</button>
+    <button id="cancelPlay" style="padding:8px 14px;border-radius:8px;border:none;background:linear-gradient(90deg,#FF1493,#FF8C00);color:#fff;font-weight:800;cursor:pointer;">Cancel</button>
+  </div>
+</div>
 
     <!-- small round TAP button (far from terminal) -->
     <button id="tapButton" aria-label="Tap" title="Tap fast!">TAP</button>
@@ -296,37 +319,65 @@ const tapEvent = ('ontouchstart' in window) ? 'touchstart' : 'click';
 // unlock audio on first touch to satisfy iOS autoplay
 document.body.addEventListener('touchstart', () => { tapSound.play().catch(()=>{}); }, { once:true });
 
-// ---------- Start flow ----------
+// ---------- Start flow (with play confirmation modal) ----------
 startBtn.addEventListener('click', () => {
-  // show spinner briefly
-  startPage.style.display = 'none';
-  spinner.classList.remove('hidden');
-  setTimeout(()=> {
-    spinner.classList.add('hidden');
-    gamePage.classList.remove('hidden');
-    startSession();
-  }, 700);
+  // Show play confirmation modal instead of directly starting
+  document.getElementById('playModal').style.display = 'flex';
+});
+
+// Cancel button
+document.getElementById('cancelPlay').addEventListener('click', () => {
+  document.getElementById('playModal').style.display = 'none';
+});
+
+// Confirm play button
+document.getElementById('confirmPlay').addEventListener('click', () => {
+  const starCountEl = document.getElementById('starCount');
+  let stars = parseInt(starCountEl.textContent, 10);
+
+  if(stars >= 10){ // cost in stars
+    stars -= 10;
+    starCountEl.textContent = stars;
+    document.getElementById('playModal').style.display = 'none';
+
+    // show spinner briefly
+    startPage.style.display = 'none';
+    spinner.classList.remove('hidden');
+    setTimeout(() => {
+      spinner.classList.add('hidden');
+      gamePage.classList.remove('hidden');
+      startSession();
+    }, 700);
+  } else {
+    alert("Not enough stars to play!");
+  }
 });
 
 function startSession(){
-  // reset
-  taps = 0; earnings = 0; timer = duration; bonusLevel = 1; progress = 0; tapsForNext = 100;
+  // reset session state
+  taps = 0;
+  earnings = 0;
+  timer = duration;
+  bonusLevel = 1;
+  progress = 0;
+  tapsForNext = 100;
   running = true;
   updateUI();
 
   // reset train bar full width then shrink over time
   trainBar.style.width = '100%';
+
   // start countdown interval
-  intervalId = setInterval(()=>{
+  intervalId = setInterval(() => {
     timer--;
-    if (timer < 0) timer = 0;
+    if(timer < 0) timer = 0;
     updateUI();
 
     // update train bar width (percent)
     const pct = Math.max(0, (timer / duration) * 100);
     trainBar.style.width = pct + '%';
 
-    if (timer === 0) {
+    if(timer === 0){
       endSession();
     }
   }, 1000);
