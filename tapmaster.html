@@ -276,7 +276,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-<script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import {
   getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp, Timestamp
@@ -298,6 +297,9 @@ const db = getFirestore(app);
 
 // ---------- UI refs ----------
 const startBtn = document.getElementById('startBtn');
+const playModal = document.getElementById('playModal');
+const cancelPlay = document.getElementById('cancelPlay');
+const confirmPlay = document.getElementById('confirmPlay');
 const spinner = document.getElementById('spinner');
 const startPage = document.getElementById('startPage');
 const gamePage = document.getElementById('gamePage');
@@ -324,28 +326,48 @@ const posterImg = document.getElementById('posterImg');
 const starCountEl = document.getElementById('starCount');
 
 // ---------- State ----------
-let taps = 0, earnings = 0, timer = 60, duration = 60, intervalId = null, running = false;
-let bonusLevel = 1, progress = 0, tapsForNext = 100;
+let taps = 0,
+    earnings = 0,
+    timer = 60,
+    duration = 60,
+    intervalId = null,
+    running = false;
+let bonusLevel = 1,
+    progress = 0,
+    tapsForNext = 100;
 const tapEvent = ('ontouchstart' in window) ? 'touchstart' : 'click';
 
-// unlock audio on first touch for iOS
+// Unlock audio on first touch (iOS)
 document.body.addEventListener('touchstart', () => { tapSound.play().catch(()=>{}); }, { once:true });
 
-// ---------- Start Game ----------
+// ---------- Start flow ----------
+
+// Show confirmation modal
 startBtn.addEventListener('click', () => {
-  let stars = parseInt(starCountEl.textContent,10);
+  playModal.style.display = 'flex';
+});
+
+// Cancel button
+cancelPlay.addEventListener('click', () => {
+  playModal.style.display = 'none';
+});
+
+// Confirm play button
+confirmPlay.addEventListener('click', () => {
+  let stars = parseInt(starCountEl.textContent, 10);
   if(stars < 10){
     alert("Not enough stars to play!");
     return;
   }
-  stars -= 10;
-  starCountEl.textContent = stars;
+  starCountEl.textContent = stars - 10;
 
-  // hide poster + start page
+  // Hide modal + poster + start page
+  playModal.style.display = 'none';
   posterImg.style.display = 'none';
   startPage.style.display = 'none';
   spinner.classList.remove('hidden');
 
+  // Start game after brief spinner
   setTimeout(() => {
     spinner.classList.add('hidden');
     gamePage.classList.remove('hidden');
