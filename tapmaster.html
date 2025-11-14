@@ -391,6 +391,7 @@ async function loadCurrentUserForGame() {
     const snap = await getDoc(userRef);
 
     if (!snap.exists()) {
+      // new user fallback
       currentUser = { 
         uid: storedUser.uid, 
         chatId: storedUser.displayName || storedUser.email.split('@')[0], 
@@ -407,7 +408,10 @@ async function loadCurrentUserForGame() {
     if (starCountEl) starCountEl.textContent = String(currentUser.stars ?? 0);
 
   } catch (err) {
-    console.warn('loadCurrentUserForGame error', err);
+    console.warn('loadCurrentUserForGame error:', err);
+    currentUser = null;
+    if (profileNameEl) profileNameEl.textContent = 'GUEST 0000';
+    if (starCountEl) starCountEl.textContent = starCountEl.textContent || '50';
   }
 }
 
@@ -468,7 +472,8 @@ function initGameUI() {
   // Start button click: show confirmation modal
   startBtn?.addEventListener('click', async () => {
     if (!currentUser) await loadCurrentUserForGame();
-    if (!currentUser) {
+    if (!currentUser?.uid) {
+      // fallback guest
       if (profileNameEl) profileNameEl.textContent = 'GUEST 0000';
       if (starCountEl) starCountEl.textContent = starCountEl.textContent || '50';
     }
@@ -483,16 +488,14 @@ function initGameUI() {
   // Confirm button: deduct stars & start session
   confirmPlay?.addEventListener('click', async () => {
     if (!currentUser) await loadCurrentUserForGame();
+    if (!currentUser?.uid) { alert('User not found. Please log in again.'); return; }
+
     let localStars = parseInt(starCountEl?.textContent || '0', 10);
 
-    if (currentUser?.uid) {
-      const r = await tryDeductStarsForJoin(STAR_COST);
-      if (!r.ok) { alert(r.message || 'Not enough stars'); return; }
-      if (starCountEl) starCountEl.textContent = String(Math.max(0, localStars - STAR_COST));
-    } else {
-      if (localStars < STAR_COST) { alert('Not enough stars to play!'); return; }
-      if (starCountEl) starCountEl.textContent = String(localStars - STAR_COST);
-    }
+    const r = await tryDeductStarsForJoin(STAR_COST);
+    if (!r.ok) { alert(r.message || 'Not enough stars'); return; }
+
+    if (starCountEl) starCountEl.textContent = String(Math.max(0, localStars - STAR_COST));
 
     if (playModal) playModal.style.display = 'none';
     if (posterImg) posterImg.style.display = 'none';
