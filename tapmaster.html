@@ -256,13 +256,16 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
 <!-- Audio -->
 <audio id="tapSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
 
+<!-- Replace your current script with this -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp, Timestamp
+  getFirestore, collection, addDoc,
+  query, where, orderBy, limit, getDocs,
+  serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-// ---------- Firebase config ----------
+/* ---------- Firebase config ---------- */
 const firebaseConfig = {
   apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
@@ -276,26 +279,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import {
-  getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp, Timestamp
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-
-// ---------- Firebase config ----------
-const firebaseConfig = {
-  apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
-  authDomain: "metaverse-1010.firebaseapp.com",
-  projectId: "metaverse-1010",
-  storageBucket: "metaverse-1010.appspot.com",
-  messagingSenderId: "1044064238233",
-  appId: "1:1044064238233:web:2fbdfb811cb0a3ba349608",
-  measurementId: "G-S77BMC266C",
-  databaseURL: "https://metaverse-1010-default-rtdb.firebaseio.com/"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-// ---------- UI refs ----------
+/* ---------- UI refs ---------- */
 const startBtn = document.getElementById('startBtn');
 const playModal = document.getElementById('playModal');
 const cancelPlay = document.getElementById('cancelPlay');
@@ -324,163 +308,339 @@ const finalPlaceEl = document.getElementById('finalPlace');
 const playAgain = document.getElementById('playAgain');
 const posterImg = document.getElementById('posterImg');
 const starCountEl = document.getElementById('starCount');
+const profileNameEl = document.getElementById('profileName') || { textContent: 'GUEST' };
 
-// ---------- State ----------
-let taps = 0,
-    earnings = 0,
-    timer = 60,
-    duration = 60,
-    intervalId = null,
-    running = false;
-let bonusLevel = 1,
-    progress = 0,
-    tapsForNext = 100;
+/* ---------- State ---------- */
+let taps = 0;
+let earnings = 0;
+let timer = 60;
+let duration = 60;
+let intervalId = null;
+let running = false;
+let bonusLevel = 1;
+let progress = 0;
+let tapsForNext = 100;
+
+/* choose event */
 const tapEvent = ('ontouchstart' in window) ? 'touchstart' : 'click';
 
-// Unlock audio on first touch (iOS)
-document.body.addEventListener('touchstart', () => { tapSound.play().catch(()=>{}); }, { once:true });
+/* unlock audio on first touch for iOS */
+document.body.addEventListener('touchstart', () => { if (tapSound) tapSound.play().catch(()=>{}); }, { once:true });
 
-// ---------- Start flow ----------
-
-// Show confirmation modal
-startBtn.addEventListener('click', () => {
+/* ---------- Start flow (confirm modal) ---------- */
+startBtn?.addEventListener('click', () => {
+  if (!playModal) {
+    // fallback: start immediately if modal missing
+    beginPlayFlow();
+    return;
+  }
   playModal.style.display = 'flex';
 });
 
-// Cancel button
-cancelPlay.addEventListener('click', () => {
+cancelPlay?.addEventListener('click', () => {
   playModal.style.display = 'none';
 });
 
-// Confirm play button
-confirmPlay.addEventListener('click', () => {
-  let stars = parseInt(starCountEl.textContent, 10);
-  if(stars < 10){
-    alert("Not enough stars to play!");
+confirmPlay?.addEventListener('click', async () => {
+  // cost in stars
+  const cost = 10;
+  const stars = parseInt(starCountEl?.textContent || '0', 10);
+  if (isNaN(stars) || stars < cost) {
+    alert('Not enough stars to play!');
     return;
   }
-  starCountEl.textContent = stars - 10;
 
-  // Hide modal + poster + start page
+  // deduct UI-wise (you can also perform Firestore transaction if needed)
+  starCountEl.textContent = String(stars - cost);
+
+  // hide modal, poster, show spinner and then start session
   playModal.style.display = 'none';
-  posterImg.style.display = 'none';
-  startPage.style.display = 'none';
-  spinner.classList.remove('hidden');
+  if (posterImg) posterImg.style.display = 'none';
+  if (startPage) startPage.style.display = 'none';
+  if (spinner) spinner.classList.remove('hidden');
 
-  // Start game after brief spinner
   setTimeout(() => {
-    spinner.classList.add('hidden');
-    gamePage.classList.remove('hidden');
+    if (spinner) spinner.classList.add('hidden');
+    if (gamePage) gamePage.classList.remove('hidden');
     startSession();
   }, 700);
 });
 
-// ---------- Session ----------
+/* If user directly wants to begin play flow without modal */
+function beginPlayFlow(){
+  if (posterImg) posterImg.style.display = 'none';
+  if (startPage) startPage.style.display = 'none';
+  if (spinner) spinner.classList.remove('hidden');
+  setTimeout(() => {
+    if (spinner) spinner.classList.add('hidden');
+    if (gamePage) gamePage.classList.remove('hidden');
+    startSession();
+  }, 700);
+}
+
+/* ---------- Session start / timer ---------- */
 function startSession(){
-  taps = 0; earnings = 0; timer = duration; bonusLevel = 1; progress = 0; tapsForNext = 100;
+  taps = 0;
+  earnings = 0;
+  timer = duration;
+  bonusLevel = 1;
+  progress = 0;
+  tapsForNext = 100;
   running = true;
   updateUI();
-  trainBar.style.width = '100%';
 
+  if (trainBar) trainBar.style.width = '100%';
+
+  // ensure tap button enabled
+  if (tapButton) { tapButton.disabled = false; tapButton.classList.remove('disabled'); }
+
+  // countdown
+  clearInterval(intervalId);
   intervalId = setInterval(() => {
     timer--;
+    if (timer < 0) timer = 0;
     updateUI();
-    trainBar.style.width = Math.max(0,(timer/duration)*100)+'%';
-    if(timer <=0) endSession();
+    if (trainBar) trainBar.style.width = Math.max(0, (timer/duration)*100) + '%';
+    if (timer === 0) {
+      endSession();
+    }
   }, 1000);
 }
 
-// ---------- Tap handler ----------
-tapButton.addEventListener(tapEvent, e=>{
+/* ---------- Tap handler ---------- */
+tapButton?.addEventListener(tapEvent, (e) => {
   e.preventDefault();
-  if(!running) return;
+  if (!running) return;
 
-  taps++; earnings+=1; progress++;
-  if(progress>=tapsForNext){
-    progress=0; bonusLevel++; tapsForNext=100+(bonusLevel-1)*50;
+  taps += 1;
+  earnings += 1; // per-tap earning
+  progress += 1;
+
+  // visual feedback: glow + micro-buzz (vibration)
+  tapButton.classList.add('tap-glow');
+  setTimeout(()=> tapButton.classList.remove('tap-glow'), 120);
+  if (navigator.vibrate) navigator.vibrate(10);
+
+  // float text
+  showFloat('+₦1.00', tapButton);
+
+  // bonus level check
+  if (progress >= tapsForNext) {
+    progress = 0;
+    bonusLevel++;
+    tapsForNext = 100 + (bonusLevel - 1) * 50;
     showTempMessage('TAP PRO!');
   }
 
+  // UI update and sound
   updateUI();
-  tapSound.currentTime=0; tapSound.play().catch(()=>{});
-  if(navigator.vibrate) navigator.vibrate(10);
+  if (tapSound) { tapSound.currentTime = 0; tapSound.play().catch(()=>{}); }
 });
 
-// ---------- UI update ----------
+/* ---------- Update UI ---------- */
 function updateUI(){
-  timerEl.textContent = timer;
-  tapCountEl.textContent = taps;
-  earningsEl.textContent = earnings.toFixed(2);
-  bonusBar.style.width = ((progress/tapsForNext)*100)+'%';
-  bonusLevelVal.textContent = bonusLevel;
-  speedVal.textContent = (taps>0 && duration-timer>0) ? Math.round(taps/(duration-timer))+'/s' : '—';
-  miniTapCount.textContent = taps;
-  miniEarnings.textContent = earnings.toFixed(2);
+  if (timerEl) timerEl.textContent = String(timer);
+  if (tapCountEl) tapCountEl.textContent = String(taps);
+  if (earningsEl) earningsEl.textContent = earnings.toFixed(2);
+  if (bonusBar) bonusBar.style.width = ((progress / tapsForNext) * 100) + '%';
+  if (bonusLevelVal) bonusLevelVal.textContent = String(bonusLevel);
+  if (speedVal) speedVal.textContent = (taps > 0 && duration - timer > 0) ? Math.round(taps / Math.max(1, (duration - timer))) + '/s' : '—';
+  if (miniTapCount) miniTapCount.textContent = String(taps);
+  if (miniEarnings) miniEarnings.textContent = earnings.toFixed(2);
 }
 
-// ---------- End session ----------
+/* ---------- End session: save & show end modal ---------- */
 async function endSession(){
-  if(!running) return;
-  running=false;
-  clearInterval(intervalId); intervalId=null;
+  if (!running) return;
+  running = false;
+  clearInterval(intervalId); intervalId = null;
 
-  finalTapsEl.textContent = taps;
+  // disable tap button
+  if (tapButton) { tapButton.disabled = true; }
 
-  try{
-    await addDoc(collection(db,'tapSessions'), {taps, earnings, timestamp:serverTimestamp()});
-  }catch(e){ console.error(e); }
+  // save session to Firestore
+  try {
+    await addDoc(collection(db, 'tapSessions'), {
+      taps,
+      earnings,
+      timestamp: serverTimestamp()
+    });
+  } catch (err) {
+    console.error('Failed to save session', err);
+  }
 
-  // Compute place locally
-  try{
-    const oneHourAgo = Timestamp.fromDate(new Date(Date.now()-3600*1000));
-    const q = query(collection(db,'tapSessions'), where('timestamp','>',oneHourAgo), orderBy('taps','desc'), limit(10));
+  // compute place in the last hour
+  let placeText = '—';
+  try {
+    const oneHourAgo = Timestamp.fromDate(new Date(Date.now() - 3600 * 1000));
+    const q = query(
+      collection(db, 'tapSessions'),
+      where('timestamp', '>', oneHourAgo),
+      orderBy('taps', 'desc'),
+      limit(100) // fetch top 100 to find place reliably
+    );
     const snap = await getDocs(q);
-    const arr = snap.docs.map(d=>d.data().taps||0);
-    const all = arr.slice(); all.push(taps); all.sort((a,b)=>b-a);
-    finalPlaceEl.textContent = `#${all.indexOf(taps)+1}`;
-  }catch(e){ finalPlaceEl.textContent='—'; console.warn(e); }
+    const arr = snap.docs.map(d => d.data().taps || 0);
+    const all = arr.slice();
+    all.push(taps);
+    all.sort((a,b)=>b-a);
+    const idx = all.indexOf(taps);
+    placeText = (idx >= 0) ? `#${idx + 1}` : '—';
+  } catch (err) {
+    console.warn('Place compute failed', err);
+  }
 
-  resultInner.classList.remove('hidden');
-  tapButton.disabled=true;
+  // Show the end modal (built dynamically so you don't need new HTML)
+  const username = (profileNameEl && profileNameEl.textContent) ? profileNameEl.textContent : 'PLAYER';
+  showEndModal({
+    username,
+    earnings,
+    taps,
+    placeText
+  });
+
+  // refresh leaderboard data in background
+  loadLeaderboardIntoModal();
 }
 
-// ---------- Play again ----------
-playAgain.addEventListener('click', ()=>{
-  resultInner.classList.add('hidden');
-  tapButton.disabled=false;
-  startSession();
-});
+/* ---------- Show dynamic End Modal ---------- */
+function showEndModal({ username, earnings, taps, placeText }) {
+  // remove existing if present
+  document.getElementById('endGameModal')?.remove();
 
-// ---------- Leaderboard ----------
-leaderboardBtn.addEventListener('click', async ()=>{
-  leaderboardList.innerHTML='<li style="color:#aaa">Loading…</li>';
-  leaderboardModal.style.display='flex';
-  try{
-    const oneHourAgo = Timestamp.fromDate(new Date(Date.now()-3600*1000));
-    const q = query(collection(db,'tapSessions'), where('timestamp','>',oneHourAgo), orderBy('taps','desc'), limit(10));
+  const overlay = document.createElement('div');
+  overlay.id = 'endGameModal';
+  Object.assign(overlay.style, {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000
+  });
+
+  const box = document.createElement('div');
+  Object.assign(box.style, {
+    width: '92%', maxWidth: '420px', background: '#0f0f0f', padding: '18px', borderRadius: '12px',
+    border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center', color: '#fff'
+  });
+
+  const title = document.createElement('div');
+  title.textContent = `${username}, time's up!`;
+  title.style.fontWeight = '800';
+  title.style.color = 'var(--accent1)';
+  title.style.marginBottom = '8px';
+
+  const info = document.createElement('div');
+  info.innerHTML = `<div style="margin:8px 0">You earned <strong>₦${Number(earnings).toFixed(2)}</strong> and made <strong>${taps}</strong> taps.</div>
+                    <div style="margin:6px 0">Your place this hour: <strong>${placeText}</strong></div>`;
+
+  const actions = document.createElement('div');
+  actions.style.marginTop = '12px';
+  actions.style.display = 'flex';
+  actions.style.justifyContent = 'center';
+  actions.style.gap = '10px';
+
+  const playAgainBtn = document.createElement('button');
+  playAgainBtn.textContent = 'Play again';
+  Object.assign(playAgainBtn.style, { padding:'8px 14px', borderRadius:'8px', border:'none', cursor:'pointer', background:'linear-gradient(90deg,#00e676,#00b0ff)', color:'#000', fontWeight:800 });
+  playAgainBtn.addEventListener('click', () => {
+    overlay.remove();
+    // reset small UI and start session immediately
+    if (resultInner) resultInner.classList.add('hidden');
+    if (tapButton) { tapButton.disabled = false; }
+    startSession();
+  });
+
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = 'Close ✕';
+  Object.assign(closeBtn.style, { padding:'8px 12px', borderRadius:'8px', border:'none', cursor:'pointer', background:'linear-gradient(90deg,#FF1493,#FF8C00)', color:'#fff', fontWeight:800 });
+  closeBtn.addEventListener('click', () => {
+    overlay.remove();
+    // show start page again
+    if (startPage) startPage.style.display = 'flex';
+    if (posterImg) posterImg.style.display = 'block';
+  });
+
+  actions.appendChild(playAgainBtn);
+  actions.appendChild(closeBtn);
+
+  // optional smaller leaderboard button inside modal
+  const lbBtn = document.createElement('button');
+  lbBtn.textContent = 'View Leaderboard';
+  Object.assign(lbBtn.style, { marginTop: '12px', padding:'8px 12px', borderRadius:'8px', border:'1px solid rgba(255,255,255,0.06)', background:'#111', color:'#fff', cursor:'pointer' });
+  lbBtn.addEventListener('click', () => {
+    overlay.remove();
+    leaderboardBtn?.click();
+  });
+
+  box.appendChild(title);
+  box.appendChild(info);
+  box.appendChild(actions);
+  box.appendChild(lbBtn);
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+/* ---------- Leaderboard modal load ---------- */
+async function loadLeaderboardIntoModal(){
+  if (!leaderboardModal) return;
+  leaderboardList.innerHTML = '<li style="color:#aaa">Loading…</li>';
+  leaderboardModal.style.display = 'flex';
+  try {
+    const oneHourAgo = Timestamp.fromDate(new Date(Date.now() - 3600 * 1000));
+    const q = query(collection(db, 'tapSessions'), where('timestamp', '>', oneHourAgo), orderBy('taps', 'desc'), limit(10));
     const snap = await getDocs(q);
-    if(snap.empty) leaderboardList.innerHTML='<li style="color:#aaa">No scores this hour</li>';
-    else leaderboardList.innerHTML = snap.docs.map((d,i)=>{
-      const data=d.data(); const t=data.taps||0; const earn=(data.earnings||0).toFixed(2);
-      const when = data.timestamp?.toDate ? data.timestamp.toDate().toLocaleTimeString() : '';
-      return `<li><strong>#${i+1}</strong> — ${t} taps &nbsp; (₦${earn}) <div style="font-size:11px;color:#aaa">${when}</div></li>`;
-    }).join('');
-  }catch(e){ leaderboardList.innerHTML='<li style="color:#f88">Failed to load</li>'; console.error(e); }
-});
+    if (snap.empty) {
+      leaderboardList.innerHTML = '<li style="color:#aaa">No scores this hour</li>';
+    } else {
+      leaderboardList.innerHTML = snap.docs.map((d,i) => {
+        const data = d.data();
+        const t = data.taps || 0;
+        const earn = (data.earnings || 0).toFixed(2);
+        const when = data.timestamp && data.timestamp.toDate ? data.timestamp.toDate().toLocaleTimeString() : '';
+        return `<li style="padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,0.03)"><strong>#${i+1}</strong> — ${t} taps &nbsp; (₦${earn}) <div style="font-size:11px;color:#aaa">${when}</div></li>`;
+      }).join('');
+    }
+  } catch (err) {
+    leaderboardList.innerHTML = '<li style="color:#f88">Failed to load</li>';
+    console.error('Leaderboard load failed', err);
+  }
+}
 
-closeLeaderboard.addEventListener('click', ()=>leaderboardModal.style.display='none');
-leaderboardModal.addEventListener('click', e=>{ if(e.target===leaderboardModal) leaderboardModal.style.display='none'; });
+/* show leaderboard on button click (manual) */
+leaderboardBtn?.addEventListener('click', loadLeaderboardIntoModal);
+closeLeaderboard?.addEventListener('click', () => { if (leaderboardModal) leaderboardModal.style.display = 'none'; });
+leaderboardModal?.addEventListener('click', (e) => { if (e.target === leaderboardModal) leaderboardModal.style.display = 'none'; });
 
-// ---------- Temporary message ----------
+/* ---------- Small helpers ---------- */
+function showFloat(text, anchorEl) {
+  const f = document.createElement('div');
+  f.className = 'floatText';
+  f.textContent = text;
+  const r = (anchorEl && anchorEl.getBoundingClientRect) ? anchorEl.getBoundingClientRect() : { left: window.innerWidth/2, top: window.innerHeight/2, width:0, height:0 };
+  const x = (Math.random() - 0.5) * 80;
+  f.style.position = 'fixed';
+  f.style.left = (r.left + r.width/2) + 'px';
+  f.style.top = (r.top + r.height/2) + 'px';
+  f.style.transform = 'translate(-50%, -50%)';
+  f.style.padding = '6px 10px';
+  f.style.background = '#000';
+  f.style.border = '1px solid rgba(255,255,255,0.06)';
+  f.style.borderRadius = '8px';
+  f.style.zIndex = 9999;
+  document.body.appendChild(f);
+  setTimeout(()=> { f.style.transition = 'all .6s ease'; f.style.opacity = '0'; f.style.transform = `translate(-50%, -120px) translateX(${x}px)`; }, 10);
+  setTimeout(()=> f.remove(), 700);
+}
+
 function showTempMessage(txt){
-  const msg=document.createElement('div'); msg.textContent=txt;
+  const msg = document.createElement('div'); msg.textContent = txt;
   Object.assign(msg.style,{position:'fixed',left:'50%',top:'30%',transform:'translateX(-50%)',background:'#000',padding:'10px 16px',borderRadius:'8px',border:'1px solid rgba(255,255,255,0.06)',zIndex:9999});
   document.body.appendChild(msg);
   setTimeout(()=>{ msg.style.transition='opacity .4s'; msg.style.opacity=0; setTimeout(()=>msg.remove(),400); },900);
 }
 
-// Prevent double-tap zoom
-document.addEventListener('gesturestart', e=>e.preventDefault(), {passive:false});
+/* prevent double-tap to zoom (iOS) */
+document.addEventListener('gesturestart', e => { e.preventDefault(); }, { passive: false });
+
 </script>
 </body>
 </html>
