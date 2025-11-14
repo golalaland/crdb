@@ -143,6 +143,18 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
     <div id="welcomeText">WELCOME TO</div>
     <div id="scrambleText">TAP MASTER</div>
   </div>
+  
+  <!-- Play Confirmation Modal -->
+<div id="playModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;justify-content:center;align-items:center;">
+  <div class="modal" style="background:#111;color:#fff;padding:20px;border-radius:12px;width:90%;max-width:320px;text-align:center;">
+    <h3 style="margin-bottom:12px;">Confirm Play</h3>
+    <p>Spend <strong>10 ⭐</strong> to start this game?</p>
+    <div style="display:flex;justify-content:space-between;margin-top:18px;">
+      <button id="cancelPlay" style="flex:1;margin-right:6px;padding:10px 12px;border:none;border-radius:8px;background:#444;color:#fff;font-weight:700;cursor:pointer;">Cancel</button>
+      <button id="confirmPlay" style="flex:1;margin-left:6px;padding:10px 12px;border:none;border-radius:8px;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:700;cursor:pointer;">Confirm</button>
+    </div>
+  </div>
+</div>
 
   <!-- Start / join flow -->
   <div id="startPage" style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:18px;">
@@ -300,21 +312,34 @@ const tapEvent = ('ontouchstart' in window) ? 'touchstart' : 'click';
 // unlock audio on first touch for iOS
 document.body.addEventListener('touchstart', () => { tapSound.play().catch(()=>{}); }, { once:true });
 
-// ---------- Start Game ----------
+// ---------- Start flow ----------
 startBtn.addEventListener('click', () => {
-  let stars = parseInt(starCountEl.textContent,10);
+  // Show confirmation modal
+  const playModal = document.getElementById('playModal');
+  playModal.style.display = 'flex';
+});
+
+// Cancel button
+document.getElementById('cancelPlay').addEventListener('click', () => {
+  document.getElementById('playModal').style.display = 'none';
+});
+
+// Confirm play button
+document.getElementById('confirmPlay').addEventListener('click', () => {
+  const stars = parseInt(starCountEl.textContent, 10);
   if(stars < 10){
     alert("Not enough stars to play!");
     return;
   }
-  stars -= 10;
-  starCountEl.textContent = stars;
+  starCountEl.textContent = stars - 10;
+  document.getElementById('playModal').style.display = 'none';
 
-  // hide poster + start page
+  // Hide poster + start page
   posterImg.style.display = 'none';
   startPage.style.display = 'none';
   spinner.classList.remove('hidden');
 
+  // Start game after spinner
   setTimeout(() => {
     spinner.classList.add('hidden');
     gamePage.classList.remove('hidden');
