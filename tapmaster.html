@@ -709,9 +709,10 @@ confirmPlay?.addEventListener("click",async ()=>{
   },700);
 });
 
-/* -------------------------------------------------
-   LEADERBOARD — FIRESTORE + MODAL + PERIOD FILTERS
---------------------------------------------------- */
+/* ------------------------------
+   LEADERBOARD SETUP
+------------------------------- */
+
 // ---------- DOM ----------
 const leaderboardBtn = document.getElementById('leaderboardBtn');
 const leaderboardModal = document.getElementById('leaderboardModal');
@@ -721,7 +722,7 @@ const leaderboardList = document.getElementById('leaderboardList');
 // ---------- Helper: get leaderboard key ----------
 function getLeaderboardKey(period) {
   const now = new Date();
-  if (period === "daily") return now.toISOString().split("T")[0];        // YYYY-MM-DD
+  if (period === "daily") return now.toISOString().split("T")[0]; // YYYY-MM-DD
   if (period === "weekly") return `${now.getFullYear()}-W${getWeek(now)}`; // YYYY-Wxx
   if (period === "monthly") return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`; // YYYY-MM
   return null;
@@ -736,12 +737,12 @@ function getWeek(date) {
 }
 
 // ---------- Fetch leaderboard ----------
-async function fetchLeaderboard(period="daily", top=10) {
+async function fetchLeaderboard(period = "daily", top = 10) {
   if (!leaderboardList) return;
   leaderboardList.innerHTML = "<li>Loading...</li>";
 
   const key = getLeaderboardKey(period);
-  const usersCol = collection(db,"users");
+  const usersCol = collection(db, "users");
 
   try {
     const snap = await getDocs(usersCol);
@@ -751,11 +752,11 @@ async function fetchLeaderboard(period="daily", top=10) {
       const data = docSnap.data();
       let tapsCount = 0;
 
-      if(period === "daily") tapsCount = data.tapsDaily?.[key] || 0;
-      if(period === "weekly") tapsCount = data.tapsWeekly?.[key] || 0;
-      if(period === "monthly") tapsCount = data.tapsMonthly?.[key] || 0;
+      if (period === "daily") tapsCount = data.tapsDaily?.[key] || 0;
+      if (period === "weekly") tapsCount = data.tapsWeekly?.[key] || 0;
+      if (period === "monthly") tapsCount = data.tapsMonthly?.[key] || 0;
 
-      if(tapsCount > 0){
+      if (tapsCount > 0) {
         scores.push({
           uid: docSnap.id,
           chatId: data.chatId || docSnap.id.slice(0,6),
@@ -764,10 +765,10 @@ async function fetchLeaderboard(period="daily", top=10) {
       }
     });
 
-    scores.sort((a,b)=>b.taps - a.taps);
+    scores.sort((a,b) => b.taps - a.taps);
     const topScores = scores.slice(0, top);
 
-    if(topScores.length === 0){
+    if (topScores.length === 0) {
       leaderboardList.innerHTML = "<li>No data yet</li>";
       return;
     }
@@ -785,19 +786,20 @@ async function fetchLeaderboard(period="daily", top=10) {
   }
 }
 
-// ---------- Open / close ----------
+// ---------- Leaderboard modal open/close ----------
 leaderboardBtn?.addEventListener("click", () => {
   leaderboardModal.style.display = "flex";
-  fetchLeaderboard("daily");
+  fetchLeaderboard("daily"); // default period
 });
 
 closeLeaderboard?.addEventListener("click", () => {
   leaderboardModal.style.display = "none";
 });
 
-// ---------- Period switch buttons ----------
+// ---------- Period buttons ----------
 const periodContainer = document.createElement("div");
 periodContainer.style = "margin:10px 0; text-align:center;";
+
 ["daily","weekly","monthly"].forEach(period => {
   const btn = document.createElement("button");
   btn.textContent = period.toUpperCase();
@@ -811,12 +813,14 @@ periodContainer.style = "margin:10px 0; text-align:center;";
     cursor:pointer;
     font-weight:700;
   `;
-  btn.addEventListener("click", () => fetchLeaderboard(period));
+  btn.addEventListener("click", () => fetchLeaderboard(period)); // <- correct place
   periodContainer.appendChild(btn);
 });
 
-// Insert before leaderboard list
-leaderboardModal.querySelector(".modal").insertBefore(periodContainer, leaderboardList);
+// Insert period buttons above leaderboard list
+const modalContent = leaderboardModal.querySelector(".modal") || leaderboardModal;
+modalContent.insertBefore(periodContainer, leaderboardList);
+
 
 // ---------- RECORD TAP ----------
 async function recordTap(userId, taps = 1, invitedBy = null, earnings = 0, bonusLevel = 0) {
