@@ -318,448 +318,229 @@ const finalPlaceEl = document.getElementById('finalPlace');
 const playAgain = document.getElementById('playAgain');
 const posterImg = document.getElementById('posterImg');
 const starCountEl = document.getElementById('starCount');
-const cashCountEl = document.getElementById('cashCount'); // NEW
+const cashCountEl = document.getElementById('cashCount');
 const profileNameEl = document.getElementById('profileName');
 
 // ---------- CONFIG & STATE ----------
-const STAR_COST = 10;         // stars required to join
-const DAILY_INITIAL_POT = 10000; // initial daily pot in Naira (example)
-const CASH_PER_AWARD = 1;     // N1 per award
-const SESSION_DURATION = 60;  // seconds
+const STAR_COST = 10;
+const DAILY_INITIAL_POT = 10000;
+const CASH_PER_AWARD = 1;
+const SESSION_DURATION = 60;
 
-let taps = 0;
-let earnings = 0.00;
-let timer = SESSION_DURATION;
-let duration = SESSION_DURATION;
-let intervalId = null;
-let running = false;
-let bonusLevel = 1;
-let progress = 0;
-let tapsForNext = 100;
-
-// Random cash award mechanism:
-// We pick a random threshold between 1..12; each tap increments counter; when counter >= threshold award N1 (if pot available).
-let cashCounter = 0;
-let cashThreshold = randomInt(1, 12);
-
-// Tap event choice
+let taps = 0, earnings = 0, timer = SESSION_DURATION, duration = SESSION_DURATION;
+let intervalId = null, running = false, bonusLevel = 1, progress = 0, tapsForNext = 100;
+let cashCounter = 0, cashThreshold = randomInt(1,12);
 const tapEvent = ('ontouchstart' in window) ? 'touchstart' : 'click';
 
-// ---------- Local pot (keeps Money Train keys) ----------
+// ---------- Local pot ----------
 const KEY_POT = 'moneytrain_pot';
 const KEY_RESET_DAY = 'moneytrain_reset_day';
 const KEY_HALF_DAY = 'moneytrain_half_date';
-
-function getStoredPot(){
-  const raw = localStorage.getItem(KEY_POT);
-  return raw ? parseInt(raw,10) : null;
-}
-function setStoredPot(v){
-  localStorage.setItem(KEY_POT, String(Math.max(0, Math.floor(v))));
-}
+function getStoredPot(){ return parseInt(localStorage.getItem(KEY_POT)) || null; }
+function setStoredPot(v){ localStorage.setItem(KEY_POT, Math.max(0, Math.floor(v))); }
 function getPotResetDay(){ return localStorage.getItem(KEY_RESET_DAY) || null; }
 function setPotResetDay(s){ localStorage.setItem(KEY_RESET_DAY, s); }
 function initializePot(){
   const today = new Date().toISOString().slice(0,10);
-  const resetDay = getPotResetDay();
-  if (!getStoredPot() || resetDay !== today){
+  if (!getStoredPot() || getPotResetDay() !== today){
     setStoredPot(DAILY_INITIAL_POT);
     setPotResetDay(today);
     localStorage.setItem(KEY_HALF_DAY, '');
   }
 }
-// helper random
-function randomInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function randomInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
 
-// -----------------------------------------------------
-//  GLOBAL USER
-// -----------------------------------------------------
+// ---------- GLOBAL USER ----------
 let currentUser = null;
 
-// -----------------------------------------------------
-//  LOAD CURRENT USER FOR GAME
-// -----------------------------------------------------
+// ---------- LOAD USER ----------
 async function loadCurrentUserForGame() {
   try {
     const vipRaw = localStorage.getItem("vipUser");
     const hostRaw = localStorage.getItem("hostUser");
     const storedUser = vipRaw ? JSON.parse(vipRaw) : hostRaw ? JSON.parse(hostRaw) : null;
-
     if (!storedUser?.email) {
       currentUser = null;
-      if (profileNameEl) profileNameEl.textContent = "GUEST 0000";
-      if (starCountEl) starCountEl.textContent = "50";
-      if (cashCountEl) cashCountEl.textContent = "0";
+      profileNameEl && (profileNameEl.textContent="GUEST 0000");
+      starCountEl && (starCountEl.textContent="50");
+      cashCountEl && (cashCountEl.textContent="0");
       return;
     }
 
     const uid = storedUser.email.replace(/\./g, ",").toLowerCase();
-    const userRef = doc(db, "users", uid);
+    const userRef = doc(db,"users",uid);
     const snap = await getDoc(userRef);
 
     if (!snap.exists()) {
-      currentUser = {
-        uid,
-        email: storedUser.email,
-        chatId: storedUser.fullName || storedUser.displayName || storedUser.email.split("@")[0],
-        stars: 0,
-        cash: 0,
-        totalTaps: 0
-      };
-
-      if (profileNameEl) profileNameEl.textContent = currentUser.chatId;
-      if (starCountEl) starCountEl.textContent = "0";
-      if (cashCountEl) cashCountEl.textContent = "0";
+      currentUser = { uid, email: storedUser.email, chatId: storedUser.fullName || storedUser.displayName || storedUser.email.split("@")[0], stars:0, cash:0, totalTaps:0 };
+      profileNameEl && (profileNameEl.textContent=currentUser.chatId);
+      starCountEl && (starCountEl.textContent="0");
+      cashCountEl && (cashCountEl.textContent="0");
       return;
     }
 
-    const data = snap.data();
-    if (data.uid) delete data.uid;
-
-    currentUser = {
-      uid,
-      ...data,
-      stars: Number(data.stars || 0),
-      cash: Number(data.cash || 0),
-      totalTaps: Number(data.totalTaps || 0)
-    };
-
-    if (profileNameEl) profileNameEl.textContent = currentUser.chatId || storedUser.fullName || storedUser.email.split("@")[0];
-    if (starCountEl) starCountEl.textContent = String(currentUser.stars);
-    if (cashCountEl) cashCountEl.textContent = String(currentUser.cash);
-  } catch (err) {
-    console.warn("loadCurrentUserForGame error", err);
-  }
+    const data = snap.data(); if (data.uid) delete data.uid;
+    currentUser = { uid, ...data, stars:Number(data.stars||0), cash:Number(data.cash||0), totalTaps:Number(data.totalTaps||0) };
+    profileNameEl && (profileNameEl.textContent=currentUser.chatId || storedUser.fullName || storedUser.email.split("@")[0]);
+    starCountEl && (starCountEl.textContent=String(currentUser.stars));
+    cashCountEl && (cashCountEl.textContent=String(currentUser.cash));
+  } catch(err){ console.warn("loadCurrentUserForGame error",err); }
 }
 
-// -----------------------------------------------------
-//  DEDUCT STARS
-// -----------------------------------------------------
-async function tryDeductStarsForJoin(cost) {
-  if (!currentUser?.uid) return { ok: false, message: "You are not logged in" };
-
-  const userRef = doc(db, "users", currentUser.uid);
-
+// ---------- DEDUCT STARS ----------
+async function tryDeductStarsForJoin(cost){
+  if (!currentUser?.uid) return {ok:false,message:"You are not logged in"};
+  const userRef = doc(db,"users",currentUser.uid);
   try {
-    await runTransaction(db, async (t) => {
+    await runTransaction(db,async t=>{
       const u = await t.get(userRef);
       if (!u.exists()) throw new Error("User not found");
-
-      const udata = u.data();
-      const currentStars = Number(udata.stars || 0);
-      if (currentStars < cost) throw new Error("Not enough stars");
-
-      t.update(userRef, { stars: currentStars - cost });
-      currentUser.stars = currentStars - cost;
+      const currentStars = Number(u.data().stars||0);
+      if(currentStars<cost) throw new Error("Not enough stars");
+      t.update(userRef,{stars:currentStars-cost});
+      currentUser.stars = currentStars-cost;
     });
-
-    if (starCountEl) starCountEl.textContent = String(currentUser.stars);
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, message: e.message || "Could not deduct stars" };
-  }
+    starCountEl && (starCountEl.textContent=String(currentUser.stars));
+    return {ok:true};
+  } catch(e){ return {ok:false,message:e.message||"Could not deduct stars"}; }
 }
 
-// -----------------------------------------------------
-//  GIVE CASH
-// -----------------------------------------------------
-async function giveCashToUser(amount) {
-  if (!currentUser?.uid) return { ok: false };
-
-  const userRef = doc(db, "users", currentUser.uid);
-
-  try {
-    await runTransaction(db, async (t) => {
+// ---------- GIVE CASH ----------
+async function giveCashToUser(amount){
+  if (!currentUser?.uid) return {ok:false};
+  const userRef = doc(db,"users",currentUser.uid);
+  try{
+    await runTransaction(db,async t=>{
       const u = await t.get(userRef);
-      if (!u.exists()) throw new Error("User not found");
-
-      const udata = u.data();
-      const newCash = Number(udata.cash || 0) + Number(amount);
-      t.update(userRef, { cash: newCash });
+      if(!u.exists()) throw new Error("User not found");
+      const newCash = Number(u.data().cash||0) + Number(amount);
+      t.update(userRef,{cash:newCash});
       currentUser.cash = newCash;
     });
-
-    if (cashCountEl) cashCountEl.textContent = String(currentUser.cash);
-    return { ok: true };
-  } catch (e) {
-    console.error("giveCashToUser error", e);
-    return { ok: false, message: e.message };
-  }
+    cashCountEl && (cashCountEl.textContent=String(currentUser.cash));
+    return {ok:true};
+  } catch(e){ console.error("giveCashToUser error", e); return {ok:false,message:e.message}; }
 }
 
-// -----------------------------------------------------
-//  INITIALIZATION
-// -----------------------------------------------------
+// ---------- INIT ----------
 initializePot();
 loadCurrentUserForGame();
 
-// -----------------------------------------------------
-//  GAME START FLOW
-// -----------------------------------------------------
-startBtn?.addEventListener("click", () => {
-  if (playModal) playModal.style.display = "flex";
-});
-
-cancelPlay?.addEventListener("click", () => {
-  if (playModal) playModal.style.display = "none";
-});
-
-confirmPlay?.addEventListener("click", async () => {
-  let localStars = parseInt(starCountEl?.textContent || "0", 10);
-
-  if (currentUser?.uid) {
+// ---------- START FLOW ----------
+startBtn?.addEventListener("click",()=>playModal&&(playModal.style.display="flex"));
+cancelPlay?.addEventListener("click",()=>playModal&&(playModal.style.display="none"));
+confirmPlay?.addEventListener("click",async ()=>{
+  let localStars = parseInt(starCountEl?.textContent||"0",10);
+  if(currentUser?.uid){
     const r = await tryDeductStarsForJoin(STAR_COST);
-    if (!r.ok) {
-      alert(r.message || "Not enough stars");
-      return;
-    }
+    if(!r.ok){ alert(r.message||"Not enough stars"); return; }
   } else {
-    if (localStars < STAR_COST) {
-      alert("Not enough stars to play!");
-      return;
-    }
-    localStars -= STAR_COST;
-    starCountEl.textContent = String(localStars);
+    if(localStars<STAR_COST){ alert("Not enough stars to play!"); return; }
+    localStars-=STAR_COST; starCountEl.textContent=String(localStars);
   }
-
-  if (playModal) playModal.style.display = "none";
-  if (posterImg) posterImg.style.display = "none";
-  if (startPage) startPage.style.display = "none";
-  if (spinner) spinner.classList.remove("hidden");
-
-  setTimeout(() => {
-    if (spinner) spinner.classList.add("hidden");
-    if (gamePage) gamePage.classList.remove("hidden");
-    startSession();
-  }, 700);
+  playModal&&(playModal.style.display="none");
+  posterImg&&(posterImg.style.display="none");
+  startPage&&(startPage.style.display="none");
+  spinner&&spinner.classList.remove("hidden");
+  setTimeout(()=>{ spinner&&spinner.classList.add("hidden"); gamePage&&gamePage.classList.remove("hidden"); startSession(); },700);
 });
 
-// ---------- Session functions ----------
-function startSession() {
-  taps = 0;
-  earnings = 0;
-  timer = duration;
-  bonusLevel = 1;
-  progress = 0;
-  tapsForNext = 100;
-  running = true;
-  cashCounter = 0;
-  cashThreshold = randomInt(1,12);
-  updateUI();
-  trainBar && (trainBar.style.width = '100%');
-
-  intervalId = setInterval(() => {
-    timer--;
-    if (timer < 0) timer = 0;
-    updateUI();
-    if (trainBar) trainBar.style.width = Math.max(0, (timer/duration)*100) + '%';
-    if (timer === 0) endSession();
-  }, 1000);
+// ---------- SESSION ----------
+function startSession(){
+  taps=0; earnings=0; timer=duration; bonusLevel=1; progress=0; tapsForNext=100; running=true;
+  cashCounter=0; cashThreshold=randomInt(1,12);
+  trainBar&&(trainBar.style.width='100%'); updateUI();
+  intervalId=setInterval(()=>{
+    timer--; if(timer<0) timer=0; updateUI();
+    trainBar&&(trainBar.style.width=Math.max(0,(timer/duration)*100)+'%');
+    if(timer===0) endSession();
+  },1000);
 }
+function stopSession(){ running=false; intervalId&&(clearInterval(intervalId),intervalId=null); }
 
-function stopSession() {
-  running = false;
-  if (intervalId) { clearInterval(intervalId); intervalId = null; }
-}
-
-// ---------- Tap handler with proper cash awarding ----------
-tapButton?.addEventListener(tapEvent, async (e) => {
-  e.preventDefault();
-  if (!running) return;
-
-  taps++;
-  currentUser.totalTaps = (currentUser.totalTaps || 0) + 1;
-  progress++;
-
-  // Random cash award logic only triggers at thresholds
-  cashCounter++;
-  if (cashCounter >= cashThreshold) {
-    cashCounter = 0;
-    cashThreshold = randomInt(1,12);
-
-    const pot = getStoredPot() ?? DAILY_INITIAL_POT;
-    if (pot > 0) {
-      earnings += CASH_PER_AWARD;
-      setStoredPot(Math.max(0, pot - CASH_PER_AWARD));
-      await giveCashToUser(CASH_PER_AWARD);
-
-      const texts = ['+₦1', 'Nice! +₦1', 'Cha-ching +1', '+1 Naira'];
-      radiateText(texts[randomInt(0,texts.length-1)]);
-      showConfetti();
-    } else {
-      radiateText('Pool empty');
-    }
-  } else {
-    const tapTexts = ['Tap', 'Nice', '+1 tap', 'Good'];
-    radiateText(tapTexts[randomInt(0,tapTexts.length-1)]);
-  }
-
-  if (progress >= tapsForNext) {
-    progress = 0;
-    bonusLevel++;
-    tapsForNext = 100 + (bonusLevel - 1) * 50;
-    showTempMessage(`Level ${bonusLevel} reached! TAP PRO!`);
-    showConfetti();
-  }
-
+tapButton?.addEventListener(tapEvent, async e=>{
+  e.preventDefault(); if(!running) return;
+  taps++; currentUser.totalTaps=(currentUser.totalTaps||0)+1; progress++; cashCounter++;
+  if(cashCounter>=cashThreshold){
+    cashCounter=0; cashThreshold=randomInt(1,12);
+    const pot=getStoredPot()??DAILY_INITIAL_POT;
+    if(pot>0){ earnings+=CASH_PER_AWARD; setStoredPot(Math.max(0,pot-CASH_PER_AWARD)); await giveCashToUser(CASH_PER_AWARD); radiateText(['+₦1','Nice! +₦1','Cha-ching +1','+1 Naira'][randomInt(0,3)]); showConfetti(); }
+    else radiateText('Pool empty');
+  } else radiateText(['Tap','Nice','+1 tap','Good'][randomInt(0,3)]);
+  if(progress>=tapsForNext){ progress=0; bonusLevel++; tapsForNext=100+(bonusLevel-1)*50; showTempMessage(`Level ${bonusLevel} reached! TAP PRO!`); showConfetti(); }
   flashTapGlow();
-  try { tapSound.currentTime = 0; tapSound.play().catch(()=>{}); } catch(e){ }
-  if (navigator.vibrate) navigator.vibrate(12);
-  updateUI();
+  try{tapSound.currentTime=0;tapSound.play().catch(()=>{});}catch{}
+  navigator.vibrate?.(12); updateUI();
 });
 
-// ---------- End session ----------
-async function endSession() {
-  if (!running) return;
-  stopSession();
-
-  try {
-    await addDoc(collection(db,'tapSessions'),{
-      taps,
-      earnings,
-      uid: currentUser?.uid || null,
-      username: currentUser?.chatId || profileNameEl?.textContent || 'GUEST',
-      timestamp: serverTimestamp()
-    });
-  } catch(e){ console.error('Failed to save session', e); }
-
-  let placeText = '—';
-  try {
-    const oneHourAgo = Timestamp.fromDate(new Date(Date.now()-3600*1000));
-    const q = query(collection(db,'tapSessions'), where('timestamp','>',oneHourAgo), orderBy('taps','desc'), limit(50));
-    const snap = await getDocs(q);
-    const arr = snap.docs.map(d=>d.data().taps || 0);
-    const all = arr.slice(); all.push(taps);
-    all.sort((a,b)=>b-a);
-    const place = all.indexOf(taps)+1;
-    placeText = `#${place}`;
-  } catch(e){ console.warn('Leaderboard error', e); }
-
-  showEndGameModal({
-    username: currentUser?.chatId || profileNameEl?.textContent || 'GUEST',
-    taps,
-    earnings: earnings.toFixed(2),
-    place: placeText
-  });
-
-  tapButton.disabled = true;
+async function endSession(){
+  if(!running) return; stopSession();
+  try{ await addDoc(collection(db,'tapSessions'),{ taps, earnings, uid:currentUser?.uid||null, username:currentUser?.chatId||profileNameEl?.textContent||'GUEST', timestamp:serverTimestamp() }); } catch(e){ console.error('Failed to save session', e);}
+  let placeText='—';
+  try{
+    const oneHourAgo=Timestamp.fromDate(new Date(Date.now()-3600*1000));
+    const q=query(collection(db,'tapSessions'),where('timestamp','>',oneHourAgo),orderBy('taps','desc'),limit(50));
+    const snap=await getDocs(q);
+    const arr=snap.docs.map(d=>d.data().taps||0); const all=arr.slice(); all.push(taps); all.sort((a,b)=>b-a);
+    const place=all.indexOf(taps)+1; placeText=`#${place}`;
+  } catch(e){ console.warn('Leaderboard error',e); }
+  showEndGameModal({username:currentUser?.chatId||profileNameEl?.textContent||'GUEST', taps, earnings:earnings.toFixed(2), place:placeText});
+  tapButton.disabled=true;
 }
 
-// ---------- Confetti ----------
-function showConfetti(){
-  // minimal confetti effect for taps
-  const c = document.createElement('div');
-  c.textContent = '✨';
-  Object.assign(c.style, {position:'fixed',left:`${randomInt(20,80)}%`,top:`${randomInt(20,60)}%`,fontSize:'24px',pointerEvents:'none',zIndex:9999});
-  document.body.appendChild(c);
-  setTimeout(()=>c.remove(),800);
+// ---------- UI Helpers ----------
+function updateUI(){
+  timerEl&&(timerEl.textContent=String(timer));
+  tapCountEl&&(tapCountEl.textContent=String(taps));
+  earningsEl&&(earningsEl.textContent='₦'+earnings.toFixed(2));
+  bonusLevelVal&&(bonusLevelVal.textContent=String(bonusLevel));
+  miniTapCount&&(miniTapCount.textContent=String(taps));
+  miniEarnings&&(miniEarnings.textContent='₦'+earnings.toFixed(2));
+}
+function radiateText(txt){ const t=document.createElement('div'); t.textContent=txt; Object.assign(t.style,{position:'fixed',left:`${randomInt(20,80)}%`,top:`${randomInt(20,60)}%`,fontSize:'18px',color:'#FFFA00',zIndex:9999,pointerEvents:'none'}); document.body.appendChild(t); setTimeout(()=>t.remove(),800);}
+function showConfetti(){ const c=document.createElement('div'); c.textContent='✨'; Object.assign(c.style,{position:'fixed',left:`${randomInt(20,80)}%`,top:`${randomInt(20,60)}%`,fontSize:'24px',pointerEvents:'none',zIndex:9999}); document.body.appendChild(c); setTimeout(()=>c.remove(),800);}
+function showTempMessage(txt){ const msg=document.createElement('div'); msg.textContent=txt; Object.assign(msg.style,{position:'fixed',left:'50%',top:'30%',transform:'translateX(-50%)',background:'#000',padding:'10px 16px',borderRadius:'8px',border:'1px solid rgba(255,255,255,0.06)',zIndex:9999}); document.body.appendChild(msg); setTimeout(()=>{msg.style.transition='opacity .4s';msg.style.opacity=0; setTimeout(()=>msg.remove(),400);},900);}
+function flashTapGlow(){ tapButton?.classList.add('tap-glow'); setTimeout(()=>tapButton?.classList.remove('tap-glow'),120); }
+
+// ---------- End Game Modal ----------
+function showEndGameModal({username,taps,earnings,place}){
+  const existing=document.getElementById('tapEndModal'); if(existing) existing.remove();
+  const modal=document.createElement('div'); modal.id='tapEndModal'; Object.assign(modal.style,{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)',zIndex:99999,padding:'20px'});
+  const box=document.createElement('div'); Object.assign(box.style,{width:'92%',maxWidth:'420px',background:'#0f0f0f',borderRadius:'12px',padding:'18px',textAlign:'center',border:'1px solid rgba(255,255,255,0.06)'});
+  const h=document.createElement('div'); h.style.fontWeight='800'; h.style.color='#FF1493'; h.style.marginBottom='8px'; h.textContent=`${username}, Time's Up!`;
+  const p1=document.createElement('div'); p1.style.margin='8px 0'; p1.innerHTML=`You earned <strong>₦${earnings}</strong> and made <strong>${taps}</strong> taps.`;
+  const p2=document.createElement('div'); p2.style.margin='8px 0'; p2.innerHTML=`Your rank: <strong>${place}</strong> — check the leaderboard for full details.`;
+  const actions=document.createElement('div'); Object.assign(actions.style,{marginTop:'12px',display:'flex',justifyContent:'center',gap:'12px'});
+  const playAgainBtn=document.createElement('button'); playAgainBtn.textContent='Play Again'; Object.assign(playAgainBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#00e676,#00b0ff)',color:'#000',fontWeight:800});
+  const closeBtn=document.createElement('button'); closeBtn.textContent='Close'; Object.assign(closeBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#FF1493,#FF8C00)',color:'#fff',fontWeight:800});
+  actions.append(playAgainBtn,closeBtn); box.append(h,p1,p2,actions); modal.appendChild(box); document.body.appendChild(modal);
+  playAgainBtn.addEventListener('click',async()=>{ modal.remove(); if(currentUser?.stars>=STAR_COST){ await tryDeductStarsForJoin(STAR_COST); starCountEl.textContent=String(currentUser.stars); startSession(); tapButton.disabled=false; } else { alert("Not enough stars to play again!"); }});
+  closeBtn.addEventListener('click',()=>{ modal.remove(); gamePage&&gamePage.classList.add('hidden'); startPage&&(startPage.style.display='flex'); posterImg&&(posterImg.style.display='block'); tapButton.disabled=false; });
 }
 
-// ---------- End game modal ----------
-function showEndGameModal({ username, taps, earnings, place }) {
-  const existing = document.getElementById('tapEndModal');
-  if (existing) existing.remove();
-
-  const modal = document.createElement('div');
-  modal.id = 'tapEndModal';
-  Object.assign(modal.style,{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)',zIndex:99999,padding:'20px'});
-
-  const box = document.createElement('div');
-  Object.assign(box.style,{width:'92%',maxWidth:'420px',background:'#0f0f0f',borderRadius:'12px',padding:'18px',textAlign:'center',border:'1px solid rgba(255,255,255,0.06)'});
-
-  const h = document.createElement('div');
-  h.style.fontWeight='800'; h.style.color='#FF1493'; h.style.marginBottom='8px';
-  h.textContent = `${username}, Time's Up!`;
-
-  const p1 = document.createElement('div'); p1.style.margin='8px 0';
-  p1.innerHTML = `You earned <strong>₦${earnings}</strong> and made <strong>${taps}</strong> taps.`;
-
-  const p2 = document.createElement('div'); p2.style.margin='8px 0';
-  p2.innerHTML = `Your rank: <strong>${place}</strong> — check the leaderboard for full details.`;
-
-  const actions = document.createElement('div');
-  actions.style.marginTop='12px'; actions.style.display='flex'; actions.style.justifyContent='center'; actions.style.gap='12px';
-
-  const playAgainBtn = document.createElement('button'); playAgainBtn.textContent='Play Again';
-  Object.assign(playAgainBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#00e676,#00b0ff)',color:'#000',fontWeight:800});
-  
-  const closeBtn = document.createElement('button'); closeBtn.textContent='Close';
-  Object.assign(closeBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#FF1493,#FF8C00)',color:'#fff',fontWeight:800});
-
-  actions.appendChild(playAgainBtn); actions.appendChild(closeBtn);
-  box.appendChild(h); box.appendChild(p1); box.appendChild(p2); box.appendChild(actions);
-  modal.appendChild(box); document.body.appendChild(modal);
-
-  playAgainBtn.addEventListener('click', async () => {
-    modal.remove();
-    // Deduct stars like confirm modal
-    if (currentUser?.stars >= STAR_COST) {
-      await tryDeductStarsForJoin(STAR_COST);
-      starCountEl.textContent = String(currentUser.stars);
-      startSession();
-      tapButton.disabled=false;
-    } else {
-      alert("Not enough stars to play again!");
-    }
-  });
-
-  closeBtn.addEventListener('click', () => {
-    modal.remove();
-    if (gamePage) gamePage.classList.add('hidden');
-    if (startPage) startPage.style.display='flex';
-    if (posterImg) posterImg.style.display='block';
-    tapButton.disabled=false;
-  });
-}
-
-// ---------- Leaderboard ----------
-leaderboardBtn?.addEventListener('click', async ()=>{
-  leaderboardList.innerHTML = '<li style="color:#aaa">Loading…</li>';
+// ---------- LEADERBOARD ----------
+leaderboardBtn?.addEventListener('click',async()=>{
+  leaderboardList.innerHTML='<li style="color:#aaa">Loading…</li>';
   leaderboardModal.style.display='flex';
   try{
-    const oneHourAgo = Timestamp.fromDate(new Date(Date.now()-3600*1000));
-    const q = query(collection(db,'tapSessions'), where('timestamp','>',oneHourAgo), orderBy('taps','desc'), limit(20));
-    const snap = await getDocs(q);
+    const oneHourAgo=Timestamp.fromDate(new Date(Date.now()-3600*1000));
+    const q=query(collection(db,'tapSessions'),where('timestamp','>',oneHourAgo),orderBy('taps','desc'),limit(20));
+    const snap=await getDocs(q);
     if(snap.empty){ leaderboardList.innerHTML='<li style="color:#aaa">No scores this hour</li>'; return; }
-
-    leaderboardList.innerHTML = snap.docs.map((d,i)=>{
-      const data = d.data();
-      const t = data.taps||0;
-      const earn = (data.earnings||0).toFixed(2);
-      const when = data.timestamp?.toDate ? data.timestamp.toDate().toLocaleTimeString() : '';
-      const uname = data.username||'GUEST';
+    leaderboardList.innerHTML=snap.docs.map((d,i)=>{
+      const data=d.data(),t=data.taps||0,earn=(data.earnings||0).toFixed(2),when=data.timestamp?.toDate?data.timestamp.toDate().toLocaleTimeString():'',uname=data.username||'GUEST';
       return `<li style="padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,0.03)"><strong>#${i+1}</strong> — ${uname} — ${t} taps &nbsp; (₦${earn})<div style="font-size:11px;color:#aaa">${when}</div></li>`;
     }).join('');
   } catch(e){ leaderboardList.innerHTML='<li style="color:#f88">Failed to load</li>'; console.error(e);}
 });
+closeLeaderboard?.addEventListener('click',()=>leaderboardModal.style.display='none');
+leaderboardModal?.addEventListener('click',e=>{ if(e.target===leaderboardModal) leaderboardModal.style.display='none'; });
 
-closeLeaderboard?.addEventListener('click', ()=>leaderboardModal.style.display='none');
-leaderboardModal?.addEventListener('click', (e)=>{if(e.target===leaderboardModal) leaderboardModal.style.display='none';});
+// ---------- CSS ----------
+const style=document.createElement('style'); style.innerHTML=`#tapButton.tap-glow{box-shadow:0 0 26px rgba(0,230,118,0.9),0 0 8px rgba(0,176,255,0.6);transform:scale(1.03);}`; document.head.appendChild(style);
 
-
-// ---------- Small helpers ----------
-function showTempMessage(txt){
-  const msg = document.createElement('div');
-  msg.textContent = txt;
-  Object.assign(msg.style, { position:'fixed', left:'50%', top:'30%', transform:'translateX(-50%)', background:'#000', padding:'10px 16px', borderRadius:'8px', border:'1px solid rgba(255,255,255,0.06)', zIndex:9999 });
-  document.body.appendChild(msg);
-  setTimeout(()=> { msg.style.transition='opacity .4s'; msg.style.opacity=0; setTimeout(()=>msg.remove(),400); }, 900);
-}
-
-// small CSS flip: add glow class style for button programmatically so it's self-contained
-const style = document.createElement('style');
-style.innerHTML = `
-  #tapButton.tap-glow { box-shadow: 0 0 26px rgba(0,230,118,0.9), 0 0 8px rgba(0,176,255,0.6); transform: scale(1.03); }
-`;
-document.head.appendChild(style);
-
-// expose some helpers for debugging
-window.tapMasterDebug = {
-  getPot: () => getStoredPot(),
-  setPot: (v) => setStoredPot(v),
-  startSession,
-  endSession
-};
+// ---------- DEBUG ----------
+window.tapMasterDebug={ getPot:()=>getStoredPot(), setPot:(v)=>setStoredPot(v), startSession, endSession };
 </script>
 </body>
 </html>
