@@ -577,8 +577,7 @@ if (currentUser?.uid && taps > 0) {
     });
 
     // ----- 2. Save session as a separate document -----
-    const sessionsRef = collection(db, "tapSessions");
-    await addDoc(sessionsRef, {
+    await addDoc(collection(db, "tapSessions"), {
       uid: currentUser.uid,
       chatId: currentUser.chatId || currentUser.uid,
       email: currentUser.email || null,
@@ -586,7 +585,7 @@ if (currentUser?.uid && taps > 0) {
       earnings: earnings,
       bonusLevel: bonusLevel,
       invitedBy: currentUser.invitedBy || null,
-      timestamp: new Date() // safe, avoids hanging
+      timestamp: new Date() // safer than serverTimestamp() in client JS
     });
 
     console.log("Session recorded successfully.");
@@ -704,7 +703,7 @@ function getTimeRange(period) {
   if (period === "daily") {
     start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   } else if (period === "weekly") {
-    const day = now.getDay();
+    const day = now.getDay(); // 0=Sun, 1=Mon
     start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
   } else if (period === "monthly") {
     start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -720,41 +719,47 @@ async function fetchLeaderboard(period = "daily", top = 10) {
   try {
     const { start, end } = getTimeRange(period);
 
-    const sessionsCol = collection(db, "tapSessions");
+    // Firestore timestamps need to be converted to Timestamp
+    const startTs = start; // use Date directly if your field is stored as client Date
+    const endTs = end;
 
+    // Fetch sessions in range
+    const sessionsCol = collection(db, "tapSessions");
     const q = query(
       sessionsCol,
-      where("timestamp", ">=", start),
-      where("timestamp", "<=", end)
+      where("timestamp", ">=", startTs),
+      where("timestamp", "<=", endTs)
     );
 
     const snap = await getDocs(q);
 
+    // Aggregate taps per user
     const userTotals = {};
-
     snap.forEach(docSnap => {
       const d = docSnap.data();
       if (!d.uid) return;
-
       if (!userTotals[d.uid]) userTotals[d.uid] = 0;
       userTotals[d.uid] += Number(d.taps || 0);
     });
 
+    // Sort descending
     const sorted = Object.entries(userTotals)
       .sort((a, b) => b[1] - a[1])
       .slice(0, top);
 
-    if (sorted.length === 0) {
+    if (!sorted.length) {
       leaderboardList.innerHTML = "<li>No data yet</li>";
       return;
     }
 
+    // Render leaderboard
     leaderboardList.innerHTML = sorted
       .map(([uid, taps], i) => {
-        const name =
-          currentUser?.uid === uid ? currentUser.chatId : uid.slice(0, 6);
+        let name = uid;
+        // show chatId if current user
+        if (currentUser?.uid === uid) name = currentUser.chatId;
         return `<li style="margin-bottom:8px;">
-            ${i + 1}. <strong>${name}</strong> — ${taps.toLocaleString()} taps
+          ${i + 1}. <strong>${name}</strong> — ${taps.toLocaleString()} taps
         </li>`;
       })
       .join("");
@@ -768,7 +773,7 @@ async function fetchLeaderboard(period = "daily", top = 10) {
 // ---------- OPEN / CLOSE ----------
 leaderboardBtn?.addEventListener("click", () => {
   leaderboardModal.style.display = "flex";
-  fetchLeaderboard("daily");
+  fetchLeaderboard("daily"); // default
 });
 
 closeLeaderboard?.addEventListener("click", () => {
@@ -796,7 +801,6 @@ periodContainer.style = "margin:10px 0; text-align:center;";
   periodContainer.appendChild(btn);
 });
 
-// insert before <ol id="leaderboardList">
 leaderboardModal.querySelector(".modal").insertBefore(periodContainer, leaderboardList);
 
 // ---------- Tap Function ----------
