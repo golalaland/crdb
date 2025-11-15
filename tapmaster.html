@@ -370,19 +370,25 @@ function initializePot(){
 // helper random
 function randomInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
 
-// ---------- User loader (mirrors Money Train) ----------
+// -----------------------------------------------------
+//  GLOBAL USER
+// -----------------------------------------------------
 let currentUser = null;
 
+// -----------------------------------------------------
+//  LOAD CURRENT USER FOR GAME
+// -----------------------------------------------------
 async function loadCurrentUserForGame() {
   try {
-    const vipRaw = localStorage.getItem('vipUser');
-    const hostRaw = localStorage.getItem('hostUser');
+    const vipRaw = localStorage.getItem("vipUser");
+    const hostRaw = localStorage.getItem("hostUser");
     const storedUser = vipRaw
       ? JSON.parse(vipRaw)
       : hostRaw
       ? JSON.parse(hostRaw)
       : null;
 
+    // No stored login
     if (!storedUser?.email) {
       currentUser = null;
       if (profileNameEl) profileNameEl.textContent = "GUEST 0000";
@@ -390,155 +396,185 @@ async function loadCurrentUserForGame() {
       return;
     }
 
-    // ✅ Your REAL sanitization: "." → "," AND lowercase
+    // -----------------------------------------------------
+    //  SANITIZE EMAIL EXACTLY AS FIRESTORE USES IT
+    //  (your system replaces '.' with ',')
+    // -----------------------------------------------------
     const uid = storedUser.email.replace(/\./g, ",").toLowerCase();
 
     const userRef = doc(db, "users", uid);
     const snap = await getDoc(userRef);
 
+    // -----------------------------------------------------
+    //  USER DOC DOES NOT EXIST
+    // -----------------------------------------------------
     if (!snap.exists()) {
-      console.warn("⚠️ User NOT found in users collection");
-
       currentUser = {
         uid,
+        email: storedUser.email,
         chatId:
           storedUser.fullName ||
-          storedUser.vipName ||
           storedUser.displayName ||
           storedUser.email.split("@")[0],
         stars: 0,
         cash: 0,
-        email: storedUser.email,
       };
 
       if (profileNameEl) profileNameEl.textContent = currentUser.chatId;
       if (starCountEl) starCountEl.textContent = "0";
-
       return;
     }
 
-    // ✅ Document exists — load ACTUAL balances + names
+    // -----------------------------------------------------
+    //  USER EXISTS IN FIRESTORE
+    // -----------------------------------------------------
     const data = snap.data();
 
+    // Remove any old invalid uid field inside the document
+    if (data.uid) delete data.uid;
+
+    // FINAL, GUARANTEED CORRECT USER OBJECT
     currentUser = {
-      uid,
+      uid, // always enforce sanitized UID
       ...data,
     };
 
-    // 🔥 Name priority — FIXED
-    const displayName =
-      data.fullName ||
-      data.vipName ||
-      data.chatId ||
-      storedUser.fullName ||
-      storedUser.displayName ||
-      storedUser.email.split("@")[0];
+    // Update UI
+    if (profileNameEl)
+      profileNameEl.textContent =
+        currentUser.chatId ||
+        storedUser.fullName ||
+        storedUser.email.split("@")[0];
 
-    if (profileNameEl) profileNameEl.textContent = displayName;
-
-    // 🔥 Stars will now load correctly
-    if (starCountEl) starCountEl.textContent = String(data.stars ?? 0);
+    if (starCountEl)
+      starCountEl.textContent = String(currentUser.stars ?? 0);
 
   } catch (err) {
     console.warn("loadCurrentUserForGame error", err);
   }
 }
 
-// Atomic star deduction
-async function tryDeductStarsForJoin(cost){
-  if (!currentUser?.uid) return { ok:false, message:'You are not logged in' };
-  const userRef = doc(db, 'users', currentUser.uid);
+// -----------------------------------------------------
+//  DEDUCT STARS (transaction)
+// -----------------------------------------------------
+async function tryDeductStarsForJoin(cost) {
+  if (!currentUser?.uid)
+    return { ok: false, message: "You are not logged in" };
+
+  const userRef = doc(db, "users", currentUser.uid);
+
   try {
     await runTransaction(db, async (t) => {
       const u = await t.get(userRef);
-      if (!u.exists()) throw new Error('User not found');
+      if (!u.exists()) throw new Error("User not found");
+
       const udata = u.data();
       const currentStars = Number(udata.stars || 0);
-      if (currentStars < cost) throw new Error('Not enough stars');
+
+      if (currentStars < cost) throw new Error("Not enough stars");
+
       t.update(userRef, { stars: currentStars - cost });
     });
-    return { ok:true };
+
+    return { ok: true };
   } catch (e) {
-    return { ok:false, message: e.message || 'Could not deduct stars' };
+    return { ok: false, message: e.message || "Could not deduct stars" };
   }
 }
 
-// Add cash to user (transactional) when an award occurs
-async function giveCashToUser(amount){
+// -----------------------------------------------------
+//  GIVE CASH (transaction)
+// -----------------------------------------------------
+async function giveCashToUser(amount) {
   if (!currentUser?.uid) {
-    // if guest: update local UI only
-    if (miniEarnings) miniEarnings.textContent = (parseFloat(miniEarnings.textContent || '0') + amount).toFixed(2);
-    return { ok:true };
+    // guest → update local UI
+    if (miniEarnings)
+      miniEarnings.textContent = (
+        parseFloat(miniEarnings.textContent || "0") + amount
+      ).toFixed(2);
+
+    return { ok: true };
   }
-  const userRef = doc(db, 'users', currentUser.uid);
+
+  const userRef = doc(db, "users", currentUser.uid);
+
   try {
     await runTransaction(db, async (t) => {
       const u = await t.get(userRef);
-      if (!u.exists()) throw new Error('User not found');
+      if (!u.exists()) throw new Error("User not found");
+
       const udata = u.data();
-      const newCash = (Number(udata.cash || 0) + Number(amount));
+      const newCash = Number(udata.cash || 0) + Number(amount);
+
       t.update(userRef, { cash: newCash });
     });
-    return { ok:true };
+
+    return { ok: true };
   } catch (e) {
-    console.error('giveCashToUser error', e);
-    return { ok:false, message: e.message };
+    console.error("giveCashToUser error", e);
+    return { ok: false, message: e.message };
   }
 }
 
-// ---------- UI / Initialization ----------
+// -----------------------------------------------------
+//  INITIALIZATION
+// -----------------------------------------------------
 initializePot();
 loadCurrentUserForGame();
 
-// prevent double-tap zoom on iOS
-document.addEventListener('gesturestart', function(e){ e.preventDefault(); }, { passive:false });
-
-// unlock audio on first touch for iOS
-document.body.addEventListener('touchstart', () => { tapSound?.play().catch(()=>{}); }, { once:true });
-
-// ---------- Start flow ----------
-startBtn?.addEventListener('click', () => {
-  // show play confirmation modal
-  if (playModal) playModal.style.display = 'flex';
+// Disable double-tap zoom on iOS
+document.addEventListener("gesturestart", (e) => e.preventDefault(), {
+  passive: false,
 });
 
-// cancel
-cancelPlay?.addEventListener('click', () => {
-  if (playModal) playModal.style.display = 'none';
+// Unlock audio
+document.body.addEventListener(
+  "touchstart",
+  () => {
+    tapSound?.play().catch(() => {});
+  },
+  { once: true }
+);
+
+// -----------------------------------------------------
+//  GAME START FLOW
+// -----------------------------------------------------
+startBtn?.addEventListener("click", () => {
+  if (playModal) playModal.style.display = "flex";
 });
 
-// confirm
-confirmPlay?.addEventListener('click', async () => {
-  // take star cost via transaction
-  // if user logged in we deduct via Firestore; else we check UI starCountEl
-  let localStars = parseInt(starCountEl?.textContent || '0', 10);
-  // if currentUser exists try deduct transactionally
-  if (currentUser?.uid){
+cancelPlay?.addEventListener("click", () => {
+  if (playModal) playModal.style.display = "none";
+});
+
+confirmPlay?.addEventListener("click", async () => {
+  let localStars = parseInt(starCountEl?.textContent || "0", 10);
+
+  if (currentUser?.uid) {
     const r = await tryDeductStarsForJoin(STAR_COST);
-    if (!r.ok){
-      alert(r.message || 'Not enough stars');
+    if (!r.ok) {
+      alert(r.message || "Not enough stars");
       return;
     }
-    // update UI optimistically
-    if (starCountEl) starCountEl.textContent = String(Math.max(0, localStars - STAR_COST));
+
+    if (starCountEl)
+      starCountEl.textContent = String(Math.max(0, localStars - STAR_COST));
   } else {
-    // guest: just deduct from UI if enough
-    if (localStars < STAR_COST){
-      alert('Not enough stars to play!');
+    if (localStars < STAR_COST) {
+      alert("Not enough stars to play!");
       return;
     }
     starCountEl.textContent = String(localStars - STAR_COST);
   }
 
-  // hide modal + poster + start and show spinner
-  if (playModal) playModal.style.display = 'none';
-  if (posterImg) posterImg.style.display = 'none';
-  if (startPage) startPage.style.display = 'none';
-  if (spinner) spinner.classList.remove('hidden');
+  if (playModal) playModal.style.display = "none";
+  if (posterImg) posterImg.style.display = "none";
+  if (startPage) startPage.style.display = "none";
+  if (spinner) spinner.classList.remove("hidden");
 
-  setTimeout(()=> {
-    if (spinner) spinner.classList.add('hidden');
-    if (gamePage) gamePage.classList.remove('hidden');
+  setTimeout(() => {
+    if (spinner) spinner.classList.add("hidden");
+    if (gamePage) gamePage.classList.remove("hidden");
     startSession();
   }, 700);
 });
