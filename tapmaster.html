@@ -461,6 +461,63 @@ function startSession(){
 
 function stopSession(){ running=false; intervalId&&(clearInterval(intervalId),intervalId=null); }
 
+// ---------- Bonus Level Names & Confetti ----------
+const BONUS_LEVELS = [
+  {level:1, name:"Tap Starter", color:"#00e676"},
+  {level:2, name:"Tap On!", color:"#00b0ff"},
+  {level:3, name:"Tap Pro!", color:"#FF1493"},
+  {level:4, name:"Tap Boss!", color:"#FF8C00"},
+  {level:5, name:"Tap Legend!", color:"#9c27b0"},
+];
+
+// Floating +1 animation
+function showFloatingPlus(btn){
+  const plus = document.createElement('div');
+  plus.textContent = "+1";
+  Object.assign(plus.style,{
+    position:"absolute",
+    color:"#fff",
+    fontWeight:"bold",
+    fontSize:"18px",
+    pointerEvents:"none",
+    top:(btn.getBoundingClientRect().top-20)+"px",
+    left:(btn.getBoundingClientRect().left + btn.offsetWidth/2 - 10)+"px",
+    opacity:1,
+    transition:"all 0.8s ease-out"
+  });
+  document.body.appendChild(plus);
+  setTimeout(()=>{
+    plus.style.transform="translateY(-40px)";
+    plus.style.opacity="0";
+  },10);
+  setTimeout(()=>plus.remove(),800);
+}
+
+// Confetti helper (minimal)
+function triggerConfetti(color="#fff"){
+  const confetti = document.createElement('div');
+  confetti.textContent="🎉";
+  Object.assign(confetti.style,{
+    position:"absolute",
+    top: Math.random()*window.innerHeight + "px",
+    left: Math.random()*window.innerWidth + "px",
+    fontSize:"24px",
+    pointerEvents:"none",
+    opacity:1,
+    transform:"translateY(0px)",
+    transition:"all 1s ease-out"
+  });
+  document.body.appendChild(confetti);
+  setTimeout(()=>{
+    confetti.style.transform="translateY(50px) rotate(360deg)";
+    confetti.style.opacity=0;
+  },10);
+  setTimeout(()=>confetti.remove(),1000);
+}
+
+// ---------- Tap Listener ----------
+let lastTapTime = 0;
+
 tapButton?.addEventListener(tapEvent, async e=>{
   e.preventDefault(); if(!running) return;
 
@@ -468,9 +525,14 @@ tapButton?.addEventListener(tapEvent, async e=>{
   const deltaSec = (now - lastTapTime)/1000;
   lastTapTime = now;
 
-  taps++; currentUser && (currentUser.totalTaps=(currentUser.totalTaps||0)+1);
+  taps++; 
+  currentUser && (currentUser.totalTaps=(currentUser.totalTaps||0)+1);
   progress++; cashCounter++;
 
+  // Floating +1
+  showFloatingPlus(tapButton);
+
+  // Cash increment logic
   if(cashCounter >= cashThreshold){
     cashCounter = 0; cashThreshold = randomInt(1,12);
     const pot = getStoredPot() ?? DAILY_INITIAL_POT;
@@ -481,13 +543,34 @@ tapButton?.addEventListener(tapEvent, async e=>{
     }
   }
 
+  // Bonus level up
   if(progress >= tapsForNext){
     progress = 0; bonusLevel++; tapsForNext = 100 + (bonusLevel-1)*50;
+
+    // Determine level info
+    const levelInfo = BONUS_LEVELS.find(l=>l.level===bonusLevel) || {name:`Bonus lvl ${bonusLevel}`, color:"#fff"};
+    showTempMessage(levelInfo.name); // mini popup
+    triggerConfetti(levelInfo.color); // confetti
+    navigator.vibrate?.(25); // stronger buzz for bonus level
+  } else {
+    navigator.vibrate?.(8); // gentle buzz for normal tap
   }
 
+  // Bonus bar pulse effect
+  if(bonusBar){
+    const pct = Math.min(100, (progress / tapsForNext)*100);
+    bonusBar.style.width = pct + "%";
+    bonusBar.style.background = BONUS_LEVELS[bonusLevel-1]?.color || "#fff";
+    bonusBar.style.boxShadow = `0 0 12px ${BONUS_LEVELS[bonusLevel-1]?.color || "#fff"}, 0 0 4px #fff`;
+  }
+
+  // Button glow
   flashTapGlow();
+
+  // Sound
   try{ tapSound.currentTime=0; tapSound.play().catch(()=>{});}catch{}
-  navigator.vibrate?.(12);
+
+  // Update UI
   updateUI(deltaSec);
 });
 
