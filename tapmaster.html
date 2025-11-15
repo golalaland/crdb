@@ -257,7 +257,6 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
 <audio id="tapSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
 
 
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import {
@@ -419,7 +418,7 @@ function showFloatingPlus(parent,text){
   setTimeout(()=>span.remove(),900);
 }
 
-// ---------- BONUS BAR RANDOM COLORS ----------
+// ---------- BONUS BAR ANIMATED RAINBOW ----------
 function updateBonusBar(){
   if(!bonusBar) return;
   const colors = [
@@ -432,6 +431,7 @@ function updateBonusBar(){
   ];
   const idx = randomInt(0, colors.length-1);
   bonusBar.style.background = colors[idx];
+  bonusBar.style.transition = 'width 0.4s ease-in-out';
   bonusBar.style.width = Math.min(100,(progress/tapsForNext)*100)+'%';
 }
 
@@ -458,23 +458,32 @@ function triggerConfetti(){
 function startSession(){
   taps=0; earnings=0; timer=SESSION_DURATION; bonusLevel=1; progress=0; tapsForNext=100;
   cashCounter=0; cashThreshold=randomInt(1,12); running=true; lastTapTime=Date.now();
-  trainBar && (trainBar.style.width='100%'); bonusBar && updateBonusBar();
+  trainBar && (trainBar.style.width='100%'); updateBonusBar();
   tapButton.disabled = false; updateUI();
+  
+  // timer interval solid
+  let expected = Date.now() + 1000;
   intervalId=setInterval(()=>{
+    const drift = Date.now() - expected;
+    if(drift > 1000) { expected = Date.now() + 1000; return; }
     timer--;
-    if(timer<=0) { timer=0; endSession(); }
+    if(timer<=0){ timer=0; endSession(); }
     trainBar && (trainBar.style.width=(timer/SESSION_DURATION*100)+'%');
     updateUI();
-  },1000);
+    expected += 1000;
+  }, 1000);
 }
 
 function stopSession(){ running=false; intervalId&&(clearInterval(intervalId),intervalId=null); }
 
 // ---------- TAP ----------
+let tapLocked = false;
 tapButton?.addEventListener(tapEvent, async e=>{
   e.preventDefault();
-  if(!running) return;
-  const now=Date.now(), deltaSec=(now-lastTapTime)/1000; lastTapTime=now;
+  if(!running || tapLocked) return;
+  tapLocked = true; // prevent multiple taps per frame
+  setTimeout(()=>{ tapLocked=false; },50);
+
   taps++; currentUser && (currentUser.totalTaps=(currentUser.totalTaps||0)+1);
   progress++; cashCounter++;
   showFloatingPlus(tapButton,'+1');
@@ -497,12 +506,12 @@ tapButton?.addEventListener(tapEvent, async e=>{
   flashTapGlow();
   try{ tapSound.currentTime=0; tapSound.play().catch(()=>{});}catch{}
   navigator.vibrate?.(12);
-  updateUI(deltaSec);
+  updateUI();
   updateBonusBar();
 });
 
-// ---------- UI ----------
-function updateUI(deltaSec=1){
+// ---------- UI & TAP GLOW ----------
+function updateUI(){
   timerEl && (timerEl.textContent=String(timer));
   tapCountEl && (tapCountEl.textContent=String(taps));
   earningsEl && (earningsEl.textContent='₦'+formatNumber(earnings.toFixed(2)));
@@ -516,103 +525,12 @@ function updateUI(deltaSec=1){
   if(cashCountEl && currentUser) cashCountEl.textContent='₦'+formatNumber(currentUser.cash);
 }
 
-// ---------- TAP GLOW ----------
 function flashTapGlow(){ 
   tapButton?.classList.add('tap-glow','tap-pulse'); 
   setTimeout(()=>{tapButton?.classList.remove('tap-glow','tap-pulse');},120); 
 }
 
-// ---------- END SESSION ----------
-async function endSession(){
-  if(!running) return;
-  stopSession();
-  tapButton.disabled = true;
-
-  try{ 
-    await addDoc(collection(db,'tapSessions'),{
-      taps, earnings, uid:currentUser?.uid||null, 
-      username:currentUser?.chatId||profileNameEl?.textContent||'GUEST',
-      timestamp:serverTimestamp()
-    }); 
-  } catch(e){console.error(e);}
-
-  let placeText='—';
-  try{
-    const oneHourAgo = Timestamp.fromDate(new Date(Date.now()-3600*1000));
-    const q=query(collection(db,'tapSessions'),where('timestamp','>',oneHourAgo),orderBy('taps','desc'),limit(50));
-    const snap=await getDocs(q);
-    const arr=snap.docs.map(d=>d.data().taps||0);
-    const all=arr.slice(); all.push(taps); all.sort((a,b)=>b-a);
-    const place=all.indexOf(taps)+1;
-    placeText=`#${place}`;
-  }catch(e){console.warn(e);}
-
-  showEndGameModal({username:currentUser?.chatId||profileNameEl?.textContent||'GUEST', taps, earnings:formatNumber(earnings.toFixed(2)), place:placeText});
-}
-
-// ---------- END GAME MODAL ----------
-function showEndGameModal({username,taps,earnings,place}){
-  document.getElementById('tapEndModal')?.remove();
-  const modal=document.createElement('div'); modal.id='tapEndModal';
-  Object.assign(modal.style,{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)',zIndex:99999,padding:'20px'});
-  const box=document.createElement('div');
-  Object.assign(box.style,{width:'92%',maxWidth:'420px',background:'#0f0f0f',borderRadius:'12px',padding:'18px',textAlign:'center',border:'1px solid rgba(255,255,255,0.06)'});
-  const h=document.createElement('div'); h.style.fontWeight='800'; h.style.color='#FF1493'; h.style.marginBottom='8px';
-  h.textContent=`${username}, Time's Up!`;
-  const p1=document.createElement('div'); p1.style.margin='8px 0';
-  p1.innerHTML=`You earned <strong>₦${earnings}</strong> and made <strong>${taps}</strong> taps.`;
-  const p2=document.createElement('div'); p2.style.margin='8px 0';
-  p2.innerHTML=`Your rank: <strong>${place}</strong>`;
-  const actions=document.createElement('div'); Object.assign(actions.style,{marginTop:'12px',display:'flex',justifyContent:'center',gap:'12px'});
-  const playAgainBtn=document.createElement('button'); playAgainBtn.textContent='Play Again';
-  Object.assign(playAgainBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#00e676,#00b0ff)',color:'#000',fontWeight:800});
-  const closeBtn=document.createElement('button'); closeBtn.textContent='Close';
-  Object.assign(closeBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#FF1493,#FF8C00)',color:'#fff',fontWeight:800});
-  actions.append(playAgainBtn,closeBtn); box.append(h,p1,p2,actions); modal.appendChild(box); document.body.appendChild(modal);
-
-  playAgainBtn.addEventListener('click',()=>{
-    modal.remove();
-    gamePage.classList.add('hidden');
-    startPage.style.display='flex';
-    posterImg.style.display='block';
-    startSession();
-  });
-  closeBtn.addEventListener('click',()=>{
-    modal.remove();
-    stopSession();
-    gamePage.classList.add('hidden');
-    startPage.style.display='flex';
-    posterImg.style.display='block';
-  });
-}
-
-// ---------- START FLOW ----------
-initializePot();
-loadCurrentUserForGame();
-startBtn?.addEventListener("click",()=>playModal&&(playModal.style.display="flex"));
-cancelPlay?.addEventListener("click",()=>playModal&&(playModal.style.display="none"));
-
-confirmPlay?.addEventListener("click",async ()=>{
-  let localStars=parseInt(starCountEl?.textContent.replace(/,/g,'')||"0",10);
-  if(currentUser?.uid){
-    const r=await tryDeductStarsForJoin(STAR_COST);
-    if(!r.ok){ alert(r.message||"Not enough stars"); return; }
-  } else {
-    if(localStars<STAR_COST){ alert("Not enough stars to play!"); return; }
-    localStars-=STAR_COST; starCountEl.textContent=formatNumber(localStars);
-  }
-  playModal&&(playModal.style.display="none");
-  posterImg&&(posterImg.style.display="none");
-  startPage&&(startPage.style.display="none");
-  spinner?.classList.remove("hidden");
-  setTimeout(()=>{
-    spinner?.classList.add("hidden");
-    gamePage?.classList.remove("hidden");
-    startSession();
-  },700);
-});
-
-// ---------- EXTRA CSS ----------
+// ---------- ADD CSS ----------
 const style=document.createElement('style'); 
 style.innerHTML=`
   #tapButton.tap-glow { box-shadow:0 0 26px rgba(0,230,118,0.9),0 0 8px rgba(0,176,255,0.6); }
@@ -620,9 +538,8 @@ style.innerHTML=`
 `;
 document.head.appendChild(style);
 
-window.tapMasterDebug={ getPot:()=>getStoredPot(), setPot:(v)=>setStoredPot(v), startSession, endSession };
+initializePot();
+loadCurrentUserForGame();
 </script>
-
-
 </body>
 </html>
