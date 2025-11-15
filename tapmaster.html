@@ -925,6 +925,175 @@ async function recordTap(userId, taps = 1, invitedBy = null, earnings = 0, bonus
     console.error("Error recording tap:", e);
   }
 }
+// ---------- DOM ----------
+const poolBtn = document.getElementById('poolBtn');
+const poolModal = document.getElementById('poolModal');
+const poolInfo = document.getElementById('poolInfo');
+const joinPoolBtn = document.getElementById('joinPoolBtn');
+const closePoolBtns = document.querySelectorAll('.closeModalBtn[data-target="poolModal"]');
+
+let poolDocId = "dailyPool"; // can be dynamic if you want multiple pools
+
+// Open pool modal
+poolBtn?.addEventListener('click', async () => {
+  poolModal.style.display = 'flex';
+  await fetchPoolInfo(poolDocId);
+});
+
+// Close modal
+closePoolBtns.forEach(btn => btn.addEventListener('click', () => poolModal.style.display = 'none'));
+
+// Fetch pool info
+async function fetchPoolInfo(docId){
+  const docRef = doc(db, "pools", docId);
+  const snap = await getDoc(docRef);
+
+  if(!snap.exists()){
+    poolInfo.innerHTML = "No pool active";
+    return;
+  }
+
+  const data = snap.data();
+  const {targetAmount, currentAmount, participants} = data;
+
+  poolInfo.innerHTML = `
+    Pool: ₦${currentAmount.toLocaleString()} / ₦${targetAmount.toLocaleString()}<br>
+    Participants: ${participants.length}
+  `;
+}
+
+// Join pool
+joinPoolBtn?.addEventListener('click', async () => {
+  if(!currentUser) return;
+
+  const userRef = doc(db, "users", currentUser.uid);
+  const poolRef = doc(db, "pools", poolDocId);
+
+  await runTransaction(db, async (t) => {
+    const userSnap = await t.get(userRef);
+    const poolSnap = await t.get(poolRef);
+
+    if(!userSnap.exists() || !poolSnap.exists()) return;
+
+    const userData = userSnap.data();
+    if((userData.cash || 0) < 50) return alert("Not enough cash");
+
+    const poolData = poolSnap.data();
+    const newAmount = (poolData.currentAmount || 0) + 50;
+    const newParticipants = Array.from(new Set([...(poolData.participants||[]), currentUser.uid]));
+
+    // Deduct user cash
+    t.update(userRef, {cash: (userData.cash||0) - 50});
+    t.update(poolRef, {
+      currentAmount: newAmount,
+      participants: newParticipants
+    });
+  });
+
+  await fetchPoolInfo(poolDocId);
+});
+// ---------- DOM ----------
+const bidBtn = document.getElementById('bidBtn');
+const bidModal = document.getElementById('bidModal');
+const bidInfo = document.getElementById('bidInfo');
+const tapBidBtn = document.getElementById('tapBidBtn');
+const closeBidBtns = document.querySelectorAll('.closeModalBtn[data-target="bidModal"]');
+
+let currentBidId = "item1"; // can be dynamic if multiple items
+let bidCountdownInterval;
+
+// Open bid modal
+bidBtn?.addEventListener('click', async () => {
+  bidModal.style.display = 'flex';
+  await showBidItem(currentBidId);
+  startBidCountdown(currentBidId);
+  await updateBidLeaderboard(currentBidId);
+});
+
+// Close bid modal
+closeBidBtns.forEach(btn => btn.addEventListener('click', () => {
+  bidModal.style.display = 'none';
+  clearInterval(bidCountdownInterval);
+}));
+
+// Show bid images (carousel)
+async function showBidItem(bidId){
+  const bidRef = doc(db, "bids", bidId);
+  const snap = await getDoc(bidRef);
+  if(!snap.exists()) return;
+
+  const {images, description} = snap.data();
+  bidInfo.innerHTML = `
+    <div class="carousel">
+      ${images.map(url => `<img src="${url}" style="width:100%;margin-bottom:5px;border-radius:8px;">`).join('')}
+    </div>
+    <div>${description || ''}</div>
+  `;
+}
+
+// Countdown timer
+function startBidCountdown(bidId){
+  const bidRef = doc(db, "bids", bidId);
+
+  bidCountdownInterval = setInterval(async ()=>{
+    const snap = await getDoc(bidRef);
+    if(!snap.exists()) return clearInterval(bidCountdownInterval);
+
+    const {endTime} = snap.data();
+    const now = Date.now();
+    const diff = endTime - now;
+
+    if(diff <= 0){
+      bidInfo.querySelector('.countdown')?.remove();
+      clearInterval(bidCountdownInterval);
+      bidInfo.insertAdjacentHTML('beforeend', '<div>Bid Ended!</div>');
+      return;
+    }
+
+    const mins = Math.floor(diff/60000);
+    const secs = Math.floor((diff%60000)/1000);
+    let countdown = bidInfo.querySelector('.countdown');
+    if(!countdown){
+      countdown = document.createElement('div');
+      countdown.className = 'countdown';
+      bidInfo.appendChild(countdown);
+    }
+    countdown.textContent = `Time Left: ${mins}:${secs.toString().padStart(2,'0')}`;
+  }, 1000);
+}
+
+// Tap to bid
+tapBidBtn?.addEventListener('click', async ()=>{
+  if(!currentUser) return;
+
+  const bidScoreRef = doc(db, "bids", currentBidId, "scores", currentUser.uid);
+  await runTransaction(db, async t=>{
+    const snap = await t.get(bidScoreRef);
+    const taps = snap.exists() ? snap.data().taps : 0;
+    t.set(bidScoreRef,{taps: taps+1});
+  });
+
+  await updateBidLeaderboard(currentBidId);
+});
+
+// Update bid leaderboard
+async function updateBidLeaderboard(bidId, top = 10){
+  const scoresCol = collection(db, "bids", bidId, "scores");
+  const snap = await getDocs(scoresCol);
+  const scores = [];
+  snap.forEach(docSnap=>{
+    const data = docSnap.data();
+    if(data.taps > 0) scores.push({uid: docSnap.id, taps: data.taps});
+  });
+  scores.sort((a,b)=> b.taps - a.taps);
+  const topScores = scores.slice(0, top);
+
+  const lb = bidInfo.querySelector('.bid-leaderboard') || document.createElement('ol');
+  lb.className = 'bid-leaderboard';
+  lb.style = 'list-style:none;margin-top:10px;padding-left:0;max-height:150px;overflow-y:auto;';
+  lb.innerHTML = topScores.map((u,i)=>`<li>#${i+1} — ${u.taps} taps</li>`).join('');
+  if(!bidInfo.querySelector('.bid-leaderboard')) bidInfo.appendChild(lb);
+}
 </script>
 </body>
 </html>
