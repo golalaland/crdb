@@ -429,6 +429,7 @@ loadCurrentUserForGame();
 // ---------- START FLOW ----------
 startBtn?.addEventListener("click",()=>playModal&&(playModal.style.display="flex"));
 cancelPlay?.addEventListener("click",()=>playModal&&(playModal.style.display="none"));
+
 confirmPlay?.addEventListener("click",async ()=>{
   let localStars = parseInt(starCountEl?.textContent||"0",10);
   if(currentUser?.uid){
@@ -442,17 +443,23 @@ confirmPlay?.addEventListener("click",async ()=>{
   posterImg&&(posterImg.style.display="none");
   startPage&&(startPage.style.display="none");
   spinner&&spinner.classList.remove("hidden");
-  setTimeout(()=>{ spinner&&spinner.classList.add("hidden"); gamePage&&gamePage.classList.remove("hidden"); startSession(); },700);
+  setTimeout(()=>{
+    spinner&&spinner.classList.add("hidden");
+    gamePage&&gamePage.classList.remove("hidden");
+    startSession();
+  },700);
 });
 
 // ---------- SESSION ----------
 function startSession(){
   taps=0; earnings=0; timer=duration; bonusLevel=1; progress=0; tapsForNext=100; running=true;
   cashCounter=0; cashThreshold=randomInt(1,12);
-  trainBar&&(trainBar.style.width='100%'); updateUI();
+  trainBar&&(trainBar.style.width='0%');
+  updateUI();
   intervalId=setInterval(()=>{
-    timer--; if(timer<0) timer=0; updateUI();
-    trainBar&&(trainBar.style.width=Math.max(0,(timer/duration)*100)+'%');
+    timer--; if(timer<0) timer=0;
+    updateUI();
+    trainBar&&(trainBar.style.width=Math.min(100, (progress/tapsForNext)*100)+'%'); // fill bar on tap
     if(timer===0) endSession();
   },1000);
 }
@@ -460,158 +467,127 @@ function stopSession(){ running=false; intervalId&&(clearInterval(intervalId),in
 
 tapButton?.addEventListener(tapEvent, async e=>{
   e.preventDefault(); if(!running) return;
-  taps++; currentUser.totalTaps=(currentUser.totalTaps||0)+1; progress++; cashCounter++;
+
+  taps++; currentUser && (currentUser.totalTaps=(currentUser.totalTaps||0)+1);
+  progress++; cashCounter++;
+
+  // Add earnings
   if(cashCounter>=cashThreshold){
     cashCounter=0; cashThreshold=randomInt(1,12);
     const pot=getStoredPot()??DAILY_INITIAL_POT;
-    if(pot>0){ earnings+=CASH_PER_AWARD; setStoredPot(Math.max(0,pot-CASH_PER_AWARD)); await giveCashToUser(CASH_PER_AWARD); radiateText(['+₦1','Nice! +₦1','Cha-ching +1','+1 Naira'][randomInt(0,3)]); showConfetti(); }
-    else radiateText('Pool empty');
-  } else radiateText(['Tap','Nice','+1 tap','Good'][randomInt(0,3)]);
-  if(progress>=tapsForNext){ progress=0; bonusLevel++; tapsForNext=100+(bonusLevel-1)*50; showTempMessage(`Level ${bonusLevel} reached! TAP PRO!`); showConfetti(); }
+    if(pot>0){
+      earnings+=CASH_PER_AWARD;
+      setStoredPot(Math.max(0,pot-CASH_PER_AWARD));
+      await giveCashToUser(CASH_PER_AWARD);
+    }
+  }
+
+  // Bonus level logic
+  if(progress>=tapsForNext){
+    progress=0; bonusLevel++; tapsForNext=100+(bonusLevel-1)*50;
+  }
+
   flashTapGlow();
-  try{tapSound.currentTime=0;tapSound.play().catch(()=>{});}catch{}
-  navigator.vibrate?.(12); updateUI();
+  try{tapSound.currentTime=0; tapSound.play().catch(()=>{});}catch{}
+  navigator.vibrate?.(12);
+  updateUI();
 });
 
 async function endSession(){
   if(!running) return; stopSession();
-  try{ await addDoc(collection(db,'tapSessions'),{ taps, earnings, uid:currentUser?.uid||null, username:currentUser?.chatId||profileNameEl?.textContent||'GUEST', timestamp:serverTimestamp() }); } catch(e){ console.error('Failed to save session', e);}
+  try{
+    await addDoc(collection(db,'tapSessions'),{
+      taps, earnings, uid:currentUser?.uid||null,
+      username:currentUser?.chatId||profileNameEl?.textContent||'GUEST',
+      timestamp:serverTimestamp()
+    });
+  } catch(e){ console.error('Failed to save session', e); }
+
   let placeText='—';
   try{
     const oneHourAgo=Timestamp.fromDate(new Date(Date.now()-3600*1000));
     const q=query(collection(db,'tapSessions'),where('timestamp','>',oneHourAgo),orderBy('taps','desc'),limit(50));
     const snap=await getDocs(q);
-    const arr=snap.docs.map(d=>d.data().taps||0); const all=arr.slice(); all.push(taps); all.sort((a,b)=>b-a);
+    const arr=snap.docs.map(d=>d.data().taps||0);
+    const all=arr.slice(); all.push(taps); all.sort((a,b)=>b-a);
     const place=all.indexOf(taps)+1; placeText=`#${place}`;
   } catch(e){ console.warn('Leaderboard error',e); }
-  showEndGameModal({username:currentUser?.chatId||profileNameEl?.textContent||'GUEST', taps, earnings:earnings.toFixed(2), place:placeText});
+
+  showEndGameModal({
+    username:currentUser?.chatId||profileNameEl?.textContent||'GUEST',
+    taps,
+    earnings:formatNumber(earnings.toFixed(2)),
+    place:placeText
+  });
   tapButton.disabled=true;
 }
 
 // ---------- UI Helpers ----------
-function formatNumber(n){ return n.toLocaleString(); }
+function formatNumber(n){ return Number(n).toLocaleString(); }
 
 function updateUI(){
   timerEl && (timerEl.textContent = String(timer));
   tapCountEl && (tapCountEl.textContent = String(taps));
-  earningsEl && (earningsEl.textContent = '₦' + earnings.toFixed(2));
+  earningsEl && (earningsEl.textContent = '₦' + formatNumber(earnings.toFixed(2)));
   bonusLevelVal && (bonusLevelVal.textContent = String(bonusLevel));
-  speedVal && (speedVal.textContent = `x${bonusLevel}`); // assuming speed = bonusLevel
+  speedVal && (speedVal.textContent = `x${bonusLevel}`);
   miniTapCount && (miniTapCount.textContent = String(taps));
-  miniEarnings && (miniEarnings.textContent = '₦' + earnings.toFixed(2));
+  miniEarnings && (miniEarnings.textContent = '₦' + formatNumber(earnings.toFixed(2)));
 
-  // cash & stars with commas
   if(starCountEl && currentUser) starCountEl.textContent = formatNumber(currentUser.stars);
   if(cashCountEl && currentUser) cashCountEl.textContent = formatNumber(currentUser.cash);
 }
 
-function radiateText(txt){ 
-  const t=document.createElement('div'); 
-  t.textContent=txt; 
-  Object.assign(t.style,{
-    position:'fixed', left:`${randomInt(20,80)}%`, top:`${randomInt(20,60)}%`,
-    fontSize:'18px', color:'#FFFA00', zIndex:9999, pointerEvents:'none'
-  }); 
-  document.body.appendChild(t); 
-  setTimeout(()=>t.remove(),800);
-}
-
-function showConfetti(){ 
-  const c=document.createElement('div'); 
-  c.textContent='✨'; 
-  Object.assign(c.style,{
-    position:'fixed', left:`${randomInt(20,80)}%`, top:`${randomInt(20,60)}%`,
-    fontSize:'24px', pointerEvents:'none', zIndex:9999
-  }); 
-  document.body.appendChild(c); 
-  setTimeout(()=>c.remove(),800);
-}
-
-function showTempMessage(txt){ 
-  const msg=document.createElement('div'); 
-  msg.textContent=txt; 
-  Object.assign(msg.style,{
-    position:'fixed', left:'50%', top:'30%', transform:'translateX(-50%)',
-    background:'#000', padding:'10px 16px', borderRadius:'8px', border:'1px solid rgba(255,255,255,0.06)', zIndex:9999
-  }); 
-  document.body.appendChild(msg); 
-  setTimeout(()=>{ 
-    msg.style.transition='opacity .4s'; 
-    msg.style.opacity=0; 
-    setTimeout(()=>msg.remove(),400); 
-  },900);
-}
-
-function flashTapGlow(){ 
-  tapButton?.classList.add('tap-glow'); 
-  tapButton?.classList.add('tap-vibrate'); // add visual vibration class
+function flashTapGlow(){
+  tapButton?.classList.add('tap-glow', 'tap-pulse');
   setTimeout(()=>{
-    tapButton?.classList.remove('tap-glow');
-    tapButton?.classList.remove('tap-vibrate');
+    tapButton?.classList.remove('tap-glow', 'tap-pulse');
   },120);
 }
 
-// ---------- End Game Modal ----------
+// ---------- END GAME MODAL ----------
 function showEndGameModal({username, taps, earnings, place}){
-  const existing=document.getElementById('tapEndModal'); 
-  if(existing) existing.remove();
+  const existing=document.getElementById('tapEndModal'); if(existing) existing.remove();
 
-  const modal=document.createElement('div'); 
-  modal.id='tapEndModal'; 
+  const modal=document.createElement('div'); modal.id='tapEndModal';
   Object.assign(modal.style,{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)',zIndex:99999,padding:'20px'});
 
-  const box=document.createElement('div'); 
+  const box=document.createElement('div');
   Object.assign(box.style,{width:'92%',maxWidth:'420px',background:'#0f0f0f',borderRadius:'12px',padding:'18px',textAlign:'center',border:'1px solid rgba(255,255,255,0.06)'});
 
-  const h=document.createElement('div'); 
-  h.style.fontWeight='800'; 
-  h.style.color='#FF1493'; 
-  h.style.marginBottom='8px'; 
+  const h=document.createElement('div'); h.style.fontWeight='800'; h.style.color='#FF1493'; h.style.marginBottom='8px';
   h.textContent=`${username}, Time's Up!`;
 
-  const p1=document.createElement('div'); 
-  p1.style.margin='8px 0'; 
-  p1.innerHTML=`You earned <strong>${earnings}</strong> and made <strong>${taps}</strong> taps.`;
+  const p1=document.createElement('div'); p1.style.margin='8px 0';
+  p1.innerHTML=`You earned <strong>₦${earnings}</strong> and made <strong>${taps}</strong> taps.`;
 
-  const p2=document.createElement('div'); 
-  p2.style.margin='8px 0'; 
+  const p2=document.createElement('div'); p2.style.margin='8px 0';
   p2.innerHTML=`Your rank: <strong>${place}</strong> — check the leaderboard for full details.`;
 
-  const actions=document.createElement('div'); 
-  Object.assign(actions.style,{marginTop:'12px',display:'flex',justifyContent:'center',gap:'12px'});
+  const actions=document.createElement('div'); Object.assign(actions.style,{marginTop:'12px',display:'flex',justifyContent:'center',gap:'12px'});
 
-  const playAgainBtn=document.createElement('button'); 
-  playAgainBtn.textContent='Play Again'; 
+  const playAgainBtn=document.createElement('button'); playAgainBtn.textContent='Play Again';
   Object.assign(playAgainBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#00e676,#00b0ff)',color:'#000',fontWeight:800});
 
-  const closeBtn=document.createElement('button'); 
-  closeBtn.textContent='Close'; 
+  const closeBtn=document.createElement('button'); closeBtn.textContent='Close';
   Object.assign(closeBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#FF1493,#FF8C00)',color:'#fff',fontWeight:800});
 
-  actions.append(playAgainBtn,closeBtn); 
-  box.append(h,p1,p2,actions); 
-  modal.appendChild(box); 
-  document.body.appendChild(modal);
+  actions.append(playAgainBtn,closeBtn); box.append(h,p1,p2,actions); modal.appendChild(box); document.body.appendChild(modal);
 
-  // Reset user and log out on play again
-  playAgainBtn.addEventListener('click', async()=>{
-    modal.remove();
-    stopSession();
+  playAgainBtn.addEventListener('click',()=>{
+    modal.remove(); stopSession();
     taps=0; earnings=0; progress=0; bonusLevel=1; tapsForNext=100;
-    if(currentUser){
-      currentUser = null;
-      starCountEl.textContent = '50';
-      cashCountEl.textContent = '0';
-      profileNameEl.textContent = 'GUEST 0000';
-    }
+    currentUser=null;
+    starCountEl.textContent='50';
+    cashCountEl.textContent='0';
+    profileNameEl.textContent='GUEST 0000';
     gamePage && gamePage.classList.add('hidden');
     startPage && (startPage.style.display='flex');
     posterImg && (posterImg.style.display='block');
   });
 
   closeBtn.addEventListener('click',()=>{
-    modal.remove();
-    stopSession();
+    modal.remove(); stopSession();
     taps=0; earnings=0; progress=0; bonusLevel=1; tapsForNext=100;
     gamePage && gamePage.classList.add('hidden');
     startPage && (startPage.style.display='flex');
@@ -619,12 +595,11 @@ function showEndGameModal({username, taps, earnings, place}){
   });
 }
 
-// ---------- Extra CSS for visual vibration ----------
+// ---------- EXTRA CSS ----------
 const style=document.createElement('style'); 
 style.innerHTML=`
-  #tapButton.tap-glow { box-shadow:0 0 26px rgba(0,230,118,0.9),0 0 8px rgba(0,176,255,0.6); transform:scale(1.03); }
-  #tapButton.tap-vibrate { animation: tapVibrate 0.12s; }
-  @keyframes tapVibrate { 0%{transform:scale(1.02) translateX(0)} 25%{transform:scale(1.02) translateX(-2px)} 50%{transform:scale(1.02) translateX(2px)} 75%{transform:scale(1.02) translateX(-2px)} 100%{transform:scale(1.02) translateX(0)} }
+  #tapButton.tap-glow { box-shadow:0 0 26px rgba(0,230,118,0.9),0 0 8px rgba(0,176,255,0.6); }
+  #tapButton.tap-pulse { transform: scale(1.05); transition: transform 0.12s ease; }
 `;
 document.head.appendChild(style);
 
