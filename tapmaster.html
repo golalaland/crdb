@@ -682,42 +682,22 @@ confirmPlay?.addEventListener("click",async ()=>{
 /* -------------------------------------------------
    LEADERBOARD — FIRESTORE + MODAL + PERIOD FILTERS
 --------------------------------------------------- */
-
 // ---------- DOM ----------
 const leaderboardBtn = document.getElementById('leaderboardBtn');
 const leaderboardModal = document.getElementById('leaderboardModal');
 const closeLeaderboard = document.getElementById('closeLeaderboard');
 const leaderboardList = document.getElementById('leaderboardList');
 
-// ---------- TIME RANGE HELPER ----------
-function getTimeRangeKey(period) {
+// ---------- Helper: get leaderboard key ----------
+function getLeaderboardKey(period) {
   const now = new Date();
-
-  if (period === "daily") {
-    return now.toISOString().split("T")[0]; // YYYY-MM-DD
-  } else if (period === "weekly") {
-    return `${now.getFullYear()}-W${getWeek(now)}`; // YYYY-Wxx
-  } else if (period === "monthly") {
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}`; // YYYY-MM
-  }
-}
-
-// ---------- FETCH LEADERBOARD ----------
-// ---------- HELPER: get key for period ----------
-function getTimeRangeKey(period) {
-  const now = new Date();
-  if (period === "daily") {
-    return now.toISOString().split("T")[0]; // YYYY-MM-DD
-  } else if (period === "weekly") {
-    const weekNum = getWeek(now);
-    return `${now.getFullYear()}-W${weekNum}`; // YYYY-Wxx
-  } else if (period === "monthly") {
-    return `${now.getFullYear()}-${now.getMonth() + 1}`; // YYYY-M
-  }
+  if (period === "daily") return now.toISOString().split("T")[0]; // YYYY-MM-DD
+  if (period === "weekly") return `${now.getFullYear()}-W${getWeek(now)}`; // YYYY-W#
+  if (period === "monthly") return `${now.getFullYear()}-${now.getMonth() + 1}`; // YYYY-M
   return null;
 }
 
-// ---------- Helper: get ISO week ----------
+// ---------- Helper: get ISO week number ----------
 function getWeek(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const dayNum = d.getUTCDay() || 7;
@@ -726,12 +706,11 @@ function getWeek(date) {
   return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
 }
 
-// ---------- FETCH LEADERBOARD ----------
+// ---------- Fetch leaderboard ----------
 async function fetchLeaderboard(period = "daily", top = 10) {
   leaderboardList.innerHTML = "<li>Loading...</li>";
-
   try {
-    const key = getTimeRangeKey(period);
+    const key = getLeaderboardKey(period);
     const usersCol = collection(db, "users");
     const snap = await getDocs(usersCol);
 
@@ -746,11 +725,7 @@ async function fetchLeaderboard(period = "daily", top = 10) {
       if (period === "monthly") tapsCount = data.monthlyTaps?.[key] || 0;
 
       if (tapsCount > 0) {
-        scores.push({
-          uid: docSnap.id,
-          chatId: data.chatId || docSnap.id.slice(0,6),
-          taps: tapsCount
-        });
+        scores.push({ uid: docSnap.id, chatId: data.chatId || docSnap.id.slice(0,6), taps: tapsCount });
       }
     });
 
@@ -766,13 +741,13 @@ async function fetchLeaderboard(period = "daily", top = 10) {
       .map((u, i) => `<li style="margin-bottom:8px;">${i+1}. <strong>${u.chatId}</strong> — ${u.taps.toLocaleString()} taps</li>`)
       .join("");
 
-  } catch (err) {
+  } catch(err) {
     console.error("Leaderboard error:", err);
     leaderboardList.innerHTML = "<li>Error loading leaderboard</li>";
   }
 }
 
-// ---------- OPEN / CLOSE ----------
+// ---------- Open / close ----------
 leaderboardBtn?.addEventListener("click", () => {
   leaderboardModal.style.display = "flex";
   fetchLeaderboard("daily");
@@ -782,10 +757,9 @@ closeLeaderboard?.addEventListener("click", () => {
   leaderboardModal.style.display = "none";
 });
 
-// ---------- PERIOD SWITCH BUTTONS ----------
+// ---------- Period switch buttons ----------
 const periodContainer = document.createElement("div");
 periodContainer.style = "margin:10px 0; text-align:center;";
-
 ["daily","weekly","monthly"].forEach(period => {
   const btn = document.createElement("button");
   btn.textContent = period.toUpperCase();
@@ -803,6 +777,7 @@ periodContainer.style = "margin:10px 0; text-align:center;";
   periodContainer.appendChild(btn);
 });
 
+// Insert before leaderboard list
 leaderboardModal.querySelector(".modal").insertBefore(periodContainer, leaderboardList);
 
 // ---------- RECORD TAP ----------
