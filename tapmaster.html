@@ -703,6 +703,30 @@ function getTimeRangeKey(period) {
 }
 
 // ---------- FETCH LEADERBOARD ----------
+// ---------- HELPER: get key for period ----------
+function getTimeRangeKey(period) {
+  const now = new Date();
+  if (period === "daily") {
+    return now.toISOString().split("T")[0]; // YYYY-MM-DD
+  } else if (period === "weekly") {
+    const weekNum = getWeek(now);
+    return `${now.getFullYear()}-W${weekNum}`; // YYYY-Wxx
+  } else if (period === "monthly") {
+    return `${now.getFullYear()}-${now.getMonth() + 1}`; // YYYY-M
+  }
+  return null;
+}
+
+// ---------- Helper: get ISO week ----------
+function getWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+}
+
+// ---------- FETCH LEADERBOARD ----------
 async function fetchLeaderboard(period = "daily", top = 10) {
   leaderboardList.innerHTML = "<li>Loading...</li>";
 
@@ -717,12 +741,16 @@ async function fetchLeaderboard(period = "daily", top = 10) {
       const data = docSnap.data();
       let tapsCount = 0;
 
-      if (period === "daily") tapsCount = (data.tapsDaily?.[key] || 0);
-      if (period === "weekly") tapsCount = (data.tapsWeekly?.[key] || 0);
-      if (period === "monthly") tapsCount = (data.tapsMonthly?.[key] || 0);
+      if (period === "daily") tapsCount = data.dailyTaps?.[key] || 0;
+      if (period === "weekly") tapsCount = data.weeklyTaps?.[key] || 0;
+      if (period === "monthly") tapsCount = data.monthlyTaps?.[key] || 0;
 
       if (tapsCount > 0) {
-        scores.push({ uid: docSnap.id, chatId: data.chatId || docSnap.id.slice(0,6), taps: tapsCount });
+        scores.push({
+          uid: docSnap.id,
+          chatId: data.chatId || docSnap.id.slice(0,6),
+          taps: tapsCount
+        });
       }
     });
 
@@ -833,14 +861,6 @@ async function recordTap(userId, taps = 1, invitedBy = null, earnings = 0, bonus
   } catch (e) {
     console.error("Error recording tap:", e);
   }
-}
- // ---------- HELPER: ISO week number ----------
-function getWeek(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
 }
 </script>
 </body>
