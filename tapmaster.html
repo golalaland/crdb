@@ -133,6 +133,7 @@ body {display:flex;justify-content:center;align-items:flex-start;padding:18px 0 
 /* small helpers */
 .hidden { display:none!important; }
 button, input { font-size:16px; } /* prevents iOS zoom on tap */
+
 /* ---------- Instagram Style Leaderboard ---------- */
 .lb-row {
   display: flex;
@@ -183,6 +184,56 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
   font-size: 18px;
   font-weight: 700;
   opacity: 0.9;
+}
+
+/* ---------- Fortnite Leaderboard ---------- */
+.ft-row {
+  display: flex;
+  align-items: center;
+  background: rgba(25,25,30,0.85);
+  margin: 4px 0;
+  padding: 10px;
+  border-radius: 8px;
+  transition: transform 0.2s ease;
+}
+
+.ft-row:hover {
+  transform: scale(1.02);
+}
+
+.ft-current {
+  border: 2px solid #00ffe0;
+  background: rgba(40,40,50,0.95);
+}
+
+.ft-badge {
+  font-size: 20px;
+  color: gold;
+  margin-right: 10px;
+}
+
+.ft-rank {
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+  margin-right: 10px;
+}
+
+.ft-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.ft-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.ft-sub {
+  font-size: 12px;
+  color: #aaa;
 }
 </style>
 </head>
@@ -882,22 +933,17 @@ async function fetchLeaderboard(period = "daily", top = 10) {
       return;
     }
 
-    leaderboardList.innerHTML = topScores.map((u, i) => {
+leaderboardList.innerHTML = topScores.map((u,i)=>{
   const isCurrent = currentUser && u.uid === currentUser.uid;
+  const top3 = i < 3;
 
   return `
-    <li class="lb-row ${isCurrent ? 'lb-current' : ''}">
-      <span class="lb-rank">#${i + 1}</span>
-
-      <img src="${u.photoURL || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}"
-           class="lb-avatar">
-
-      <div class="lb-info">
-        <div class="lb-name">${u.chatId}</div>
-        <div class="lb-sub">${u.taps.toLocaleString()} taps</div>
+    <li class="ft-row ${isCurrent ? 'ft-current' : ''}">
+      ${top3 ? `<span class="ft-badge">★</span>` : `<span class="ft-rank">${i+1}</span>`}
+      <div class="ft-info">
+        <div class="ft-name">${u.chatId}</div>
+        <div class="ft-sub">${u.taps.toLocaleString()} taps</div>
       </div>
-
-      <div class="lb-score">${u.taps.toLocaleString()}</div>
     </li>
   `;
 }).join("");
