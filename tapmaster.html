@@ -258,6 +258,7 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
 
 
 
+<!-- Firebase SDKs + script -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import {
@@ -319,24 +320,21 @@ const SESSION_DURATION = 60;
 
 let taps = 0, earnings = 0, timer = SESSION_DURATION, duration = SESSION_DURATION;
 let intervalId = null, running = false, bonusLevel = 1, progress = 0, tapsForNext = 100;
-let cashCounter = 0, cashThreshold = randomInt(1,12);
-let lastTapTime = Date.now(); // for speed
+let cashCounter = 0, cashThreshold = 1, lastTapTime = 0;
 const tapEvent = ('ontouchstart' in window) ? 'touchstart' : 'click';
 
 // ---------- Local pot ----------
 const KEY_POT = 'moneytrain_pot';
 const KEY_RESET_DAY = 'moneytrain_reset_day';
-const KEY_HALF_DAY = 'moneytrain_half_date';
 function getStoredPot(){ return parseInt(localStorage.getItem(KEY_POT)) || null; }
 function setStoredPot(v){ localStorage.setItem(KEY_POT, Math.max(0, Math.floor(v))); }
 function getPotResetDay(){ return localStorage.getItem(KEY_RESET_DAY) || null; }
 function setPotResetDay(s){ localStorage.setItem(KEY_RESET_DAY, s); }
 function initializePot(){
   const today = new Date().toISOString().slice(0,10);
-  if (!getStoredPot() || getPotResetDay() !== today){
+  if(!getStoredPot() || getPotResetDay()!==today){
     setStoredPot(DAILY_INITIAL_POT);
     setPotResetDay(today);
-    localStorage.setItem(KEY_HALF_DAY, '');
   }
 }
 function randomInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
@@ -350,42 +348,40 @@ async function loadCurrentUserForGame() {
     const vipRaw = localStorage.getItem("vipUser");
     const hostRaw = localStorage.getItem("hostUser");
     const storedUser = vipRaw ? JSON.parse(vipRaw) : hostRaw ? JSON.parse(hostRaw) : null;
-    if (!storedUser?.email) {
+    if(!storedUser?.email){
       currentUser = null;
       profileNameEl && (profileNameEl.textContent="GUEST 0000");
       starCountEl && (starCountEl.textContent="50");
-      cashCountEl && (cashCountEl.textContent="₦0");
+      cashCountEl && (cashCountEl.textContent="0");
       return;
     }
-
-    const uid = storedUser.email.replace(/\./g, ",").toLowerCase();
+    const uid = storedUser.email.replace(/\./g,",").toLowerCase();
     const userRef = doc(db,"users",uid);
     const snap = await getDoc(userRef);
 
-    if (!snap.exists()) {
+    if(!snap.exists()){
       currentUser = { uid, email: storedUser.email, chatId: storedUser.fullName || storedUser.displayName || storedUser.email.split("@")[0], stars:0, cash:0, totalTaps:0 };
       profileNameEl && (profileNameEl.textContent=currentUser.chatId);
       starCountEl && (starCountEl.textContent="0");
-      cashCountEl && (cashCountEl.textContent="₦0");
+      cashCountEl && (cashCountEl.textContent="0");
       return;
     }
-
-    const data = snap.data(); if (data.uid) delete data.uid;
+    const data = snap.data(); if(data.uid) delete data.uid;
     currentUser = { uid, ...data, stars:Number(data.stars||0), cash:Number(data.cash||0), totalTaps:Number(data.totalTaps||0) };
     profileNameEl && (profileNameEl.textContent=currentUser.chatId || storedUser.fullName || storedUser.email.split("@")[0]);
     starCountEl && (starCountEl.textContent=formatNumber(currentUser.stars));
-    cashCountEl && (cashCountEl.textContent='₦' + formatNumber(currentUser.cash));
+    cashCountEl && (cashCountEl.textContent=formatNumber(currentUser.cash));
   } catch(err){ console.warn("loadCurrentUserForGame error",err); }
 }
 
 // ---------- DEDUCT STARS ----------
 async function tryDeductStarsForJoin(cost){
-  if (!currentUser?.uid) return {ok:false,message:"You are not logged in"};
+  if(!currentUser?.uid) return {ok:false,message:"You are not logged in"};
   const userRef = doc(db,"users",currentUser.uid);
   try {
     await runTransaction(db,async t=>{
       const u = await t.get(userRef);
-      if (!u.exists()) throw new Error("User not found");
+      if(!u.exists()) throw new Error("User not found");
       const currentStars = Number(u.data().stars||0);
       if(currentStars<cost) throw new Error("Not enough stars");
       t.update(userRef,{stars:currentStars-cost});
@@ -398,7 +394,7 @@ async function tryDeductStarsForJoin(cost){
 
 // ---------- GIVE CASH ----------
 async function giveCashToUser(amount){
-  if (!currentUser?.uid) return {ok:false};
+  if(!currentUser?.uid) return {ok:false};
   const userRef = doc(db,"users",currentUser.uid);
   try{
     await runTransaction(db,async t=>{
@@ -408,21 +404,82 @@ async function giveCashToUser(amount){
       t.update(userRef,{cash:newCash});
       currentUser.cash = newCash;
     });
-    cashCountEl && (cashCountEl.textContent='₦' + formatNumber(currentUser.cash));
+    cashCountEl && (cashCountEl.textContent=formatNumber(currentUser.cash));
     return {ok:true};
   } catch(e){ console.error("giveCashToUser error", e); return {ok:false,message:e.message}; }
 }
 
-// ---------- INIT ----------
+// ---------- UI Helpers ----------
+function formatNumber(n){ return Number(n).toLocaleString(); }
+
+function flashTapGlow(){
+  tapButton?.classList.add('tap-glow','tap-pulse');
+  setTimeout(()=>{ tapButton?.classList.remove('tap-glow','tap-pulse'); },120);
+}
+
+// ---------- Floating +1 ----------
+function showFloatingPlus(parent,text){
+  const span = document.createElement('span');
+  span.textContent = text;
+  Object.assign(span.style,{
+    position:'absolute', fontWeight:'bold', color:'#00ffcc', fontSize:'18px',
+    pointerEvents:'none', userSelect:'none', zIndex:1000,
+    top: parent.offsetTop - 20 + 'px',
+    left: parent.offsetLeft + parent.offsetWidth/2 - 10 + 'px',
+    opacity:1, transition:'all 0.8s ease-out'
+  });
+  document.body.appendChild(span);
+  setTimeout(()=>{ span.style.top = (parent.offsetTop - 50)+'px'; span.style.opacity=0; },50);
+  setTimeout(()=>span.remove(),850);
+}
+
+// ---------- Confetti ----------
+function triggerConfetti(){
+  for(let i=0;i<15;i++){
+    const dot = document.createElement('div');
+    Object.assign(dot.style,{
+      position:'absolute', width:'6px', height:'6px',
+      background:`hsl(${Math.random()*360},80%,60%)`,
+      borderRadius:'50%', top: tapButton.offsetTop+'px',
+      left: tapButton.offsetLeft + tapButton.offsetWidth/2+'px',
+      pointerEvents:'none', zIndex:9999, opacity:1
+    });
+    document.body.appendChild(dot);
+    const x=(Math.random()-0.5)*100;
+    const y=-Math.random()*80;
+    dot.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${x}px,${y}px)`,opacity:0}],
+      {duration:600, easing:'ease-out'});
+    setTimeout(()=>dot.remove(),600);
+  }
+}
+
+// ---------- Temporary floating message ----------
+function showTempMessage(text){
+  const div=document.createElement('div');
+  div.textContent=text;
+  Object.assign(div.style,{
+    position:'fixed', top:'30%', left:'50%', transform:'translateX(-50%)',
+    fontSize:'24px', color:'#FF1493', fontWeight:'800', textShadow:'0 0 6px #fff',
+    pointerEvents:'none', zIndex:9999, opacity:0
+  });
+  document.body.appendChild(div);
+  div.animate([{opacity:0},{opacity:1},{opacity:1},{opacity:0}],{duration:1200, easing:'ease-out'});
+  setTimeout(()=>div.remove(),1200);
+}
+
+// ---------- BONUS LEVELS ----------
+const bonusNames = ["Tap On!","Tap Pro!","Tap Boss!","Tap Legend!"];
+function getBonusName(level){ return bonusNames[level-1] || `Level ${level}`; }
+
+// ---------- START FLOW ----------
 initializePot();
 loadCurrentUserForGame();
 
-// ---------- START FLOW ----------
 startBtn?.addEventListener("click",()=>playModal&&(playModal.style.display="flex"));
 cancelPlay?.addEventListener("click",()=>playModal&&(playModal.style.display="none"));
 
 confirmPlay?.addEventListener("click",async ()=>{
-  let localStars = parseInt(starCountEl?.textContent.replace(/,/g,'')||"0",10);
+  let localStars = parseInt(starCountEl?.textContent||"0",10);
   if(currentUser?.uid){
     const r = await tryDeductStarsForJoin(STAR_COST);
     if(!r.ok){ alert(r.message||"Not enough stars"); return; }
@@ -443,163 +500,75 @@ confirmPlay?.addEventListener("click",async ()=>{
 
 // ---------- SESSION ----------
 function startSession(){
-  taps = 0; earnings = 0; timer = duration; bonusLevel = 1; progress = 0; tapsForNext = 100;
-  cashCounter = 0; cashThreshold = randomInt(1,12);
-  running = true; lastTapTime = Date.now();
-  trainBar && (trainBar.style.width = '100%');
-  bonusBar && (bonusBar.style.width = '0%');
+  taps=0; earnings=0; timer=duration; bonusLevel=1; progress=0; tapsForNext=100; running=true;
+  cashCounter=0; cashThreshold=randomInt(1,12);
+  trainBar&&(trainBar.style.width='0%');
+  bonusBar&&(bonusBar.style.width='0%');
   updateUI();
-
-  intervalId = setInterval(()=>{
-    timer--;
-    if(timer < 0) timer = 0;
+  intervalId=setInterval(()=>{
+    timer--; if(timer<0) timer=0;
     updateUI();
-    trainBar && (trainBar.style.width = Math.max(0,(timer/duration)*100) + '%');
-    if(timer === 0) endSession();
+    // Train bar shows countdown
+    trainBar&&(trainBar.style.width=Math.max(0, (timer/duration)*100)+'%');
+    if(timer===0) endSession();
   },1000);
 }
 
 function stopSession(){ running=false; intervalId&&(clearInterval(intervalId),intervalId=null); }
 
-// ---------- Bonus Level Names & Confetti ----------
-const BONUS_LEVELS = [
-  {level:1, name:"Tap Starter", color:"#00e676"},
-  {level:2, name:"Tap On!", color:"#00b0ff"},
-  {level:3, name:"Tap Pro!", color:"#FF1493"},
-  {level:4, name:"Tap Boss!", color:"#FF8C00"},
-  {level:5, name:"Tap Legend!", color:"#9c27b0"},
-];
-
-// Floating +1 animation
-function showFloatingPlus(btn){
-  const plus = document.createElement('div');
-  plus.textContent = "+1";
-  Object.assign(plus.style,{
-    position:"absolute",
-    color:"#fff",
-    fontWeight:"bold",
-    fontSize:"18px",
-    pointerEvents:"none",
-    top:(btn.getBoundingClientRect().top-20)+"px",
-    left:(btn.getBoundingClientRect().left + btn.offsetWidth/2 - 10)+"px",
-    opacity:1,
-    transition:"all 0.8s ease-out"
-  });
-  document.body.appendChild(plus);
-  setTimeout(()=>{
-    plus.style.transform="translateY(-40px)";
-    plus.style.opacity="0";
-  },10);
-  setTimeout(()=>plus.remove(),800);
-}
-
-// Confetti helper (minimal)
-function triggerConfetti(color="#fff"){
-  const confetti = document.createElement('div');
-  confetti.textContent="🎉";
-  Object.assign(confetti.style,{
-    position:"absolute",
-    top: Math.random()*window.innerHeight + "px",
-    left: Math.random()*window.innerWidth + "px",
-    fontSize:"24px",
-    pointerEvents:"none",
-    opacity:1,
-    transform:"translateY(0px)",
-    transition:"all 1s ease-out"
-  });
-  document.body.appendChild(confetti);
-  setTimeout(()=>{
-    confetti.style.transform="translateY(50px) rotate(360deg)";
-    confetti.style.opacity=0;
-  },10);
-  setTimeout(()=>confetti.remove(),1000);
-}
-
-// ---------- Tap Listener ----------
-let lastTapTime = 0;
-
+// ---------- TAP LISTENER ----------
 tapButton?.addEventListener(tapEvent, async e=>{
   e.preventDefault(); if(!running) return;
 
-  const now = Date.now();
-  const deltaSec = (now - lastTapTime)/1000;
-  lastTapTime = now;
-
-  taps++; 
-  currentUser && (currentUser.totalTaps=(currentUser.totalTaps||0)+1);
+  taps++; currentUser && (currentUser.totalTaps=(currentUser.totalTaps||0)+1);
   progress++; cashCounter++;
 
   // Floating +1
-  showFloatingPlus(tapButton);
+  showFloatingPlus(tapButton,'+1');
 
-  // Cash increment logic
+  // Add earnings from pot
   if(cashCounter >= cashThreshold){
-    cashCounter = 0; cashThreshold = randomInt(1,12);
+    cashCounter=0; cashThreshold=randomInt(1,12);
     const pot = getStoredPot() ?? DAILY_INITIAL_POT;
-    if(pot > 0){
+    if(pot>0){
       earnings += CASH_PER_AWARD;
-      setStoredPot(Math.max(0, pot - CASH_PER_AWARD));
+      setStoredPot(Math.max(0,pot-CASH_PER_AWARD));
       await giveCashToUser(CASH_PER_AWARD);
     }
   }
 
-  // Bonus level up
+  // Bonus level logic
   if(progress >= tapsForNext){
-    progress = 0; bonusLevel++; tapsForNext = 100 + (bonusLevel-1)*50;
-
-    // Determine level info
-    const levelInfo = BONUS_LEVELS.find(l=>l.level===bonusLevel) || {name:`Bonus lvl ${bonusLevel}`, color:"#fff"};
-    showTempMessage(levelInfo.name); // mini popup
-    triggerConfetti(levelInfo.color); // confetti
-    navigator.vibrate?.(25); // stronger buzz for bonus level
-  } else {
-    navigator.vibrate?.(8); // gentle buzz for normal tap
+    progress=0; bonusLevel++; tapsForNext=100+(bonusLevel-1)*50;
+    triggerConfetti();
+    showTempMessage(getBonusName(bonusLevel));
   }
 
-  // Bonus bar pulse effect
-  if(bonusBar){
-    const pct = Math.min(100, (progress / tapsForNext)*100);
-    bonusBar.style.width = pct + "%";
-    bonusBar.style.background = BONUS_LEVELS[bonusLevel-1]?.color || "#fff";
-    bonusBar.style.boxShadow = `0 0 12px ${BONUS_LEVELS[bonusLevel-1]?.color || "#fff"}, 0 0 4px #fff`;
-  }
-
-  // Button glow
   flashTapGlow();
-
-  // Sound
-  try{ tapSound.currentTime=0; tapSound.play().catch(()=>{});}catch{}
-
-  // Update UI
-  updateUI(deltaSec);
+  try{tapSound.currentTime=0; tapSound.play().catch(()=>{});}catch{}
+  navigator.vibrate?.(12);
+  updateUI();
 });
 
 // ---------- UPDATE UI ----------
-function updateUI(deltaSec=1){
-  timerEl && (timerEl.textContent = String(timer));
-  tapCountEl && (tapCountEl.textContent = String(taps));
-  earningsEl && (earningsEl.textContent = '₦' + formatNumber(earnings.toFixed(2)));
-  bonusBar && (bonusBar.style.width = Math.min(100,(progress/tapsForNext)*100) + '%');
-  bonusLevelVal && (bonusLevelVal.textContent = String(bonusLevel));
-  const elapsed = duration - timer;
-  const speed = elapsed > 0 ? taps/elapsed : 0;
-  speedVal && (speedVal.textContent = `x${speed.toFixed(2)}`);
-  miniTapCount && (miniTapCount.textContent = String(taps));
-  miniEarnings && (miniEarnings.textContent = '₦' + formatNumber(earnings.toFixed(2)));
-  if(starCountEl && currentUser) starCountEl.textContent = formatNumber(currentUser.stars);
-  if(cashCountEl && currentUser) cashCountEl.textContent = '₦' + formatNumber(currentUser.cash);
-}
+function updateUI(){
+  timerEl && (timerEl.textContent=String(timer));
+  tapCountEl && (tapCountEl.textContent=String(taps));
+  earningsEl && (earningsEl.textContent='₦'+formatNumber(earnings.toFixed(2)));
+  bonusLevelVal && (bonusLevelVal.textContent=String(bonusLevel));
+  speedVal && (speedVal.textContent=`x${bonusLevel}`);
+  miniTapCount && (miniTapCount.textContent=String(taps));
+  miniEarnings && (miniEarnings.textContent='₦'+formatNumber(earnings.toFixed(2)));
+  bonusBar && (bonusBar.style.width=Math.min(100,(progress/tapsForNext)*100)+'%');
 
-function flashTapGlow(){
-  tapButton?.classList.add('tap-glow','tap-pulse');
-  setTimeout(()=>{ tapButton?.classList.remove('tap-glow','tap-pulse'); },120);
+  if(starCountEl && currentUser) starCountEl.textContent=formatNumber(currentUser.stars);
+  if(cashCountEl && currentUser) cashCountEl.textContent=formatNumber(currentUser.cash);
 }
-
-function formatNumber(n){ return Number(n).toLocaleString(); }
 
 // ---------- END SESSION ----------
 async function endSession(){
   if(!running) return; stopSession();
+
   try{
     await addDoc(collection(db,'tapSessions'),{
       taps, earnings, uid:currentUser?.uid||null,
@@ -632,31 +601,41 @@ function showEndGameModal({username,taps,earnings,place}){
   const existing=document.getElementById('tapEndModal'); if(existing) existing.remove();
   const modal=document.createElement('div'); modal.id='tapEndModal';
   Object.assign(modal.style,{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)',zIndex:99999,padding:'20px'});
+
   const box=document.createElement('div');
   Object.assign(box.style,{width:'92%',maxWidth:'420px',background:'#0f0f0f',borderRadius:'12px',padding:'18px',textAlign:'center',border:'1px solid rgba(255,255,255,0.06)'});
+
   const h=document.createElement('div'); h.style.fontWeight='800'; h.style.color='#FF1493'; h.style.marginBottom='8px';
   h.textContent=`${username}, Time's Up!`;
+
   const p1=document.createElement('div'); p1.style.margin='8px 0';
   p1.innerHTML=`You earned <strong>₦${earnings}</strong> and made <strong>${taps}</strong> taps.`;
+
   const p2=document.createElement('div'); p2.style.margin='8px 0';
   p2.innerHTML=`Your rank: <strong>${place}</strong> — check the leaderboard for full details.`;
+
   const actions=document.createElement('div'); Object.assign(actions.style,{marginTop:'12px',display:'flex',justifyContent:'center',gap:'12px'});
+
   const playAgainBtn=document.createElement('button'); playAgainBtn.textContent='Play Again';
   Object.assign(playAgainBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#00e676,#00b0ff)',color:'#000',fontWeight:800});
+
   const closeBtn=document.createElement('button'); closeBtn.textContent='Close';
   Object.assign(closeBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#FF1493,#FF8C00)',color:'#fff',fontWeight:800});
+
   actions.append(playAgainBtn,closeBtn); box.append(h,p1,p2,actions); modal.appendChild(box); document.body.appendChild(modal);
+
   playAgainBtn.addEventListener('click',()=>{
     modal.remove(); stopSession();
     taps=0; earnings=0; progress=0; bonusLevel=1; tapsForNext=100;
     currentUser=null;
     starCountEl.textContent='50';
-    cashCountEl.textContent='₦0';
+    cashCountEl.textContent='0';
     profileNameEl.textContent='GUEST 0000';
     gamePage && gamePage.classList.add('hidden');
     startPage && (startPage.style.display='flex');
     posterImg && (posterImg.style.display='block');
   });
+
   closeBtn.addEventListener('click',()=>{
     modal.remove(); stopSession();
     taps=0; earnings=0; progress=0; bonusLevel=1; tapsForNext=100;
