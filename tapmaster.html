@@ -549,33 +549,56 @@ async function endSession() {
 
   endGameModal.style.display = "flex";
 
-  // ---------- RECORD SESSION IN FIRESTORE ----------
-  if(currentUser?.uid && taps > 0){
-    try{
-      await addDoc(collection(db,"tapSessions"),{
+ // ---------- RECORD SESSION IN FIRESTORE ----------
+if (currentUser?.uid && taps > 0) {
+  try {
+
+    const userRef = doc(db, "users", currentUser.uid);
+
+    // ----- ONE transaction handles everything -----
+    await runTransaction(db, async (t) => {
+      const snap = await t.get(userRef);
+
+      let existing = snap.exists() ? snap.data() : {};
+
+      const newTotal = Number(existing.totalTaps || 0) + taps;
+
+      // Save session inside transaction (avoids race conditions)
+      const sessionsRef = collection(db, "tapSessions");
+      t.set(doc(sessionsRef), {
         uid: currentUser.uid,
-        email: currentUser.email,
         chatId: currentUser.chatId || currentUser.uid,
+        email: currentUser.email || null,
         taps: taps,
         earnings: earnings,
         bonusLevel: bonusLevel,
-        timestamp: serverTimestamp()
+        invitedBy: existing.invitedBy || currentUser.invitedBy || null,
+        timestamp: new Date() // avoid serverTimestamp to prevent hanging
       });
 
-      // Optional: update user's cumulative totalTaps
-      const userRef = doc(db,"users",currentUser.uid);
-      await runTransaction(db, async t=>{
-        const u = await t.get(userRef);
-        if(!u.exists()) return;
-        const totalTaps = Number(u.data().totalTaps||0) + taps;
-        t.update(userRef,{totalTaps});
-        currentUser.totalTaps = totalTaps;
-      });
-    }catch(e){
-      console.error("Error recording session:", e);
-    }
+      // Update totals
+      t.set(
+        userRef,
+        {
+          totalTaps: newTotal,
+          lastPlayed: new Date(),
+          lastEarnings: earnings,
+          lastBonus: bonusLevel,
+          invitedBy: existing.invitedBy || currentUser.invitedBy || null
+        },
+        { merge: true }
+      );
+
+      currentUser.totalTaps = newTotal;
+    });
+
+    console.log("Session recorded successfully.");
+
+  } catch (e) {
+    console.error("🔥 FIRESTORE ERROR:", e);
   }
 }
+
 
 
 // ---------- TAP ----------
