@@ -238,17 +238,40 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
     <button id="leaderboardBtn" style="padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#FFD700,#FF8C00);color:#111;font-weight:800;border:none;cursor:pointer;font-size:14px;">View Leaderboard 🏆</button>
   </div>
 
-  <!-- Leaderboard modal -->
-  <div id="leaderboardModal" class="modal-backdrop" role="dialog" aria-modal="true">
-    <div class="modal">
-      <h3>Top Tappers — This Hour</h3>
-      <ol id="leaderboardList" class="list" style="list-style:none;padding-left:0;margin:0;"></ol>
-      <div style="margin-top:12px;text-align:right;">
-        <button id="closeLeaderboard" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#FF1493,#FF8C00);color:#fff;font-weight:800;cursor:pointer">Close</button>
-      </div>
-    </div>
-  </div>
+<!-- Leaderboard Modal -->
+<div id="leaderboardModal" class="modal-backdrop" role="dialog" aria-modal="true" style="display:none;">
+  <div class="modal" style="max-width:480px;width:90%;margin:40px auto;background:#222;border-radius:12px;padding:12px;color:#fff;position:relative;">
 
+    <!-- Image Slider -->
+    <div id="leaderboardImageSlider" style="position:relative;width:100%;height:180px;overflow:hidden;border-radius:8px;margin-bottom:10px;">
+      <img src="https://via.placeholder.com/400x180?text=Image+1" class="leaderboard-slide" style="width:100%;height:100%;object-fit:cover;display:block;">
+      <img src="https://via.placeholder.com/400x180?text=Image+2" class="leaderboard-slide" style="width:100%;height:100%;object-fit:cover;display:none;">
+      <img src="https://via.placeholder.com/400x180?text=Image+3" class="leaderboard-slide" style="width:100%;height:100%;object-fit:cover;display:none;">
+    </div>
+
+    <!-- Description Text -->
+    <div id="leaderboardDescription" style="padding:8px 6px;font-size:14px;text-align:center;color:#fff;margin-bottom:10px;">
+      🏆 Tap fast to climb the leaderboard! Top 10 get special rewards every hour.
+    </div>
+
+    <!-- Period Tab Switcher -->
+    <div id="leaderboardPeriodTabs" style="display:flex;justify-content:center;gap:8px;margin-bottom:10px;">
+      <button class="period-tab active" data-period="daily" style="flex:1;padding:6px 8px;border:none;border-radius:6px;background:#FF8C00;color:#fff;font-weight:700;cursor:pointer;">DAILY</button>
+      <button class="period-tab" data-period="weekly" style="flex:1;padding:6px 8px;border:none;border-radius:6px;background:#555;color:#fff;font-weight:700;cursor:pointer;">WEEKLY</button>
+      <button class="period-tab" data-period="monthly" style="flex:1;padding:6px 8px;border:none;border-radius:6px;background:#555;color:#fff;font-weight:700;cursor:pointer;">MONTHLY</button>
+    </div>
+
+    <!-- Scrollable Leaderboard List -->
+    <ol id="leaderboardList" class="list" style="list-style:none;padding-left:0;margin:0;max-height:250px;overflow-y:auto;border-top:1px solid rgba(255,255,255,0.1);border-bottom:1px solid rgba(255,255,255,0.1);padding:6px 0;">
+      <li>Loading leaderboard...</li>
+    </ol>
+
+    <!-- Close Button -->
+    <div style="margin-top:12px;text-align:center;">
+      <button id="closeLeaderboard" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#FF1493,#FF8C00);color:#fff;font-weight:800;cursor:pointer">Close</button>
+    </div>
+
+  </div>
 </div>
 
 <!-- Audio -->
@@ -768,7 +791,7 @@ confirmPlay?.addEventListener("click",async ()=>{
 });
 
 /* ------------------------------
-   LEADERBOARD SETUP
+   LEADERBOARD SETUP (UPGRADED)
 ------------------------------- */
 
 // ---------- DOM ----------
@@ -776,6 +799,9 @@ const leaderboardBtn = document.getElementById('leaderboardBtn');
 const leaderboardModal = document.getElementById('leaderboardModal');
 const closeLeaderboard = document.getElementById('closeLeaderboard');
 const leaderboardList = document.getElementById('leaderboardList');
+const leaderboardSlides = document.querySelectorAll(".leaderboard-slide");
+const periodTabs = document.querySelectorAll(".period-tab");
+const leaderboardDescription = document.getElementById("leaderboardDescription");
 
 // ---------- Helper: get leaderboard key ----------
 function getLeaderboardKey(period) {
@@ -794,7 +820,15 @@ function getWeek(date) {
   return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
 }
 
-// ---------- Fetch leaderboard ----------
+/* ----------------- IMAGE SLIDER ----------------- */
+let slideIndex = 0;
+setInterval(() => {
+  leaderboardSlides.forEach(slide => slide.style.display = "none");
+  slideIndex = (slideIndex + 1) % leaderboardSlides.length;
+  leaderboardSlides[slideIndex].style.display = "block";
+}, 3000);
+
+/* ----------------- FETCH LEADERBOARD ----------------- */
 async function fetchLeaderboard(period = "daily", top = 10) {
   if (!leaderboardList) return;
   leaderboardList.innerHTML = "<li>Loading...</li>";
@@ -809,7 +843,6 @@ async function fetchLeaderboard(period = "daily", top = 10) {
     snap.forEach(docSnap => {
       const data = docSnap.data();
       let tapsCount = 0;
-
       if (period === "daily") tapsCount = data.tapsDaily?.[key] || 0;
       if (period === "weekly") tapsCount = data.tapsWeekly?.[key] || 0;
       if (period === "monthly") tapsCount = data.tapsMonthly?.[key] || 0;
@@ -833,7 +866,13 @@ async function fetchLeaderboard(period = "daily", top = 10) {
 
     leaderboardList.innerHTML = topScores.map((u,i)=>{
       const isCurrent = currentUser && u.uid === currentUser.uid;
-      return `<li style="margin-bottom:8px;${isCurrent ? 'background:#333;padding:5px;border-radius:4px;' : ''}">
+      let style = "";
+      if (i === 0) style = "color:#FFD700;font-weight:700;";         // Gold for #1
+      else if (i === 1) style = "color:#C0C0C0;font-weight:700;";    // Silver for #2
+      else if (i === 2) style = "color:#CD7F32;font-weight:700;";    // Bronze for #3
+      else if (isCurrent) style = "background:#333;padding:4px;border-radius:4px;";
+
+      return `<li style="margin-bottom:6px;${style}">
         ${i+1}. <strong>${u.chatId}</strong> — ${u.taps.toLocaleString()} taps
       </li>`;
     }).join("");
@@ -844,99 +883,32 @@ async function fetchLeaderboard(period = "daily", top = 10) {
   }
 }
 
-// ---------- Leaderboard modal open/close ----------
+/* ----------------- PERIOD TABS ----------------- */
+periodTabs.forEach(tab => {
+  tab.addEventListener("click", () => {
+    // Remove active from all tabs
+    periodTabs.forEach(t => t.classList.remove("active"));
+    periodTabs.forEach(t => t.style.background = "#555");
+
+    // Set active
+    tab.classList.add("active");
+    tab.style.background = "#FF8C00";
+
+    // Fetch leaderboard
+    const period = tab.dataset.period;
+    fetchLeaderboard(period);
+  });
+});
+
+/* ----------------- OPEN/CLOSE MODAL ----------------- */
 leaderboardBtn?.addEventListener("click", () => {
   leaderboardModal.style.display = "flex";
-  fetchLeaderboard("daily"); // default period
+  fetchLeaderboard("daily"); // default
 });
 
 closeLeaderboard?.addEventListener("click", () => {
   leaderboardModal.style.display = "none";
 });
-
-// ---------- Period buttons ----------
-const periodContainer = document.createElement("div");
-periodContainer.style = "margin:10px 0; text-align:center;";
-
-["daily","weekly","monthly"].forEach(period => {
-  const btn = document.createElement("button");
-  btn.textContent = period.toUpperCase();
-  btn.style = `
-    margin: 0 5px;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: none;
-    background:#FF8C00;
-    color:white;
-    cursor:pointer;
-    font-weight:700;
-  `;
-  btn.addEventListener("click", () => fetchLeaderboard(period)); // <- correct place
-  periodContainer.appendChild(btn);
-});
-
-// Insert period buttons above leaderboard list
-const modalContent = leaderboardModal.querySelector(".modal") || leaderboardModal;
-modalContent.insertBefore(periodContainer, leaderboardList);
-
-
-// ---------- RECORD TAP ----------
-async function recordTap(userId, taps = 1, invitedBy = null, earnings = 0, bonusLevel = 0) {
-  if (!userId || taps <= 0) return;
-
-  const userRef = doc(db, "users", userId);
-  const now = new Date();
-
-  const dailyKey = now.toISOString().split("T")[0];               // YYYY-MM-DD
-  const weeklyKey = `${now.getFullYear()}-W${getWeek(now)}`;      // YYYY-Wxx
-  const monthlyKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
-
-  try {
-    await runTransaction(db, async (transaction) => {
-      const docSnap = await transaction.get(userRef);
-
-      if (!docSnap.exists()) {
-        // -------- First time user --------
-        transaction.set(userRef, {
-          totalTaps: taps,
-          tapsDaily: { [dailyKey]: taps },
-          tapsWeekly: { [weeklyKey]: taps },
-          tapsMonthly: { [monthlyKey]: taps },
-          lastEarnings: earnings,
-          lastBonus: bonusLevel,
-          invitedBy: invitedBy || null,
-        });
-        return;
-      }
-
-      const data = docSnap.data();
-
-      // -------- Existing user --------
-      const tapsDaily = { ...(data.tapsDaily || {}) };
-      tapsDaily[dailyKey] = (tapsDaily[dailyKey] || 0) + taps;
-
-      const tapsWeekly = { ...(data.tapsWeekly || {}) };
-      tapsWeekly[weeklyKey] = (tapsWeekly[weeklyKey] || 0) + taps;
-
-      const tapsMonthly = { ...(data.tapsMonthly || {}) };
-      tapsMonthly[monthlyKey] = (tapsMonthly[monthlyKey] || 0) + taps;
-
-      transaction.update(userRef, {
-        totalTaps: (data.totalTaps || 0) + taps,
-        tapsDaily,
-        tapsWeekly,
-        tapsMonthly,
-        lastEarnings: earnings,
-        lastBonus: bonusLevel,
-        invitedBy: data.invitedBy || invitedBy || null,
-      });
-    });
-
-    console.log("Tap recorded successfully.");
-  } catch (e) {
-    console.error("Error recording tap:", e);
-  }
-}
 </script>
 </body>
 </html>
