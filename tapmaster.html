@@ -831,6 +831,14 @@ async function recordTap(userId, taps = 1, invitedBy = null, earnings = 0, bonus
     console.error("Error recording tap:", e);
   }
 }
+ // ---------- HELPER: ISO week number ----------
+function getWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+}
 </script>
 </body>
 </html>
