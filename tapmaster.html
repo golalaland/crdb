@@ -678,20 +678,16 @@ const closeLeaderboard = document.getElementById('closeLeaderboard');
 const leaderboardList = document.getElementById('leaderboardList');
 
 // ---------- TIME RANGE HELPER ----------
-function getTimeRange(period) {
+function getTimeRangeKey(period) {
   const now = new Date();
-  let start;
 
   if (period === "daily") {
-    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return now.toISOString().split("T")[0]; // YYYY-MM-DD
   } else if (period === "weekly") {
-    const day = now.getDay(); // 0=Sun, 1=Mon
-    start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
+    return `${now.getFullYear()}-W${getWeek(now)}`; // YYYY-Wxx
   } else if (period === "monthly") {
-    start = new Date(now.getFullYear(), now.getMonth(), 1);
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}`; // YYYY-MM
   }
-
-  return { start, end: now };
 }
 
 // ---------- FETCH LEADERBOARD ----------
@@ -699,51 +695,35 @@ async function fetchLeaderboard(period = "daily", top = 10) {
   leaderboardList.innerHTML = "<li>Loading...</li>";
 
   try {
-    const { start, end } = getTimeRange(period);
+    const key = getTimeRangeKey(period);
+    const usersCol = collection(db, "users");
+    const snap = await getDocs(usersCol);
 
-    // Firestore timestamps need to be converted to Timestamp
-    const startTs = start; // use Date directly if your field is stored as client Date
-    const endTs = end;
+    const scores = [];
 
-    // Fetch sessions in range
-    const sessionsCol = collection(db, "tapSessions");
-    const q = query(
-      sessionsCol,
-      where("timestamp", ">=", startTs),
-      where("timestamp", "<=", endTs)
-    );
-
-    const snap = await getDocs(q);
-
-    // Aggregate taps per user
-    const userTotals = {};
     snap.forEach(docSnap => {
-      const d = docSnap.data();
-      if (!d.uid) return;
-      if (!userTotals[d.uid]) userTotals[d.uid] = 0;
-      userTotals[d.uid] += Number(d.taps || 0);
+      const data = docSnap.data();
+      let tapsCount = 0;
+
+      if (period === "daily") tapsCount = (data.tapsDaily?.[key] || 0);
+      if (period === "weekly") tapsCount = (data.tapsWeekly?.[key] || 0);
+      if (period === "monthly") tapsCount = (data.tapsMonthly?.[key] || 0);
+
+      if (tapsCount > 0) {
+        scores.push({ uid: docSnap.id, chatId: data.chatId || docSnap.id.slice(0,6), taps: tapsCount });
+      }
     });
 
-    // Sort descending
-    const sorted = Object.entries(userTotals)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, top);
+    scores.sort((a,b) => b.taps - a.taps);
+    const topScores = scores.slice(0, top);
 
-    if (!sorted.length) {
+    if (topScores.length === 0) {
       leaderboardList.innerHTML = "<li>No data yet</li>";
       return;
     }
 
-    // Render leaderboard
-    leaderboardList.innerHTML = sorted
-      .map(([uid, taps], i) => {
-        let name = uid;
-        // show chatId if current user
-        if (currentUser?.uid === uid) name = currentUser.chatId;
-        return `<li style="margin-bottom:8px;">
-          ${i + 1}. <strong>${name}</strong> — ${taps.toLocaleString()} taps
-        </li>`;
-      })
+    leaderboardList.innerHTML = topScores
+      .map((u, i) => `<li style="margin-bottom:8px;">${i+1}. <strong>${u.chatId}</strong> — ${u.taps.toLocaleString()} taps</li>`)
       .join("");
 
   } catch (err) {
@@ -755,7 +735,7 @@ async function fetchLeaderboard(period = "daily", top = 10) {
 // ---------- OPEN / CLOSE ----------
 leaderboardBtn?.addEventListener("click", () => {
   leaderboardModal.style.display = "flex";
-  fetchLeaderboard("daily"); // default
+  fetchLeaderboard("daily");
 });
 
 closeLeaderboard?.addEventListener("click", () => {
@@ -766,7 +746,7 @@ closeLeaderboard?.addEventListener("click", () => {
 const periodContainer = document.createElement("div");
 periodContainer.style = "margin:10px 0; text-align:center;";
 
-["daily", "weekly", "monthly"].forEach(period => {
+["daily","weekly","monthly"].forEach(period => {
   const btn = document.createElement("button");
   btn.textContent = period.toUpperCase();
   btn.style = `
@@ -785,74 +765,74 @@ periodContainer.style = "margin:10px 0; text-align:center;";
 
 leaderboardModal.querySelector(".modal").insertBefore(periodContainer, leaderboardList);
 
-// ---------- Tap Function ----------
-async function recordTap(userId, invitedBy = null) {
-  const userRef = doc(db, "users", userId);
-
-  await runTransaction(db, async (transaction) => {
-    const docSnap = await transaction.get(userRef);
-
-    const now = new Date();
-
-    // Format timestamps
-    const dailyKey = now.toISOString().split("T")[0];               // 2025-11-15
-    const weeklyKey = `${now.getFullYear()}-W${getWeek(now)}`;      // 2025-W46
-    const monthlyKey = `${now.getFullYear()}-${now.getMonth() + 1}`; // 2025-11
-
-    let data;
-
-    if (!docSnap.exists()) {
-      // -------- First time user --------
-      data = {
-        invitedBy: invitedBy || null,
-
-        totalTaps: 1,
-        dailyTaps: 1,
-        weeklyTaps: 1,
-        monthlyTaps: 1,
-
-        lastDailyReset: dailyKey,
-        lastWeeklyReset: weeklyKey,
-        lastMonthlyReset: monthlyKey
-      };
-
-      transaction.set(userRef, data);
-      return;
-    }
-
-    // -------- Existing user --------
-    const existing = docSnap.data();
-
-    // Reset counters if a new day/week/month
-    const dailyTaps =
-      existing.lastDailyReset === dailyKey ? existing.dailyTaps + 1 : 1;
-
-    const weeklyTaps =
-      existing.lastWeeklyReset === weeklyKey ? existing.weeklyTaps + 1 : 1;
-
-    const monthlyTaps =
-      existing.lastMonthlyReset === monthlyKey ? existing.monthlyTaps + 1 : 1;
-
-    data = {
-      totalTaps: (existing.totalTaps || 0) + 1,
-      dailyTaps,
-      weeklyTaps,
-      monthlyTaps,
-
-      lastDailyReset: dailyKey,
-      lastWeeklyReset: weeklyKey,
-      lastMonthlyReset: monthlyKey,
-
-      invitedBy: existing.invitedBy || invitedBy || null
-    };
-
-    transaction.update(userRef, data);
-  });
-
-  console.log("Tap recorded.");
+// ---------- HELPER: ISO week number ----------
+function getWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
 }
 
-// ---------- Helper: get ISO week ----------
+// ---------- RECORD TAP ----------
+async function recordTap(userId, taps = 1, invitedBy = null, earnings = 0, bonusLevel = 0) {
+  if (!userId || taps <= 0) return;
+
+  const userRef = doc(db, "users", userId);
+  const now = new Date();
+
+  const dailyKey = now.toISOString().split("T")[0];               // YYYY-MM-DD
+  const weeklyKey = `${now.getFullYear()}-W${getWeek(now)}`;      // YYYY-Wxx
+  const monthlyKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const docSnap = await transaction.get(userRef);
+
+      if (!docSnap.exists()) {
+        // -------- First time user --------
+        transaction.set(userRef, {
+          totalTaps: taps,
+          tapsDaily: { [dailyKey]: taps },
+          tapsWeekly: { [weeklyKey]: taps },
+          tapsMonthly: { [monthlyKey]: taps },
+          lastEarnings: earnings,
+          lastBonus: bonusLevel,
+          invitedBy: invitedBy || null,
+        });
+        return;
+      }
+
+      const data = docSnap.data();
+
+      // -------- Existing user --------
+      const tapsDaily = { ...(data.tapsDaily || {}) };
+      tapsDaily[dailyKey] = (tapsDaily[dailyKey] || 0) + taps;
+
+      const tapsWeekly = { ...(data.tapsWeekly || {}) };
+      tapsWeekly[weeklyKey] = (tapsWeekly[weeklyKey] || 0) + taps;
+
+      const tapsMonthly = { ...(data.tapsMonthly || {}) };
+      tapsMonthly[monthlyKey] = (tapsMonthly[monthlyKey] || 0) + taps;
+
+      transaction.update(userRef, {
+        totalTaps: (data.totalTaps || 0) + taps,
+        tapsDaily,
+        tapsWeekly,
+        tapsMonthly,
+        lastEarnings: earnings,
+        lastBonus: bonusLevel,
+        invitedBy: data.invitedBy || invitedBy || null,
+      });
+    });
+
+    console.log("Tap recorded successfully.");
+  } catch (e) {
+    console.error("Error recording tap:", e);
+  }
+}
+
+// ---------- HELPER: ISO week number ----------
 function getWeek(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const dayNum = d.getUTCDay() || 7;
