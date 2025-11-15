@@ -399,10 +399,10 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
 
   </div> <!-- end gamePage -->
 
-<!-- Bottom tab bar (rectangular, equal width) -->
+<!-- Bottom tab bar -->
 <div id="bottomBar" style="
   position:fixed;
-  bottom:80px; /* space for profile card below */
+  bottom:0;
   left:50%;
   transform:translateX(-50%);
   width:90%;
@@ -422,7 +422,7 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
     border:none;
     cursor:pointer;
     font-size:16px;
-  ">leader</button>
+  ">🏆</button>
 
   <button class="tab-btn" id="poolBtn" style="
     flex:1;
@@ -449,10 +449,10 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
   ">Bid</button>
 </div>
 
-<!-- Profile card (below the tab bar) -->
+<!-- Fixed profile card (independent) -->
 <div id="profileCardWrapper" style="
   position:fixed;
-  bottom:10px; /* small gap below tabs */
+  bottom:60px; /* sits above the tab bar */
   left:50%;
   transform:translateX(-50%);
   width:90%;
@@ -476,7 +476,6 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
     <div class="profile-info">CASH EARNED: <span id="cashCount">0</span></div>
   </div>
 </div>
-
 
 <!-- Audio -->
 <audio id="tapSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
