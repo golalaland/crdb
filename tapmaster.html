@@ -300,37 +300,33 @@ const cashCountEl = document.getElementById('cashCount');
 const profileNameEl = document.getElementById('profileName');
 
 // ---------- END GAME MODAL ----------
-const endGameModal = document.createElement('div');
-endGameModal.id = "endGameModal";
-endGameModal.style = `
-  position:fixed; top:0; left:0; width:100%; height:100%;
-  background:rgba(0,0,0,0.9); color:#fff; display:none;
-  justify-content:center; align-items:center; z-index:9999; font-family:sans-serif;
-`;
-endGameModal.innerHTML = `
-  <div style="background:#111; padding:30px; border-radius:15px; text-align:center; width:300px;">
-    <h2>Game Over</h2>
-    <p>Taps: <span id="endTaps">0</span></p>
-    <p>Earnings: ₦<span id="endEarnings">0</span></p>
-    <p>Bonus Level: <span id="endBonus">0</span></p>
-    <p>Speed: x<span id="endSpeed">0</span></p>
-    <button id="closeEndGame" style="margin-top:15px; padding:10px 20px; border:none; border-radius:8px; background:#0f0; color:#000; font-weight:bold; cursor:pointer;">Close</button>
-  </div>
-`;
-document.body.appendChild(endGameModal);
-
-const endTapsEl = document.getElementById('endTaps');
-const endEarningsEl = document.getElementById('endEarnings');
-const endBonusEl = document.getElementById('endBonus');
-const endSpeedEl = document.getElementById('endSpeed');
-const closeEndGameBtn = document.getElementById('closeEndGame');
-
 closeEndGameBtn.addEventListener('click', () => {
+  // Hide modal
   endGameModal.style.display = "none";
+
+  // Reset pages
   gamePage.style.display = "none";
   startPage.style.display = "block";
   if(posterImg) posterImg.style.display = "block";
+
+  // Reset game variables
+  taps = 0;
+  earnings = 0;
+  timer = SESSION_DURATION;
+  bonusLevel = 1;
+  progress = 0;
+  cashCounter = 0;
+  tapsForNext = 100;
+  tapButton.disabled = false;
+  running = false;
+  intervalId && clearInterval(intervalId);
+  
+  // Reset UI counters
+  updateUI();
+  trainBar && (trainBar.style.width = '100%');
+  updateBonusBar();
 });
+
 
 // ---------- CONFIG ----------
 const STAR_COST = 10;
