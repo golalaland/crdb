@@ -664,124 +664,119 @@ confirmPlay?.addEventListener("click",async ()=>{
   },700);
 });
 
-  
+/* -------------------------------------------------
+   LEADERBOARD — FIRESTORE + MODAL + PERIOD FILTERS
+--------------------------------------------------- */
+
 // ---------- DOM ----------
 const leaderboardBtn = document.getElementById('leaderboardBtn');
 const leaderboardModal = document.getElementById('leaderboardModal');
 const closeLeaderboard = document.getElementById('closeLeaderboard');
 const leaderboardList = document.getElementById('leaderboardList');
 
-// Firestore imports needed:
-// getFirestore, collection, getDocs
-
-// ---------- HELPERS ----------
-function formatLeaderboardNumber(n){
-  return Number(n).toLocaleString();
-}
-
-function getCurrentDailyId() {
-  return new Date().toISOString().split("T")[0];
-}
-
-function getCurrentWeekId() {
+// ---------- TIME RANGE HELPER ----------
+function getTimeRange(period) {
   const now = new Date();
-  const oneJan = new Date(now.getFullYear(), 0, 1);
-  const numberOfDays = Math.floor((now - oneJan) / 86400000);
-  const week = Math.ceil((now.getDay() + 1 + numberOfDays) / 7);
-  return `${now.getFullYear()}-W${week}`;
-}
+  let start;
 
-function getCurrentMonthId() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
-}
-
-// ---------- FETCH LEADERBOARD (players collection) ----------
-async function fetchLeaderboard(period="daily", top=10){
-  leaderboardList.innerHTML = '<li>Loading...</li>';
-
-  const playersCol = collection(db, "players");
-  const snap = await getDocs(playersCol);
-
-  const today = getCurrentDailyId();
-  const weekId = getCurrentWeekId();
-  const monthId = getCurrentMonthId();
-
-  let scores = [];
-
-  snap.forEach(docSnap => {
-    const data = docSnap.data();
-    const uid = docSnap.id;
-
-    let taps = 0;
-
-    if(period === "daily") {
-      if(data.daily?.date === today) taps = data.daily.taps || 0;
-    }
-    else if(period === "weekly") {
-      if(data.weekly?.weekId === weekId) taps = data.weekly.taps || 0;
-    }
-    else if(period === "monthly") {
-      if(data.monthly?.monthId === monthId) taps = data.monthly.taps || 0;
-    }
-    else if(period === "total") {
-      taps = data.totalTaps || 0;
-    }
-
-    // Only include players who have any taps
-    if(taps > 0) {
-      scores.push({ uid, taps });
-    }
-  });
-
-  // SORT (descending)
-  scores.sort((a,b)=> b.taps - a.taps);
-
-  // LIMIT
-  const topPlayers = scores.slice(0, top);
-
-  // BUILD LIST
-  if(topPlayers.length === 0){
-    leaderboardList.innerHTML = '<li>No data yet</li>';
-    return;
+  if (period === "daily") {
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (period === "weekly") {
+    const day = now.getDay();
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
+  } else if (period === "monthly") {
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
   }
 
-  leaderboardList.innerHTML = topPlayers.map((p, i) => {
-    const displayName = (currentUser?.uid === p.uid)
-      ? (currentUser.chatId || p.uid)
-      : p.uid;
+  return { start, end: now };
+}
 
-    return `
-      <li style="margin-bottom:8px;">
-        ${i+1}. <strong>${displayName}</strong> — ${formatLeaderboardNumber(p.taps)} taps
-      </li>
-    `;
-  }).join("");
+// ---------- FETCH LEADERBOARD ----------
+async function fetchLeaderboard(period = "daily", top = 10) {
+  leaderboardList.innerHTML = "<li>Loading...</li>";
+
+  try {
+    const { start, end } = getTimeRange(period);
+
+    const sessionsCol = collection(db, "tapSessions");
+
+    const q = query(
+      sessionsCol,
+      where("timestamp", ">=", start),
+      where("timestamp", "<=", end)
+    );
+
+    const snap = await getDocs(q);
+
+    const userTotals = {};
+
+    snap.forEach(docSnap => {
+      const d = docSnap.data();
+      if (!d.uid) return;
+
+      if (!userTotals[d.uid]) userTotals[d.uid] = 0;
+      userTotals[d.uid] += Number(d.taps || 0);
+    });
+
+    const sorted = Object.entries(userTotals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, top);
+
+    if (sorted.length === 0) {
+      leaderboardList.innerHTML = "<li>No data yet</li>";
+      return;
+    }
+
+    leaderboardList.innerHTML = sorted
+      .map(([uid, taps], i) => {
+        const name =
+          currentUser?.uid === uid ? currentUser.chatId : uid.slice(0, 6);
+        return `<li style="margin-bottom:8px;">
+            ${i + 1}. <strong>${name}</strong> — ${taps.toLocaleString()} taps
+        </li>`;
+      })
+      .join("");
+
+  } catch (err) {
+    console.error("Leaderboard error:", err);
+    leaderboardList.innerHTML = "<li>Error loading leaderboard</li>";
+  }
 }
 
 // ---------- OPEN / CLOSE ----------
-leaderboardBtn?.addEventListener('click', ()=>{
+leaderboardBtn?.addEventListener("click", () => {
   leaderboardModal.style.display = "flex";
-  fetchLeaderboard("daily"); // default view
+  fetchLeaderboard("daily");
 });
 
-closeLeaderboard?.addEventListener('click', ()=>{
+closeLeaderboard?.addEventListener("click", () => {
   leaderboardModal.style.display = "none";
 });
 
 // ---------- PERIOD SWITCH BUTTONS ----------
-const periodButtonsContainer = document.createElement('div');
-periodButtonsContainer.style.margin='10px 0; text-align:center;';
+const periodContainer = document.createElement("div");
+periodContainer.style = "margin:10px 0; text-align:center;";
 
-['daily','weekly','monthly','total'].forEach(period=>{
-  const btn = document.createElement('button');
-  btn.textContent = period.charAt(0).toUpperCase()+period.slice(1);
-  btn.style.margin='0 5px; padding:5px 10px; border-radius:6px; border:none; background:#ff8c00; color:#fff; cursor:pointer;';
-  btn.addEventListener('click', ()=> fetchLeaderboard(period));
-  periodButtonsContainer.appendChild(btn);
+["daily", "weekly", "monthly"].forEach(period => {
+  const btn = document.createElement("button");
+  btn.textContent = period.toUpperCase();
+  btn.style = `
+    margin: 0 5px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    background:#FF8C00;
+    color:white;
+    cursor:pointer;
+    font-weight:700;
+  `;
+  btn.addEventListener("click", () => fetchLeaderboard(period));
+  periodContainer.appendChild(btn);
 });
 
-leaderboardModal.querySelector('.modal').insertBefore(periodButtonsContainer, leaderboardList);
+// insert before <ol id="leaderboardList">
+leaderboardModal.querySelector(".modal").insertBefore(periodContainer, leaderboardList);
+
 </script>
 
 </body>
