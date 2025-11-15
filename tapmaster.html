@@ -537,7 +537,11 @@ function startSession() {
 }
 
 async function endSession() {
-  stopSession();
+  // Immediately stop the session and block taps
+  running = false;
+  tapButton.disabled = true;   // disable button
+  tapLocked = true;            // lock taps
+  if(intervalId){ clearInterval(intervalId); intervalId = null; }
 
   if (!endGameModal) return;
 
@@ -557,13 +561,12 @@ async function endSession() {
     try {
       const userRef = doc(db,"users",currentUser.uid);
 
-      // Transaction: update cumulative totalTaps + leaderboard keys
       await runTransaction(db, async t=>{
         const docSnap = await t.get(userRef);
         const now = new Date();
-        const dailyKey = now.toISOString().split("T")[0]; // YYYY-MM-DD
-        const weeklyKey = `${now.getFullYear()}-W${getWeek(now)}`; // YYYY-Wxx
-        const monthlyKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`; // YYYY-MM
+        const dailyKey = now.toISOString().split("T")[0];
+        const weeklyKey = `${now.getFullYear()}-W${getWeek(now)}`;
+        const monthlyKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 
         if(!docSnap.exists()){
           t.set(userRef, {
@@ -581,25 +584,16 @@ async function endSession() {
         }
 
         const data = docSnap.data();
-        const tapsDaily = { ...(data.tapsDaily || {}) };
-        const tapsWeekly = { ...(data.tapsWeekly || {}) };
-        const tapsMonthly = { ...(data.tapsMonthly || {}) };
-
-        tapsDaily[dailyKey] = (tapsDaily[dailyKey] || 0) + taps;
-        tapsWeekly[weeklyKey] = (tapsWeekly[weeklyKey] || 0) + taps;
-        tapsMonthly[monthlyKey] = (tapsMonthly[monthlyKey] || 0) + taps;
-
         t.update(userRef, {
           totalTaps: (data.totalTaps || 0) + taps,
-          tapsDaily,
-          tapsWeekly,
-          tapsMonthly,
+          tapsDaily: { ...(data.tapsDaily || {}), [dailyKey]: ((data.tapsDaily?.[dailyKey] || 0) + taps) },
+          tapsWeekly: { ...(data.tapsWeekly || {}), [weeklyKey]: ((data.tapsWeekly?.[weeklyKey] || 0) + taps) },
+          tapsMonthly: { ...(data.tapsMonthly || {}), [monthlyKey]: ((data.tapsMonthly?.[monthlyKey] || 0) + taps) },
           lastEarnings: earnings,
           lastBonus: bonusLevel
         });
       });
 
-      // Optional: add a session record (for history)
       await addDoc(collection(db,"tapSessions"),{
         uid: currentUser.uid,
         email: currentUser.email,
@@ -610,10 +604,9 @@ async function endSession() {
         timestamp: serverTimestamp()
       });
 
-      // Update local currentUser for UI
       currentUser.totalTaps = (currentUser.totalTaps || 0) + taps;
 
-      // Immediately refresh leaderboard
+      // Refresh leaderboard after session ends
       fetchLeaderboard("daily");
 
     } catch(e){
