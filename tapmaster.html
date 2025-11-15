@@ -721,13 +721,12 @@ const leaderboardList = document.getElementById('leaderboardList');
 // ---------- Helper: get leaderboard key ----------
 function getLeaderboardKey(period) {
   const now = new Date();
-  if (period === "daily") return now.toISOString().split("T")[0]; // YYYY-MM-DD
-  if (period === "weekly") return `${now.getFullYear()}-W${getWeek(now)}`; // YYYY-W#
-  if (period === "monthly") return `${now.getFullYear()}-${now.getMonth() + 1}`; // YYYY-M
+  if (period === "daily") return now.toISOString().split("T")[0];        // YYYY-MM-DD
+  if (period === "weekly") return `${now.getFullYear()}-W${getWeek(now)}`; // YYYY-Wxx
+  if (period === "monthly") return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`; // YYYY-MM
   return null;
 }
 
-// ---------- Helper: get ISO week number ----------
 function getWeek(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const dayNum = d.getUTCDay() || 7;
@@ -737,48 +736,50 @@ function getWeek(date) {
 }
 
 // ---------- Fetch leaderboard ----------
-async function fetchLeaderboard(period = "daily", top = 10) {
+async function fetchLeaderboard(period="daily", top=10) {
+  if (!leaderboardList) return;
   leaderboardList.innerHTML = "<li>Loading...</li>";
 
-  try {
-    const key = getLeaderboardKey(period);
-    const usersCol = collection(db, "users");
-    const snap = await getDocs(usersCol);
+  const key = getLeaderboardKey(period);
+  const usersCol = collection(db,"users");
 
+  try {
+    const snap = await getDocs(usersCol);
     const scores = [];
 
     snap.forEach(docSnap => {
       const data = docSnap.data();
       let tapsCount = 0;
 
-      if (period === "daily") tapsCount = data.tapsDaily?.[key] || 0;
-      if (period === "weekly") tapsCount = data.tapsWeekly?.[key] || 0;
-      if (period === "monthly") tapsCount = data.tapsMonthly?.[key] || 0;
+      if(period === "daily") tapsCount = data.tapsDaily?.[key] || 0;
+      if(period === "weekly") tapsCount = data.tapsWeekly?.[key] || 0;
+      if(period === "monthly") tapsCount = data.tapsMonthly?.[key] || 0;
 
-      if (tapsCount > 0) {
+      if(tapsCount > 0){
         scores.push({
           uid: docSnap.id,
-          chatId: data.chatId || docSnap.id.slice(0, 6),
+          chatId: data.chatId || docSnap.id.slice(0,6),
           taps: tapsCount
         });
       }
     });
 
-    scores.sort((a,b) => b.taps - a.taps);
+    scores.sort((a,b)=>b.taps - a.taps);
     const topScores = scores.slice(0, top);
 
-    if (topScores.length === 0) {
+    if(topScores.length === 0){
       leaderboardList.innerHTML = "<li>No data yet</li>";
       return;
     }
 
-    leaderboardList.innerHTML = topScores
-      .map((u, i) => `<li style="margin-bottom:8px;">
+    leaderboardList.innerHTML = topScores.map((u,i)=>{
+      const isCurrent = currentUser && u.uid === currentUser.uid;
+      return `<li style="margin-bottom:8px;${isCurrent ? 'background:#333;padding:5px;border-radius:4px;' : ''}">
         ${i+1}. <strong>${u.chatId}</strong> — ${u.taps.toLocaleString()} taps
-      </li>`)
-      .join("");
+      </li>`;
+    }).join("");
 
-  } catch(err) {
+  } catch(err){
     console.error("Leaderboard error:", err);
     leaderboardList.innerHTML = "<li>Error loading leaderboard</li>";
   }
