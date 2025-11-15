@@ -399,28 +399,74 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
 
   </div> <!-- end gamePage -->
 
-  <!-- Fixed bottom profile + leaderboard button -->
-  <div id="bottomBar" style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:1000;">
-    <div class="profile-card" style="background:rgba(255,255,255,0.04);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);text-align:center;">
-      <div class="profile-name" id="profileName">GUEST 0000</div>
-      <div class="profile-info">STARS COLLECTED: <span id="starCount">50</span>⭐</div>
-      <div class="profile-info">CASH EARNED: <span id="cashCount">0</span></div>
-    </div>
-    <button id="leaderboardBtn" style="padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#FFD700,#FF8C00);color:#111;font-weight:800;border:none;cursor:pointer;font-size:14px;">View Leaderboard 🏆</button>
-  </div>
+<!-- Fixed bottom tab bar -->
+<div id="bottomBar" style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;justify-content:space-between;gap:6px;z-index:1000;">
 
-  <!-- Leaderboard modal -->
-  <div id="leaderboardModal" class="modal-backdrop" role="dialog" aria-modal="true">
-    <div class="modal">
-      <h3>Top Tappers — This Hour</h3>
-      <ol id="leaderboardList" class="list" style="list-style:none;padding-left:0;margin:0;"></ol>
-      <div style="margin-top:12px;text-align:right;">
-        <button id="closeLeaderboard" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#FF1493,#FF8C00);color:#fff;font-weight:800;cursor:pointer">Close</button>
-      </div>
+  <!-- Tab 1: Leaderboard -->
+  <button class="tab-btn" id="leaderboardBtn" style="flex:1;padding:10px;border-radius:10px;background:linear-gradient(90deg,#FFD700,#FF8C00);color:#111;font-weight:800;border:none;cursor:pointer;font-size:14px;">
+    🏆
+  </button>
+
+  <!-- Tab 2: Pool -->
+  <button class="tab-btn" id="poolBtn" style="flex:1;padding:10px;border-radius:10px;background:linear-gradient(90deg,#1E90FF,#00BFFF);color:#fff;font-weight:800;border:none;cursor:pointer;font-size:14px;">
+    Pool
+  </button>
+
+  <!-- Tab 3: Bid -->
+  <button class="tab-btn" id="bidBtn" style="flex:1;padding:10px;border-radius:10px;background:linear-gradient(90deg,#32CD32,#228B22);color:#fff;font-weight:800;border:none;cursor:pointer;font-size:14px;">
+    Bid
+  </button>
+
+</div>
+
+<!-- Leaderboard modal -->
+<div id="leaderboardModal" class="modal-backdrop" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>Top Tappers — This Hour</h3>
+    <ol id="leaderboardList" class="list" style="list-style:none;padding-left:0;margin:0;"></ol>
+    <div style="margin-top:12px;text-align:right;">
+      <button id="closeLeaderboard" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#FF1493,#FF8C00);color:#fff;font-weight:800;cursor:pointer">Close</button>
     </div>
+  </div>
+</div>
+
+<!-- Pool modal -->
+<div id="poolModal" class="modal-backdrop" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>Daily Pool</h3>
+    <div id="poolInfo">Loading pool info...</div>
+    <button id="joinPoolBtn" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#1E90FF,#00BFFF);color:#fff;font-weight:800;cursor:pointer;margin-top:10px;">Join Pool</button>
+    <div style="margin-top:12px;text-align:right;">
+      <button class="closeModalBtn" data-target="poolModal" style="padding:8px 12px;border-radius:8px;border:none;background:#aaa;color:#111;font-weight:800;cursor:pointer;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bid modal -->
+<div id="bidModal" class="modal-backdrop" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>Bid for Item</h3>
+    <div id="bidInfo">Tap to bid for this item!</div>
+    <button id="tapBidBtn" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#32CD32,#228B22);color:#fff;font-weight:800;cursor:pointer;margin-top:10px;">Tap to Bid</button>
+    <div style="margin-top:12px;text-align:right;">
+      <button class="closeModalBtn" data-target="bidModal" style="padding:8px 12px;border-radius:8px;border:none;background:#aaa;color:#111;font-weight:800;cursor:pointer;">Close</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Fixed bottom profile card (above bottom tab bar) -->
+<div id="profileCardWrapper" style="position:fixed;bottom:60px;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:1500;">
+
+  <!-- Profile Card -->
+  <div class="profile-card" style="background:rgba(255,255,255,0.04);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);text-align:center;width:100%;">
+    <div class="profile-name" id="profileName">GUEST 0000</div>
+    <div class="profile-info">STARS COLLECTED: <span id="starCount">0</span>⭐</div>
+    <div class="profile-info">CASH EARNED: <span id="cashCount">0</span></div>
   </div>
 
 </div>
+
 
 <!-- Audio -->
 <audio id="tapSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
