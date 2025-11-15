@@ -495,9 +495,31 @@ function triggerConfetti(){
   }
 }
 
-// ---------- SESSION ----------
+// ======================================================
+//   SESSION ENGINE — CLEAN, BULLETPROOF, DROP-IN
+// ======================================================
+
+// GLOBAL STATE
+let taps = 0;
+let earnings = 0;
+let timer = 0;
+let bonusLevel = 1;
+let progress = 0;
+let tapsForNext = 100;
+let cashCounter = 0;
+let cashThreshold = 0;
+
+let running = false;
+let tapLocked = false;
+let intervalId = null;
+
+
+// ======================================================
+//   START SESSION
+// ======================================================
 function startSession() {
-  // Reset session state
+
+  // Reset state
   taps = 0;
   earnings = 0;
   timer = SESSION_DURATION;
@@ -505,47 +527,62 @@ function startSession() {
   progress = 0;
   tapsForNext = 100;
   cashCounter = 0;
-  cashThreshold = randomInt(1,12);
+  cashThreshold = randomInt(1, 12);
+
   running = true;
+  tapLocked = false;
   tapButton.disabled = false;
 
-  trainBar && (trainBar.style.width = '100%');
+  trainBar && (trainBar.style.width = "100%");
   updateBonusBar();
   updateUI();
 
-  // Clear any old interval
+  // Clear old interval
   if (intervalId) clearInterval(intervalId);
 
-  // Solid 1-second countdown
+  // NEW SAFE COUNTDOWN
   intervalId = setInterval(() => {
-    if (!running) return;
+
+    if (!running) return;   
 
     timer--;
     if (timer < 0) timer = 0;
 
     updateUI();
-    trainBar && (trainBar.style.width = (timer / SESSION_DURATION * 100) + '%');
+    trainBar && (trainBar.style.width = (timer / SESSION_DURATION * 100) + "%");
 
     if (timer === 0) {
-      stopSession();
-      endSession();
+
+      // 🚫 STOP EVERYTHING IMMEDIATELY
+      endSessionImmediate();
+
+      // 📝 SAVE THE SESSION ASYNC
+      endSessionRecord();
+
     }
+
   }, 1000);
 
-  // Immediately show the starting timer
   updateUI();
 }
 
-async function endSession() {
-  // Immediately stop the session and block taps
+
+
+// ======================================================
+//   INSTANT END — UI FREEZE, BLOCK TAPS
+// ======================================================
+function endSessionImmediate() {
+
   running = false;
-  tapButton.disabled = true;   // disable button
-  tapLocked = true;            // lock taps
-  if(intervalId){ clearInterval(intervalId); intervalId = null; }
+  tapLocked = true;
+  tapButton.disabled = true;
 
-  if (!endGameModal) return;
+  if (intervalId) {
+    clearInterval(intervalId);
+    intervalId = null;
+  }
 
-  // Populate end-game modal
+  // Fill modal
   endTapsEl.textContent = taps;
   endEarningsEl.textContent = formatNumber(earnings.toFixed(2));
   endBonusEl.textContent = bonusLevel;
@@ -554,95 +591,127 @@ async function endSession() {
   const speed = elapsed > 0 ? taps / elapsed : 0;
   endSpeedEl.textContent = speed.toFixed(2);
 
+  // Show modal immediately
   endGameModal.style.display = "flex";
+}
 
-  // ---------- RECORD SESSION & LEADERBOARD ----------
-  if(currentUser?.uid && taps > 0){
-    try {
-      const userRef = doc(db,"users",currentUser.uid);
 
-      await runTransaction(db, async t=>{
-        const docSnap = await t.get(userRef);
-        const now = new Date();
-        const dailyKey = now.toISOString().split("T")[0];
-        const weeklyKey = `${now.getFullYear()}-W${getWeek(now)}`;
-        const monthlyKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 
-        if(!docSnap.exists()){
-          t.set(userRef, {
-            chatId: currentUser.chatId || currentUser.uid,
-            stars: currentUser.stars || 0,
-            cash: currentUser.cash || 0,
-            totalTaps: taps,
-            tapsDaily: { [dailyKey]: taps },
-            tapsWeekly: { [weeklyKey]: taps },
-            tapsMonthly: { [monthlyKey]: taps },
-            lastEarnings: earnings,
-            lastBonus: bonusLevel
-          });
-          return;
-        }
+// ======================================================
+//   FIRESTORE — ASYNC RECORDING
+// ======================================================
+async function endSessionRecord() {
 
-        const data = docSnap.data();
-        t.update(userRef, {
-          totalTaps: (data.totalTaps || 0) + taps,
-          tapsDaily: { ...(data.tapsDaily || {}), [dailyKey]: ((data.tapsDaily?.[dailyKey] || 0) + taps) },
-          tapsWeekly: { ...(data.tapsWeekly || {}), [weeklyKey]: ((data.tapsWeekly?.[weeklyKey] || 0) + taps) },
-          tapsMonthly: { ...(data.tapsMonthly || {}), [monthlyKey]: ((data.tapsMonthly?.[monthlyKey] || 0) + taps) },
+  if (!currentUser?.uid || taps <= 0) return;
+
+  try {
+    const userRef = doc(db, "users", currentUser.uid);
+
+    await runTransaction(db, async t => {
+
+      const docSnap = await t.get(userRef);
+      const now = new Date();
+
+      const dailyKey = now.toISOString().split("T")[0];
+      const weeklyKey = `${now.getFullYear()}-W${getWeek(now)}`;
+      const monthlyKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+
+      if (!docSnap.exists()) {
+
+        t.set(userRef, {
+          chatId: currentUser.chatId || currentUser.uid,
+          stars: currentUser.stars || 0,
+          cash: currentUser.cash || 0,
+          totalTaps: taps,
+          tapsDaily: { [dailyKey]: taps },
+          tapsWeekly: { [weeklyKey]: taps },
+          tapsMonthly: { [monthlyKey]: taps },
           lastEarnings: earnings,
           lastBonus: bonusLevel
         });
+
+        return;
+      }
+
+      const data = docSnap.data();
+
+      t.update(userRef, {
+        totalTaps: (data.totalTaps || 0) + taps,
+        tapsDaily: { ...(data.tapsDaily || {}), [dailyKey]: ((data.tapsDaily?.[dailyKey] || 0) + taps) },
+        tapsWeekly: { ...(data.tapsWeekly || {}), [weeklyKey]: ((data.tapsWeekly?.[weeklyKey] || 0) + taps) },
+        tapsMonthly: { ...(data.tapsMonthly || {}), [monthlyKey]: ((data.tapsMonthly?.[monthlyKey] || 0) + taps) },
+        lastEarnings: earnings,
+        lastBonus: bonusLevel
       });
 
-      await addDoc(collection(db,"tapSessions"),{
-        uid: currentUser.uid,
-        email: currentUser.email,
-        chatId: currentUser.chatId || currentUser.uid,
-        taps,
-        earnings,
-        bonusLevel,
-        timestamp: serverTimestamp()
-      });
+    });
 
-      currentUser.totalTaps = (currentUser.totalTaps || 0) + taps;
+    await addDoc(collection(db, "tapSessions"), {
+      uid: currentUser.uid,
+      email: currentUser.email,
+      chatId: currentUser.chatId || currentUser.uid,
+      taps,
+      earnings,
+      bonusLevel,
+      timestamp: serverTimestamp()
+    });
 
-      // Refresh leaderboard after session ends
-      fetchLeaderboard("daily");
+    currentUser.totalTaps = (currentUser.totalTaps || 0) + taps;
 
-    } catch(e){
-      console.error("Error recording session:", e);
-    }
+    // Refresh leaderboard
+    fetchLeaderboard("daily");
+
+  } catch (err) {
+    console.error("Error saving session:", err);
   }
 }
 
-// ---------- TAP ----------
-tapButton?.addEventListener(tapEvent, async e=>{
+
+
+// ======================================================
+//   TAP HANDLER — NOW PERFECTLY LOCKED
+// ======================================================
+tapButton?.addEventListener(tapEvent, async e => {
+
   e.preventDefault();
-  if(!running || tapLocked) return;
-  tapLocked=true; setTimeout(()=>{ tapLocked=false; },50);
 
-  taps++; currentUser && (currentUser.totalTaps=(currentUser.totalTaps||0)+1);
-  progress++; cashCounter++;
-  showFloatingPlus(tapButton,'+1');
+  if (!running || tapLocked) return;
 
-  if(cashCounter>=cashThreshold){
-    cashCounter=0; cashThreshold=randomInt(1,12);
-    const pot=getStoredPot()??DAILY_INITIAL_POT;
-    if(pot>0){ 
-      earnings+=CASH_PER_AWARD; 
-      setStoredPot(Math.max(0,pot-CASH_PER_AWARD));
-      await giveCashToUser(CASH_PER_AWARD); 
+  tapLocked = true;
+  setTimeout(() => tapLocked = false, 50);
+
+  taps++;
+  currentUser && (currentUser.totalTaps = (currentUser.totalTaps || 0) + 1);
+
+  progress++;
+  cashCounter++;
+  showFloatingPlus(tapButton, "+1");
+
+  // CASH AWARD
+  if (cashCounter >= cashThreshold) {
+    cashCounter = 0;
+    cashThreshold = randomInt(1, 12);
+
+    const pot = getStoredPot() ?? DAILY_INITIAL_POT;
+    if (pot > 0) {
+      earnings += CASH_PER_AWARD;
+      setStoredPot(Math.max(0, pot - CASH_PER_AWARD));
+      await giveCashToUser(CASH_PER_AWARD);
     }
   }
 
-  if(progress>=tapsForNext){
-    progress=0; bonusLevel++; tapsForNext=100+(bonusLevel-1)*50;
+  // BONUS LEVEL
+  if (progress >= tapsForNext) {
+    progress = 0;
+    bonusLevel++;
+    tapsForNext = 100 + (bonusLevel - 1) * 50;
     triggerConfetti();
   }
 
   flashTapGlow();
-  try{ tapSound.currentTime=0; tapSound.play().catch(()=>{});}catch{}
+  try { tapSound.currentTime = 0; tapSound.play().catch(()=>{}); } catch {}
   navigator.vibrate?.(12);
+
   updateUI();
   updateBonusBar();
 });
