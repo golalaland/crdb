@@ -549,32 +549,122 @@ async function endSession() {
 
   endGameModal.style.display = "flex";
 
-  // ---------- RECORD SESSION IN FIRESTORE ----------
-  if(currentUser?.uid && taps > 0){
-    try{
-      await addDoc(collection(db,"tapSessions"),{
-        uid: currentUser.uid,
-        email: currentUser.email,
-        chatId: currentUser.chatId || currentUser.uid,
-        taps: taps,
-        earnings: earnings,
-        bonusLevel: bonusLevel,
-        timestamp: serverTimestamp()
+ // ---------- RECORD SESSION IN FIRESTORE ----------
+if (currentUser?.uid && taps > 0) {
+  try {
+    // Save session
+    await addDoc(collection(db, "tapSessions"), {
+      uid: currentUser.uid,
+      chatId: currentUser.chatId || currentUser.uid,
+      email: currentUser.email || null,
+      taps: taps,
+      earnings: earnings,
+      bonusLevel: bonusLevel,
+      invitedBy: currentUser.invitedBy || null,
+      timestamp: serverTimestamp()
+    });
+
+    // Update cumulative total taps
+    const userRef = doc(db, "users", currentUser.uid);
+
+    await runTransaction(db, async (t) => {
+      const snap = await t.get(userRef);
+
+      if (!snap.exists()) return;
+
+      const data = snap.data();
+      const newTotal = Number(data.totalTaps || 0) + taps;
+
+      t.update(userRef, {
+        totalTaps: newTotal,
+        lastPlayed: new Date(),
+        // optional for analytics:
+        lastEarnings: earnings,
+        lastBonus: bonusLevel
       });
 
-      // Optional: update user's cumulative totalTaps
-      const userRef = doc(db,"users",currentUser.uid);
-      await runTransaction(db, async t=>{
-        const u = await t.get(userRef);
-        if(!u.exists()) return;
-        const totalTaps = Number(u.data().totalTaps||0) + taps;
-        t.update(userRef,{totalTaps});
-        currentUser.totalTaps = totalTaps;
-      });
-    }catch(e){
-      console.error("Error recording session:", e);
-    }
+      currentUser.totalTaps = newTotal;
+    });
+
+  } catch (e) {
+    console.error("Error recording session:", e);
   }
+}
+
+// ---------- Tap Function ----------
+async function recordTap(userId, invitedBy = null) {
+  const userRef = doc(db, "users", userId);
+
+  await runTransaction(db, async (transaction) => {
+    const docSnap = await transaction.get(userRef);
+
+    const now = new Date();
+
+    // Format timestamps
+    const dailyKey = now.toISOString().split("T")[0];               // 2025-11-15
+    const weeklyKey = `${now.getFullYear()}-W${getWeek(now)}`;      // 2025-W46
+    const monthlyKey = `${now.getFullYear()}-${now.getMonth() + 1}`; // 2025-11
+
+    let data;
+
+    if (!docSnap.exists()) {
+      // -------- First time user --------
+      data = {
+        invitedBy: invitedBy || null,
+
+        totalTaps: 1,
+        dailyTaps: 1,
+        weeklyTaps: 1,
+        monthlyTaps: 1,
+
+        lastDailyReset: dailyKey,
+        lastWeeklyReset: weeklyKey,
+        lastMonthlyReset: monthlyKey
+      };
+
+      transaction.set(userRef, data);
+      return;
+    }
+
+    // -------- Existing user --------
+    const existing = docSnap.data();
+
+    // Reset counters if a new day/week/month
+    const dailyTaps =
+      existing.lastDailyReset === dailyKey ? existing.dailyTaps + 1 : 1;
+
+    const weeklyTaps =
+      existing.lastWeeklyReset === weeklyKey ? existing.weeklyTaps + 1 : 1;
+
+    const monthlyTaps =
+      existing.lastMonthlyReset === monthlyKey ? existing.monthlyTaps + 1 : 1;
+
+    data = {
+      totalTaps: (existing.totalTaps || 0) + 1,
+      dailyTaps,
+      weeklyTaps,
+      monthlyTaps,
+
+      lastDailyReset: dailyKey,
+      lastWeeklyReset: weeklyKey,
+      lastMonthlyReset: monthlyKey,
+
+      invitedBy: existing.invitedBy || invitedBy || null
+    };
+
+    transaction.update(userRef, data);
+  });
+
+  console.log("Tap recorded.");
+}
+
+// ---------- Helper: get ISO week ----------
+function getWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
 }
 
 // ---------- TAP ----------
