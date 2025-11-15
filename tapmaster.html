@@ -774,71 +774,62 @@ function getWeek(date) {
   return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
 }
 
-// ---------- Tap Function ----------
-async function recordTap(userId, invitedBy = null) {
+// ---------- RECORD TAP ----------
+async function recordTap(userId, taps = 1, invitedBy = null, earnings = 0, bonusLevel = 0) {
+  if (!userId || taps <= 0) return;
+
   const userRef = doc(db, "users", userId);
+  const now = new Date();
 
-  await runTransaction(db, async (transaction) => {
-    const docSnap = await transaction.get(userRef);
+  const dailyKey = now.toISOString().split("T")[0];               // YYYY-MM-DD
+  const weeklyKey = `${now.getFullYear()}-W${getWeek(now)}`;      // YYYY-Wxx
+  const monthlyKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
 
-    const now = new Date();
+  try {
+    await runTransaction(db, async (transaction) => {
+      const docSnap = await transaction.get(userRef);
 
-    // Format timestamps
-    const dailyKey = now.toISOString().split("T")[0];               // 2025-11-15
-    const weeklyKey = `${now.getFullYear()}-W${getWeek(now)}`;      // 2025-W46
-    const monthlyKey = `${now.getFullYear()}-${now.getMonth() + 1}`; // 2025-11
+      if (!docSnap.exists()) {
+        // -------- First time user --------
+        transaction.set(userRef, {
+          totalTaps: taps,
+          tapsDaily: { [dailyKey]: taps },
+          tapsWeekly: { [weeklyKey]: taps },
+          tapsMonthly: { [monthlyKey]: taps },
+          lastEarnings: earnings,
+          lastBonus: bonusLevel,
+          invitedBy: invitedBy || null,
+        });
+        return;
+      }
 
-    let data;
+      const data = docSnap.data();
 
-    if (!docSnap.exists()) {
-      // -------- First time user --------
-      data = {
-        invitedBy: invitedBy || null,
+      // -------- Existing user --------
+      const tapsDaily = { ...(data.tapsDaily || {}) };
+      tapsDaily[dailyKey] = (tapsDaily[dailyKey] || 0) + taps;
 
-        totalTaps: 1,
-        dailyTaps: 1,
-        weeklyTaps: 1,
-        monthlyTaps: 1,
+      const tapsWeekly = { ...(data.tapsWeekly || {}) };
+      tapsWeekly[weeklyKey] = (tapsWeekly[weeklyKey] || 0) + taps;
 
-        lastDailyReset: dailyKey,
-        lastWeeklyReset: weeklyKey,
-        lastMonthlyReset: monthlyKey
-      };
+      const tapsMonthly = { ...(data.tapsMonthly || {}) };
+      tapsMonthly[monthlyKey] = (tapsMonthly[monthlyKey] || 0) + taps;
 
-      transaction.set(userRef, data);
-      return;
-    }
+      transaction.update(userRef, {
+        totalTaps: (data.totalTaps || 0) + taps,
+        tapsDaily,
+        tapsWeekly,
+        tapsMonthly,
+        lastEarnings: earnings,
+        lastBonus: bonusLevel,
+        invitedBy: data.invitedBy || invitedBy || null,
+      });
+    });
 
-    // -------- Existing user --------
-    const existing = docSnap.data();
-
-    // Reset counters if a new day/week/month
-    const dailyTaps =
-      existing.lastDailyReset === dailyKey ? existing.dailyTaps + 1 : 1;
-
-    const weeklyTaps =
-      existing.lastWeeklyReset === weeklyKey ? existing.weeklyTaps + 1 : 1;
-
-    const monthlyTaps =
-      existing.lastMonthlyReset === monthlyKey ? existing.monthlyTaps + 1 : 1;
-
-    data = {
-      totalTaps: (existing.totalTaps || 0) + 1,
-      dailyTaps,
-      weeklyTaps,
-      monthlyTaps,
-
-      lastDailyReset: dailyKey,
-      lastWeeklyReset: weeklyKey,
-      lastMonthlyReset: monthlyKey,
-
-      invitedBy: existing.invitedBy || invitedBy || null
-    };
-
-    transaction.update(userRef, data);
-  });
-
-  console.log("Tap recorded.");
+    console.log("Tap recorded successfully.");
+  } catch (e) {
+    console.error("Error recording tap:", e);
+  }
 }
 </script>
 </body>
