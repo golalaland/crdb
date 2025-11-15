@@ -967,113 +967,154 @@ async function recordTap(userId, taps = 1, invitedBy = null, earnings = 0, bonus
     console.error("Error recording tap:", e);
   }
 }
-// -------------------- POOL JS --------------------
-const poolModal = document.getElementById("poolModal");
-const poolInfo = document.getElementById("poolInfo");
-const poolProgress = document.getElementById("poolProgress");
-const poolCountdown = document.getElementById("poolCountdown");
-const joinPoolBtn = document.getElementById("joinPoolBtn");
 
-let poolParticipants = 0;
-const poolTarget = 500; // Example: 500 people
-let poolTime = 3600; // 1 hour in seconds
+/* ------------------ BOTTOM TAB MODAL OPENERS ------------------ */
 
-// Update progress bar and info
-function updatePoolDisplay() {
-  poolInfo.textContent = `${poolParticipants}/${poolTarget} joined`;
-  poolProgress.style.width = `${(poolParticipants / poolTarget) * 100}%`;
-}
+document.getElementById("poolBtn")?.addEventListener("click", () => {
+  const modal = document.getElementById("poolModal");
+  if (!modal) return;
+  modal.style.display = "flex";
+  loadPoolInfo(); // auto-update pool info
+});
 
-// Countdown timer
-function startPoolCountdown() {
-  const timer = setInterval(() => {
-    if (poolTime <= 0) {
-      clearInterval(timer);
-      poolCountdown.textContent = "POOL ENDED";
-      return;
-    }
-    poolTime--;
-    const hrs = String(Math.floor(poolTime / 3600)).padStart(2, '0');
-    const mins = String(Math.floor((poolTime % 3600) / 60)).padStart(2, '0');
-    const secs = String(poolTime % 60).padStart(2, '0');
-    poolCountdown.textContent = `${hrs}:${mins}:${secs}`;
-  }, 1000);
-}
+document.getElementById("bidBtn")?.addEventListener("click", () => {
+  const modal = document.getElementById("bidModal");
+  if (!modal) return;
+  modal.style.display = "flex";
+  loadBidInfo(); // auto-update bid info
+});
 
-// Join Pool
-joinPoolBtn?.addEventListener("click", () => {
-  if (poolParticipants < poolTarget) {
-    poolParticipants++;
-    updatePoolDisplay();
-    // Here you can also record in Firestore
+
+/* ------------------ UNIVERSAL MODAL CLOSER ------------------ */
+document.querySelectorAll(".closeModalBtn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const modalId = btn.dataset.target;
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = "none";
+  });
+});
+
+/* ------------------ POOL MODAL LOGIC ------------------ */
+async function initPool(modal) {
+  const gameId = modal.dataset.gameId;
+  if (!gameId) return;
+
+  const infoEl = modal.querySelector("#poolInfo");
+  const progressEl = modal.querySelector("#poolProgress");
+  const countdownEl = modal.querySelector("#poolCountdown");
+  const joinBtn = modal.querySelector("#joinPoolBtn");
+
+  const poolRef = doc(db, "pools", gameId);
+
+  let duration = 3600; // 1 hour
+
+  // Countdown
+  function startPoolCountdown() {
+    const timer = setInterval(() => {
+      duration--;
+      const h = String(Math.floor(duration / 3600)).padStart(2, '0');
+      const m = String(Math.floor((duration % 3600) / 60)).padStart(2, '0');
+      const s = String(duration % 60).padStart(2, '0');
+
+      countdownEl.textContent = `${h}:${m}:${s}`;
+
+      if (duration <= 0) clearInterval(timer);
+    }, 1000);
   }
-});
 
-// Initialize pool modal
-poolModal?.addEventListener("click", e => {
-  if (e.target === poolModal) poolModal.style.display = "none";
-});
-updatePoolDisplay();
-startPoolCountdown();
+  startPoolCountdown();
 
-// -------------------- BID JS --------------------
-const bidModal = document.getElementById("bidModal");
-const bidSlides = bidModal?.querySelectorAll(".bid-slide");
-const bidCountdown = document.getElementById("bidCountdown");
-const tapBidBtn = document.getElementById("tapBidBtn");
-const bidLeaderboardList = document.getElementById("bidLeaderboardList");
+  // Live updates
+  onSnapshot(poolRef, snap => {
+    const data = snap.data() || { participants:0, target:500 };
+    const { participants, target } = data;
 
-let currentSlide = 0;
-let bidTime = 3600; // 1 hour
-let bids = []; // Example: [{user:"Guest01", taps:10}, ...]
+    infoEl.textContent = `${participants}/${target} joined`;
+    progressEl.style.width = `${(participants / target) * 100}%`;
 
-function showBidSlide(index) {
-  bidSlides.forEach((slide, i) => slide.style.display = i === index ? "block" : "none");
-}
-
-// Auto-slide every 3 sec
-setInterval(() => {
-  currentSlide = (currentSlide + 1) % bidSlides.length;
-  showBidSlide(currentSlide);
-}, 3000);
-
-// Bid countdown
-function startBidCountdown() {
-  const timer = setInterval(() => {
-    if (bidTime <= 0) {
-      clearInterval(timer);
-      bidCountdown.textContent = "BID ENDED";
-      return;
+    if (participants >= target) {
+      countdownEl.textContent = "POOL COMPLETE!";
     }
-    bidTime--;
-    const hrs = String(Math.floor(bidTime / 3600)).padStart(2, '0');
-    const mins = String(Math.floor((bidTime % 3600) / 60)).padStart(2, '0');
-    const secs = String(bidTime % 60).padStart(2, '0');
-    bidCountdown.textContent = `${hrs}:${mins}:${secs}`;
-  }, 1000);
+  });
+
+  // Join button
+  joinBtn.onclick = async () => {
+    await updateDoc(poolRef, {
+      participants: increment(1)
+    });
+  };
 }
 
-// Tap to Bid
-tapBidBtn?.addEventListener("click", () => {
-  // Example logic: add tap for current user
-  const user = currentUser?.chatId || "Guest";
-  const bidRecord = bids.find(b => b.user === user);
-  if (bidRecord) bidRecord.taps++;
-  else bids.push({user, taps:1});
+/* RUN WHEN POOL OPENS */
+const poolModal = document.getElementById("poolModal");
+new MutationObserver(() => {
+  if (poolModal.style.display === "flex") initPool(poolModal);
+}).observe(poolModal, { attributes: true });
 
-  // Sort top 10
-  bids.sort((a,b)=>b.taps - a.taps);
-  const top10 = bids.slice(0,10);
 
-  bidLeaderboardList.innerHTML = top10.map((b,i) => `<li>#${i+1} ${b.user} — ${b.taps} taps</li>`).join("");
-});
 
-// Initialize bid modal
-bidModal?.addEventListener("click", e => {
-  if (e.target === bidModal) bidModal.style.display = "none";
-});
-showBidSlide(0);
-startBidCountdown();
+/* ------------------ BID MODAL LOGIC ------------------ */
+async function initBid(modal) {
+  const gameId = modal.dataset.gameId;
+  if (!gameId) return;
+
+  const countdownEl = modal.querySelector("#bidCountdown");
+  const tapBtn = modal.querySelector("#tapBidBtn");
+  const leaderboardList = modal.querySelector("#bidLeaderboardList");
+
+  const slides = modal.querySelectorAll(".bid-slide");
+  let slideIndex = 0;
+
+  const bidRef = doc(db, "bids", gameId);
+
+  // Countdown
+  let duration = 3600;
+  function startBidCountdown() {
+    const timer = setInterval(() => {
+      duration--;
+      const h = String(Math.floor(duration / 3600)).padStart(2, '0');
+      const m = String(Math.floor((duration % 3600) / 60)).padStart(2, '0');
+      const s = String(duration % 60).padStart(2, '0');
+
+      countdownEl.textContent = `${h}:${m}:${s}`;
+      if (duration <= 0) clearInterval(timer);
+    }, 1000);
+  }
+  startBidCountdown();
+
+  // Image Slider
+  setInterval(() => {
+    slides.forEach(s => s.style.display = "none");
+    slideIndex = (slideIndex + 1) % slides.length;
+    slides[slideIndex].style.display = "block";
+  }, 3000);
+
+  // Live leaderboard
+  onSnapshot(bidRef, snap => {
+    const data = snap.data() || {};
+    const users = Object.entries(data)
+      .map(([user, taps]) => ({ user, taps }))
+      .sort((a,b) => b.taps - a.taps)
+      .slice(0,10);
+
+    leaderboardList.innerHTML = users
+      .map((u,i)=>`<li>#${i+1}: ${u.user} — ${u.taps} taps</li>`)
+      .join("");
+  });
+
+  // Tap to bid
+  tapBtn.onclick = async () => {
+    const username = window.currentUserName || "Guest";
+    await updateDoc(bidRef, { [username]: increment(1) });
+  };
+}
+
+/* RUN WHEN BID OPENS */
+const bidModal = document.getElementById("bidModal");
+new MutationObserver(() => {
+  if (bidModal.style.display === "flex") initBid(bidModal);
+}).observe(bidModal, { attributes: true });
+
 </script>
 </body>
 </html>
