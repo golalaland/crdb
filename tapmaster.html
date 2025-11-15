@@ -638,6 +638,107 @@ confirmPlay?.addEventListener("click",async ()=>{
     startSession();
   },700);
 });
+
+  
+  // ---------- DOM ----------
+const leaderboardBtn = document.getElementById('leaderboardBtn');
+const leaderboardModal = document.getElementById('leaderboardModal');
+const closeLeaderboard = document.getElementById('closeLeaderboard');
+const leaderboardList = document.getElementById('leaderboardList');
+
+// ---------- HELPER ----------
+function formatLeaderboardNumber(n){
+  return n.toLocaleString();
+}
+
+function getTimeRange(period){
+  const now = new Date();
+  let start, end;
+  end = now;
+
+  if(period==="daily"){
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if(period==="weekly"){
+    const day = now.getDay(); // 0=Sun, 1=Mon
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
+  } else if(period==="monthly"){
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+  return { start, end };
+}
+
+// ---------- FETCH LEADERBOARD ----------
+async function fetchLeaderboard(period="daily", top=10){
+  leaderboardList.innerHTML = '<li>Loading...</li>';
+  const { start, end } = getTimeRange(period);
+  const startTs = Timestamp.fromDate(start);
+  const endTs = Timestamp.fromDate(end);
+
+  try {
+    const sessionsCol = collection(db,"tapSessions");
+    const q = query(
+      sessionsCol,
+      where("timestamp", ">=", startTs),
+      where("timestamp", "<=", endTs)
+    );
+    const snap = await getDocs(q);
+
+    // Aggregate taps per user
+    const userTaps = {};
+    snap.forEach(doc => {
+      const data = doc.data();
+      if(!data.uid) return;
+      if(!userTaps[data.uid]) userTaps[data.uid] = 0;
+      userTaps[data.uid] += Number(data.taps||0);
+    });
+
+    // Convert to array and sort
+    const sorted = Object.entries(userTaps)
+      .sort((a,b)=>b[1]-a[1])
+      .slice(0, top);
+
+    // Build HTML
+    if(sorted.length === 0){
+      leaderboardList.innerHTML = '<li>No data yet</li>';
+      return;
+    }
+
+    const html = [];
+    for(let i=0;i<sorted.length;i++){
+      const [uid,taps] = sorted[i];
+      let name = uid;
+      // Try to get username from currentUser if matches
+      if(currentUser?.uid === uid) name = currentUser.chatId;
+      html.push(`<li style="margin-bottom:8px;">${i+1}. <strong>${name}</strong> — ${formatLeaderboardNumber(taps)} taps</li>`);
+    }
+    leaderboardList.innerHTML = html.join("");
+  } catch(e){
+    console.error("fetchLeaderboard error", e);
+    leaderboardList.innerHTML = '<li>Error loading leaderboard</li>';
+  }
+}
+
+// ---------- OPEN / CLOSE ----------
+leaderboardBtn?.addEventListener('click', ()=>{
+  leaderboardModal.style.display = "flex";
+  fetchLeaderboard("daily"); // default: daily
+});
+
+closeLeaderboard?.addEventListener('click', ()=>{
+  leaderboardModal.style.display = "none";
+});
+
+// Optional: add buttons to switch periods
+const periodButtonsContainer = document.createElement('div');
+periodButtonsContainer.style.margin='10px 0; text-align:center;';
+['daily','weekly','monthly'].forEach(period=>{
+  const btn = document.createElement('button');
+  btn.textContent = period.charAt(0).toUpperCase()+period.slice(1);
+  btn.style.margin='0 5px; padding:5px 10px; border-radius:6px; border:none; background:#ff8c00; color:#fff; cursor:pointer;';
+  btn.addEventListener('click', ()=> fetchLeaderboard(period));
+  periodButtonsContainer.appendChild(btn);
+});
+leaderboardModal.querySelector('.modal').insertBefore(periodButtonsContainer, leaderboardList);
 </script>
 
 </body>
