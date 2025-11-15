@@ -387,7 +387,7 @@ async function loadCurrentUserForGame(){
     }
 
     // sanitize email to doc id
-    const uid = String(storedUser.email).replace(/[.#$[\]]/g, ',');
+    const uid = storedUser.email.replace(/\./g, ",");
     const userRef = doc(db, 'users', uid);
     const snap = await getDoc(userRef);
     if (!snap.exists()){
