@@ -489,95 +489,144 @@ async function endSession(){
 }
 
 // ---------- UI Helpers ----------
+function formatNumber(n){ return n.toLocaleString(); }
+
 function updateUI(){
-  timerEl&&(timerEl.textContent=String(timer));
-  tapCountEl&&(tapCountEl.textContent=String(taps));
-  earningsEl&&(earningsEl.textContent='₦'+earnings.toFixed(2));
-  bonusLevelVal&&(bonusLevelVal.textContent=String(bonusLevel));
-  miniTapCount&&(miniTapCount.textContent=String(taps));
-  miniEarnings&&(miniEarnings.textContent='₦'+earnings.toFixed(2));
-  // commas for cash and stars
-  starCountEl&&(starCountEl.textContent=currentUser ? currentUser.stars.toLocaleString() : "0");
-  cashCountEl&&(cashCountEl.textContent=currentUser ? currentUser.cash.toLocaleString() : "0");
+  timerEl && (timerEl.textContent = String(timer));
+  tapCountEl && (tapCountEl.textContent = String(taps));
+  earningsEl && (earningsEl.textContent = '₦' + earnings.toFixed(2));
+  bonusLevelVal && (bonusLevelVal.textContent = String(bonusLevel));
+  speedVal && (speedVal.textContent = `x${bonusLevel}`); // assuming speed = bonusLevel
+  miniTapCount && (miniTapCount.textContent = String(taps));
+  miniEarnings && (miniEarnings.textContent = '₦' + earnings.toFixed(2));
+
+  // cash & stars with commas
+  if(starCountEl && currentUser) starCountEl.textContent = formatNumber(currentUser.stars);
+  if(cashCountEl && currentUser) cashCountEl.textContent = formatNumber(currentUser.cash);
 }
-function flashTapGlow(){
-  if(!tapButton) return;
-  tapButton.classList.add('tap-glow');
-  tapButton.style.transform='scale(1.04)';
+
+function radiateText(txt){ 
+  const t=document.createElement('div'); 
+  t.textContent=txt; 
+  Object.assign(t.style,{
+    position:'fixed', left:`${randomInt(20,80)}%`, top:`${randomInt(20,60)}%`,
+    fontSize:'18px', color:'#FFFA00', zIndex:9999, pointerEvents:'none'
+  }); 
+  document.body.appendChild(t); 
+  setTimeout(()=>t.remove(),800);
+}
+
+function showConfetti(){ 
+  const c=document.createElement('div'); 
+  c.textContent='✨'; 
+  Object.assign(c.style,{
+    position:'fixed', left:`${randomInt(20,80)}%`, top:`${randomInt(20,60)}%`,
+    fontSize:'24px', pointerEvents:'none', zIndex:9999
+  }); 
+  document.body.appendChild(c); 
+  setTimeout(()=>c.remove(),800);
+}
+
+function showTempMessage(txt){ 
+  const msg=document.createElement('div'); 
+  msg.textContent=txt; 
+  Object.assign(msg.style,{
+    position:'fixed', left:'50%', top:'30%', transform:'translateX(-50%)',
+    background:'#000', padding:'10px 16px', borderRadius:'8px', border:'1px solid rgba(255,255,255,0.06)', zIndex:9999
+  }); 
+  document.body.appendChild(msg); 
+  setTimeout(()=>{ 
+    msg.style.transition='opacity .4s'; 
+    msg.style.opacity=0; 
+    setTimeout(()=>msg.remove(),400); 
+  },900);
+}
+
+function flashTapGlow(){ 
+  tapButton?.classList.add('tap-glow'); 
+  tapButton?.classList.add('tap-vibrate'); // add visual vibration class
   setTimeout(()=>{
-    tapButton.classList.remove('tap-glow');
-    tapButton.style.transform='scale(1)';
+    tapButton?.classList.remove('tap-glow');
+    tapButton?.classList.remove('tap-vibrate');
   },120);
-  navigator.vibrate?.(12);
 }
 
 // ---------- End Game Modal ----------
-function showEndGameModal({username,taps,earnings,place}){
-  const existing=document.getElementById('tapEndModal'); if(existing) existing.remove();
-  const modal=document.createElement('div'); modal.id='tapEndModal';
-  Object.assign(modal.style,{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)',zIndex:99999,padding:'20px'});
-  const box=document.createElement('div');
-  Object.assign(box.style,{width:'92%',maxWidth:'420px',background:'#0f0f0f',borderRadius:'12px',padding:'18px',textAlign:'center',border:'1px solid rgba(255,255,255,0.06)'});
-  const h=document.createElement('div'); h.style.fontWeight='800'; h.style.color='#FF1493'; h.style.marginBottom='8px';
-  h.textContent=`${username}, Time's Up!`;
-  const p1=document.createElement('div'); p1.style.margin='8px 0';
-  p1.innerHTML=`You earned <strong>₦${earnings}</strong> and made <strong>${taps}</strong> taps.`;
-  const p2=document.createElement('div'); p2.style.margin='8px 0';
-  p2.innerHTML=`Your rank: <strong>${place}</strong> — check the leaderboard for full details.`;
-  const actions=document.createElement('div');
-  Object.assign(actions.style,{marginTop:'12px',display:'flex',justifyContent:'center',gap:'12px'});
-  const playAgainBtn=document.createElement('button'); playAgainBtn.textContent='Play Again';
-  Object.assign(playAgainBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#00e676,#00b0ff)',color:'#000',fontWeight:800});
-  const closeBtn=document.createElement('button'); closeBtn.textContent='Close';
-  Object.assign(closeBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#FF1493,#FF8C00)',color:'#fff',fontWeight:800});
-  actions.append(playAgainBtn,closeBtn); box.append(h,p1,p2,actions); modal.appendChild(box); document.body.appendChild(modal);
+function showEndGameModal({username, taps, earnings, place}){
+  const existing=document.getElementById('tapEndModal'); 
+  if(existing) existing.remove();
 
-  // Play Again just reloads start page (user logs out)
-  playAgainBtn.addEventListener('click',()=>{
+  const modal=document.createElement('div'); 
+  modal.id='tapEndModal'; 
+  Object.assign(modal.style,{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)',zIndex:99999,padding:'20px'});
+
+  const box=document.createElement('div'); 
+  Object.assign(box.style,{width:'92%',maxWidth:'420px',background:'#0f0f0f',borderRadius:'12px',padding:'18px',textAlign:'center',border:'1px solid rgba(255,255,255,0.06)'});
+
+  const h=document.createElement('div'); 
+  h.style.fontWeight='800'; 
+  h.style.color='#FF1493'; 
+  h.style.marginBottom='8px'; 
+  h.textContent=`${username}, Time's Up!`;
+
+  const p1=document.createElement('div'); 
+  p1.style.margin='8px 0'; 
+  p1.innerHTML=`You earned <strong>${earnings}</strong> and made <strong>${taps}</strong> taps.`;
+
+  const p2=document.createElement('div'); 
+  p2.style.margin='8px 0'; 
+  p2.innerHTML=`Your rank: <strong>${place}</strong> — check the leaderboard for full details.`;
+
+  const actions=document.createElement('div'); 
+  Object.assign(actions.style,{marginTop:'12px',display:'flex',justifyContent:'center',gap:'12px'});
+
+  const playAgainBtn=document.createElement('button'); 
+  playAgainBtn.textContent='Play Again'; 
+  Object.assign(playAgainBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#00e676,#00b0ff)',color:'#000',fontWeight:800});
+
+  const closeBtn=document.createElement('button'); 
+  closeBtn.textContent='Close'; 
+  Object.assign(closeBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#FF1493,#FF8C00)',color:'#fff',fontWeight:800});
+
+  actions.append(playAgainBtn,closeBtn); 
+  box.append(h,p1,p2,actions); 
+  modal.appendChild(box); 
+  document.body.appendChild(modal);
+
+  // Reset user and log out on play again
+  playAgainBtn.addEventListener('click', async()=>{
     modal.remove();
-    tapButton.disabled=false;
-    currentUser=null;
-    starCountEl.textContent="0";
-    cashCountEl.textContent="0";
-    profileNameEl.textContent="GUEST 0000";
-    gamePage&&gamePage.classList.add('hidden');
-    startPage&&(startPage.style.display='flex');
-    posterImg&&(posterImg.style.display='block');
+    stopSession();
+    taps=0; earnings=0; progress=0; bonusLevel=1; tapsForNext=100;
+    if(currentUser){
+      currentUser = null;
+      starCountEl.textContent = '50';
+      cashCountEl.textContent = '0';
+      profileNameEl.textContent = 'GUEST 0000';
+    }
+    gamePage && gamePage.classList.add('hidden');
+    startPage && (startPage.style.display='flex');
+    posterImg && (posterImg.style.display='block');
   });
 
   closeBtn.addEventListener('click',()=>{
     modal.remove();
-    tapButton.disabled=false;
-    currentUser=null;
-    starCountEl.textContent="0";
-    cashCountEl.textContent="0";
-    profileNameEl.textContent="GUEST 0000";
-    gamePage&&gamePage.classList.add('hidden');
-    startPage&&(startPage.style.display='flex');
-    posterImg&&(posterImg.style.display='block');
+    stopSession();
+    taps=0; earnings=0; progress=0; bonusLevel=1; tapsForNext=100;
+    gamePage && gamePage.classList.add('hidden');
+    startPage && (startPage.style.display='flex');
+    posterImg && (posterImg.style.display='block');
   });
 }
 
-// ---------- LEADERBOARD ----------
-leaderboardBtn?.addEventListener('click',async()=>{
-  leaderboardList.innerHTML='<li style="color:#aaa">Loading…</li>';
-  leaderboardModal.style.display='flex';
-  try{
-    const oneHourAgo=Timestamp.fromDate(new Date(Date.now()-3600*1000));
-    const q=query(collection(db,'tapSessions'),where('timestamp','>',oneHourAgo),orderBy('taps','desc'),limit(20));
-    const snap=await getDocs(q);
-    if(snap.empty){ leaderboardList.innerHTML='<li style="color:#aaa">No scores this hour</li>'; return; }
-    leaderboardList.innerHTML=snap.docs.map((d,i)=>{
-      const data=d.data(),t=data.taps||0,earn=(data.earnings||0).toFixed(2),when=data.timestamp?.toDate?data.timestamp.toDate().toLocaleTimeString():'',uname=data.username||'GUEST';
-      return `<li style="padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,0.03)"><strong>#${i+1}</strong> — ${uname} — ${t} taps &nbsp; (₦${earn})<div style="font-size:11px;color:#aaa">${when}</div></li>`;
-    }).join('');
-  } catch(e){ leaderboardList.innerHTML='<li style="color:#f88">Failed to load</li>'; console.error(e);}
-});
-closeLeaderboard?.addEventListener('click',()=>leaderboardModal.style.display='none');
-leaderboardModal?.addEventListener('click',e=>{ if(e.target===leaderboardModal) leaderboardModal.style.display='none'; });
-
-// ---------- CSS ----------
-const style=document.createElement('style'); style.innerHTML=`#tapButton.tap-glow{box-shadow:0 0 26px rgba(0,230,118,0.9),0 0 8px rgba(0,176,255,0.6);transform:scale(1.03);}`; document.head.appendChild(style);
+// ---------- Extra CSS for visual vibration ----------
+const style=document.createElement('style'); 
+style.innerHTML=`
+  #tapButton.tap-glow { box-shadow:0 0 26px rgba(0,230,118,0.9),0 0 8px rgba(0,176,255,0.6); transform:scale(1.03); }
+  #tapButton.tap-vibrate { animation: tapVibrate 0.12s; }
+  @keyframes tapVibrate { 0%{transform:scale(1.02) translateX(0)} 25%{transform:scale(1.02) translateX(-2px)} 50%{transform:scale(1.02) translateX(2px)} 75%{transform:scale(1.02) translateX(-2px)} 100%{transform:scale(1.02) translateX(0)} }
+`;
+document.head.appendChild(style);
 
 // ---------- DEBUG ----------
 window.tapMasterDebug={ getPot:()=>getStoredPot(), setPot:(v)=>setStoredPot(v), startSession, endSession };
