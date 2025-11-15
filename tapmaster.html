@@ -399,22 +399,31 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
 
   </div> <!-- end gamePage -->
 
-<!-- Fixed bottom tab bar -->
-<div id="bottomBar" style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;justify-content:space-between;gap:6px;z-index:1000;">
+<!-- Fixed bottom profile card (above tab bar) -->
+<div id="profileCardWrapper" style="position:fixed;bottom:70px;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:1500;">
+  <div class="profile-card" style="background:rgba(255,255,255,0.04);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);text-align:center;width:100%;">
+    <div class="profile-name" id="profileName">GUEST 0000</div>
+    <div class="profile-info">STARS COLLECTED: <span id="starCount">0</span>⭐</div>
+    <div class="profile-info">CASH EARNED: <span id="cashCount">0</span></div>
+  </div>
+</div>
+
+<!-- Bottom circular tab bar -->
+<div id="bottomBar" style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;justify-content:space-between;gap:10px;z-index:1000;">
 
   <!-- Tab 1: Leaderboard -->
-  <button class="tab-btn" id="leaderboardBtn" style="flex:1;padding:10px;border-radius:10px;background:linear-gradient(90deg,#FFD700,#FF8C00);color:#111;font-weight:800;border:none;cursor:pointer;font-size:14px;">
+  <button class="tab-btn" id="leaderboardBtn" style="flex:1;aspect-ratio:1/1;border-radius:50%;background:linear-gradient(90deg,#FFD700,#FF8C00);color:#111;font-weight:800;border:none;cursor:pointer;font-size:20px;">
     🏆
   </button>
 
   <!-- Tab 2: Pool -->
-  <button class="tab-btn" id="poolBtn" style="flex:1;padding:10px;border-radius:10px;background:linear-gradient(90deg,#1E90FF,#00BFFF);color:#fff;font-weight:800;border:none;cursor:pointer;font-size:14px;">
-    Pool
+  <button class="tab-btn" id="poolBtn" style="flex:1;aspect-ratio:1/1;border-radius:50%;background:linear-gradient(90deg,#1E90FF,#00BFFF);color:#fff;font-weight:800;border:none;cursor:pointer;font-size:18px;">
+    💰
   </button>
 
   <!-- Tab 3: Bid -->
-  <button class="tab-btn" id="bidBtn" style="flex:1;padding:10px;border-radius:10px;background:linear-gradient(90deg,#32CD32,#228B22);color:#fff;font-weight:800;border:none;cursor:pointer;font-size:14px;">
-    Bid
+  <button class="tab-btn" id="bidBtn" style="flex:1;aspect-ratio:1/1;border-radius:50%;background:linear-gradient(90deg,#32CD32,#228B22);color:#fff;font-weight:800;border:none;cursor:pointer;font-size:18px;">
+    🖐️
   </button>
 
 </div>
@@ -452,19 +461,6 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
       <button class="closeModalBtn" data-target="bidModal" style="padding:8px 12px;border-radius:8px;border:none;background:#aaa;color:#111;font-weight:800;cursor:pointer;">Close</button>
     </div>
   </div>
-</div>
-
-
-<!-- Fixed bottom profile card (above bottom tab bar) -->
-<div id="profileCardWrapper" style="position:fixed;bottom:60px;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:1500;">
-
-  <!-- Profile Card -->
-  <div class="profile-card" style="background:rgba(255,255,255,0.04);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);text-align:center;width:100%;">
-    <div class="profile-name" id="profileName">GUEST 0000</div>
-    <div class="profile-info">STARS COLLECTED: <span id="starCount">0</span>⭐</div>
-    <div class="profile-info">CASH EARNED: <span id="cashCount">0</span></div>
-  </div>
-
 </div>
 
 
