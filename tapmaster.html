@@ -372,36 +372,75 @@ function randomInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min; 
 
 // ---------- User loader (mirrors Money Train) ----------
 let currentUser = null;
-async function loadCurrentUserForGame(){
+
+async function loadCurrentUserForGame() {
   try {
     const vipRaw = localStorage.getItem('vipUser');
     const hostRaw = localStorage.getItem('hostUser');
-    const storedUser = vipRaw ? JSON.parse(vipRaw) : hostRaw ? JSON.parse(hostRaw) : null;
+    const storedUser = vipRaw
+      ? JSON.parse(vipRaw)
+      : hostRaw
+      ? JSON.parse(hostRaw)
+      : null;
 
-    if (!storedUser?.email){
+    if (!storedUser?.email) {
       currentUser = null;
-      // populate UI defaults
-      if (profileNameEl) profileNameEl.textContent = 'GUEST 0000';
-      if (starCountEl) starCountEl.textContent = starCountEl.textContent || '50';
+      if (profileNameEl) profileNameEl.textContent = "GUEST 0000";
+      if (starCountEl) starCountEl.textContent = starCountEl.textContent || "50";
       return;
     }
 
-    // sanitize email to doc id
-    const uid = storedUser.email.replace(/\./g, ",");
-    const userRef = doc(db, 'users', uid);
+    // ✅ Your REAL sanitization: "." → "," AND lowercase
+    const uid = storedUser.email.replace(/\./g, ",").toLowerCase();
+
+    const userRef = doc(db, "users", uid);
     const snap = await getDoc(userRef);
-    if (!snap.exists()){
-      currentUser = { uid, chatId: storedUser.displayName || storedUser.email.split('@')[0], stars:0, cash:0, email: storedUser.email };
+
+    if (!snap.exists()) {
+      console.warn("⚠️ User NOT found in users collection");
+
+      currentUser = {
+        uid,
+        chatId:
+          storedUser.fullName ||
+          storedUser.vipName ||
+          storedUser.displayName ||
+          storedUser.email.split("@")[0],
+        stars: 0,
+        cash: 0,
+        email: storedUser.email,
+      };
+
       if (profileNameEl) profileNameEl.textContent = currentUser.chatId;
-      if (starCountEl) starCountEl.textContent = String(currentUser.stars);
+      if (starCountEl) starCountEl.textContent = "0";
+
       return;
     }
-    currentUser = { uid, ...snap.data() };
-    // update UI
-    if (profileNameEl) profileNameEl.textContent = currentUser.chatId || storedUser.displayName || storedUser.email.split('@')[0];
-    if (starCountEl) starCountEl.textContent = String(currentUser.stars ?? 0);
-  } catch (err){
-    console.warn('loadCurrentUserForGame error', err);
+
+    // ✅ Document exists — load ACTUAL balances + names
+    const data = snap.data();
+
+    currentUser = {
+      uid,
+      ...data,
+    };
+
+    // 🔥 Name priority — FIXED
+    const displayName =
+      data.fullName ||
+      data.vipName ||
+      data.chatId ||
+      storedUser.fullName ||
+      storedUser.displayName ||
+      storedUser.email.split("@")[0];
+
+    if (profileNameEl) profileNameEl.textContent = displayName;
+
+    // 🔥 Stars will now load correctly
+    if (starCountEl) starCountEl.textContent = String(data.stars ?? 0);
+
+  } catch (err) {
+    console.warn("loadCurrentUserForGame error", err);
   }
 }
 
