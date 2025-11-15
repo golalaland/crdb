@@ -549,34 +549,18 @@ async function endSession() {
 
   endGameModal.style.display = "flex";
 
- // ---------- RECORD SESSION IN FIRESTORE ----------
+// ---------- RECORD SESSION IN FIRESTORE ----------
 if (currentUser?.uid && taps > 0) {
   try {
-
     const userRef = doc(db, "users", currentUser.uid);
 
-    // ----- ONE transaction handles everything -----
+    // ----- 1. Update user's cumulative totals -----
     await runTransaction(db, async (t) => {
       const snap = await t.get(userRef);
-
-      let existing = snap.exists() ? snap.data() : {};
+      const existing = snap.exists() ? snap.data() : {};
 
       const newTotal = Number(existing.totalTaps || 0) + taps;
 
-      // Save session inside transaction (avoids race conditions)
-      const sessionsRef = collection(db, "tapSessions");
-      t.set(doc(sessionsRef), {
-        uid: currentUser.uid,
-        chatId: currentUser.chatId || currentUser.uid,
-        email: currentUser.email || null,
-        taps: taps,
-        earnings: earnings,
-        bonusLevel: bonusLevel,
-        invitedBy: existing.invitedBy || currentUser.invitedBy || null,
-        timestamp: new Date() // avoid serverTimestamp to prevent hanging
-      });
-
-      // Update totals
       t.set(
         userRef,
         {
@@ -592,12 +576,26 @@ if (currentUser?.uid && taps > 0) {
       currentUser.totalTaps = newTotal;
     });
 
+    // ----- 2. Save session as a separate document -----
+    const sessionsRef = collection(db, "tapSessions");
+    await addDoc(sessionsRef, {
+      uid: currentUser.uid,
+      chatId: currentUser.chatId || currentUser.uid,
+      email: currentUser.email || null,
+      taps: taps,
+      earnings: earnings,
+      bonusLevel: bonusLevel,
+      invitedBy: currentUser.invitedBy || null,
+      timestamp: new Date() // safe, avoids hanging
+    });
+
     console.log("Session recorded successfully.");
 
   } catch (e) {
     console.error("🔥 FIRESTORE ERROR:", e);
   }
 }
+
 
 
 
