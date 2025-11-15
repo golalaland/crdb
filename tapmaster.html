@@ -133,6 +133,26 @@ body {display:flex;justify-content:center;align-items:flex-start;padding:18px 0 
 /* small helpers */
 .hidden { display:none!important; }
 button, input { font-size:16px; } /* prevents iOS zoom on tap */
+.slider-container {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.slider-track {
+  display: flex;
+  transition: transform 0.3s ease;
+}
+
+.slide-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border-radius: 10px;
+  user-select: none;
+  -webkit-user-drag: none;
+}
 </style>
 </head>
 <body>
@@ -238,41 +258,44 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
     <button id="leaderboardBtn" style="padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#FFD700,#FF8C00);color:#111;font-weight:800;border:none;cursor:pointer;font-size:14px;">View Leaderboard 🏆</button>
   </div>
 
-<!-- Leaderboard Modal -->
-<div id="leaderboardModal" class="modal-backdrop" role="dialog" aria-modal="true" style="display:none;">
-  <div class="modal" style="max-width:480px;width:90%;margin:40px auto;background:#222;border-radius:12px;padding:12px;color:#fff;position:relative;">
+<div id="leaderboardSliders">
 
-    <!-- Image Slider -->
-    <div id="leaderboardImageSlider" style="position:relative;width:100%;height:180px;overflow:hidden;border-radius:8px;margin-bottom:10px;">
-      <img src="https://via.placeholder.com/400x180?text=Image+1" class="leaderboard-slide" style="width:100%;height:100%;object-fit:cover;display:block;">
-      <img src="https://via.placeholder.com/400x180?text=Image+2" class="leaderboard-slide" style="width:100%;height:100%;object-fit:cover;display:none;">
-      <img src="https://via.placeholder.com/400x180?text=Image+3" class="leaderboard-slide" style="width:100%;height:100%;object-fit:cover;display:none;">
+  <!-- DAILY -->
+  <div class="slider-container" data-period="daily">
+    <div class="slider-track">
+      <img src="https://via.placeholder.com/400x180?text=Daily+1" class="slide-img">
+      <img src="https://via.placeholder.com/400x180?text=Daily+2" class="slide-img">
+      <img src="https://via.placeholder.com/400x180?text=Daily+3" class="slide-img">
     </div>
-
-    <!-- Description Text -->
-    <div id="leaderboardDescription" style="padding:8px 6px;font-size:14px;text-align:center;color:#fff;margin-bottom:10px;">
-      🏆 Tap fast to climb the leaderboard! Top 10 get special rewards every hour.
-    </div>
-
-    <!-- Period Tab Switcher -->
-    <div id="leaderboardPeriodTabs" style="display:flex;justify-content:center;gap:8px;margin-bottom:10px;">
-      <button class="period-tab active" data-period="daily" style="flex:1;padding:6px 8px;border:none;border-radius:6px;background:#FF8C00;color:#fff;font-weight:700;cursor:pointer;">DAILY</button>
-      <button class="period-tab" data-period="weekly" style="flex:1;padding:6px 8px;border:none;border-radius:6px;background:#555;color:#fff;font-weight:700;cursor:pointer;">WEEKLY</button>
-      <button class="period-tab" data-period="monthly" style="flex:1;padding:6px 8px;border:none;border-radius:6px;background:#555;color:#fff;font-weight:700;cursor:pointer;">MONTHLY</button>
-    </div>
-
-    <!-- Scrollable Leaderboard List -->
-    <ol id="leaderboardList" class="list" style="list-style:none;padding-left:0;margin:0;max-height:250px;overflow-y:auto;border-top:1px solid rgba(255,255,255,0.1);border-bottom:1px solid rgba(255,255,255,0.1);padding:6px 0;">
-      <li>Loading leaderboard...</li>
-    </ol>
-
-    <!-- Close Button -->
-    <div style="margin-top:12px;text-align:center;">
-      <button id="closeLeaderboard" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#FF1493,#FF8C00);color:#fff;font-weight:800;cursor:pointer">Close</button>
-    </div>
-
   </div>
+
+  <!-- WEEKLY -->
+  <div class="slider-container" data-period="weekly" style="display:none;">
+    <div class="slider-track">
+      <img src="https://via.placeholder.com/400x180?text=Weekly+1" class="slide-img">
+      <img src="https://via.placeholder.com/400x180?text=Weekly+2" class="slide-img">
+      <img src="https://via.placeholder.com/400x180?text=Weekly+3" class="slide-img">
+    </div>
+  </div>
+
+  <!-- MONTHLY -->
+  <div class="slider-container" data-period="monthly" style="display:none;">
+    <div class="slider-track">
+      <img src="https://via.placeholder.com/400x180?text=Monthly+1" class="slide-img">
+      <img src="https://via.placeholder.com/400x180?text=Monthly+2" class="slide-img">
+      <img src="https://via.placeholder.com/400x180?text=Monthly+3" class="slide-img">
+    </div>
+  </div>
+
 </div>
+
+<div id="dailyCountdown"></div>
+
+<div id="leaderboardDescription" style="text-align:center;margin-top:8px;color:#ccc;">
+  Who will top the leaderboard today?
+</div>
+
+
 
 <!-- Audio -->
 <audio id="tapSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
@@ -886,19 +909,76 @@ async function fetchLeaderboard(period = "daily", top = 10) {
 /* ----------------- PERIOD TABS ----------------- */
 periodTabs.forEach(tab => {
   tab.addEventListener("click", () => {
-    // Remove active from all tabs
-    periodTabs.forEach(t => t.classList.remove("active"));
-    periodTabs.forEach(t => t.style.background = "#555");
-
-    // Set active
-    tab.classList.add("active");
-    tab.style.background = "#FF8C00";
-
-    // Fetch leaderboard
     const period = tab.dataset.period;
+
+    // hide all sliders
+    document.querySelectorAll(".slider-container")
+      .forEach(s => s.style.display = "none");
+
+    // show selected
+    document.querySelector(`.slider-container[data-period="${period}"]`)
+      .style.display = "block";
+
     fetchLeaderboard(period);
+
+    document.getElementById("dailyCountdown").style.display = 
+      period === "daily" ? "block" : "none";
   });
 });
+
+document.querySelectorAll(".slider-container").forEach(c => enableSwipeSlider(c));
+
+/* ---------------- SWIPE SLIDER ENGINE ---------------- */
+function enableSwipeSlider(container) {
+  const track = container.querySelector(".slider-track");
+  const slides = container.querySelectorAll(".slide-img");
+  const total = slides.length;
+
+  let index = 0;
+  let startX = 0;
+  let currentX = 0;
+  let isDragging = false;
+
+  const width = container.offsetWidth;
+
+  function setPosition() {
+    track.style.transform = `translateX(${-index * width}px)`;
+  }
+
+  track.addEventListener("touchstart", e => {
+    isDragging = true;
+    startX = e.touches[0].clientX;
+  });
+
+  track.addEventListener("touchmove", e => {
+    if (!isDragging) return;
+    currentX = e.touches[0].clientX;
+    const diff = currentX - startX;
+
+    track.style.transition = "none";
+    track.style.transform = `translateX(${diff - index * width}px)`;
+  });
+
+  track.addEventListener("touchend", () => {
+    isDragging = false;
+
+    const diff = currentX - startX;
+
+    // swipe threshold
+    if (diff < -40 && index < total - 1) index++;
+    if (diff > 40 && index > 0) index--;
+
+    track.style.transition = "transform .3s";
+    setPosition();
+  });
+
+  // resize fix
+  window.addEventListener("resize", () => {
+    setPosition();
+  });
+
+  setPosition();
+}
 
 /* ----------------- OPEN/CLOSE MODAL ----------------- */
 leaderboardBtn?.addEventListener("click", () => {
