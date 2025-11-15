@@ -454,6 +454,49 @@ function triggerConfetti(){
   }
 }
 
+  // ---------- START FLOW FIX ----------
+initializePot();
+loadCurrentUserForGame();
+
+// Show modal on start button
+startBtn?.addEventListener("click", () => {
+  if(playModal) playModal.style.display = "flex";
+});
+
+// Cancel button hides modal
+cancelPlay?.addEventListener("click", () => {
+  if(playModal) playModal.style.display = "none";
+});
+
+// Confirm button: deduct stars & start game
+confirmPlay?.addEventListener("click", async () => {
+  let localStars = parseInt(starCountEl?.textContent.replace(/,/g,'') || "0", 10);
+
+  // Deduct stars
+  if(currentUser?.uid){
+    const r = await tryDeductStarsForJoin(STAR_COST);
+    if(!r.ok){ alert(r.message || "Not enough stars"); return; }
+  } else {
+    if(localStars < STAR_COST){ alert("Not enough stars to play!"); return; }
+    localStars -= STAR_COST;
+    starCountEl.textContent = formatNumber(localStars);
+  }
+
+  // Hide modal/start page
+  if(playModal) playModal.style.display = "none";
+  if(posterImg) posterImg.style.display = "none";
+  if(startPage) startPage.style.display = "none";
+  if(spinner) spinner.classList.remove("hidden");
+
+  // Short spinner then show game page
+  setTimeout(() => {
+    if(spinner) spinner.classList.add("hidden");
+    if(gamePage) gamePage.classList.remove("hidden");
+    startSession();
+  }, 700);
+});
+
+
 // ---------- SESSION ----------
 function startSession(){
   taps=0; earnings=0; timer=SESSION_DURATION; bonusLevel=1; progress=0; tapsForNext=100;
