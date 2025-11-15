@@ -549,47 +549,34 @@ async function endSession() {
 
   endGameModal.style.display = "flex";
 
- // ---------- RECORD SESSION IN FIRESTORE ----------
-if (currentUser?.uid && taps > 0) {
-  try {
-    // Save session
-    await addDoc(collection(db, "tapSessions"), {
-      uid: currentUser.uid,
-      chatId: currentUser.chatId || currentUser.uid,
-      email: currentUser.email || null,
-      taps: taps,
-      earnings: earnings,
-      bonusLevel: bonusLevel,
-      invitedBy: currentUser.invitedBy || null,
-      timestamp: serverTimestamp()
-    });
-
-    // Update cumulative total taps
-    const userRef = doc(db, "users", currentUser.uid);
-
-    await runTransaction(db, async (t) => {
-      const snap = await t.get(userRef);
-
-      if (!snap.exists()) return;
-
-      const data = snap.data();
-      const newTotal = Number(data.totalTaps || 0) + taps;
-
-      t.update(userRef, {
-        totalTaps: newTotal,
-        lastPlayed: new Date(),
-        // optional for analytics:
-        lastEarnings: earnings,
-        lastBonus: bonusLevel
+  // ---------- RECORD SESSION IN FIRESTORE ----------
+  if(currentUser?.uid && taps > 0){
+    try{
+      await addDoc(collection(db,"tapSessions"),{
+        uid: currentUser.uid,
+        email: currentUser.email,
+        chatId: currentUser.chatId || currentUser.uid,
+        taps: taps,
+        earnings: earnings,
+        bonusLevel: bonusLevel,
+        timestamp: serverTimestamp()
       });
 
-      currentUser.totalTaps = newTotal;
-    });
-
-  } catch (e) {
-    console.error("Error recording session:", e);
+      // Optional: update user's cumulative totalTaps
+      const userRef = doc(db,"users",currentUser.uid);
+      await runTransaction(db, async t=>{
+        const u = await t.get(userRef);
+        if(!u.exists()) return;
+        const totalTaps = Number(u.data().totalTaps||0) + taps;
+        t.update(userRef,{totalTaps});
+        currentUser.totalTaps = totalTaps;
+      });
+    }catch(e){
+      console.error("Error recording session:", e);
+    }
   }
 }
+
 
 // ---------- TAP ----------
 tapButton?.addEventListener(tapEvent, async e=>{
