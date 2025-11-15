@@ -410,13 +410,29 @@ function showFloatingPlus(parent,text){
   const x = rect.left + Math.random() * rect.width * 0.6 + rect.width*0.2;
   const y = rect.top + Math.random() * rect.height * 0.6;
   Object.assign(span.style,{
-    position:'absolute', fontWeight:'bold', color:'#00ffcc', fontSize:'18px',
+    position:'absolute', fontWeight:'bold', color:'#fff', fontSize:'20px',
     pointerEvents:'none', userSelect:'none', zIndex:1000,
-    top: y+'px', left: x+'px', opacity:1, transition:'all 0.8s ease-out'
+    top: y+'px', left: x+'px', opacity:1, transition:'all 0.9s ease-out'
   });
   document.body.appendChild(span);
-  setTimeout(()=>{ span.style.top=(y-30)+'px'; span.style.opacity=0; },50);
-  setTimeout(()=>span.remove(),850);
+  setTimeout(()=>{ span.style.top=(y-40)+'px'; span.style.opacity=0; },50);
+  setTimeout(()=>span.remove(),900);
+}
+
+// ---------- BONUS BAR RANDOM COLORS ----------
+function updateBonusBar(){
+  if(!bonusBar) return;
+  const colors = [
+    `linear-gradient(90deg, #ff416c, #ff4b2b)`,
+    `linear-gradient(90deg, #00c6ff, #0072ff)`,
+    `linear-gradient(90deg, #f7971e, #ffd200)`,
+    `linear-gradient(90deg, #a1ffce, #faffd1)`,
+    `linear-gradient(90deg, #ff9a9e, #fad0c4)`,
+    `linear-gradient(90deg, #ffecd2, #fcb69f)`
+  ];
+  const idx = randomInt(0, colors.length-1);
+  bonusBar.style.background = colors[idx];
+  bonusBar.style.width = Math.min(100,(progress/tapsForNext)*100)+'%';
 }
 
 // ---------- CONFETTI ----------
@@ -442,7 +458,7 @@ function triggerConfetti(){
 function startSession(){
   taps=0; earnings=0; timer=SESSION_DURATION; bonusLevel=1; progress=0; tapsForNext=100;
   cashCounter=0; cashThreshold=randomInt(1,12); running=true; lastTapTime=Date.now();
-  trainBar && (trainBar.style.width='100%'); bonusBar && (bonusBar.style.width='0%');
+  trainBar && (trainBar.style.width='100%'); bonusBar && updateBonusBar();
   tapButton.disabled = false; updateUI();
   intervalId=setInterval(()=>{
     timer--;
@@ -482,6 +498,7 @@ tapButton?.addEventListener(tapEvent, async e=>{
   try{ tapSound.currentTime=0; tapSound.play().catch(()=>{});}catch{}
   navigator.vibrate?.(12);
   updateUI(deltaSec);
+  updateBonusBar();
 });
 
 // ---------- UI ----------
@@ -489,7 +506,6 @@ function updateUI(deltaSec=1){
   timerEl && (timerEl.textContent=String(timer));
   tapCountEl && (tapCountEl.textContent=String(taps));
   earningsEl && (earningsEl.textContent='₦'+formatNumber(earnings.toFixed(2)));
-  bonusBar && (bonusBar.style.width=Math.min(100,(progress/tapsForNext)*100)+'%');
   bonusLevelVal && (bonusLevelVal.textContent=String(bonusLevel));
   const elapsed=SESSION_DURATION-timer;
   const speed=elapsed>0?taps/elapsed:0;
@@ -604,7 +620,9 @@ style.innerHTML=`
 `;
 document.head.appendChild(style);
 
+window.tapMasterDebug={ getPot:()=>getStoredPot(), setPot:(v)=>setStoredPot(v), startSession, endSession };
 </script>
+
 
 </body>
 </html>
