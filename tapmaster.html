@@ -216,9 +216,7 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
     <!-- TAP button -->
     <button id="tapButton" aria-label="Tap" title="Tap fast!">TAP</button>
 
-    <!-- Mini stats -->
-    <div id="miniStats" aria-hidden="false">Taps: <strong id="miniTapCount">0</strong> · Earnings: ₦<span id="miniEarnings">0.00</span></div>
-
+  
     <!-- Result modal -->
 <div id="resultModal" class="modal-backdrop" style="display:none;align-items:center;justify-content:center;">
   <div class="modal" style="padding:16px;border-radius:12px;max-width:380px;text-align:center;position:relative;">
@@ -534,7 +532,7 @@ function stopSession() {
   }
 }
 
-function endSession() {
+async function endSession() {
   stopSession();
 
   // Populate end-game modal
@@ -549,8 +547,34 @@ function endSession() {
   endSpeedEl.textContent = speed.toFixed(2);
 
   endGameModal.style.display = "flex";
-}
 
+  // ---------- RECORD SESSION IN FIRESTORE ----------
+  if(currentUser?.uid && taps > 0){
+    try{
+      await addDoc(collection(db,"tapSessions"),{
+        uid: currentUser.uid,
+        email: currentUser.email,
+        chatId: currentUser.chatId || currentUser.uid,
+        taps: taps,
+        earnings: earnings,
+        bonusLevel: bonusLevel,
+        timestamp: serverTimestamp()
+      });
+
+      // Optional: update user's cumulative totalTaps
+      const userRef = doc(db,"users",currentUser.uid);
+      await runTransaction(db, async t=>{
+        const u = await t.get(userRef);
+        if(!u.exists()) return;
+        const totalTaps = Number(u.data().totalTaps||0) + taps;
+        t.update(userRef,{totalTaps});
+        currentUser.totalTaps = totalTaps;
+      });
+    }catch(e){
+      console.error("Error recording session:", e);
+    }
+  }
+}
 
 // ---------- TAP ----------
 tapButton?.addEventListener(tapEvent, async e=>{
