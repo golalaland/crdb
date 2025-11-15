@@ -259,9 +259,7 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import {
-  getFirestore, collection, addDoc, doc, getDoc, runTransaction, serverTimestamp, Timestamp, query, where, orderBy, limit, getDocs
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, runTransaction } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 // ---------- FIREBASE ----------
 const firebaseConfig = {
@@ -301,6 +299,39 @@ const starCountEl = document.getElementById('starCount');
 const cashCountEl = document.getElementById('cashCount');
 const profileNameEl = document.getElementById('profileName');
 
+// ---------- END GAME MODAL ----------
+const endGameModal = document.createElement('div');
+endGameModal.id = "endGameModal";
+endGameModal.style = `
+  position:fixed; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.9); color:#fff; display:none;
+  justify-content:center; align-items:center; z-index:9999; font-family:sans-serif;
+`;
+endGameModal.innerHTML = `
+  <div style="background:#111; padding:30px; border-radius:15px; text-align:center; width:300px;">
+    <h2>Game Over</h2>
+    <p>Taps: <span id="endTaps">0</span></p>
+    <p>Earnings: ₦<span id="endEarnings">0</span></p>
+    <p>Bonus Level: <span id="endBonus">0</span></p>
+    <p>Speed: x<span id="endSpeed">0</span></p>
+    <button id="closeEndGame" style="margin-top:15px; padding:10px 20px; border:none; border-radius:8px; background:#0f0; color:#000; font-weight:bold; cursor:pointer;">Close</button>
+  </div>
+`;
+document.body.appendChild(endGameModal);
+
+const endTapsEl = document.getElementById('endTaps');
+const endEarningsEl = document.getElementById('endEarnings');
+const endBonusEl = document.getElementById('endBonus');
+const endSpeedEl = document.getElementById('endSpeed');
+const closeEndGameBtn = document.getElementById('closeEndGame');
+
+closeEndGameBtn.addEventListener('click', () => {
+  endGameModal.style.display = "none";
+  gamePage.style.display = "none";
+  startPage.style.display = "block";
+  if(posterImg) posterImg.style.display = "block";
+});
+
 // ---------- CONFIG ----------
 const STAR_COST = 10;
 const DAILY_INITIAL_POT = 10000;
@@ -311,14 +342,14 @@ const SESSION_DURATION = 60;
 let taps = 0, earnings = 0, timer = SESSION_DURATION, bonusLevel = 1;
 let progress = 0, tapsForNext = 100;
 let cashCounter = 0, cashThreshold = randomInt(1,12);
-let running = false, intervalId = null, lastTapTime = Date.now();
+let running = false, intervalId = null;
 let currentUser = null;
 const tapEvent = ('ontouchstart' in window) ? 'touchstart' : 'click';
+let tapLocked = false;
 
 // ---------- LOCAL POT ----------
 const KEY_POT = 'moneytrain_pot';
 const KEY_RESET_DAY = 'moneytrain_reset_day';
-
 function getStoredPot(){ return parseInt(localStorage.getItem(KEY_POT)) || null; }
 function setStoredPot(v){ localStorage.setItem(KEY_POT, Math.max(0, Math.floor(v))); }
 function getPotResetDay(){ return localStorage.getItem(KEY_RESET_DAY) || null; }
@@ -418,7 +449,7 @@ function showFloatingPlus(parent,text){
   setTimeout(()=>span.remove(),900);
 }
 
-// ---------- BONUS BAR ANIMATED RAINBOW ----------
+// ---------- BONUS BAR ----------
 function updateBonusBar(){
   if(!bonusBar) return;
   const colors = [
@@ -431,7 +462,6 @@ function updateBonusBar(){
   ];
   const idx = randomInt(0, colors.length-1);
   bonusBar.style.background = colors[idx];
-  bonusBar.style.transition = 'width 0.4s ease-in-out';
   bonusBar.style.width = Math.min(100,(progress/tapsForNext)*100)+'%';
 }
 
@@ -454,57 +484,13 @@ function triggerConfetti(){
   }
 }
 
-  // ---------- START FLOW FIX ----------
-initializePot();
-loadCurrentUserForGame();
-
-// Show modal on start button
-startBtn?.addEventListener("click", () => {
-  if(playModal) playModal.style.display = "flex";
-});
-
-// Cancel button hides modal
-cancelPlay?.addEventListener("click", () => {
-  if(playModal) playModal.style.display = "none";
-});
-
-// Confirm button: deduct stars & start game
-confirmPlay?.addEventListener("click", async () => {
-  let localStars = parseInt(starCountEl?.textContent.replace(/,/g,'') || "0", 10);
-
-  // Deduct stars
-  if(currentUser?.uid){
-    const r = await tryDeductStarsForJoin(STAR_COST);
-    if(!r.ok){ alert(r.message || "Not enough stars"); return; }
-  } else {
-    if(localStars < STAR_COST){ alert("Not enough stars to play!"); return; }
-    localStars -= STAR_COST;
-    starCountEl.textContent = formatNumber(localStars);
-  }
-
-  // Hide modal/start page
-  if(playModal) playModal.style.display = "none";
-  if(posterImg) posterImg.style.display = "none";
-  if(startPage) startPage.style.display = "none";
-  if(spinner) spinner.classList.remove("hidden");
-
-  // Short spinner then show game page
-  setTimeout(() => {
-    if(spinner) spinner.classList.add("hidden");
-    if(gamePage) gamePage.classList.remove("hidden");
-    startSession();
-  }, 700);
-});
-
-
 // ---------- SESSION ----------
 function startSession(){
   taps=0; earnings=0; timer=SESSION_DURATION; bonusLevel=1; progress=0; tapsForNext=100;
   cashCounter=0; cashThreshold=randomInt(1,12); running=true; lastTapTime=Date.now();
   trainBar && (trainBar.style.width='100%'); updateBonusBar();
   tapButton.disabled = false; updateUI();
-  
-  // timer interval solid
+
   let expected = Date.now() + 1000;
   intervalId=setInterval(()=>{
     const drift = Date.now() - expected;
@@ -514,18 +500,29 @@ function startSession(){
     trainBar && (trainBar.style.width=(timer/SESSION_DURATION*100)+'%');
     updateUI();
     expected += 1000;
-  }, 1000);
+  },1000);
 }
 
 function stopSession(){ running=false; intervalId&&(clearInterval(intervalId),intervalId=null); }
 
+function endSession(){
+  stopSession();
+  // Populate end-game modal
+  endTapsEl.textContent = taps;
+  endEarningsEl.textContent = formatNumber(earnings.toFixed(2));
+  endBonusEl.textContent = bonusLevel;
+  const elapsed = SESSION_DURATION - timer;
+  const speed = elapsed > 0 ? taps / elapsed : 0;
+  endSpeedEl.textContent = speed.toFixed(2);
+
+  endGameModal.style.display = "flex";
+}
+
 // ---------- TAP ----------
-let tapLocked = false;
 tapButton?.addEventListener(tapEvent, async e=>{
   e.preventDefault();
   if(!running || tapLocked) return;
-  tapLocked = true; // prevent multiple taps per frame
-  setTimeout(()=>{ tapLocked=false; },50);
+  tapLocked=true; setTimeout(()=>{ tapLocked=false; },50);
 
   taps++; currentUser && (currentUser.totalTaps=(currentUser.totalTaps||0)+1);
   progress++; cashCounter++;
@@ -573,7 +570,7 @@ function flashTapGlow(){
   setTimeout(()=>{tapButton?.classList.remove('tap-glow','tap-pulse');},120); 
 }
 
-// ---------- ADD CSS ----------
+// ---------- CSS ----------
 const style=document.createElement('style'); 
 style.innerHTML=`
   #tapButton.tap-glow { box-shadow:0 0 26px rgba(0,230,118,0.9),0 0 8px rgba(0,176,255,0.6); }
@@ -581,8 +578,33 @@ style.innerHTML=`
 `;
 document.head.appendChild(style);
 
+// ---------- INITIALIZE ----------
 initializePot();
 loadCurrentUserForGame();
+
+// ---------- START FLOW ----------
+startBtn?.addEventListener("click",()=>{ if(playModal) playModal.style.display="flex"; });
+cancelPlay?.addEventListener("click",()=>{ if(playModal) playModal.style.display="none"; });
+confirmPlay?.addEventListener("click",async ()=>{
+  let localStars=parseInt(starCountEl?.textContent.replace(/,/g,'')||"0",10);
+  if(currentUser?.uid){
+    const r=await tryDeductStarsForJoin(STAR_COST);
+    if(!r.ok){ alert(r.message||"Not enough stars"); return; }
+  } else {
+    if(localStars<STAR_COST){ alert("Not enough stars"); return; }
+    localStars-=STAR_COST; starCountEl.textContent=formatNumber(localStars);
+  }
+  if(playModal) playModal.style.display="none";
+  if(posterImg) posterImg.style.display="none";
+  if(startPage) startPage.style.display="none";
+  if(spinner) spinner.classList.remove("hidden");
+  setTimeout(()=>{
+    if(spinner) spinner.classList.add("hidden");
+    if(gamePage) gamePage.classList.remove("hidden");
+    startSession();
+  },700);
+});
 </script>
+
 </body>
 </html>
