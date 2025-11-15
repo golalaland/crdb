@@ -1052,11 +1052,12 @@ new MutationObserver(() => {
 }).observe(poolModal, { attributes: true });
 
 
+/* -------------------------------- BID MODAL LOGIC (FULL REWRITE) -------------------------------- */
 
-/* ------------------ BID MODAL LOGIC ------------------ */
 async function initBid(modal) {
-  const gameId = modal.dataset.gameId;
-  if (!gameId) return;
+
+  const uid = auth.currentUser?.uid;
+  if (!uid) return;
 
   const countdownEl = modal.querySelector("#bidCountdown");
   const tapBtn = modal.querySelector("#tapBidBtn");
@@ -1065,54 +1066,133 @@ async function initBid(modal) {
   const slides = modal.querySelectorAll(".bid-slide");
   let slideIndex = 0;
 
-  const bidRef = doc(db, "bids", gameId);
+  const bidRef = doc(db, "bidGame", "active");
 
-  // Countdown
-  let duration = 3600;
-  function startBidCountdown() {
-    const timer = setInterval(() => {
-      duration--;
-      const h = String(Math.floor(duration / 3600)).padStart(2, '0');
-      const m = String(Math.floor((duration % 3600) / 60)).padStart(2, '0');
-      const s = String(duration % 60).padStart(2, '0');
-
-      countdownEl.textContent = `${h}:${m}:${s}`;
-      if (duration <= 0) clearInterval(timer);
-    }, 1000);
-  }
-  startBidCountdown();
-
-  // Image Slider
+  /* ---------------- IMAGE SLIDER ---------------- */
   setInterval(() => {
     slides.forEach(s => s.style.display = "none");
     slideIndex = (slideIndex + 1) % slides.length;
     slides[slideIndex].style.display = "block";
   }, 3000);
 
-  // Live leaderboard
-  onSnapshot(bidRef, snap => {
-    const data = snap.data() || {};
-    const users = Object.entries(data)
-      .map(([user, taps]) => ({ user, taps }))
-      .sort((a,b) => b.taps - a.taps)
-      .slice(0,10);
 
-    leaderboardList.innerHTML = users
-      .map((u,i)=>`<li>#${i+1}: ${u.user} — ${u.taps} taps</li>`)
+  /* ---------------- COUNTDOWN FROM FIRESTORE ---------------- */
+  onSnapshot(bidRef, snap => {
+    const data = snap.data();
+    if (!data?.endTime) return;
+
+    const timer = setInterval(() => {
+      const now = Date.now();
+      let diff = Math.floor((data.endTime - now) / 1000);
+
+      if (diff < 0) diff = 0;
+
+      const h = String(Math.floor(diff / 3600)).padStart(2, '0');
+      const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+      const s = String(diff % 60).padStart(2, '0');
+
+      countdownEl.textContent = `${h}:${m}:${s}`;
+
+      if (diff <= 0) clearInterval(timer);
+    }, 1000);
+  });
+
+
+  /* ---------------- LIVE BID LEADERBOARD ---------------- */
+  const biddersRef = collection(db, "bidGame", "active", "bidders");
+
+  onSnapshot(biddersRef, snap => {
+    const arr = [];
+    snap.forEach(doc => arr.push(doc.data()));
+
+    arr.sort((a,b) => b.taps - a.taps);
+
+    leaderboardList.innerHTML = arr
+      .slice(0,10)
+      .map((u,i)=>`<li>#${i+1}: ${u.uid.slice(0,5)}… — ${u.taps} taps</li>`)
       .join("");
   });
 
-  // Tap to bid
+
+  /* ---------------- TAP TO BID ---------------- */
   tapBtn.onclick = async () => {
-    const username = window.currentUserName || "Guest";
-    await updateDoc(bidRef, { [username]: increment(1) });
+
+    // Check if user joined bid
+    const userRef = doc(db, "users", uid);
+    const userSnap = await getDoc(userRef);
+    const user = userSnap.data();
+
+    if (!user?.joinedBid) {
+      return showBidJoinConfirm(uid); // Open confirm modal to join
+    }
+
+    // User joined → record tap into bid collection
+    await updateDoc(doc(db, "bidGame", "active"), {
+      totalTaps: increment(1)
+    });
+
+    await updateDoc(doc(db, "bidGame", "active", "bidders", uid), {
+      taps: increment(1),
+      uid
+    });
+
   };
 }
 
-/* RUN WHEN BID OPENS */
+
+
+/* ---------------- CONFIRM MODAL TO JOIN BID ---------------- */
+
+async function showBidJoinConfirm(uid) {
+  const c = confirm("Joining this bid costs ⭐ 50 stars. Continue?");
+  if (!c) return;
+
+  joinBid(uid);
+}
+
+
+
+/* ---------------- JOIN BID FUNCTION ---------------- */
+
+async function joinBid(uid) {
+  try {
+    const userRef = doc(db, "users", uid);
+    const snap = await getDoc(userRef);
+    const user = snap.data();
+
+    if (user.stars < 50) {
+      return alert("Not enough stars to join.");
+    }
+
+    // Deduct entry fee
+    await updateDoc(userRef, {
+      stars: user.stars - 50,
+      joinedBid: true
+    });
+
+    // Create or update bidder record
+    await setDoc(doc(db, "bidGame", "active", "bidders", uid), {
+      taps: 0,
+      uid
+    }, { merge: true });
+
+    alert("You are now in the bid! All taps go toward this bid.");
+
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+
+
+/* ---------------- RUN WHEN BID MODAL OPENS ---------------- */
+
 const bidModal = document.getElementById("bidModal");
+
 new MutationObserver(() => {
-  if (bidModal.style.display === "flex") initBid(bidModal);
+  if (bidModal.style.display === "flex") {
+    initBid(bidModal);
+  }
 }).observe(bidModal, { attributes: true });
 
 </script>
