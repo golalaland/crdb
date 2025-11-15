@@ -485,7 +485,8 @@ function triggerConfetti(){
 }
 
 // ---------- SESSION ----------
-function startSession(){
+function startSession() {
+  // Reset session state
   taps = 0;
   earnings = 0;
   timer = SESSION_DURATION;
@@ -495,41 +496,61 @@ function startSession(){
   cashCounter = 0;
   cashThreshold = randomInt(1,12);
   running = true;
-  lastTapTime = Date.now();
-  
-  trainBar && (trainBar.style.width = '100%'); 
+  tapButton.disabled = false;
+
+  trainBar && (trainBar.style.width = '100%');
   updateBonusBar();
-  tapButton.disabled = false; 
   updateUI();
 
-  // ---------- SOLID TIMER ----------
+  // Clear any old interval
+  if (intervalId) clearInterval(intervalId);
+
+  // Solid 1-second countdown
   intervalId = setInterval(() => {
     if (!running) return;
+
     timer--;
-    if (timer <= 0) {
-      timer = 0;
-      endSession(); // trigger end-game modal
-    }
-    trainBar && (trainBar.style.width = (timer / SESSION_DURATION * 100) + '%');
+    if (timer < 0) timer = 0;
+
     updateUI();
-  }, 1000); // updates every 1 second
+    trainBar && (trainBar.style.width = (timer / SESSION_DURATION * 100) + '%');
+
+    if (timer === 0) {
+      stopSession();
+      endSession();
+    }
+  }, 1000);
+
+  // Immediately show the starting timer
+  updateUI();
 }
 
+function stopSession() {
+  running = false;
+  tapButton.disabled = true;
+  if (intervalId) {
+    clearInterval(intervalId);
+    intervalId = null;
+  }
+}
 
-function stopSession(){ running=false; intervalId&&(clearInterval(intervalId),intervalId=null); }
-
-function endSession(){
+function endSession() {
   stopSession();
+
   // Populate end-game modal
+  if (!endGameModal) return;
+
   endTapsEl.textContent = taps;
   endEarningsEl.textContent = formatNumber(earnings.toFixed(2));
   endBonusEl.textContent = bonusLevel;
+
   const elapsed = SESSION_DURATION - timer;
   const speed = elapsed > 0 ? taps / elapsed : 0;
   endSpeedEl.textContent = speed.toFixed(2);
 
   endGameModal.style.display = "flex";
 }
+
 
 // ---------- TAP ----------
 tapButton?.addEventListener(tapEvent, async e=>{
