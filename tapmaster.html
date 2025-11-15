@@ -393,7 +393,6 @@ async function loadCurrentUserForGame() {
       return;
     }
 
-    // sanitize email as used in Firestore
     const uid = storedUser.email.replace(/\./g, ",").toLowerCase();
     const userRef = doc(db, "users", uid);
     const snap = await getDoc(userRef);
@@ -405,6 +404,7 @@ async function loadCurrentUserForGame() {
         chatId: storedUser.fullName || storedUser.displayName || storedUser.email.split("@")[0],
         stars: 0,
         cash: 0,
+        totalTaps: 0
       };
 
       if (profileNameEl) profileNameEl.textContent = currentUser.chatId;
@@ -421,20 +421,19 @@ async function loadCurrentUserForGame() {
       ...data,
       stars: Number(data.stars || 0),
       cash: Number(data.cash || 0),
+      totalTaps: Number(data.totalTaps || 0)
     };
 
-    // update UI
     if (profileNameEl) profileNameEl.textContent = currentUser.chatId || storedUser.fullName || storedUser.email.split("@")[0];
     if (starCountEl) starCountEl.textContent = String(currentUser.stars);
     if (cashCountEl) cashCountEl.textContent = String(currentUser.cash);
-
   } catch (err) {
     console.warn("loadCurrentUserForGame error", err);
   }
 }
 
 // -----------------------------------------------------
-//  DEDUCT STARS (transaction)
+//  DEDUCT STARS
 // -----------------------------------------------------
 async function tryDeductStarsForJoin(cost) {
   if (!currentUser?.uid) return { ok: false, message: "You are not logged in" };
@@ -451,7 +450,7 @@ async function tryDeductStarsForJoin(cost) {
       if (currentStars < cost) throw new Error("Not enough stars");
 
       t.update(userRef, { stars: currentStars - cost });
-      currentUser.stars = currentStars - cost; // update global
+      currentUser.stars = currentStars - cost;
     });
 
     if (starCountEl) starCountEl.textContent = String(currentUser.stars);
@@ -462,13 +461,10 @@ async function tryDeductStarsForJoin(cost) {
 }
 
 // -----------------------------------------------------
-//  GIVE CASH (transaction)
+//  GIVE CASH
 // -----------------------------------------------------
 async function giveCashToUser(amount) {
-  if (!currentUser?.uid) {
-    if (miniEarnings) miniEarnings.textContent = (parseFloat(miniEarnings.textContent || "0") + amount).toFixed(2);
-    return { ok: true };
-  }
+  if (!currentUser?.uid) return { ok: false };
 
   const userRef = doc(db, "users", currentUser.uid);
 
@@ -480,7 +476,7 @@ async function giveCashToUser(amount) {
       const udata = u.data();
       const newCash = Number(udata.cash || 0) + Number(amount);
       t.update(userRef, { cash: newCash });
-      currentUser.cash = newCash; // update global
+      currentUser.cash = newCash;
     });
 
     if (cashCountEl) cashCountEl.textContent = String(currentUser.cash);
@@ -517,15 +513,13 @@ confirmPlay?.addEventListener("click", async () => {
       alert(r.message || "Not enough stars");
       return;
     }
-
-    if (starCountEl)
-      starCountEl.textContent = String(Math.max(0, localStars - STAR_COST));
   } else {
     if (localStars < STAR_COST) {
       alert("Not enough stars to play!");
       return;
     }
-    starCountEl.textContent = String(localStars - STAR_COST);
+    localStars -= STAR_COST;
+    starCountEl.textContent = String(localStars);
   }
 
   if (playModal) playModal.style.display = "none";
@@ -541,7 +535,7 @@ confirmPlay?.addEventListener("click", async () => {
 });
 
 // ---------- Session functions ----------
-function startSession(){
+function startSession() {
   taps = 0;
   earnings = 0;
   timer = duration;
@@ -554,7 +548,7 @@ function startSession(){
   updateUI();
   trainBar && (trainBar.style.width = '100%');
 
-  intervalId = setInterval(()=>{
+  intervalId = setInterval(() => {
     timer--;
     if (timer < 0) timer = 0;
     updateUI();
@@ -563,154 +557,84 @@ function startSession(){
   }, 1000);
 }
 
-function stopSession(){
+function stopSession() {
   running = false;
   if (intervalId) { clearInterval(intervalId); intervalId = null; }
 }
 
-// Tap glow helper
-function flashTapGlow(){
-  tapButton.classList.add('tap-glow');
-  setTimeout(()=> tapButton.classList.remove('tap-glow'), 120);
-}
-
-// Radiating floating label (text changes to avoid "+N1.00")
-function radiateText(txt){
-  const r = tapButton.getBoundingClientRect();
-  const node = document.createElement('div');
-  node.textContent = txt;
-  node.style.position = 'fixed';
-  node.style.left = (r.left + r.width/2) + 'px';
-  node.style.top = (r.top + r.height/2) + 'px';
-  node.style.transform = 'translate(-50%,-50%)';
-  node.style.pointerEvents = 'none';
-  node.style.zIndex = 9999;
-  node.style.fontWeight = '800';
-  node.style.color = '#fff';
-  node.style.textShadow = '0 0 8px rgba(0,0,0,0.6)';
-  node.style.opacity = '1';
-  node.style.transition = 'transform .8s ease-out, opacity .8s ease-out';
-  document.body.appendChild(node);
-  // random offset
-  const dx = (Math.random()-0.5)*120;
-  node.style.transform = `translate(${dx}px,-120px)`;
-  node.style.opacity = '0';
-  setTimeout(()=> node.remove(), 900);
-}
-
-// ---------- Tap handler (with random cash awarding) ----------
+// ---------- Tap handler with proper cash awarding ----------
 tapButton?.addEventListener(tapEvent, async (e) => {
   e.preventDefault();
   if (!running) return;
 
   taps++;
+  currentUser.totalTaps = (currentUser.totalTaps || 0) + 1;
   progress++;
 
-  // Random cash distribution logic:
-  // increment a counter; when >= threshold, try award N1 (if pot > 0)
+  // Random cash award logic only triggers at thresholds
   cashCounter++;
-  if (cashCounter >= cashThreshold){
+  if (cashCounter >= cashThreshold) {
     cashCounter = 0;
-    cashThreshold = randomInt(1,12); // new random threshold for next award
+    cashThreshold = randomInt(1,12);
 
-    // check pot
     const pot = getStoredPot() ?? DAILY_INITIAL_POT;
-    if (pot > 0){
-      // award N1 locally and try to persist to user's account
+    if (pot > 0) {
       earnings += CASH_PER_AWARD;
       setStoredPot(Math.max(0, pot - CASH_PER_AWARD));
-      // give to user in Firestore if logged in
-      const rewardResult = await giveCashToUser(CASH_PER_AWARD);
-      if (!rewardResult.ok){
-        console.warn('Failed to give cash to user:', rewardResult.message);
-      }
-      // visual text for cash (but not always +N1.00; show different phrases)
+      await giveCashToUser(CASH_PER_AWARD);
+
       const texts = ['+₦1', 'Nice! +₦1', 'Cha-ching +1', '+1 Naira'];
-      radiateText(texts[randomInt(0, texts.length-1)]);
+      radiateText(texts[randomInt(0,texts.length-1)]);
+      showConfetti();
     } else {
-      // pot exhausted — radiate a different message occasionally
       radiateText('Pool empty');
     }
   } else {
-    // normal tap, show small pulse but not cash text
     const tapTexts = ['Tap', 'Nice', '+1 tap', 'Good'];
-    radiateText(tapTexts[randomInt(0, tapTexts.length-1)]);
+    radiateText(tapTexts[randomInt(0,tapTexts.length-1)]);
   }
 
-  // update small bonus/progress
-  if (progress >= tapsForNext){
+  if (progress >= tapsForNext) {
     progress = 0;
     bonusLevel++;
-    tapsForNext = 100 + (bonusLevel - 1)*50;
-    showTempMessage('TAP PRO!');
+    tapsForNext = 100 + (bonusLevel - 1) * 50;
+    showTempMessage(`Level ${bonusLevel} reached! TAP PRO!`);
+    showConfetti();
   }
 
-  // visual + audio feedback
   flashTapGlow();
-  try { tapSound.currentTime = 0; tapSound.play().catch(()=>{}); } catch(e){ /* ignore */ }
+  try { tapSound.currentTime = 0; tapSound.play().catch(()=>{}); } catch(e){ }
   if (navigator.vibrate) navigator.vibrate(12);
-
-  // update UI (we intentionally DO NOT show mini stats under button as per your request)
   updateUI();
 });
 
-// ---------- update UI ----------
-function updateUI(){
-  timerEl && (timerEl.textContent = String(timer));
-  tapCountEl && (tapCountEl.textContent = String(taps));
-  earningsEl && (earningsEl.textContent = earnings.toFixed(2));
-  bonusBar && (bonusBar.style.width = ((progress / tapsForNext) * 100) + '%');
-  bonusLevelVal && (bonusLevelVal.textContent = String(bonusLevel));
-  speedVal && (speedVal.textContent = (taps>0 && duration - timer > 0) ? Math.round(taps / Math.max(1, (duration - timer))) + '/s' : '—');
-  // keep mini elements updated in background (not visible)
-  if (miniTapCount) miniTapCount.textContent = String(taps);
-  if (miniEarnings) miniEarnings.textContent = earnings.toFixed(2);
-}
-
-// ---------- End session / save  ----------
-async function endSession(){
+// ---------- End session ----------
+async function endSession() {
   if (!running) return;
   stopSession();
 
-  // save session to Firestore
   try {
-    await addDoc(collection(db, 'tapSessions'), {
+    await addDoc(collection(db,'tapSessions'),{
       taps,
       earnings,
       uid: currentUser?.uid || null,
       username: currentUser?.chatId || profileNameEl?.textContent || 'GUEST',
       timestamp: serverTimestamp()
     });
-  } catch (err){
-    console.error('Failed to save session', err);
-  }
+  } catch(e){ console.error('Failed to save session', e); }
 
-  // compute leaderboard place among last hour
   let placeText = '—';
   try {
-    const oneHourAgo = Timestamp.fromDate(new Date(Date.now() - 3600 * 1000));
-    const q = query(collection(db, 'tapSessions'),
-      where('timestamp', '>', oneHourAgo),
-      orderBy('taps', 'desc'),
-      limit(50)
-    );
+    const oneHourAgo = Timestamp.fromDate(new Date(Date.now()-3600*1000));
+    const q = query(collection(db,'tapSessions'), where('timestamp','>',oneHourAgo), orderBy('taps','desc'), limit(50));
     const snap = await getDocs(q);
-    const arr = snap.docs.map(d => d.data().taps || 0);
-    const all = arr.slice();
-    all.push(taps);
+    const arr = snap.docs.map(d=>d.data().taps || 0);
+    const all = arr.slice(); all.push(taps);
     all.sort((a,b)=>b-a);
-    const place = all.indexOf(taps) + 1;
+    const place = all.indexOf(taps)+1;
     placeText = `#${place}`;
-  } catch (e) {
-    console.warn('Could not compute place', e);
-  }
+  } catch(e){ console.warn('Leaderboard error', e); }
 
-  // Fill end modal content and show modal
-  // We reuse the inline resultInner element; create modal overlay if you prefer.
-  if (finalTapsEl) finalTapsEl.textContent = String(taps);
-  if (finalPlaceEl) finalPlaceEl.textContent = placeText;
-
-  // Create a friendly message modal (centered) — dynamic
   showEndGameModal({
     username: currentUser?.chatId || profileNameEl?.textContent || 'GUEST',
     taps,
@@ -718,110 +642,100 @@ async function endSession(){
     place: placeText
   });
 
-  // disable tap interactions until user restarts
   tapButton.disabled = true;
 }
 
-// ---------- End game modal (centered) ----------
-function showEndGameModal({ username, taps, earnings, place }){
-  // remove existing if present
+// ---------- Confetti ----------
+function showConfetti(){
+  // minimal confetti effect for taps
+  const c = document.createElement('div');
+  c.textContent = '✨';
+  Object.assign(c.style, {position:'fixed',left:`${randomInt(20,80)}%`,top:`${randomInt(20,60)}%`,fontSize:'24px',pointerEvents:'none',zIndex:9999});
+  document.body.appendChild(c);
+  setTimeout(()=>c.remove(),800);
+}
+
+// ---------- End game modal ----------
+function showEndGameModal({ username, taps, earnings, place }) {
   const existing = document.getElementById('tapEndModal');
   if (existing) existing.remove();
 
   const modal = document.createElement('div');
   modal.id = 'tapEndModal';
-  Object.assign(modal.style, {
-    position:'fixed', inset:0, display:'flex', alignItems:'center', justifyContent:'center',
-    background:'rgba(0,0,0,0.6)', zIndex:99999, padding:'20px'
-  });
+  Object.assign(modal.style,{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)',zIndex:99999,padding:'20px'});
 
   const box = document.createElement('div');
-  Object.assign(box.style, {
-    width:'92%', maxWidth:'420px', background:'#0f0f0f', borderRadius:'12px', padding:'18px', textAlign:'center',
-    border:'1px solid rgba(255,255,255,0.06)'
-  });
+  Object.assign(box.style,{width:'92%',maxWidth:'420px',background:'#0f0f0f',borderRadius:'12px',padding:'18px',textAlign:'center',border:'1px solid rgba(255,255,255,0.06)'});
 
   const h = document.createElement('div');
   h.style.fontWeight='800'; h.style.color='#FF1493'; h.style.marginBottom='8px';
   h.textContent = `${username}, Time's Up!`;
 
-  const p1 = document.createElement('div');
-  p1.style.margin='8px 0'; p1.innerHTML = `You earned <strong>₦${earnings}</strong> and made <strong>${taps}</strong> taps.`;
+  const p1 = document.createElement('div'); p1.style.margin='8px 0';
+  p1.innerHTML = `You earned <strong>₦${earnings}</strong> and made <strong>${taps}</strong> taps.`;
 
-  const p2 = document.createElement('div');
-  p2.style.margin='8px 0'; p2.innerHTML = `Your rank: <strong>${place}</strong> — check the leaderboard for full details.`;
+  const p2 = document.createElement('div'); p2.style.margin='8px 0';
+  p2.innerHTML = `Your rank: <strong>${place}</strong> — check the leaderboard for full details.`;
 
   const actions = document.createElement('div');
   actions.style.marginTop='12px'; actions.style.display='flex'; actions.style.justifyContent='center'; actions.style.gap='12px';
 
-  const playAgainBtn = document.createElement('button');
-  playAgainBtn.textContent = 'Play Again';
-  Object.assign(playAgainBtn.style, { padding:'10px 14px', borderRadius:'8px', border:'none', cursor:'pointer', background:'linear-gradient(90deg,#00e676,#00b0ff)', color:'#000', fontWeight:800 });
+  const playAgainBtn = document.createElement('button'); playAgainBtn.textContent='Play Again';
+  Object.assign(playAgainBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#00e676,#00b0ff)',color:'#000',fontWeight:800});
+  
+  const closeBtn = document.createElement('button'); closeBtn.textContent='Close';
+  Object.assign(closeBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#FF1493,#FF8C00)',color:'#fff',fontWeight:800});
 
-  const closeBtn = document.createElement('button');
-  closeBtn.textContent = 'Close';
-  Object.assign(closeBtn.style, { padding:'10px 14px', borderRadius:'8px', border:'none', cursor:'pointer', background:'linear-gradient(90deg,#FF1493,#FF8C00)', color:'#fff', fontWeight:800 });
-
-  actions.appendChild(playAgainBtn);
-  actions.appendChild(closeBtn);
-
+  actions.appendChild(playAgainBtn); actions.appendChild(closeBtn);
   box.appendChild(h); box.appendChild(p1); box.appendChild(p2); box.appendChild(actions);
-  modal.appendChild(box);
-  document.body.appendChild(modal);
+  modal.appendChild(box); document.body.appendChild(modal);
 
-  playAgainBtn.addEventListener('click', () => {
+  playAgainBtn.addEventListener('click', async () => {
     modal.remove();
-    // re-enable tap, reset poster hidden and restart session
-    tapButton.disabled = false;
-    // optionally keep poster hidden because user is already in flow
-    startSession();
+    // Deduct stars like confirm modal
+    if (currentUser?.stars >= STAR_COST) {
+      await tryDeductStarsForJoin(STAR_COST);
+      starCountEl.textContent = String(currentUser.stars);
+      startSession();
+      tapButton.disabled=false;
+    } else {
+      alert("Not enough stars to play again!");
+    }
   });
+
   closeBtn.addEventListener('click', () => {
     modal.remove();
-    // send user back to start page (show start page & poster)
     if (gamePage) gamePage.classList.add('hidden');
-    if (startPage) startPage.style.display = 'flex';
-    if (posterImg) posterImg.style.display = 'block';
-    tapButton.disabled = false;
+    if (startPage) startPage.style.display='flex';
+    if (posterImg) posterImg.style.display='block';
+    tapButton.disabled=false;
   });
 }
 
-// ---------- Play again inline (keeps old button behavior) ----------
-playAgain?.addEventListener('click', () => {
-  resultInner.classList.add('hidden');
-  tapButton.disabled = false;
-  // restart
-  startSession();
-});
-
-// ---------- Leaderboard modal ----------
+// ---------- Leaderboard ----------
 leaderboardBtn?.addEventListener('click', async ()=>{
   leaderboardList.innerHTML = '<li style="color:#aaa">Loading…</li>';
-  leaderboardModal.style.display = 'flex';
+  leaderboardModal.style.display='flex';
   try{
     const oneHourAgo = Timestamp.fromDate(new Date(Date.now()-3600*1000));
     const q = query(collection(db,'tapSessions'), where('timestamp','>',oneHourAgo), orderBy('taps','desc'), limit(20));
     const snap = await getDocs(q);
-    if (snap.empty) {
-      leaderboardList.innerHTML = '<li style="color:#aaa">No scores this hour</li>';
-      return;
-    }
-    leaderboardList.innerHTML = snap.docs.map((d,i) => {
+    if(snap.empty){ leaderboardList.innerHTML='<li style="color:#aaa">No scores this hour</li>'; return; }
+
+    leaderboardList.innerHTML = snap.docs.map((d,i)=>{
       const data = d.data();
-      const t = data.taps || 0;
-      const earn = (data.earnings || 0).toFixed(2);
-      const when = data.timestamp && data.timestamp.toDate ? data.timestamp.toDate().toLocaleTimeString() : '';
-      const uname = data.username || 'GUEST';
-      return `<li style="padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,0.03)"><strong>#${i+1}</strong> — ${uname} — ${t} taps &nbsp; (₦${earn}) <div style="font-size:11px;color:#aaa">${when}</div></li>`;
+      const t = data.taps||0;
+      const earn = (data.earnings||0).toFixed(2);
+      const when = data.timestamp?.toDate ? data.timestamp.toDate().toLocaleTimeString() : '';
+      const uname = data.username||'GUEST';
+      return `<li style="padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,0.03)"><strong>#${i+1}</strong> — ${uname} — ${t} taps &nbsp; (₦${earn})<div style="font-size:11px;color:#aaa">${when}</div></li>`;
     }).join('');
-  } catch(e){
-    leaderboardList.innerHTML = '<li style="color:#f88">Failed to load</li>';
-    console.error(e);
-  }
+  } catch(e){ leaderboardList.innerHTML='<li style="color:#f88">Failed to load</li>'; console.error(e);}
 });
 
-closeLeaderboard?.addEventListener('click', ()=> leaderboardModal.style.display='none');
-leaderboardModal?.addEventListener('click', (e) => { if (e.target === leaderboardModal) leaderboardModal.style.display='none'; });
+closeLeaderboard?.addEventListener('click', ()=>leaderboardModal.style.display='none');
+leaderboardModal?.addEventListener('click', (e)=>{if(e.target===leaderboardModal) leaderboardModal.style.display='none';});
+
 
 // ---------- Small helpers ----------
 function showTempMessage(txt){
@@ -846,7 +760,6 @@ window.tapMasterDebug = {
   startSession,
   endSession
 };
-
 </script>
 </body>
 </html>
