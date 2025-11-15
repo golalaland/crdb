@@ -133,6 +133,57 @@ body {display:flex;justify-content:center;align-items:flex-start;padding:18px 0 
 /* small helpers */
 .hidden { display:none!important; }
 button, input { font-size:16px; } /* prevents iOS zoom on tap */
+/* ---------- Instagram Style Leaderboard ---------- */
+.lb-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 5px;
+  border-bottom: 1px solid #ffffff15;
+  gap: 10px;
+}
+
+.lb-current {
+  background: #333;
+  border-radius: 8px;
+}
+
+.lb-rank {
+  width: 35px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.lb-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.lb-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.lb-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.lb-sub {
+  font-size: 12px;
+  opacity: 0.6;
+  margin-top: 2px;
+}
+
+.lb-score {
+  font-size: 18px;
+  font-weight: 700;
+  opacity: 0.9;
+}
 </style>
 </head>
 <body>
@@ -831,13 +882,25 @@ async function fetchLeaderboard(period = "daily", top = 10) {
       return;
     }
 
-    leaderboardList.innerHTML = topScores.map((u,i)=>{
-      const isCurrent = currentUser && u.uid === currentUser.uid;
-      return `<li style="margin-bottom:8px;${isCurrent ? 'background:#333;padding:5px;border-radius:4px;' : ''}">
-        ${i+1}. <strong>${u.chatId}</strong> — ${u.taps.toLocaleString()} taps
-      </li>`;
-    }).join("");
+    leaderboardList.innerHTML = topScores.map((u, i) => {
+  const isCurrent = currentUser && u.uid === currentUser.uid;
 
+  return `
+    <li class="lb-row ${isCurrent ? 'lb-current' : ''}">
+      <span class="lb-rank">#${i + 1}</span>
+
+      <img src="${u.photoURL || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}"
+           class="lb-avatar">
+
+      <div class="lb-info">
+        <div class="lb-name">${u.chatId}</div>
+        <div class="lb-sub">${u.taps.toLocaleString()} taps</div>
+      </div>
+
+      <div class="lb-score">${u.taps.toLocaleString()}</div>
+    </li>
+  `;
+}).join("");
   } catch(err){
     console.error("Leaderboard error:", err);
     leaderboardList.innerHTML = "<li>Error loading leaderboard</li>";
