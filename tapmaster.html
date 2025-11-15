@@ -840,15 +840,6 @@ async function recordTap(userId, invitedBy = null) {
 
   console.log("Tap recorded.");
 }
-
-// ---------- Helper: get ISO week ----------
-function getWeek(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
-}
 </script>
 </body>
 </html>
