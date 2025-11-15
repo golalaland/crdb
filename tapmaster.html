@@ -765,6 +765,15 @@ periodContainer.style = "margin:10px 0; text-align:center;";
 
 leaderboardModal.querySelector(".modal").insertBefore(periodContainer, leaderboardList);
 
+// ---------- HELPER: ISO week number ----------
+function getWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+}
+
 // ---------- Tap Function ----------
 async function recordTap(userId, invitedBy = null) {
   const userRef = doc(db, "users", userId);
