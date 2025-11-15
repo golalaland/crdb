@@ -709,6 +709,7 @@ function getWeek(date) {
 // ---------- Fetch leaderboard ----------
 async function fetchLeaderboard(period = "daily", top = 10) {
   leaderboardList.innerHTML = "<li>Loading...</li>";
+
   try {
     const key = getLeaderboardKey(period);
     const usersCol = collection(db, "users");
@@ -720,12 +721,16 @@ async function fetchLeaderboard(period = "daily", top = 10) {
       const data = docSnap.data();
       let tapsCount = 0;
 
-      if (period === "daily") tapsCount = data.dailyTaps?.[key] || 0;
-      if (period === "weekly") tapsCount = data.weeklyTaps?.[key] || 0;
-      if (period === "monthly") tapsCount = data.monthlyTaps?.[key] || 0;
+      if (period === "daily") tapsCount = data.tapsDaily?.[key] || 0;
+      if (period === "weekly") tapsCount = data.tapsWeekly?.[key] || 0;
+      if (period === "monthly") tapsCount = data.tapsMonthly?.[key] || 0;
 
       if (tapsCount > 0) {
-        scores.push({ uid: docSnap.id, chatId: data.chatId || docSnap.id.slice(0,6), taps: tapsCount });
+        scores.push({
+          uid: docSnap.id,
+          chatId: data.chatId || docSnap.id.slice(0, 6),
+          taps: tapsCount
+        });
       }
     });
 
@@ -738,7 +743,9 @@ async function fetchLeaderboard(period = "daily", top = 10) {
     }
 
     leaderboardList.innerHTML = topScores
-      .map((u, i) => `<li style="margin-bottom:8px;">${i+1}. <strong>${u.chatId}</strong> — ${u.taps.toLocaleString()} taps</li>`)
+      .map((u, i) => `<li style="margin-bottom:8px;">
+        ${i+1}. <strong>${u.chatId}</strong> — ${u.taps.toLocaleString()} taps
+      </li>`)
       .join("");
 
   } catch(err) {
