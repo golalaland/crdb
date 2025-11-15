@@ -306,7 +306,7 @@ const bonusBar = document.getElementById('bonusBar');
 const trainBar = document.getElementById('trainBar');
 const bonusLevelVal = document.getElementById('bonusLevelVal');
 const speedVal = document.getElementById('speedVal');
-const miniTapCount = document.getElementById('miniTapCount'); // we'll stop updating visible mini stats but keep ref
+const miniTapCount = document.getElementById('miniTapCount');
 const miniEarnings = document.getElementById('miniEarnings');
 const leaderboardBtn = document.getElementById('leaderboardBtn');
 const leaderboardModal = document.getElementById('leaderboardModal');
@@ -318,6 +318,7 @@ const finalPlaceEl = document.getElementById('finalPlace');
 const playAgain = document.getElementById('playAgain');
 const posterImg = document.getElementById('posterImg');
 const starCountEl = document.getElementById('starCount');
+const cashCountEl = document.getElementById('cashCount'); // NEW
 const profileNameEl = document.getElementById('profileName');
 
 // ---------- CONFIG & STATE ----------
@@ -382,72 +383,51 @@ async function loadCurrentUserForGame() {
   try {
     const vipRaw = localStorage.getItem("vipUser");
     const hostRaw = localStorage.getItem("hostUser");
-    const storedUser = vipRaw
-      ? JSON.parse(vipRaw)
-      : hostRaw
-      ? JSON.parse(hostRaw)
-      : null;
+    const storedUser = vipRaw ? JSON.parse(vipRaw) : hostRaw ? JSON.parse(hostRaw) : null;
 
-    // No stored login
     if (!storedUser?.email) {
       currentUser = null;
       if (profileNameEl) profileNameEl.textContent = "GUEST 0000";
-      if (starCountEl) starCountEl.textContent = starCountEl.textContent || "50";
-      if (cashCountEl) cashCountEl.textContent = cashCountEl.textContent || "0";
+      if (starCountEl) starCountEl.textContent = "50";
+      if (cashCountEl) cashCountEl.textContent = "0";
       return;
     }
 
-    // -----------------------------------------------------
-    //  SANITIZE EMAIL EXACTLY AS FIRESTORE USES IT
-    // -----------------------------------------------------
+    // sanitize email as used in Firestore
     const uid = storedUser.email.replace(/\./g, ",").toLowerCase();
-
     const userRef = doc(db, "users", uid);
     const snap = await getDoc(userRef);
 
-    // -----------------------------------------------------
-    //  USER DOC DOES NOT EXIST
-    // -----------------------------------------------------
     if (!snap.exists()) {
       currentUser = {
         uid,
         email: storedUser.email,
-        chatId:
-          storedUser.fullName ||
-          storedUser.displayName ||
-          storedUser.email.split("@")[0],
+        chatId: storedUser.fullName || storedUser.displayName || storedUser.email.split("@")[0],
         stars: 0,
         cash: 0,
       };
 
       if (profileNameEl) profileNameEl.textContent = currentUser.chatId;
-      if (starCountEl) starCountEl.textContent = String(currentUser.stars);
-      if (cashCountEl) cashCountEl.textContent = String(currentUser.cash);
+      if (starCountEl) starCountEl.textContent = "0";
+      if (cashCountEl) cashCountEl.textContent = "0";
       return;
     }
 
-    // -----------------------------------------------------
-    //  USER EXISTS IN FIRESTORE
-    // -----------------------------------------------------
     const data = snap.data();
     if (data.uid) delete data.uid;
 
     currentUser = {
-      uid, // sanitized UID always
+      uid,
       ...data,
-      stars: Number(data.stars ?? 0),
-      cash: Number(data.cash ?? 0),
+      stars: Number(data.stars || 0),
+      cash: Number(data.cash || 0),
     };
 
-    // Update UI
-    if (profileNameEl)
-      profileNameEl.textContent =
-        currentUser.chatId ||
-        storedUser.fullName ||
-        storedUser.email.split("@")[0];
-
+    // update UI
+    if (profileNameEl) profileNameEl.textContent = currentUser.chatId || storedUser.fullName || storedUser.email.split("@")[0];
     if (starCountEl) starCountEl.textContent = String(currentUser.stars);
     if (cashCountEl) cashCountEl.textContent = String(currentUser.cash);
+
   } catch (err) {
     console.warn("loadCurrentUserForGame error", err);
   }
@@ -457,8 +437,7 @@ async function loadCurrentUserForGame() {
 //  DEDUCT STARS (transaction)
 // -----------------------------------------------------
 async function tryDeductStarsForJoin(cost) {
-  if (!currentUser?.uid)
-    return { ok: false, message: "You are not logged in" };
+  if (!currentUser?.uid) return { ok: false, message: "You are not logged in" };
 
   const userRef = doc(db, "users", currentUser.uid);
 
@@ -469,14 +448,13 @@ async function tryDeductStarsForJoin(cost) {
 
       const udata = u.data();
       const currentStars = Number(udata.stars || 0);
-
       if (currentStars < cost) throw new Error("Not enough stars");
 
       t.update(userRef, { stars: currentStars - cost });
-      currentUser.stars = currentStars - cost; // update local user
-      if (starCountEl) starCountEl.textContent = String(currentUser.stars);
+      currentUser.stars = currentStars - cost; // update global
     });
 
+    if (starCountEl) starCountEl.textContent = String(currentUser.stars);
     return { ok: true };
   } catch (e) {
     return { ok: false, message: e.message || "Could not deduct stars" };
@@ -488,11 +466,7 @@ async function tryDeductStarsForJoin(cost) {
 // -----------------------------------------------------
 async function giveCashToUser(amount) {
   if (!currentUser?.uid) {
-    // guest → update local UI
-    if (miniEarnings)
-      miniEarnings.textContent = (
-        parseFloat(miniEarnings.textContent || "0") + amount
-      ).toFixed(2);
+    if (miniEarnings) miniEarnings.textContent = (parseFloat(miniEarnings.textContent || "0") + amount).toFixed(2);
     return { ok: true };
   }
 
@@ -505,12 +479,11 @@ async function giveCashToUser(amount) {
 
       const udata = u.data();
       const newCash = Number(udata.cash || 0) + Number(amount);
-
       t.update(userRef, { cash: newCash });
-      currentUser.cash = newCash; // update local user
-      if (cashCountEl) cashCountEl.textContent = String(currentUser.cash);
+      currentUser.cash = newCash; // update global
     });
 
+    if (cashCountEl) cashCountEl.textContent = String(currentUser.cash);
     return { ok: true };
   } catch (e) {
     console.error("giveCashToUser error", e);
