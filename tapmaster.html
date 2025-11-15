@@ -350,13 +350,8 @@ const CASH_PER_AWARD = 1;
 const SESSION_DURATION = 60;
 
 // ---------- STATE ----------
-let taps = 0, earnings = 0, timer = SESSION_DURATION, bonusLevel = 1;
-let progress = 0, tapsForNext = 100;
-let cashCounter = 0, cashThreshold = randomInt(1,12);
-let running = false, intervalId = null;
 let currentUser = null;
 const tapEvent = ('ontouchstart' in window) ? 'touchstart' : 'click';
-let tapLocked = false;
 
 // ---------- LOCAL POT ----------
 const KEY_POT = 'moneytrain_pot';
