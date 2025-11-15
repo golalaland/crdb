@@ -301,30 +301,33 @@ const profileNameEl = document.getElementById('profileName');
 
 // ---------- END GAME MODAL ----------
 closeEndGameBtn.addEventListener('click', () => {
-  // Hide modal
+  // Hide end-game modal
   endGameModal.style.display = "none";
 
-  // Reset pages
+  // Show start page
   gamePage.style.display = "none";
   startPage.style.display = "block";
-  if(posterImg) posterImg.style.display = "block";
+  if (posterImg) posterImg.style.display = "block";
 
-  // Reset game variables
+  // Reset UI counters only (game variables reset on next session)
   taps = 0;
   earnings = 0;
-  timer = SESSION_DURATION;
   bonusLevel = 1;
   progress = 0;
   cashCounter = 0;
   tapsForNext = 100;
-  tapButton.disabled = false;
-  running = false;
-  intervalId && clearInterval(intervalId);
-  
-  // Reset UI counters
+
   updateUI();
   trainBar && (trainBar.style.width = '100%');
   updateBonusBar();
+
+  // Ensure timer is cleared in case it’s still running
+  running = false;
+  intervalId && clearInterval(intervalId);
+  intervalId = null;
+
+  // Enable tap button for next session
+  tapButton.disabled = false;
 });
 
 
