@@ -486,22 +486,35 @@ function triggerConfetti(){
 
 // ---------- SESSION ----------
 function startSession(){
-  taps=0; earnings=0; timer=SESSION_DURATION; bonusLevel=1; progress=0; tapsForNext=100;
-  cashCounter=0; cashThreshold=randomInt(1,12); running=true; lastTapTime=Date.now();
-  trainBar && (trainBar.style.width='100%'); updateBonusBar();
-  tapButton.disabled = false; updateUI();
+  taps = 0;
+  earnings = 0;
+  timer = SESSION_DURATION;
+  bonusLevel = 1;
+  progress = 0;
+  tapsForNext = 100;
+  cashCounter = 0;
+  cashThreshold = randomInt(1,12);
+  running = true;
+  lastTapTime = Date.now();
+  
+  trainBar && (trainBar.style.width = '100%'); 
+  updateBonusBar();
+  tapButton.disabled = false; 
+  updateUI();
 
-  let expected = Date.now() + 1000;
-  intervalId=setInterval(()=>{
-    const drift = Date.now() - expected;
-    if(drift > 1000) { expected = Date.now() + 1000; return; }
+  // ---------- SOLID TIMER ----------
+  intervalId = setInterval(() => {
+    if (!running) return;
     timer--;
-    if(timer<=0){ timer=0; endSession(); }
-    trainBar && (trainBar.style.width=(timer/SESSION_DURATION*100)+'%');
+    if (timer <= 0) {
+      timer = 0;
+      endSession(); // trigger end-game modal
+    }
+    trainBar && (trainBar.style.width = (timer / SESSION_DURATION * 100) + '%');
     updateUI();
-    expected += 1000;
-  },1000);
+  }, 1000); // updates every 1 second
 }
+
 
 function stopSession(){ running=false; intervalId&&(clearInterval(intervalId),intervalId=null); }
 
