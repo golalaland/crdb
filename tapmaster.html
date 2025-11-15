@@ -549,49 +549,31 @@ async function endSession() {
 
   endGameModal.style.display = "flex";
 
-// ---------- RECORD SESSION IN FIRESTORE ----------
-if (currentUser?.uid && taps > 0) {
-  try {
-    const userRef = doc(db, "users", currentUser.uid);
+ // ---------- RECORD SESSION IN FIRESTORE ----------
+  if(currentUser?.uid && taps > 0){
+    try{
+      await addDoc(collection(db,"tapSessions"),{
+        uid: currentUser.uid,
+        email: currentUser.email,
+        chatId: currentUser.chatId || currentUser.uid,
+        taps: taps,
+        earnings: earnings,
+        bonusLevel: bonusLevel,
+        timestamp: serverTimestamp()
+      });
 
-    // ----- 1. Update user's cumulative totals -----
-    await runTransaction(db, async (t) => {
-      const snap = await t.get(userRef);
-      const existing = snap.exists() ? snap.data() : {};
-
-      const newTotal = Number(existing.totalTaps || 0) + taps;
-
-      t.set(
-        userRef,
-        {
-          totalTaps: newTotal,
-          lastPlayed: new Date(),
-          lastEarnings: earnings,
-          lastBonus: bonusLevel,
-          invitedBy: existing.invitedBy || currentUser.invitedBy || null
-        },
-        { merge: true }
-      );
-
-      currentUser.totalTaps = newTotal;
-    });
-
-    // ----- 2. Save session as a separate document -----
-    await addDoc(collection(db, "tapSessions"), {
-      uid: currentUser.uid,
-      chatId: currentUser.chatId || currentUser.uid,
-      email: currentUser.email || null,
-      taps: taps,
-      earnings: earnings,
-      bonusLevel: bonusLevel,
-      invitedBy: currentUser.invitedBy || null,
-      timestamp: new Date() // safer than serverTimestamp() in client JS
-    });
-
-    console.log("Session recorded successfully.");
-
-  } catch (e) {
-    console.error("🔥 FIRESTORE ERROR:", e);
+      // Optional: update user's cumulative totalTaps
+      const userRef = doc(db,"users",currentUser.uid);
+      await runTransaction(db, async t=>{
+        const u = await t.get(userRef);
+        if(!u.exists()) return;
+        const totalTaps = Number(u.data().totalTaps||0) + taps;
+        t.update(userRef,{totalTaps});
+        currentUser.totalTaps = totalTaps;
+      });
+    }catch(e){
+      console.error("Error recording session:", e);
+    }
   }
 }
 
