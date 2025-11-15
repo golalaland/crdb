@@ -536,21 +536,12 @@ function startSession() {
   updateUI();
 }
 
-function stopSession() {
-  running = false;
-  tapButton.disabled = true;
-  if (intervalId) {
-    clearInterval(intervalId);
-    intervalId = null;
-  }
-}
-
 async function endSession() {
   stopSession();
 
-  // Populate end-game modal
   if (!endGameModal) return;
 
+  // Populate end-game modal
   endTapsEl.textContent = taps;
   endEarningsEl.textContent = formatNumber(earnings.toFixed(2));
   endBonusEl.textContent = bonusLevel;
@@ -561,36 +552,75 @@ async function endSession() {
 
   endGameModal.style.display = "flex";
 
- // ---------- RECORD SESSION IN FIRESTORE ----------
+  // ---------- RECORD SESSION & LEADERBOARD ----------
   if(currentUser?.uid && taps > 0){
-    try{
+    try {
+      const userRef = doc(db,"users",currentUser.uid);
+
+      // Transaction: update cumulative totalTaps + leaderboard keys
+      await runTransaction(db, async t=>{
+        const docSnap = await t.get(userRef);
+        const now = new Date();
+        const dailyKey = now.toISOString().split("T")[0]; // YYYY-MM-DD
+        const weeklyKey = `${now.getFullYear()}-W${getWeek(now)}`; // YYYY-Wxx
+        const monthlyKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`; // YYYY-MM
+
+        if(!docSnap.exists()){
+          t.set(userRef, {
+            chatId: currentUser.chatId || currentUser.uid,
+            stars: currentUser.stars || 0,
+            cash: currentUser.cash || 0,
+            totalTaps: taps,
+            tapsDaily: { [dailyKey]: taps },
+            tapsWeekly: { [weeklyKey]: taps },
+            tapsMonthly: { [monthlyKey]: taps },
+            lastEarnings: earnings,
+            lastBonus: bonusLevel
+          });
+          return;
+        }
+
+        const data = docSnap.data();
+        const tapsDaily = { ...(data.tapsDaily || {}) };
+        const tapsWeekly = { ...(data.tapsWeekly || {}) };
+        const tapsMonthly = { ...(data.tapsMonthly || {}) };
+
+        tapsDaily[dailyKey] = (tapsDaily[dailyKey] || 0) + taps;
+        tapsWeekly[weeklyKey] = (tapsWeekly[weeklyKey] || 0) + taps;
+        tapsMonthly[monthlyKey] = (tapsMonthly[monthlyKey] || 0) + taps;
+
+        t.update(userRef, {
+          totalTaps: (data.totalTaps || 0) + taps,
+          tapsDaily,
+          tapsWeekly,
+          tapsMonthly,
+          lastEarnings: earnings,
+          lastBonus: bonusLevel
+        });
+      });
+
+      // Optional: add a session record (for history)
       await addDoc(collection(db,"tapSessions"),{
         uid: currentUser.uid,
         email: currentUser.email,
         chatId: currentUser.chatId || currentUser.uid,
-        taps: taps,
-        earnings: earnings,
-        bonusLevel: bonusLevel,
+        taps,
+        earnings,
+        bonusLevel,
         timestamp: serverTimestamp()
       });
 
-      // Optional: update user's cumulative totalTaps
-      const userRef = doc(db,"users",currentUser.uid);
-      await runTransaction(db, async t=>{
-        const u = await t.get(userRef);
-        if(!u.exists()) return;
-        const totalTaps = Number(u.data().totalTaps||0) + taps;
-        t.update(userRef,{totalTaps});
-        currentUser.totalTaps = totalTaps;
-      });
-    }catch(e){
+      // Update local currentUser for UI
+      currentUser.totalTaps = (currentUser.totalTaps || 0) + taps;
+
+      // Immediately refresh leaderboard
+      fetchLeaderboard("daily");
+
+    } catch(e){
       console.error("Error recording session:", e);
     }
   }
 }
-
-
-
 
 // ---------- TAP ----------
 tapButton?.addEventListener(tapEvent, async e=>{
