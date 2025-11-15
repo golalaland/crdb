@@ -261,11 +261,10 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs,
-  doc, runTransaction, serverTimestamp, Timestamp, getDoc
+  getFirestore, collection, addDoc, doc, getDoc, runTransaction, serverTimestamp, Timestamp, query, where, orderBy, limit, getDocs
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-// ---------- FIREBASE CONFIG ----------
+// ---------- FIREBASE ----------
 const firebaseConfig = {
   apiKey: "AIzaSyDbKz4ef_eUDlCukjmnK38sOwueYuzqoao",
   authDomain: "metaverse-1010.firebaseapp.com",
@@ -279,7 +278,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ---------- DOM REFS ----------
+// ---------- DOM ----------
 const startBtn = document.getElementById('startBtn');
 const playModal = document.getElementById('playModal');
 const cancelPlay = document.getElementById('cancelPlay');
@@ -298,40 +297,44 @@ const bonusLevelVal = document.getElementById('bonusLevelVal');
 const speedVal = document.getElementById('speedVal');
 const miniTapCount = document.getElementById('miniTapCount');
 const miniEarnings = document.getElementById('miniEarnings');
+const posterImg = document.getElementById('posterImg');
 const starCountEl = document.getElementById('starCount');
 const cashCountEl = document.getElementById('cashCount');
 const profileNameEl = document.getElementById('profileName');
-const posterImg = document.getElementById('posterImg');
 
-// ---------- CONFIG & STATE ----------
+// ---------- CONFIG ----------
 const STAR_COST = 10;
 const DAILY_INITIAL_POT = 10000;
 const CASH_PER_AWARD = 1;
 const SESSION_DURATION = 60;
 
-let taps = 0, earnings = 0, timer = SESSION_DURATION, duration = SESSION_DURATION;
-let intervalId = null, running = false, bonusLevel = 1, progress = 0, tapsForNext = 100;
-let cashCounter = 0, cashThreshold = 1, lastTapTime = 0;
+// ---------- STATE ----------
+let taps = 0, earnings = 0, timer = SESSION_DURATION, bonusLevel = 1;
+let progress = 0, tapsForNext = 100;
+let cashCounter = 0, cashThreshold = randomInt(1,12);
+let running = false, intervalId = null, lastTapTime = Date.now();
+let currentUser = null;
 const tapEvent = ('ontouchstart' in window) ? 'touchstart' : 'click';
 
 // ---------- LOCAL POT ----------
 const KEY_POT = 'moneytrain_pot';
 const KEY_RESET_DAY = 'moneytrain_reset_day';
+
 function getStoredPot(){ return parseInt(localStorage.getItem(KEY_POT)) || null; }
 function setStoredPot(v){ localStorage.setItem(KEY_POT, Math.max(0, Math.floor(v))); }
 function getPotResetDay(){ return localStorage.getItem(KEY_RESET_DAY) || null; }
 function setPotResetDay(s){ localStorage.setItem(KEY_RESET_DAY, s); }
+
 function initializePot(){
   const today = new Date().toISOString().slice(0,10);
-  if(!getStoredPot() || getPotResetDay()!==today){
+  if(!getStoredPot() || getPotResetDay() !== today){
     setStoredPot(DAILY_INITIAL_POT);
     setPotResetDay(today);
   }
 }
-function randomInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
 
-// ---------- GLOBAL USER ----------
-let currentUser = null;
+function randomInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function formatNumber(n){ return n.toLocaleString(); }
 
 // ---------- LOAD USER ----------
 async function loadCurrentUserForGame() {
@@ -340,7 +343,7 @@ async function loadCurrentUserForGame() {
     const hostRaw = localStorage.getItem("hostUser");
     const storedUser = vipRaw ? JSON.parse(vipRaw) : hostRaw ? JSON.parse(hostRaw) : null;
     if(!storedUser?.email){
-      currentUser = null;
+      currentUser=null;
       profileNameEl && (profileNameEl.textContent="GUEST 0000");
       starCountEl && (starCountEl.textContent="50");
       cashCountEl && (cashCountEl.textContent="₦0");
@@ -349,20 +352,18 @@ async function loadCurrentUserForGame() {
     const uid = storedUser.email.replace(/\./g,",").toLowerCase();
     const userRef = doc(db,"users",uid);
     const snap = await getDoc(userRef);
-
     if(!snap.exists()){
-      currentUser = { uid, email: storedUser.email, chatId: storedUser.fullName || storedUser.displayName || storedUser.email.split("@")[0], stars:0, cash:0, totalTaps:0 };
+      currentUser = { uid, email: storedUser.email, chatId: storedUser.fullName||storedUser.displayName||storedUser.email.split("@")[0], stars:0, cash:0, totalTaps:0 };
       profileNameEl && (profileNameEl.textContent=currentUser.chatId);
       starCountEl && (starCountEl.textContent="0");
-      cashCountEl && (cashCountEl.textContent="₦0");
+      cashCountEl && (cashCountEl.textContent='₦0');
       return;
     }
-
     const data = snap.data(); if(data.uid) delete data.uid;
     currentUser = { uid, ...data, stars:Number(data.stars||0), cash:Number(data.cash||0), totalTaps:Number(data.totalTaps||0) };
-    profileNameEl && (profileNameEl.textContent=currentUser.chatId || storedUser.fullName || storedUser.email.split("@")[0]);
+    profileNameEl && (profileNameEl.textContent=currentUser.chatId);
     starCountEl && (starCountEl.textContent=formatNumber(currentUser.stars));
-    cashCountEl && (cashCountEl.textContent='₦' + formatNumber(currentUser.cash));
+    cashCountEl && (cashCountEl.textContent='₦'+formatNumber(currentUser.cash));
   } catch(err){ console.warn("loadCurrentUserForGame error",err); }
 }
 
@@ -370,7 +371,7 @@ async function loadCurrentUserForGame() {
 async function tryDeductStarsForJoin(cost){
   if(!currentUser?.uid) return {ok:false,message:"You are not logged in"};
   const userRef = doc(db,"users",currentUser.uid);
-  try {
+  try{
     await runTransaction(db,async t=>{
       const u = await t.get(userRef);
       if(!u.exists()) throw new Error("User not found");
@@ -396,51 +397,189 @@ async function giveCashToUser(amount){
       t.update(userRef,{cash:newCash});
       currentUser.cash = newCash;
     });
-    cashCountEl && (cashCountEl.textContent='₦' + formatNumber(currentUser.cash));
+    cashCountEl && (cashCountEl.textContent='₦'+formatNumber(currentUser.cash));
     return {ok:true};
   } catch(e){ console.error("giveCashToUser error", e); return {ok:false,message:e.message}; }
 }
 
-// ---------- UI Helpers ----------
-function formatNumber(n){ return Number(n).toLocaleString(); }
-
-function flashTapGlow(){
-  tapButton?.classList.add('tap-glow','tap-pulse');
-  setTimeout(()=>{ tapButton?.classList.remove('tap-glow','tap-pulse'); },120);
-}
-
-// ---------- Floating +1 ----------
+// ---------- FLOATING +1 ----------
 function showFloatingPlus(parent,text){
-  const span = document.createElement('span');
-  span.textContent = text;
+  const span=document.createElement('span');
+  span.textContent=text;
+  const rect = parent.getBoundingClientRect();
+  const x = rect.left + Math.random() * rect.width * 0.6 + rect.width*0.2;
+  const y = rect.top + Math.random() * rect.height * 0.6;
   Object.assign(span.style,{
-    position:'absolute', fontWeight:'bold', color:'rgba(255,255,255,0.8)', fontSize:'18px',
+    position:'absolute', fontWeight:'bold', color:'#00ffcc', fontSize:'18px',
     pointerEvents:'none', userSelect:'none', zIndex:1000,
-    top: parent.offsetTop - 20 + 'px',
-    left: parent.offsetLeft + parent.offsetWidth/2 - 10 + 'px',
-    opacity:1, transition:'all 0.8s ease-out'
+    top: y+'px', left: x+'px', opacity:1, transition:'all 0.8s ease-out'
   });
   document.body.appendChild(span);
-  setTimeout(()=>{ span.style.top = (parent.offsetTop - 50)+'px'; span.style.opacity=0; },50);
+  setTimeout(()=>{ span.style.top=(y-30)+'px'; span.style.opacity=0; },50);
   setTimeout(()=>span.remove(),850);
 }
 
-// ---------- BONUS LEVELS ----------
-const bonusNames = ["Tap On!","Tap Pro!","Tap Boss!","Tap Legend!"];
-function getBonusName(level){ return bonusNames[level-1] || `Level ${level}`; }
+// ---------- CONFETTI ----------
+function triggerConfetti(){
+  for(let i=0;i<15;i++){
+    const dot=document.createElement('div');
+    Object.assign(dot.style,{
+      position:'absolute', width:'6px', height:'6px',
+      background:`hsl(${Math.random()*360},80%,60%)`,
+      borderRadius:'50%', top: tapButton.offsetTop+'px',
+      left: tapButton.offsetLeft + tapButton.offsetWidth/2+'px',
+      pointerEvents:'none', zIndex:9999, opacity:1
+    });
+    document.body.appendChild(dot);
+    const x=(Math.random()-0.5)*100; const y=-Math.random()*80;
+    dot.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${x}px,${y}px)`,opacity:0}],
+      {duration:600, easing:'ease-out'});
+    setTimeout(()=>dot.remove(),600);
+  }
+}
+
+// ---------- SESSION ----------
+function startSession(){
+  taps=0; earnings=0; timer=SESSION_DURATION; bonusLevel=1; progress=0; tapsForNext=100;
+  cashCounter=0; cashThreshold=randomInt(1,12); running=true; lastTapTime=Date.now();
+  trainBar && (trainBar.style.width='100%'); bonusBar && (bonusBar.style.width='0%');
+  tapButton.disabled = false; updateUI();
+  intervalId=setInterval(()=>{
+    timer--;
+    if(timer<=0) { timer=0; endSession(); }
+    trainBar && (trainBar.style.width=(timer/SESSION_DURATION*100)+'%');
+    updateUI();
+  },1000);
+}
+
+function stopSession(){ running=false; intervalId&&(clearInterval(intervalId),intervalId=null); }
+
+// ---------- TAP ----------
+tapButton?.addEventListener(tapEvent, async e=>{
+  e.preventDefault();
+  if(!running) return;
+  const now=Date.now(), deltaSec=(now-lastTapTime)/1000; lastTapTime=now;
+  taps++; currentUser && (currentUser.totalTaps=(currentUser.totalTaps||0)+1);
+  progress++; cashCounter++;
+  showFloatingPlus(tapButton,'+1');
+
+  if(cashCounter>=cashThreshold){
+    cashCounter=0; cashThreshold=randomInt(1,12);
+    const pot=getStoredPot()??DAILY_INITIAL_POT;
+    if(pot>0){ 
+      earnings+=CASH_PER_AWARD; 
+      setStoredPot(Math.max(0,pot-CASH_PER_AWARD));
+      await giveCashToUser(CASH_PER_AWARD); 
+    }
+  }
+
+  if(progress>=tapsForNext){
+    progress=0; bonusLevel++; tapsForNext=100+(bonusLevel-1)*50;
+    triggerConfetti();
+  }
+
+  flashTapGlow();
+  try{ tapSound.currentTime=0; tapSound.play().catch(()=>{});}catch{}
+  navigator.vibrate?.(12);
+  updateUI(deltaSec);
+});
+
+// ---------- UI ----------
+function updateUI(deltaSec=1){
+  timerEl && (timerEl.textContent=String(timer));
+  tapCountEl && (tapCountEl.textContent=String(taps));
+  earningsEl && (earningsEl.textContent='₦'+formatNumber(earnings.toFixed(2)));
+  bonusBar && (bonusBar.style.width=Math.min(100,(progress/tapsForNext)*100)+'%');
+  bonusLevelVal && (bonusLevelVal.textContent=String(bonusLevel));
+  const elapsed=SESSION_DURATION-timer;
+  const speed=elapsed>0?taps/elapsed:0;
+  speedVal && (speedVal.textContent=`x${speed.toFixed(2)}`);
+  miniTapCount && (miniTapCount.textContent=String(taps));
+  miniEarnings && (miniEarnings.textContent='₦'+formatNumber(earnings.toFixed(2)));
+  if(starCountEl && currentUser) starCountEl.textContent=formatNumber(currentUser.stars);
+  if(cashCountEl && currentUser) cashCountEl.textContent='₦'+formatNumber(currentUser.cash);
+}
+
+// ---------- TAP GLOW ----------
+function flashTapGlow(){ 
+  tapButton?.classList.add('tap-glow','tap-pulse'); 
+  setTimeout(()=>{tapButton?.classList.remove('tap-glow','tap-pulse');},120); 
+}
+
+// ---------- END SESSION ----------
+async function endSession(){
+  if(!running) return;
+  stopSession();
+  tapButton.disabled = true;
+
+  try{ 
+    await addDoc(collection(db,'tapSessions'),{
+      taps, earnings, uid:currentUser?.uid||null, 
+      username:currentUser?.chatId||profileNameEl?.textContent||'GUEST',
+      timestamp:serverTimestamp()
+    }); 
+  } catch(e){console.error(e);}
+
+  let placeText='—';
+  try{
+    const oneHourAgo = Timestamp.fromDate(new Date(Date.now()-3600*1000));
+    const q=query(collection(db,'tapSessions'),where('timestamp','>',oneHourAgo),orderBy('taps','desc'),limit(50));
+    const snap=await getDocs(q);
+    const arr=snap.docs.map(d=>d.data().taps||0);
+    const all=arr.slice(); all.push(taps); all.sort((a,b)=>b-a);
+    const place=all.indexOf(taps)+1;
+    placeText=`#${place}`;
+  }catch(e){console.warn(e);}
+
+  showEndGameModal({username:currentUser?.chatId||profileNameEl?.textContent||'GUEST', taps, earnings:formatNumber(earnings.toFixed(2)), place:placeText});
+}
+
+// ---------- END GAME MODAL ----------
+function showEndGameModal({username,taps,earnings,place}){
+  document.getElementById('tapEndModal')?.remove();
+  const modal=document.createElement('div'); modal.id='tapEndModal';
+  Object.assign(modal.style,{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)',zIndex:99999,padding:'20px'});
+  const box=document.createElement('div');
+  Object.assign(box.style,{width:'92%',maxWidth:'420px',background:'#0f0f0f',borderRadius:'12px',padding:'18px',textAlign:'center',border:'1px solid rgba(255,255,255,0.06)'});
+  const h=document.createElement('div'); h.style.fontWeight='800'; h.style.color='#FF1493'; h.style.marginBottom='8px';
+  h.textContent=`${username}, Time's Up!`;
+  const p1=document.createElement('div'); p1.style.margin='8px 0';
+  p1.innerHTML=`You earned <strong>₦${earnings}</strong> and made <strong>${taps}</strong> taps.`;
+  const p2=document.createElement('div'); p2.style.margin='8px 0';
+  p2.innerHTML=`Your rank: <strong>${place}</strong>`;
+  const actions=document.createElement('div'); Object.assign(actions.style,{marginTop:'12px',display:'flex',justifyContent:'center',gap:'12px'});
+  const playAgainBtn=document.createElement('button'); playAgainBtn.textContent='Play Again';
+  Object.assign(playAgainBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#00e676,#00b0ff)',color:'#000',fontWeight:800});
+  const closeBtn=document.createElement('button'); closeBtn.textContent='Close';
+  Object.assign(closeBtn.style,{padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',background:'linear-gradient(90deg,#FF1493,#FF8C00)',color:'#fff',fontWeight:800});
+  actions.append(playAgainBtn,closeBtn); box.append(h,p1,p2,actions); modal.appendChild(box); document.body.appendChild(modal);
+
+  playAgainBtn.addEventListener('click',()=>{
+    modal.remove();
+    gamePage.classList.add('hidden');
+    startPage.style.display='flex';
+    posterImg.style.display='block';
+    startSession();
+  });
+  closeBtn.addEventListener('click',()=>{
+    modal.remove();
+    stopSession();
+    gamePage.classList.add('hidden');
+    startPage.style.display='flex';
+    posterImg.style.display='block';
+  });
+}
 
 // ---------- START FLOW ----------
 initializePot();
 loadCurrentUserForGame();
-
 startBtn?.addEventListener("click",()=>playModal&&(playModal.style.display="flex"));
 cancelPlay?.addEventListener("click",()=>playModal&&(playModal.style.display="none"));
 
 confirmPlay?.addEventListener("click",async ()=>{
-  await loadCurrentUserForGame(); // reload user
-  let localStars = parseInt(starCountEl?.textContent.replace(/,/g,'')||"0",10);
+  let localStars=parseInt(starCountEl?.textContent.replace(/,/g,'')||"0",10);
   if(currentUser?.uid){
-    const r = await tryDeductStarsForJoin(STAR_COST);
+    const r=await tryDeductStarsForJoin(STAR_COST);
     if(!r.ok){ alert(r.message||"Not enough stars"); return; }
   } else {
     if(localStars<STAR_COST){ alert("Not enough stars to play!"); return; }
@@ -449,79 +588,13 @@ confirmPlay?.addEventListener("click",async ()=>{
   playModal&&(playModal.style.display="none");
   posterImg&&(posterImg.style.display="none");
   startPage&&(startPage.style.display="none");
-  spinner&&spinner.classList.remove("hidden");
+  spinner?.classList.remove("hidden");
   setTimeout(()=>{
-    spinner&&spinner.classList.add("hidden");
-    gamePage&&gamePage.classList.remove("hidden");
+    spinner?.classList.add("hidden");
+    gamePage?.classList.remove("hidden");
     startSession();
   },700);
 });
-
-// ---------- SESSION ----------
-function startSession(){
-  taps=0; earnings=0; timer=duration; bonusLevel=1; progress=0; tapsForNext=100; running=true;
-  cashCounter=0; cashThreshold=randomInt(1,12);
-  lastTapTime = Date.now();
-  trainBar&&(trainBar.style.width='0%');
-  bonusBar&&(bonusBar.style.width='0%');
-  updateUI();
-  intervalId=setInterval(()=>{
-    timer--; if(timer<0) timer=0;
-    updateUI();
-    trainBar&&(trainBar.style.width=Math.max(0, (timer/duration)*100)+'%');
-    if(timer===0) endSession();
-  },1000);
-}
-
-function stopSession(){ running=false; intervalId&&(clearInterval(intervalId),intervalId=null); }
-
-// ---------- TAP LISTENER ----------
-tapButton?.addEventListener(tapEvent, async e=>{
-  e.preventDefault(); if(!running) return;
-
-  const now = Date.now();
-  const deltaSec = (now - lastTapTime)/1000;
-  lastTapTime = now;
-
-  taps++; currentUser && (currentUser.totalTaps=(currentUser.totalTaps||0)+1);
-  progress++; cashCounter++;
-
-  showFloatingPlus(tapButton,'+1');
-
-  if(cashCounter >= cashThreshold){
-    cashCounter=0; cashThreshold=randomInt(1,12);
-    const pot = getStoredPot() ?? DAILY_INITIAL_POT;
-    if(pot>0){
-      earnings += CASH_PER_AWARD;
-      setStoredPot(Math.max(0,pot-CASH_PER_AWARD));
-      await giveCashToUser(CASH_PER_AWARD);
-    }
-  }
-
-  if(progress >= tapsForNext){
-    progress=0; bonusLevel++; tapsForNext=100+(bonusLevel-1)*50;
-  }
-
-  flashTapGlow();
-  try{tapSound.currentTime=0; tapSound.play().catch(()=>{});}catch{}
-  navigator.vibrate?.(12);
-  updateUI(deltaSec);
-});
-
-// ---------- UPDATE UI ----------
-function updateUI(deltaSec=1){
-  timerEl && (timerEl.textContent=String(timer));
-  tapCountEl && (tapCountEl.textContent=String(taps));
-  earningsEl && (earningsEl.textContent='₦'+formatNumber(earnings.toFixed(2)));
-  bonusLevelVal && (bonusLevelVal.textContent=String(bonusLevel));
-  const speed = deltaSec>0 ? taps/deltaSec : 0;
-  speedVal && (speedVal.textContent=`x${speed.toFixed(2)}`);
-  miniTapCount && (miniTapCount.textContent=String(taps));
-  miniEarnings && (miniEarnings.textContent='₦'+formatNumber(earnings.toFixed(2)));
-  bonusBar && (bonusBar.style.width=Math.min(100,(progress/tapsForNext)*100)+'%');
-  if(starCountEl && currentUser) starCountEl.textContent=formatNumber(currentUser.stars);
-  if(cashCountEl && currentUser) cashCountEl.textContent='₦'+formatNumber(currentUser.cash);
-}
 
 // ---------- EXTRA CSS ----------
 const style=document.createElement('style'); 
@@ -530,6 +603,8 @@ style.innerHTML=`
   #tapButton.tap-pulse { transform: scale(1.05); transition: transform 0.12s ease; }
 `;
 document.head.appendChild(style);
+
 </script>
+
 </body>
 </html>
