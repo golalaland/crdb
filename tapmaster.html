@@ -19,104 +19,120 @@
   --glass-border: rgba(255,255,255,0.08);
 }
 
-*{box-sizing:border-box;}
-html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:'Montserrat',sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
-body{display:flex;justify-content:center;align-items:flex-start;padding:18px 0 140px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;overflow-x:hidden;}
-#appWrapper{width:100%;max-width:480px;display:flex;flex-direction:column;align-items:center;}
+*{box-sizing:border-box}
+html,body {height:100%;margin:0;background:var(--bg);color:#fff;font-family:'Montserrat',sans-serif; -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body {display:flex;justify-content:center;align-items:flex-start;padding:18px 0 120px; touch-action:manipulation; -webkit-tap-highlight-color: transparent; overflow-x:hidden;}
+#appWrapper {width:100%;max-width:480px;display:flex;flex-direction:column;align-items:center;}
 
 /* header */
 #gameHeader{text-align:center;margin-top:6px;}
-#welcomeText{font-family:'Press Start 2P',cursive;font-size:11px;color:var(--accent1);}
-#scrambleText{font-family:'Press Start 2P',cursive;font-size:20px;color:var(--accent1);margin-top:4px;}
+#welcomeText{font-family:'Press Start 2P',cursive;font-size:11px;color:var(--accent1)}
+#scrambleText{font-family:'Press Start 2P',cursive;font-size:20px;color:var(--accent1);margin-top:4px}
 
-/* glass terminal */
-.glass-terminal{width:90%;max-width:420px;margin:18px auto;padding:14px 16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 0 20px rgba(0,0,0,0.6);color:#fff;position:relative;overflow:hidden;}
-.terminal-header{text-align:center;color:var(--accent1);font-size:11px;letter-spacing:2px;margin-bottom:8px;font-weight:700;}
-.terminal-line{font-size:13px;line-height:1.6;letter-spacing:1px;color:#fff;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
-.terminal-line span{color:#00FF99;text-shadow:0 0 6px rgba(0,255,153,0.08);font-weight:700;}
+/* glass terminal (tap stats + timer etc) */
+.glass-terminal {
+  width: 90%;
+  max-width: 420px;
+  margin: 18px auto;
+  padding: 14px 16px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 0 20px rgba(0,0,0,0.6);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+.terminal-header { text-align:center; color:var(--accent1); font-size:11px; letter-spacing:2px; margin-bottom:8px; font-weight:700; }
+.terminal-line { font-size:13px; line-height:1.6; letter-spacing:1px; color:#fff; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; }
+.terminal-line span { color:#00FF99; text-shadow:0 0 6px rgba(0,255,153,0.08); font-weight:700; }
 
-/* train bar */
-#trainBarContainer{width:100%;height:14px;background: rgba(255,255,255,0.03);border-radius:999px;overflow:hidden;margin-top:8px;}
-#trainBar{height:100%;width:100%;background: linear-gradient(90deg, var(--accent1), var(--accent2));transform-origin:left center;transition:width 0.2s linear;}
-
-/* stats row */
-.stats-row{display:flex;justify-content:space-between;gap:12px;margin-top:8px;align-items:center;}
-.stat{flex:1;background: rgba(255,255,255,0.02);padding:8px;border-radius:8px;text-align:center;}
-.stat .label{font-size:11px;color:var(--muted);}
-.stat .value{font-size:16px;font-weight:800;color:#fff;}
-
-/* bonus bar */
-#bonusContainer{width:100%;height:10px;background:#111;border-radius:999px;overflow:hidden;margin-top:12px;box-shadow:0 6px 16px rgba(0,0,0,0.6) inset;}
-#bonusBar{height:100%;width:0%;background:linear-gradient(90deg,var(--green1),#00b0ff);transition:width .15s linear;}
-
-/* TAP button */
-#tapButton{width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 25% 25%, var(--green1), #00b0ff);border:none;margin-top:36px;box-shadow:0 8px 30px rgba(0,230,118,0.14);display:inline-flex;align-items:center;justify-content:center;font-weight:800;color:#000;font-size:18px;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;}
-#tapButton:active{transform:scale(.96);}
-
-/* bottom tab bar */
-#bottomBar{display:flex;gap:10px;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:90%;max-width:480px;z-index:1000;}
-.tab-btn{flex:1;height:50px;border-radius:12px;font-size:24px;display:flex;justify-content:center;align-items:center;border:none;cursor:pointer;padding:0;}
-
-/* modals */
-.modal-backdrop{position:fixed;inset:0;background: rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:9999;}
-.modal{width:92%;max-width:420px;background:#0f0f0f;border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.06);box-shadow:0 10px 30px rgba(0,0,0,0.6);}
-.modal h3{margin:0 0 8px 0;color:var(--accent1);font-size:16px;}
-.modal .list{text-align:left;margin-top:12px;max-height:320px;overflow:auto;}
-.modal .list li{padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,0.03);font-weight:700;}
-button, input{font-size:16px;}
-.hidden{display:none!important;}
-.closeModalBtn{margin-top:12px;padding:8px 12px;border-radius:8px;border:none;background:#aaa;color:#111;font-weight:800;cursor:pointer;}
-/* ---------- Instagram Style Leaderboard ---------- */
-.lb-row {
-  display: flex;
-  align-items: center;
-  padding: 12px 5px;
-  border-bottom: 1px solid #ffffff15;
-  gap: 10px;
+/* train bar (timer visual) */
+#trainBarContainer {
+  width:100%;
+  height:14px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 999px;
+  overflow:hidden;
+  margin-top:8px;
+}
+#trainBar {
+  height:100%;
+  width:100%;
+  background: linear-gradient(90deg, var(--accent1), var(--accent2));
+  transform-origin: left center;
+  transition: width 0.2s linear;
 }
 
-.lb-current {
-  background: #333;
-  border-radius: 8px;
+/* stats row inside terminal */
+.stats-row { display:flex; justify-content:space-between; gap:12px; margin-top:8px; align-items:center; }
+.stat { flex:1; background: rgba(255,255,255,0.02); padding:8px; border-radius:8px; text-align:center; }
+.stat .label { font-size:11px; color:var(--muted); }
+.stat .value { font-size:16px; font-weight:800; color:#fff; }
+
+/* bonus bar (progress toward next bonus level) */
+#bonusContainer { width:100%; height:10px; background:#111; border-radius:999px; overflow:hidden; margin-top:12px; box-shadow:0 6px 16px rgba(0,0,0,0.6) inset; }
+#bonusBar { height:100%; width:0%; background:linear-gradient(90deg,var(--green1),#00b0ff); transition:width .15s linear; }
+
+/* TAP button - small round, far from terminal */
+#tapButton {
+  width:64px;
+  height:64px;
+  border-radius:50%;
+  background: radial-gradient(circle at 25% 25%, var(--green1), #00b0ff);
+  border: none;
+  margin-top:36px; /* far from terminal */
+  box-shadow: 0 8px 30px rgba(0,230,118,0.14);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:800;
+  color:#000;
+  font-size:18px;
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.lb-rank {
-  width: 35px;
-  text-align: center;
-  font-size: 17px;
-  font-weight: 700;
-  opacity: 0.9;
+/* tap hover/active */
+#tapButton:active { transform: scale(.96); }
+
+/* tap count + earnings small status (below button) */
+#miniStats { margin-top:12px; color:#fff; font-weight:700; }
+
+/* leaderboard button */
+#leaderboardBtn {
+  margin-top:14px;
+  padding:10px 14px;
+  border-radius:10px;
+  background: linear-gradient(90deg,#FFD700,#FF8C00);
+  color:#111;
+  font-weight:800;
+  border:none;
+  cursor:pointer;
+  font-size:14px;
 }
 
-.lb-avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  object-fit: cover;
+/* modal (normal fade-in centered) */
+.modal-backdrop {
+  position:fixed; inset:0; background: rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:9999;
 }
+.modal {
+  width:92%; max-width:420px; background:#0f0f0f; border-radius:12px; padding:16px; border:1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
+.modal h3{ margin:0 0 8px 0; color:var(--accent1); font-size:16px; }
+.modal .list { text-align:left; margin-top:12px; max-height:320px; overflow:auto; }
+.modal .list li { padding:8px 6px; border-bottom:1px dashed rgba(255,255,255,0.03); font-weight:700; }
 
-.lb-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
+/* result panel (small) */
+#resultModalInner { display:none; margin-top:18px; }
 
-.lb-name {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.lb-sub {
-  font-size: 12px;
-  opacity: 0.6;
-  margin-top: 2px;
-}
-
-.lb-score {
-  font-size: 18px;
-  font-weight: 700;
-  opacity: 0.9;
-}
+/* small helpers */
+.hidden { display:none!important; }
+button, input { font-size:16px; } /* prevents iOS zoom on tap */
 </style>
 </head>
 <body>
@@ -127,59 +143,18 @@ button, input{font-size:16px;}
     <div id="welcomeText">WELCOME TO</div>
     <div id="scrambleText">TAP MASTER</div>
   </div>
+  
 
-  <!-- Start Page -->
-  <div id="startPage" style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:18px;">
-    <button id="startBtn" style="padding:12px 22px;border-radius:12px;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:800;font-size:16px;border:none;cursor:pointer;">Play</button>
-    <img id="posterImg" src="https://cdn.shopify.com/s/files/1/0962/6648/6067/files/STRZ.jpg?v=1763196570" alt="Poster" style="width:90%;max-width:420px;margin:12px auto;border-radius:12px;">
-  </div>
-
-  <!-- Game Page -->
-  <div id="gamePage" class="hidden" style="width:100%;display:flex;flex-direction:column;align-items:center;">
-
-    <!-- Glass terminal -->
-    <div id="tapTerminal" class="glass-terminal" aria-live="polite">
-      <div class="terminal-header">TAP TERMINAL</div>
-      <div class="terminal-line"><div>⏱ Time Left</div><div><span id="timer">60</span>s</div></div>
-      <div class="terminal-line"><div>✋🏽 Taps</div><div><span id="tapCount">0</span></div></div>
-      <div class="terminal-line"><div>💵 Earnings</div><div>₦<span id="earnings">0.00</span></div></div>
-      <div id="trainBarContainer"><div id="trainBar" style="width:100%"></div></div>
-      <div class="stats-row">
-        <div class="stat"><div class="label">TAP LVL</div><div class="value" id="bonusLevelVal">1</div></div>
-        <div class="stat"><div class="label">SPEED</div><div class="value" id="speedVal">—</div></div>
-      </div>
-      <div id="bonusContainer"><div id="bonusBar"></div></div>
-    </div>
-
-    <!-- TAP button -->
-    <button id="tapButton" aria-label="Tap" title="Tap fast!">TAP</button>
-
-  </div>
-
-  <!-- Profile Card -->
-  <div id="profileCardWrapper" style="position:fixed;bottom:90px;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:1500;">
-    <div class="profile-card" style="background:rgba(255,255,255,0.04);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);text-align:center;width:100%;">
-      <div class="profile-name" id="profileName">GUEST 0000</div>
-      <div class="profile-info">STARS COLLECTED: <span id="starCount">0</span>⭐</div>
-      <div class="profile-info">CASH EARNED: <span id="cashCount">0</span></div>
-    </div>
-  </div>
-
-  <!-- Bottom Tab Bar -->
-  <div id="bottomBar">
-    <button class="tab-btn" id="leaderboardBtn" style="background:linear-gradient(90deg,#FFD700,#FF8C00);color:#111;">leaderboard</button>
-    <button class="tab-btn" id="poolBtn" style="background:linear-gradient(90deg,#1E90FF,#00BFFF);color:#fff;">PVP</button>
-    <button class="tab-btn" id="bidBtn" style="background:linear-gradient(90deg,#32CD32,#228B22);color:#fff;">Bid</button>
-  </div>
-
+<!-- Start Page -->
+<div id="startPage" style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:18px;">
+  <button id="startBtn" style="padding:12px 22px;border-radius:12px;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:800;font-size:16px;border:none;cursor:pointer;">Play</button>
+  <img id="posterImg" src="https://cdn.shopify.com/s/files/1/0962/6648/6067/files/STRZ.jpg?v=1763196570" alt="Poster" style="width:90%;max-width:420px;margin:12px auto;border-radius:12px;">
 </div>
 
-<!-- Modals -->
-
-<!-- Play Confirmation -->
-<div id="playModal" class="modal-backdrop">
-  <div class="modal" style="text-align:center;">
-    <h3>Confirm Play</h3>
+<!-- Play Confirmation Modal -->
+<div id="playModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;justify-content:center;align-items:center;display:flex;">
+  <div style="background:#111;color:#fff;padding:20px;border-radius:12px;width:90%;max-width:320px;text-align:center;">
+    <h3 style="margin-bottom:12px;">Confirm Play</h3>
     <p>Play Tap Master for <strong>10 ⭐</strong>?</p>
     <div style="display:flex;justify-content:space-between;margin-top:18px;">
       <button id="cancelPlay" style="flex:1;margin-right:6px;padding:10px 12px;border:none;border-radius:8px;background:#444;color:#fff;font-weight:700;cursor:pointer;">Cancel</button>
@@ -188,90 +163,97 @@ button, input{font-size:16px;}
   </div>
 </div>
 
-<!-- Result Modal -->
-<div id="resultModal" class="modal-backdrop">
-  <div class="modal" style="position:relative;text-align:center;">
+  <!-- Spinner (loading animation) -->
+  <div id="spinner" class="hidden" style="margin-top:18px;">
+    <div style="width:44px;height:44px;border-radius:50%;border:6px solid #222;border-top:6px solid #00e676; animation:spin 1s linear infinite;margin:0 auto"></div>
+    <div style="margin-top:10px;color:#aaa;font-size:13px">Loading Tap Arena…</div>
+  </div>
+  
+  
+
+  <!-- Game UI -->
+  <div id="gamePage" class="hidden" style="width:100%;display:flex;flex-direction:column;align-items:center;">
+
+    <!-- Glass terminal -->
+    <div id="tapTerminal" class="glass-terminal" aria-live="polite">
+      <div class="terminal-header">TAP TERMINAL</div>
+
+      <div class="terminal-line">
+        <div>⏱ Time Left</div>
+        <div><span id="timer">60</span>s</div>
+      </div>
+
+      <div class="terminal-line">
+        <div>✋🏽 Taps</div>
+        <div><span id="tapCount">0</span></div>
+      </div>
+
+      <div class="terminal-line">
+        <div>💵 Earnings</div>
+        <div>₦<span id="earnings">0.00</span></div>
+      </div>
+
+      <div id="trainBarContainer" style="margin-top:10px;">
+        <div id="trainBar" style="width:100%"></div>
+      </div>
+
+      <div class="stats-row" style="margin-top:10px">
+        <div class="stat">
+          <div class="label">TAP LVL</div>
+          <div class="value" id="bonusLevelVal">1</div>
+        </div>
+        <div class="stat">
+          <div class="label">SPEED</div>
+          <div class="value" id="speedVal">—</div>
+        </div>
+      </div>
+
+      <div id="bonusContainer" style="margin-top:12px;">
+        <div id="bonusBar"></div>
+      </div>
+    </div>
+
+    <!-- TAP button -->
+    <button id="tapButton" aria-label="Tap" title="Tap fast!">TAP</button>
+
+  
+    <!-- Result modal -->
+<div id="resultModal" class="modal-backdrop" style="display:none;align-items:center;justify-content:center;">
+  <div class="modal" style="padding:16px;border-radius:12px;max-width:380px;text-align:center;position:relative;">
     <button id="closeResult" style="position:absolute;top:8px;right:8px;font-size:18px;border:none;background:none;cursor:pointer;">✖</button>
     <div id="resultMessage" style="margin-top:10px;font-size:16px;font-weight:600;"></div>
     <button id="playAgainBtn" style="margin-top:16px;padding:10px 16px;border-radius:8px;border:none;background:linear-gradient(90deg,#00e676,#00b0ff);color:#000;font-weight:800;cursor:pointer;">Play Again</button>
   </div>
 </div>
 
-<!-- Leaderboard Modal -->
-<div id="leaderboardModal" class="modal-backdrop">
-  <div class="modal">
-    <h3>Top Tappers — This Hour</h3>
-    <ol id="leaderboardList" class="list" style="list-style:none;padding-left:0;margin:0;"></ol>
-    <button id="closeLeaderboard" class="closeModalBtn">Close</button>
-  </div>
-</div>
+  </div> <!-- end gamePage -->
 
-<!-- Pool Modal -->
-<div id="poolModal" class="modal-backdrop">
-  <div class="modal">
-    <h3>Daily Pool</h3>
-
-    <!-- Pool Info -->
-    <div id="poolInfo">Loading pool info...</div>
-
-    <!-- Progress Bar -->
-    <div style="background:#333;border-radius:8px;height:20px;margin:10px 0;overflow:hidden;">
-      <div id="poolProgress" style="width:0%;background:linear-gradient(90deg,#1E90FF,#00BFFF);height:100%;transition:width 0.3s;"></div>
+  <!-- Fixed bottom profile + leaderboard button -->
+  <div id="bottomBar" style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:1000;">
+    <div class="profile-card" style="background:rgba(255,255,255,0.04);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);text-align:center;">
+      <div class="profile-name" id="profileName">GUEST 0000</div>
+      <div class="profile-info">STARS COLLECTED: <span id="starCount">50</span>⭐</div>
+      <div class="profile-info">CASH EARNED: <span id="cashCount">0</span></div>
     </div>
-
-    <!-- Countdown -->
-    <div id="poolCountdown" style="text-align:center;font-weight:700;margin-bottom:8px;">01:00:00</div>
-
-    <!-- Join Pool Button -->
-    <button id="joinPoolBtn" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#1E90FF,#00BFFF);color:#fff;font-weight:800;cursor:pointer;margin-top:10px;">
-      Join Pool
-    </button>
-
-    <!-- Close Modal -->
-    <button class="closeModalBtn" data-target="poolModal">Close</button>
+    <button id="leaderboardBtn" style="padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#FFD700,#FF8C00);color:#111;font-weight:800;border:none;cursor:pointer;font-size:14px;">View Leaderboard 🏆</button>
   </div>
-</div>
 
-
-<!-- Bid Modal -->
-<div id="bidModal" class="modal-backdrop">
-  <div class="modal">
-    <h3>Bid for Item</h3>
-
-    <!-- Item Image Slider -->
-    <div id="bidImageSlider" style="position:relative;width:100%;height:180px;overflow:hidden;margin-bottom:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);">
-      <img src="https://via.placeholder.com/400x180?text=Item+1" class="bid-slide" style="width:100%;height:100%;object-fit:cover;display:block;">
-      <img src="https://via.placeholder.com/400x180?text=Item+2" class="bid-slide" style="width:100%;height:100%;object-fit:cover;display:none;">
-      <img src="https://via.placeholder.com/400x180?text=Item+3" class="bid-slide" style="width:100%;height:100%;object-fit:cover;display:none;">
+  <!-- Leaderboard modal -->
+  <div id="leaderboardModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3>Top Tappers — This Hour</h3>
+      <ol id="leaderboardList" class="list" style="list-style:none;padding-left:0;margin:0;"></ol>
+      <div style="margin-top:12px;text-align:right;">
+        <button id="closeLeaderboard" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#FF1493,#FF8C00);color:#fff;font-weight:800;cursor:pointer">Close</button>
+      </div>
     </div>
-
-    <!-- Bid Countdown -->
-    <div id="bidCountdown" style="text-align:center;font-weight:700;margin-bottom:8px;">01:00:00</div>
-
-    <!-- Bid Info -->
-    <div id="bidInfo">Tap to bid for this item!</div>
-
-    <!-- Join Bid / Tap Button -->
-    <button id="tapBidBtn" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#32CD32,#228B22);color:#fff;font-weight:800;cursor:pointer;margin-top:10px;">
-      Tap to Bid
-    </button>
-
-    <!-- Top 10 Bid Leaders -->
-    <div id="bidLeaderboard" style="margin-top:12px;max-height:180px;overflow-y:auto;border-top:1px solid rgba(255,255,255,0.1);padding-top:6px;">
-      <ol style="list-style:none;padding-left:0;margin:0;" id="bidLeaderboardList">
-        <li>Loading top bids...</li>
-      </ol>
-    </div>
-
-    <!-- Close Modal -->
-    <button class="closeModalBtn" data-target="bidModal" style="margin-top:8px;">Close</button>
   </div>
+
 </div>
 
 <!-- Audio -->
 <audio id="tapSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
-</body>
-</html>
+
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
@@ -849,25 +831,13 @@ async function fetchLeaderboard(period = "daily", top = 10) {
       return;
     }
 
-leaderboardList.innerHTML = topScores.map((u, i) => {
-  const isCurrent = currentUser && u.uid === currentUser.uid;
+    leaderboardList.innerHTML = topScores.map((u,i)=>{
+      const isCurrent = currentUser && u.uid === currentUser.uid;
+      return `<li style="margin-bottom:8px;${isCurrent ? 'background:#333;padding:5px;border-radius:4px;' : ''}">
+        ${i+1}. <strong>${u.chatId}</strong> — ${u.taps.toLocaleString()} taps
+      </li>`;
+    }).join("");
 
-  return `
-    <li class="lb-row ${isCurrent ? 'lb-current' : ''}">
-      <span class="lb-rank">#${i + 1}</span>
-
-      <img src="${u.photoURL || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}"
-           class="lb-avatar">
-
-      <div class="lb-info">
-        <div class="lb-name">${u.chatId}</div>
-        <div class="lb-sub">${u.taps.toLocaleString()} taps</div>
-      </div>
-
-      <div class="lb-score">${u.taps.toLocaleString()}</div>
-    </li>
-  `;
-}).join("");
   } catch(err){
     console.error("Leaderboard error:", err);
     leaderboardList.innerHTML = "<li>Error loading leaderboard</li>";
@@ -967,331 +937,6 @@ async function recordTap(userId, taps = 1, invitedBy = null, earnings = 0, bonus
     console.error("Error recording tap:", e);
   }
 }
-
-/* ------------------ BOTTOM TAB MODAL OPENERS ------------------ */
-
-document.getElementById("poolBtn")?.addEventListener("click", () => {
-  const modal = document.getElementById("poolModal");
-  if (!modal) return;
-  modal.style.display = "flex";
-  loadPoolInfo(); // auto-update pool info
-});
-
-document.getElementById("bidBtn")?.addEventListener("click", () => {
-  const modal = document.getElementById("bidModal");
-  if (!modal) return;
-  modal.style.display = "flex";
-  loadBidInfo(); // auto-update bid info
-});
-
-
-/* ------------------ UNIVERSAL MODAL CLOSER ------------------ */
-document.querySelectorAll(".closeModalBtn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const modalId = btn.dataset.target;
-    const modal = document.getElementById(modalId);
-    if (modal) modal.style.display = "none";
-  });
-});
-
-/* ------------------ POOL MODAL LOGIC ------------------ */
-async function initPool(modal) {
-  const gameId = modal.dataset.gameId;
-  if (!gameId) return;
-
-  const infoEl = modal.querySelector("#poolInfo");
-  const progressEl = modal.querySelector("#poolProgress");
-  const countdownEl = modal.querySelector("#poolCountdown");
-  const joinBtn = modal.querySelector("#joinPoolBtn");
-
-  const poolRef = doc(db, "pools", gameId);
-
-  let duration = 3600; // 1 hour
-
-  // Countdown
-  function startPoolCountdown() {
-    const timer = setInterval(() => {
-      duration--;
-      const h = String(Math.floor(duration / 3600)).padStart(2, '0');
-      const m = String(Math.floor((duration % 3600) / 60)).padStart(2, '0');
-      const s = String(duration % 60).padStart(2, '0');
-
-      countdownEl.textContent = `${h}:${m}:${s}`;
-
-      if (duration <= 0) clearInterval(timer);
-    }, 1000);
-  }
-
-  startPoolCountdown();
-
-  // Live updates
-  onSnapshot(poolRef, snap => {
-    const data = snap.data() || { participants:0, target:500 };
-    const { participants, target } = data;
-
-    infoEl.textContent = `${participants}/${target} joined`;
-    progressEl.style.width = `${(participants / target) * 100}%`;
-
-    if (participants >= target) {
-      countdownEl.textContent = "POOL COMPLETE!";
-    }
-  });
-
-  // Join button
-  joinBtn.onclick = async () => {
-    await updateDoc(poolRef, {
-      participants: increment(1)
-    });
-  };
-}
-
-/* RUN WHEN POOL OPENS */
-const poolModal = document.getElementById("poolModal");
-new MutationObserver(() => {
-  if (poolModal.style.display === "flex") initPool(poolModal);
-}).observe(poolModal, { attributes: true });
-
-
-// ---------------- SAFE BID MODULE (drop-in replacement) ----------------
-(function(){
-  // run only after DOM and firebase are ready
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initModule);
-  } else {
-    initModule();
-  }
-
-  function initModule(){
-    if (typeof db === 'undefined' || typeof auth === 'undefined') {
-      console.error("Firebase 'db' or 'auth' not found. Make sure firebase is initialized before this script.");
-      return;
-    }
-
-    const bidModal = document.getElementById("bidModal");
-    const tapBtn = document.getElementById("tapBidBtn");
-    const countdownEl = bidModal?.querySelector("#bidCountdown");
-    const leaderboardList = bidModal?.querySelector("#bidLeaderboardList");
-    const slides = bidModal ? Array.from(bidModal.querySelectorAll(".bid-slide")) : [];
-
-    if (!bidModal || !tapBtn || !countdownEl || !leaderboardList) {
-      console.error("Bid modal elements missing. Make sure IDs: bidModal, tapBidBtn, bidCountdown, bidLeaderboardList exist.");
-      return;
-    }
-
-    // single-run state
-    let biddersUnsub = null;
-    let bidDocUnsub = null;
-    let countdownTimer = null;
-    let sliderTimer = null;
-    let slideIndex = 0;
-
-    // open hook (if you already open modal with dataset.gameId, keep that)
-    // if you use the direct opener we gave earlier, modal.dataset.gameId will be set
-    // fallback to 'active' if not set
-    function getGameId(modal){
-      return modal.dataset.gameId || "active";
-    }
-
-    // ensure bid doc exists with sensible defaults (endTime = now + 1h)
-    async function ensureBidDoc(gameId){
-      try {
-        const bidRef = doc(db, "bidGame", gameId);
-        const snap = await getDoc(bidRef);
-        if (!snap.exists()) {
-          const endTime = Date.now() + 3600 * 1000; // 1 hour from now
-          await setDoc(bidRef, { totalTaps: 0, createdAt: Date.now(), endTime });
-          console.log("Created bid doc:", gameId);
-        }
-      } catch(err){
-        console.error("ensureBidDoc error:", err);
-      }
-    }
-
-    // initialize when modal opens (attach snapshots / timers)
-    async function initBid(modal){
-      const gameId = getGameId(modal);
-      console.log("initBid for", gameId);
-
-      await ensureBidDoc(gameId);
-
-      const bidRef = doc(db, "bidGame", gameId);
-      const biddersCol = collection(db, "bidGame", gameId, "bidders");
-
-      // CLEANUP any previous subscriptions/timers
-      if (biddersUnsub) biddersUnsub();
-      if (bidDocUnsub) bidDocUnsub();
-      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
-      if (sliderTimer) { clearInterval(sliderTimer); sliderTimer = null; }
-
-      // start image slider (if slides exist)
-      if (slides.length > 0) {
-        slides.forEach((s,i)=> s.style.display = i===0 ? "block" : "none");
-        slideIndex = 0;
-        sliderTimer = setInterval(()=>{
-          slides.forEach(s=> s.style.display = "none");
-          slideIndex = (slideIndex + 1) % slides.length;
-          slides[slideIndex].style.display = "block";
-        }, 3000);
-      }
-
-      // live countdown from bid doc (subscribe to doc)
-      bidDocUnsub = onSnapshot(bidRef, snap=>{
-        const data = snap.data() || {};
-        if (!data.endTime) {
-          countdownEl.textContent = "No timer set";
-          return;
-        }
-
-        // clear previous timer then start a new per-second updater
-        if (countdownTimer) clearInterval(countdownTimer);
-        countdownTimer = setInterval(()=>{
-          const now = Date.now();
-          let diff = Math.floor((data.endTime - now) / 1000);
-          if (diff < 0) diff = 0;
-          const h = String(Math.floor(diff / 3600)).padStart(2,'0');
-          const m = String(Math.floor((diff % 3600) / 60)).padStart(2,'0');
-          const s = String(diff % 60).padStart(2,'0');
-          countdownEl.textContent = `${h}:${m}:${s}`;
-
-          if (diff === 0) {
-            clearInterval(countdownTimer);
-            // optionally notify end-of-bid here
-          }
-        }, 1000);
-      }, err => {
-        console.error("bid doc snapshot error:", err);
-      });
-
-      // live bidders leaderboard (subscribe to bidders collection)
-      biddersUnsub = onSnapshot(biddersCol, snap=>{
-        const arr = [];
-        snap.forEach(d => {
-          const o = d.data();
-          arr.push(o);
-        });
-
-        arr.sort((a,b)=> (b.taps||0) - (a.taps||0));
-        leaderboardList.innerHTML = arr.slice(0,10).map((u,i)=>{
-          const label = u.displayName || (u.uid ? u.uid.slice(0,6) : "user");
-          return `<li>#${i+1} ${label} — ${Number(u.taps||0).toLocaleString()} taps</li>`;
-        }).join("") || "<li>No bidders yet</li>";
-      }, err => console.error("bidders snapshot error:", err));
-    }
-
-    // show confirm and join
-    async function showBidJoinConfirm(uid){
-      const ok = confirm("Joining this bid costs ⭐50 stars. Continue?");
-      if (!ok) return;
-      await joinBid(uid);
-    }
-
-    async function joinBid(uid){
-      try {
-        const userRef = doc(db, "users", uid);
-        const userSnap = await getDoc(userRef);
-        const user = userSnap.exists()? userSnap.data() : null;
-        if (!user) return alert("User not found.");
-        if ((user.stars||0) < 50) return alert("Not enough stars to join.");
-
-        // deduct + set joined flag
-        await updateDoc(userRef, {
-          stars: (user.stars||0) - 50,
-          joinedBid: true,
-          bidJoinedAt: Date.now()
-        });
-
-        // create bidder doc with 0 taps in current bid
-        const gameId = getGameId(bidModal);
-        const bidderRef = doc(db, "bidGame", gameId, "bidders", uid);
-        await setDoc(bidderRef, { taps: 0, uid, displayName: user.chatId || user.email || "Guest" }, { merge: true });
-
-        alert("Joined bid — all taps will now count toward the bid until it ends.");
-      } catch(e){
-        console.error("joinBid error:", e);
-        alert("Could not join bid. See console.");
-      }
-    }
-
-    // handle a bid tap (increment bidder + total)
-    async function handleBidTap(uid){
-      try {
-        const gameId = getGameId(bidModal);
-        const bidRef = doc(db, "bidGame", gameId);
-        const bidderRef = doc(db, "bidGame", gameId, "bidders", uid);
-
-        // increment total and individual atomically using transactions
-        await runTransaction(db, async t => {
-          const bSnap = await t.get(bidRef);
-          if (!bSnap.exists()) {
-            t.set(bidRef, { totalTaps: 1 });
-          } else {
-            const current = bSnap.data().totalTaps || 0;
-            t.update(bidRef, { totalTaps: current + 1 });
-          }
-
-          const pSnap = await t.get(bidderRef);
-          if (!pSnap.exists()) {
-            t.set(bidderRef, { taps: 1, uid });
-          } else {
-            const cur = pSnap.data().taps || 0;
-            t.update(bidderRef, { taps: cur + 1 });
-          }
-        });
-      } catch(e){
-        console.error("handleBidTap error:", e);
-      }
-    }
-
-    // tap button logic: either join flow or record tap
-    tapBtn.addEventListener("click", async function onTapClick(e){
-      // verify authenticated
-      const user = auth.currentUser;
-      if (!user) { alert("Log in to play."); return; }
-      const uid = user.uid;
-
-      try {
-        const userSnap = await getDoc(doc(db, "users", uid));
-        const userData = userSnap.exists() ? userSnap.data() : {};
-
-        if (!userData.joinedBid) {
-          // ask to join
-          showBidJoinConfirm(uid);
-          return;
-        }
-
-        // user is joined — route their taps into bid
-        await handleBidTap(uid);
-
-      } catch(err){
-        console.error("tap handler error:", err);
-      }
-    });
-
-    // init when modal opens (observe display change)
-    const mo = new MutationObserver(() => {
-      if (bidModal.style.display === "flex") {
-        const gameId = getGameId(bidModal);
-        initBid(bidModal).catch(e=>console.error("initBid failed:", e));
-      } else {
-        // when modal closes, cleanup subscriptions/timers
-        if (biddersUnsub) { biddersUnsub(); biddersUnsub = null; }
-        if (bidDocUnsub) { bidDocUnsub(); bidDocUnsub = null; }
-        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
-        if (sliderTimer) { clearInterval(sliderTimer); sliderTimer = null; }
-      }
-    });
-    mo.observe(bidModal, { attributes: true });
-
-    // If modal is already open on load, init immediately
-    if (bidModal.style.display === "flex") {
-      initBid(bidModal).catch(e=>console.error("initBid failed:", e));
-    }
-
-    console.log("Bid module ready");
-  } // end initModule
-})(); // end IIFE
 </script>
 </body>
 </html>
-
-
