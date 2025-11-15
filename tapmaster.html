@@ -393,12 +393,12 @@ async function loadCurrentUserForGame() {
       currentUser = null;
       if (profileNameEl) profileNameEl.textContent = "GUEST 0000";
       if (starCountEl) starCountEl.textContent = starCountEl.textContent || "50";
+      if (cashCountEl) cashCountEl.textContent = cashCountEl.textContent || "0";
       return;
     }
 
     // -----------------------------------------------------
     //  SANITIZE EMAIL EXACTLY AS FIRESTORE USES IT
-    //  (your system replaces '.' with ',')
     // -----------------------------------------------------
     const uid = storedUser.email.replace(/\./g, ",").toLowerCase();
 
@@ -421,7 +421,8 @@ async function loadCurrentUserForGame() {
       };
 
       if (profileNameEl) profileNameEl.textContent = currentUser.chatId;
-      if (starCountEl) starCountEl.textContent = "0";
+      if (starCountEl) starCountEl.textContent = String(currentUser.stars);
+      if (cashCountEl) cashCountEl.textContent = String(currentUser.cash);
       return;
     }
 
@@ -429,14 +430,13 @@ async function loadCurrentUserForGame() {
     //  USER EXISTS IN FIRESTORE
     // -----------------------------------------------------
     const data = snap.data();
-
-    // Remove any old invalid uid field inside the document
     if (data.uid) delete data.uid;
 
-    // FINAL, GUARANTEED CORRECT USER OBJECT
     currentUser = {
-      uid, // always enforce sanitized UID
+      uid, // sanitized UID always
       ...data,
+      stars: Number(data.stars ?? 0),
+      cash: Number(data.cash ?? 0),
     };
 
     // Update UI
@@ -446,9 +446,8 @@ async function loadCurrentUserForGame() {
         storedUser.fullName ||
         storedUser.email.split("@")[0];
 
-    if (starCountEl)
-      starCountEl.textContent = String(currentUser.stars ?? 0);
-
+    if (starCountEl) starCountEl.textContent = String(currentUser.stars);
+    if (cashCountEl) cashCountEl.textContent = String(currentUser.cash);
   } catch (err) {
     console.warn("loadCurrentUserForGame error", err);
   }
@@ -474,6 +473,8 @@ async function tryDeductStarsForJoin(cost) {
       if (currentStars < cost) throw new Error("Not enough stars");
 
       t.update(userRef, { stars: currentStars - cost });
+      currentUser.stars = currentStars - cost; // update local user
+      if (starCountEl) starCountEl.textContent = String(currentUser.stars);
     });
 
     return { ok: true };
@@ -492,7 +493,6 @@ async function giveCashToUser(amount) {
       miniEarnings.textContent = (
         parseFloat(miniEarnings.textContent || "0") + amount
       ).toFixed(2);
-
     return { ok: true };
   }
 
@@ -507,6 +507,8 @@ async function giveCashToUser(amount) {
       const newCash = Number(udata.cash || 0) + Number(amount);
 
       t.update(userRef, { cash: newCash });
+      currentUser.cash = newCash; // update local user
+      if (cashCountEl) cashCountEl.textContent = String(currentUser.cash);
     });
 
     return { ok: true };
@@ -521,20 +523,6 @@ async function giveCashToUser(amount) {
 // -----------------------------------------------------
 initializePot();
 loadCurrentUserForGame();
-
-// Disable double-tap zoom on iOS
-document.addEventListener("gesturestart", (e) => e.preventDefault(), {
-  passive: false,
-});
-
-// Unlock audio
-document.body.addEventListener(
-  "touchstart",
-  () => {
-    tapSound?.play().catch(() => {});
-  },
-  { once: true }
-);
 
 // -----------------------------------------------------
 //  GAME START FLOW
