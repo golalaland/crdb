@@ -304,6 +304,27 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
 .lb-list li span.taps {
   font-weight: 500;
 }
+
+#bottomBar {
+  display: flex;
+  gap:10px; /* controlled gap */
+}
+
+#posterImg, .glass-terminal {
+  margin-bottom:140px; /* space for profile card + bottom bar */
+}
+.tab-btn {
+  flex:1; /* all buttons share equal width */
+  height:50px;
+  border-radius:12px;
+  font-size:24px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  border:none;
+  cursor:pointer;
+  padding:0; /* remove extra padding */
+}
 </style>
 </head>
 <body>
