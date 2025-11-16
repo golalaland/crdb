@@ -3483,7 +3483,7 @@ highlightsBtn.onclick = async () => {
   }
 };
 
-/* ---------- Highlights Modal (DOPE EDITION) ---------- */
+/* ---------- Highlights Modal (HORIZONTAL SCROLL + TIGHT X) ---------- */
 function showHighlightsModal(videos) {
   document.getElementById("highlightsModal")?.remove();
 
@@ -3501,15 +3501,30 @@ function showHighlightsModal(videos) {
     alignItems: "center",
     justifyContent: "flex-start",
     zIndex: "999999",
-    overflowY: "auto",
-    padding: "16px",
+    overflow: "hidden",
+    padding: "0",
     boxSizing: "border-box",
-    fontFamily: "'Inter', sans-serif",
-    scrollbarWidth: "thin",
-    scrollbarColor: "#ff006e #1a1a1a"
+    fontFamily: "'Inter', sans-serif"
   });
 
-  // Sticky Neon Intro
+  // === STICKY TOP PANEL (Intro + Search + Toggle + Close) ===
+  const topPanel = document.createElement("div");
+  Object.assign(topPanel.style, {
+    position: "sticky",
+    top: 0,
+    width: "100%",
+    background: "rgba(10,10,10,0.95)",
+    backdropFilter: "blur(12px)",
+    borderBottom: "1px solid rgba(255,0,110,0.2)",
+    zIndex: "1001",
+    padding: "16px 20px",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px"
+  });
+
+  // Intro
   const intro = document.createElement("div");
   intro.innerHTML = `
     <div style="text-align:center;color:#e0e0e0;max-width:680px;margin:0 auto;line-height:1.7;font-size:15px;
@@ -3518,43 +3533,24 @@ function showHighlightsModal(videos) {
       border:1px solid rgba(255,0,110,0.3);box-shadow:0 8px 32px rgba(255,0,110,0.15);">
       <p style="margin:0;font-weight:600;">
         <span style="background:linear-gradient(90deg,#ff006e,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
-          🎬 EXCLUSIVE HIGHLIGHTS
+          EXCLUSIVE HIGHLIGHTS
         </span><br>
         <span style="font-size:13px;color:#aaa;">Unlock premium creator moments with ⭐ Stars</span>
       </p>
     </div>`;
-  Object.assign(intro.style, {
-    position: "sticky",
-    top: "12px",
-    zIndex: "1001",
-    marginBottom: "16px",
-    transition: "all 0.3s cubic-bezier(0.4,0,0.2,1)",
-    transform: "translateY(0)"
-  });
-  modal.appendChild(intro);
+  topPanel.appendChild(intro);
 
-  modal.addEventListener("scroll", () => {
-    const scrolled = modal.scrollTop > 60;
-    intro.style.transform = scrolled ? "translateY(-8px) scale(0.98)" : "translateY(0) scale(1)";
-    intro.style.opacity = scrolled ? "0.85" : "1";
-  });
-
-  // Search + Toggle Bar
-  const controlsBar = document.createElement("div");
-  Object.assign(controlsBar.style, {
-    position: "sticky",
-    top: "96px",
-    zIndex: "1001",
-    marginBottom: "20px",
+  // Search + Toggle Row
+  const controlsRow = document.createElement("div");
+  Object.assign(controlsRow.style, {
     display: "flex",
-    flexDirection: "column",
+    justifyContent: "center",
     alignItems: "center",
-    gap: "10px",
-    width: "100%",
-    maxWidth: "640px"
+    gap: "12px",
+    position: "relative"
   });
 
-  // Search Input with Glow
+  // Search Input
   const searchInputWrap = document.createElement("div");
   searchInputWrap.style.cssText = `
     display:flex;align-items:center;
@@ -3578,14 +3574,14 @@ function showHighlightsModal(videos) {
     <input id="highlightSearchInput" type="text" placeholder="Search creators or titles..." 
            style="flex:1;background:transparent;border:none;outline:none;color:#fff;font-size:14px;letter-spacing:0.4px;"/>
   `;
-  controlsBar.appendChild(searchInputWrap);
+  controlsRow.appendChild(searchInputWrap);
 
   // Toggle Button
   const toggleBtn = document.createElement("button");
   toggleBtn.id = "toggleLocked";
   toggleBtn.textContent = "Show Unlocked Only";
   Object.assign(toggleBtn.style, {
-    padding: "6px 16px",
+    padding: "8px 18px",
     borderRadius: "30px",
     background: "linear-gradient(135deg, #333, #222)",
     color: "#fff",
@@ -3594,7 +3590,8 @@ function showHighlightsModal(videos) {
     fontWeight: "600",
     cursor: "pointer",
     transition: "all 0.3s ease",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
+    boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+    whiteSpace: "nowrap"
   });
   toggleBtn.onmouseenter = () => {
     toggleBtn.style.background = "linear-gradient(135deg, #ff006e, #ff8c00)";
@@ -3606,27 +3603,68 @@ function showHighlightsModal(videos) {
     toggleBtn.style.transform = "translateY(0)";
     toggleBtn.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
   };
-  controlsBar.appendChild(toggleBtn);
-  modal.appendChild(controlsBar);
+  controlsRow.appendChild(toggleBtn);
 
-  // Video Grid
+  // === SMALL X BUTTON (Tucked in Top-Right of Panel) ===
+  const closeBtn = document.createElement("div");
+  closeBtn.innerHTML = `
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18 6L6 18M6 6L18 18" stroke="#ff006e" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>`;
+  Object.assign(closeBtn.style, {
+    position: "absolute",
+    top: "50%",
+    right: "20px",
+    transform: "translateY(-50%)",
+    cursor: "pointer",
+    padding: "8px",
+    borderRadius: "50%",
+    background: "rgba(255,255,255,0.05)",
+    backdropFilter: "blur(4px)",
+    transition: "all 0.2s ease",
+    zIndex: "1002"
+  });
+  closeBtn.onmouseenter = () => {
+    closeBtn.style.background = "rgba(255,0,110,0.3)";
+    closeBtn.style.transform = "translateY(-50%) scale(1.1)";
+  };
+  closeBtn.onmouseleave = () => {
+    closeBtn.style.background = "rgba(255,255,255,0.05)";
+    closeBtn.style.transform = "translateY(-50%) scale(1)";
+  };
+  closeBtn.onclick = (e) => {
+    e.stopPropagation();
+    modal.remove();
+  };
+  controlsRow.appendChild(closeBtn);
+
+  topPanel.appendChild(controlsRow);
+  modal.appendChild(topPanel);
+
+  // === HORIZONTAL SCROLL CONTENT ===
   const content = document.createElement("div");
   Object.assign(content.style, {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+    display: "flex",
     gap: "20px",
-    padding: "10px 0 60px",
+    overflowX: "auto",
+    overflowY: "hidden",
+    padding: "20px 24px 60px",
+    scrollBehavior: "smooth",
     width: "100%",
-    maxWidth: "1200px",
-    justifyItems: "center"
+    flex: "1",
+    scrollbarWidth: "none",
+    msOverflowStyle: "none"
   });
+  content.style.scrollbarWidth = "none";
+  content.style.webkitOverflowScrolling = "touch";
+  content.innerHTML = `<style>::-webkit-scrollbar { display: none; }</style>`;
   modal.appendChild(content);
 
   let unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
   let showUnlockedOnly = false;
 
   function renderCards(videosToRender) {
-    content.innerHTML = "";
+    content.innerHTML = `<style>::-webkit-scrollbar { display: none; }</style>` + content.innerHTML.split('<style')[0];
     const filtered = videosToRender.filter(v => !showUnlockedOnly || unlockedVideos.includes(v.id));
 
     filtered.forEach(video => {
@@ -3637,13 +3675,14 @@ function showHighlightsModal(videos) {
       card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
       card.setAttribute("data-title", video.title || "");
       Object.assign(card.style, {
-        width: "100%",
+        minWidth: "260px",
         maxWidth: "260px",
         background: "linear-gradient(145deg, #1a1a1a, #111)",
         borderRadius: "16px",
         overflow: "hidden",
         position: "relative",
         cursor: "pointer",
+        flexShrink: 0,
         transition: "all 0.4s cubic-bezier(0.25,0.8,0.25,1)",
         boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
         border: "1px solid rgba(255,255,255,0.05)"
@@ -3678,7 +3717,6 @@ function showHighlightsModal(videos) {
         transition:filter 0.5s ease;
       `;
 
-      // Lock Overlay (only if locked)
       if (!isUnlocked) {
         const lockOverlay = document.createElement("div");
         lockOverlay.innerHTML = `
@@ -3694,7 +3732,6 @@ function showHighlightsModal(videos) {
       videoContainer.appendChild(videoEl);
       card.appendChild(videoContainer);
 
-      // Hover play only if locked
       if (!isUnlocked) {
         videoContainer.onmouseenter = () => videoEl.play().catch(() => {});
         videoContainer.onmouseleave = () => {
@@ -3740,9 +3777,7 @@ function showHighlightsModal(videos) {
         boxShadow: isUnlocked
           ? "inset 0 2px 8px rgba(0,0,0,0.3)"
           : "0 4px 16px rgba(255,0,110,0.4)",
-        transition: "all 0.3s ease",
-        position: "relative",
-        overflow: "hidden"
+        transition: "all 0.3s ease"
       });
 
       if (!isUnlocked) {
@@ -3765,7 +3800,6 @@ function showHighlightsModal(videos) {
       infoPanel.append(title, uploader, unlockBtn);
       card.appendChild(infoPanel);
 
-      // Click to play (unlocked) or unlock (locked)
       card.onclick = (e) => {
         e.stopPropagation();
         if (isUnlocked) playFullVideo(video);
@@ -3774,52 +3808,35 @@ function showHighlightsModal(videos) {
 
       content.appendChild(card);
     });
+
+    // Auto-scroll to first card
+    content.scrollLeft = 0;
   }
 
   renderCards(videos);
 
-  // Search Logic
+  // Search
   const searchInput = searchInputWrap.querySelector("#highlightSearchInput");
   searchInput.addEventListener("input", (e) => {
     const term = e.target.value.toLowerCase();
     content.querySelectorAll(".videoCard").forEach(card => {
       const uploader = (card.getAttribute("data-uploader") || "").toLowerCase();
       const title = (card.getAttribute("data-title") || "").toLowerCase();
-      card.style.display = (uploader.includes(term) || title.includes(term)) ? "block" : "none";
+      card.style.display = (uploader.includes(term) || title.includes(term)) ? "flex" : "none";
     });
   });
 
-  // Toggle Unlocked Only
+  // Toggle
   toggleBtn.addEventListener("click", () => {
     showUnlockedOnly = !showUnlockedOnly;
     toggleBtn.textContent = showUnlockedOnly ? "Show All Videos" : "Show Unlocked Only";
     renderCards(videos);
   });
 
-  // Close Button (Neon X)
-  const closeBtn = document.createElement("div");
-  closeBtn.innerHTML = `
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M18 6L6 18M6 6L18 18" stroke="#ff006e" stroke-width="3" stroke-linecap="round"/>
-    </svg>`;
-  Object.assign(closeBtn.style, {
-    position: "fixed",
-    top: "20px",
-    right: "24px",
-    cursor: "pointer",
-    zIndex: "1000000",
-    filter: "drop-shadow(0 0 8px rgba(255,0,110,0.5))",
-    transition: "transform 0.2s ease"
-  });
-  closeBtn.onmouseenter = () => closeBtn.style.transform = "rotate(90deg) scale(1.1)";
-  closeBtn.onmouseleave = () => closeBtn.style.transform = "rotate(0) scale(1)";
-  closeBtn.onclick = () => modal.remove();
-  modal.appendChild(closeBtn);
-
-  document.body.appendChild(modal);
-
   // Auto-focus search
   setTimeout(() => searchInput.focus(), 300);
+
+  document.body.appendChild(modal);
 }
 
 /* ---------- Sorting helper ---------- */
