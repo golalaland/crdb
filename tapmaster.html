@@ -319,6 +319,149 @@ body.game-mode {
   width: 100%;
   flex-shrink: 0;
 }
+
+  /* Wrapper */
+  .combo-btn-wrapper {
+    position: relative;
+    display: inline-block;
+    filter: drop-shadow(0 4px 12px rgba(255,140,0,.3));
+  }
+
+  /* Animated gradient pulse */
+  @keyframes pulse {
+    0%,100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* Main Combo Button */
+  .combo-btn {
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #FFD700, #FF8C00, #FFD700);
+    background-size: 200%;
+    animation: pulse 3s ease infinite;
+    color: #111;
+    font-weight: 800;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all .25s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .combo-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(255,140,0,.4);
+  }
+
+  .combo-btn:active {
+    transform: translateY(0);
+  }
+
+  /* Shine sweep */
+  .combo-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 50%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
+    transform: skewX(-20deg);
+    transition: left .6s;
+  }
+  .combo-btn:hover::before { left: 120%; }
+
+  /* Icon pulse */
+  @keyframes iconPulse {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+  }
+  .icon-pulse { animation: iconPulse 1.6s ease-in-out infinite; }
+
+  /* Dropdown */
+  .combo-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    background: rgba(17,17,17,.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    border: 1px solid rgba(255,215,0,.3);
+    min-width: 170px;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transition: all .25s ease;
+    z-index: 100;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  }
+  .combo-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .dropdown-item {
+    padding: 11px 14px;
+    color: #fff;
+    font-weight: 600;
+    font-size: 13.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background .2s;
+    cursor: pointer;
+  }
+  .dropdown-item:hover { background: rgba(255,140,0,.25); }
+  .dropdown-item + .dropdown-item { border-top: 1px solid rgba(255,215,0,.15); }
+
+  /* Modal (matches your leaderboard modal style) */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.75);
+    backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; visibility: hidden;
+    transition: all .3s;
+    z-index: 9999;
+  }
+  .modal-overlay.show { opacity: 1; visibility: visible; }
+
+  .modal-content {
+    background: #111;
+    color: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    max-width: 90%;
+    width: 400px;
+    border: 2px solid #FFD700;
+    box-shadow: 0 0 30px rgba(255,215,0,.3);
+    transform: scale(.9);
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+  }
+  .modal-overlay.show .modal-content { transform: scale(1); }
+
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+    color: #FFD700;
+    font-size: 17px; font-weight: 800;
+  }
+  .close-btn {
+    background: none; border: none; color: #aaa;
+    font-size: 26px; cursor: pointer;
+  }
+  .close-btn:hover { color: #fff; }
+
+  .rules-list {
+    margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.7;
+  }
+  .rules-list li { position: relative; }
+  .rules-list li::marker { color: #FF8C00; }
 </style>
 </head>
 <body>
