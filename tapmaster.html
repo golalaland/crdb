@@ -926,31 +926,38 @@ async function fetchLeaderboard(period = "daily", top = 10) {
   }
 }
 
-/* ----------------- SWITCH PERIOD ----------------- */
-// ---------- Period Tabs (Daily / Weekly / Monthly) ----------
+// ---------- DOM ----------
+const periodTabs = document.querySelectorAll(".lb-tab");
+const dailyTimerContainer = document.getElementById("dailyTimer");
+
+// ---------- TAB SWITCHER ----------
 periodTabs.forEach(tab => {
   tab.addEventListener("click", () => {
     const period = tab.dataset.period;
 
-    // Remove active class from all
-    periodTabs.forEach(t => t.classList.remove("active-tab"));
+    // ----- 1. Highlight the active tab -----
+    periodTabs.forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
 
-    // Add active class to clicked tab
-    tab.classList.add("active-tab");
+    // ----- 2. Show only the slider for the selected period -----
+    const sliders = document.querySelectorAll("#leaderboardImageSlider img");
+    sliders.forEach((slide, i) => {
+      // Each image's src contains the period in its URL (Daily/Weekly/Monthly)
+      if (slide.src.toLowerCase().includes(period)) {
+        slide.style.display = i === 0 ? "block" : "none"; // show first image of that period
+      } else {
+        slide.style.display = "none";
+      }
+    });
 
-    // Load leaderboard for selected period
+    // ----- 3. Fetch leaderboard for this period -----
     fetchLeaderboard(period);
 
-    // Swap images for that period
-    updateLeaderboardSlider(period);
+    // ----- 4. Show/hide daily timer -----
+    dailyTimerContainer.style.display = period === "daily" ? "block" : "none";
 
-    // Show timer only for daily
-    if (period === "daily") {
-      dailyTimerContainer.style.display = "block";
-      startDailyCountdown();
-    } else {
-      dailyTimerContainer.style.display = "none";
-    }
+    // ----- 5. Start slider for this period -----
+    startSlider(period);
   });
 });
 
