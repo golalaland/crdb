@@ -1028,6 +1028,8 @@ leaderboardBtn?.addEventListener("click", () => {
   // Fetch default leaderboard
   fetchLeaderboard("daily");
 });
+
+
 let musicStarted = false;
 
 function startGameMusic() {
@@ -1038,7 +1040,6 @@ function startGameMusic() {
     musicStarted = true;
   }
 }
-
 document.addEventListener("click", startGameMusic);
 document.addEventListener("touchstart", startGameMusic);
 </script>
