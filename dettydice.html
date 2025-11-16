@@ -1534,33 +1534,30 @@ function initDice(numberOfDice) {
 
 function addDiceEvents(dice) {
     dice.body.addEventListener('sleep', (e) => {
-        dice.body.allowSleep = false;
+        // Only process if dice is actually sleeping (not just entering sleep state)
+        if (!e.body.sleepState === CANNON.Body.SLEEPING) return;
 
-        // Check if lying lying on a side (not edge)
+        // Re-enable sleep only if it was disabled during throw
+        dice.body.allowSleep = true;
+
         const euler = new CANNON.Vec3();
         e.body.quaternion.toEuler(euler);
 
-        const eps = .1;
+        const eps = 0.1;
         let isZero = (angle) => Math.abs(angle) < eps;
-        let isHalfPi = (angle) => Math.abs(angle - .5 * Math.PI) < eps;
-        let isMinusHalfPi = (angle) => Math.abs(.5 * Math.PI + angle) < eps;
-        let isPiOrMinusPi = (angle) => (Math.abs(Math.PI - angle) < eps || Math.abs(Math.PI + angle) < eps);
+        let isHalfPi = (angle) => Math.abs(angle - 0.5 * Math.PI) < eps;
+        let isMinusHalfPi = (angle) => Math.abs(0.5 * Math.PI + angle) < eps;
+        let isPiOrMinusPi = (angle) => Math.abs(Math.PI - angle) < eps || Math.abs(Math.PI + angle) < eps;
 
         let lyingOnSide = true;
         let result = 0;
 
         if (isZero(euler.z)) {
-            if (isZero(euler.x)) {
-                result = 1;
-            } else if (isHalfPi(euler.x)) {
-                result = 4;
-            } else if (isMinusHalfPi(euler.x)) {
-                result = 3;
-            } else if (isPiOrMinusPi(euler.x)) {
-                result = 6;
-            } else {
-                lyingOnSide = false;
-            }
+            if (isZero(euler.x)) result = 1;
+            else if (isHalfPi(euler.x)) result = 4;
+            else if (isMinusHalfPi(euler.x)) result = 3;
+            else if (isPiOrMinusPi(euler.x)) result = 6;
+            else lyingOnSide = false;
         } else if (isHalfPi(euler.z)) {
             result = 2;
         } else if (isMinusHalfPi(euler.z)) {
@@ -1574,46 +1571,42 @@ function addDiceEvents(dice) {
             settledDice++;
             checkAllSettled();
         } else {
-            // Landed on edge; re-enable sleep to wait for fall
-            dice.body.allowSleep = true;
+            // If on edge, wake up and let it fall
+            dice.body.wakeUp();
         }
     });
 }
 
-function checkAllSettled() {
-  if (settledDice === diceArray.length) {
-    let sum = 0;
-    diceArray.forEach(d => sum += d.result);
-    totalScore += sum;
-    showFloatingPlus(rollButton, `+${sum}`);
-    updateUI();
-    isRolling = false;
-    rollButton.disabled = false;
-    settledDice = 0;
-  }
-}
+setTimeout(() => {
+    rollButton.classList.remove('tap-glow', 'tap-pulse');
+}, 300);
 
 function throwDice() {
-  settledDice = 0;
-  diceArray.forEach((d, dIdx) => {
-        // Reset velocities
+    settledDice = 0;
+    isRolling = true;
+    rollButton.disabled = true;
+
+    diceArray.forEach((d, dIdx) => {
         d.body.velocity.setZero();
         d.body.angularVelocity.setZero();
-        d.body.allowSleep = true;  // Re-enable sleep tracking
+        d.body.allowSleep = true;  // Must allow sleep to detect settling
+        d.body.sleep(); // Optional: force sleep reset
+        d.body.wakeUp();
 
-        // Set initial position
-        d.body.position = new CANNON.Vec3(5, dIdx * 1.5, 0);
+        d.body.position = new CANNON.Vec3(3 + dIdx * 1.5, 3, 0);
         d.mesh.position.copy(d.body.position);
 
-        // Set random initial rotation
-        d.mesh.rotation.set(2 * Math.PI * Math.random(), 0, 2 * Math.PI * Math.random());
+        d.mesh.rotation.set(
+            2 * Math.PI * Math.random(),
+            2 * Math.PI * Math.random(),
+            2 * Math.PI * Math.random()
+        );
         d.body.quaternion.copy(d.mesh.quaternion);
 
-        // Apply impulse for throw
-        const force = 3 + 5 * Math.random();
+        const force = 4 + 6 * Math.random();
         d.body.applyImpulse(
-            new CANNON.Vec3(-force, force, 0),
-            new CANNON.Vec3(0, 0, .2)  // Offset from center for spin
+            new CANNON.Vec3(-force, force, (Math.random() - 0.5) * 2),
+            new CANNON.Vec3(.2 * (Math.random() - 0.5), .3, .2 * (Math.random() - 0.5))
         );
     });
 }
