@@ -3482,7 +3482,7 @@ highlightsBtn.onclick = async () => {
     showGoldAlert("Error fetching highlights — please try again.");
   }
 };
-/* ---------- Highlights Modal (DOPE + ORIGINAL SIZES + TIGHT X) ---------- */
+/* ---------- Highlights Modal (DOPE + ORIGINAL SIZES + EDGE X) ---------- */
 function showHighlightsModal(videos) {
   document.getElementById("highlightsModal")?.remove();
 
@@ -3509,7 +3509,7 @@ function showHighlightsModal(videos) {
   // === STICKY INTRO (Your Size, My Glow) ===
   const intro = document.createElement("div");
   intro.innerHTML = `
-    <div style="position:relative;text-align:center;color:#ccc;max-width:640px;margin:0 auto;line-height:1.6;font-size:14px;
+    <div style="text-align:center;color:#ccc;max-width:640px;margin:0 auto;line-height:1.6;font-size:14px;
       background:linear-gradient(135deg,rgba(255,0,110,0.12),rgba(255,100,0,0.08));
       padding:14px 20px;border-radius:10px;backdrop-filter:blur(8px);
       border:1px solid rgba(255,0,110,0.3);box-shadow:0 0 16px rgba(255,0,110,0.15);">
@@ -3519,14 +3519,6 @@ function showHighlightsModal(videos) {
         </span> are exclusive creator moments.<br>
         Unlock premium clips with ⭐ Stars to support your favorite creators.
       </p>
-      <!-- TIGHT X BUTTON (inline, no padding) -->
-      <div style="position:absolute;top:50%;right:16px;transform:translateY(-50%);cursor:pointer;
-                  width:24px;height:24px;display:flex;align-items:center;justify-content:center;
-                  background:rgba(255,255,255,0.1);border-radius:50%;transition:all 0.2s;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M18 6L6 18M6 6L18 18" stroke="#ff006e" stroke-width="3" stroke-linecap="round"/>
-        </svg>
-      </div>
     </div>`;
   Object.assign(intro.style, {
     position: "sticky",
@@ -3535,7 +3527,6 @@ function showHighlightsModal(videos) {
     marginBottom: "12px",
     transition: "opacity 0.3s ease"
   });
-  intro.querySelector("div > div").onclick = () => modal.remove();
   modal.appendChild(intro);
 
   modal.addEventListener("scroll", () => {
@@ -3555,7 +3546,7 @@ function showHighlightsModal(videos) {
     gap: "6px"
   });
 
-  // Search Input (Your Size: 280px)
+  // Search Input (280px)
   const searchInputWrap = document.createElement("div");
   searchInputWrap.style.cssText = `
     display:flex;align-items:center;
@@ -3575,7 +3566,7 @@ function showHighlightsModal(videos) {
   `;
   searchWrap.appendChild(searchInputWrap);
 
-  // Toggle Button (Your Exact Size)
+  // Toggle Button
   const toggleBtn = document.createElement("button");
   toggleBtn.id = "toggleLocked";
   toggleBtn.textContent = "Show Unlocked";
@@ -3602,7 +3593,29 @@ function showHighlightsModal(videos) {
   searchWrap.appendChild(toggleBtn);
   modal.appendChild(searchWrap);
 
-  // === HORIZONTAL CONTENT (Your Exact Scroll) ===
+  // === X BUTTON — EDGE OF MODAL, ZERO PADDING, ORIGINAL POSITION ===
+  const closeBtn = document.createElement("div");
+  closeBtn.innerHTML = `
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18 6L6 18M6 6L18 18" stroke="#ff006e" stroke-width="3" stroke-linecap="round"/>
+    </svg>`;
+  Object.assign(closeBtn.style, {
+    position: "fixed",
+    top: "20px",
+    right: "20px",
+    cursor: "pointer",
+    zIndex: "1000000",
+    padding: "0",
+    margin: "0",
+    transition: "transform 0.2s ease",
+    filter: "drop-shadow(0 0 8px rgba(255,0,110,0.4))"
+  });
+  closeBtn.onmouseenter = () => closeBtn.style.transform = "rotate(90deg) scale(1.1)";
+  closeBtn.onmouseleave = () => closeBtn.style.transform = "rotate(0) scale(1)";
+  closeBtn.onclick = () => modal.remove();
+  modal.appendChild(closeBtn);
+
+  // === HORIZONTAL CONTENT ===
   const content = document.createElement("div");
   Object.assign(content.style, {
     display: "flex",
@@ -3645,7 +3658,6 @@ function showHighlightsModal(videos) {
       card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
       card.setAttribute("data-title", video.title || "");
 
-      // Video Container (Your Exact 320px Height)
       const videoContainer = document.createElement("div");
       Object.assign(videoContainer.style, { height: "320px", overflow: "hidden", position: "relative" });
 
@@ -3655,11 +3667,10 @@ function showHighlightsModal(videos) {
       videoEl.poster = video.thumbnail || `https://image-thumbnails-service/?video=${encodeURIComponent(video.highlightVideo)}&blur=10`;
       videoEl.style.cssText = `
         width:100%;height:100%;object-fit:cover;
-        filter: ${isUnlocked ? 'none' : 'blur(6px)'};
+        filter: ${isUnlocked ? 'none' : "blur(6px)"};
         transition: filter 0.4s ease;
       `;
 
-      // Lock Overlay
       if (!isUnlocked) {
         const lock = document.createElement("div");
         lock.innerHTML = `
@@ -3674,7 +3685,6 @@ function showHighlightsModal(videos) {
 
       videoContainer.appendChild(videoEl);
 
-      // Hover Play (Only Locked)
       if (!isUnlocked) {
         videoContainer.onmouseenter = () => videoEl.play().catch(() => {});
         videoContainer.onmouseleave = () => { videoEl.pause(); videoEl.currentTime = 0; };
@@ -3686,7 +3696,6 @@ function showHighlightsModal(videos) {
         else showUnlockConfirm(video, () => renderCards(videos));
       };
 
-      // Info Panel (Your Exact Padding & Font Sizes)
       const infoPanel = document.createElement("div");
       Object.assign(infoPanel.style, {
         background: "#111", padding: "10px", display: "flex", flexDirection: "column", textAlign: "left", gap: "4px"
@@ -3743,7 +3752,7 @@ function showHighlightsModal(videos) {
 
   renderCards(videos);
 
-  // === SEARCH & TOGGLE LOGIC (Unchanged) ===
+  // Search & Toggle
   searchInputWrap.querySelector("#highlightSearchInput").addEventListener("input", e => {
     const term = e.target.value.trim().toLowerCase();
     content.querySelectorAll(".videoCard").forEach(card => {
@@ -3761,7 +3770,6 @@ function showHighlightsModal(videos) {
 
   document.body.appendChild(modal);
 
-  // Auto-focus
   setTimeout(() => searchInputWrap.querySelector("input").focus(), 300);
 }
 
