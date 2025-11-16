@@ -231,71 +231,107 @@ body.game-mode {
   width: 100%;
   flex-shrink: 0;
 }
-/* ==== CUTE LEADERBOARD BADGE ==== */
-.lb-badge {
-  --size: 48px;                 /* tiny – change to 44px or 40px if you want even smaller */
-  position: relative;
-  width: var(--size);
-  height: var(--size);
-  border-radius: 50%;
-  background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%);
+/* ==== CUTE PILL MENU ==== */
+.pill-menu {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 95%;
+  max-width: 480px;
+  background: rgba(15, 15, 20, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 28px 28px 0 0;
+  padding: 12px 8px 20px;
   display: flex;
+  justify-content: space-around;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+  z-index: 1000;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6);
+  font-family: 'Montserrat', sans-serif;
+}
+
+.pill-tab {
+  flex: 1;
+  position: relative;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 10px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: #ccc;
+  font-size: 10px;
+  font-weight: 700;
   cursor: pointer;
-  box-shadow:
-    0 4px 12px rgba(255, 140, 0, 0.3),
-    inset 0 2px 4px rgba(255,255,255,0.4);
-  transition: all 0.2s ease;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  min-height: 56px;
 }
 
-/* Hover: lift + glow */
-.lb-badge:hover {
-  transform: translateY(-3px) scale(1.05);
-  box-shadow:
-    0 8px 20px rgba(255, 140, 0, 0.4),
-    0 0 20px rgba(255, 215, 0, 0.6),
-    inset 0 2px 6px rgba(255,255,255,0.5);
+/* Active tab - pops up + glow */
+.pill-tab.active {
+  background: linear-gradient(135deg, #FF1493, #FF8C00);
+  color: #000;
+  transform: translateY(-6px) scale(1.05);
+  box-shadow: 
+    0 8px 20px rgba(255, 20, 147, 0.4),
+    0 0 20px rgba(255, 140, 0, 0.3);
+  border-color: #FFD700;
 }
 
-/* Tap/Click: squish + ripple */
-.lb-badge:active {
-  transform: translateY(1px) scale(0.95);
-}
-.lb-badge:active .lb-ripple {
-  animation: ripple 0.6s ease-out;
-}
-
-/* Trophy icon */
-.lb-icon {
-  font-size: calc(var(--size) * 0.5);
-  color: #111;
-  text-shadow: 0 1px 1px rgba(255,255,255,0.6);
-  animation: tinyBounce 2s ease-in-out infinite;
+/* Hover glow */
+.pill-tab:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 255, 255, 0.1);
 }
 
-/* Ripple effect on tap */
-.lb-ripple {
+/* Icon bounce */
+.pill-icon {
+  font-size: 22px;
+  animation: iconFloat 2.5s ease-in-out infinite;
+}
+.pill-tab.active .pill-icon {
+  animation: iconPop 0.4s ease;
+}
+
+/* Label */
+.pill-label {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Tiny dot indicator */
+.pill-tab::after {
+  content: '';
   position: absolute;
-  inset: 0;
+  bottom: 6px;
+  width: 6px;
+  height: 6px;
+  background: #00e676;
   border-radius: 50%;
-  background: rgba(255,255,255,0.4);
-  transform: scale(0);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.pill-tab.active::after {
   opacity: 1;
 }
-@keyframes ripple {
-  to {
-    transform: scale(2.5);
-    opacity: 0;
-  }
-}
 
-/* Tiny bounce for the trophy */
-@keyframes tinyBounce {
+/* Animations */
+@keyframes iconFloat {
   0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-2px); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes iconPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
 }
 </style>
 </head>
@@ -435,10 +471,24 @@ body.game-mode {
       </div>
   </div>
 
-<!-- LEADERBOARD TRIGGER – CUTE FLOATING BADGE -->
-<div id="leaderboardBtn" class="lb-badge">
-  <span class="lb-icon">Trophy</span>
-  <span class="lb-ripple"></span>
+<!-- CUTE 4-TAB PILL MENU (replaces old footer) -->
+<div id="pillMenu" class="pill-menu">
+  <button class="pill-tab active" data-tab="home">
+    <span class="pill-icon">Home</span>
+    <span class="pill-label">Home</span>
+  </button>
+  <button class="pill-tab" data-tab="shop">
+    <span class="pill-icon">Shopping Cart</span>
+    <span class="pill-label">Shop</span>
+  </button>
+  <button class="pill-tab" data-tab="leaderboard" id="leaderboardBtn">
+    <span class="pill-icon">Trophy</span>
+    <span class="pill-label">Leaderboard</span>
+  </button>
+  <button class="pill-tab" data-tab="profile">
+    <span class="pill-icon">User</span>
+    <span class="pill-label">Profile</span>
+  </button>
 </div>
   
   <!-- Leaderboard Modal -->
