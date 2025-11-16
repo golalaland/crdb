@@ -1,127 +1,384 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🔥 Heat Spinner</title>
-  <style>
-    body {
-      background: radial-gradient(circle at center, #0a0a0a 40%, #1e1e1e);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      overflow: hidden;
-      font-family: 'Poppins', sans-serif;
-      color: white;
-    }
-
-    .spinner-container {
-      position: relative;
-      width: 280px;
-      height: 280px;
-    }
-
-    .spinner-wheel {
-      width: 100%;
-      height: 100%;
-      transition: transform 5s cubic-bezier(0.17, 0.67, 0.83, 0.67);
-      transform-origin: center center;
-    }
-
-    /* 🔺 Pointer on top */
-    .pointer {
-      position: absolute;
-      top: -20px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
-      border-left: 15px solid transparent;
-      border-right: 15px solid transparent;
-      border-bottom: 25px solid #ff4444;
-      z-index: 10;
-    }
-
-    button {
-      margin-top: 40px;
-      background: linear-gradient(135deg, #ff3c3c, #ff9900);
-      border: none;
-      color: white;
-      font-size: 1.2rem;
-      padding: 14px 34px;
-      border-radius: 50px;
-      cursor: pointer;
-      transition: 0.3s ease;
-      font-weight: 600;
-    }
-
-    button:hover {
-      transform: scale(1.1);
-      box-shadow: 0 0 20px #ff6600;
-    }
-
-    .result {
-      margin-top: 25px;
-      font-size: 1.4rem;
-      letter-spacing: 1px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detty Dice - Test Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #0e0e0e 0%, #1a1a2e 50%, #16213e 100%);
+            color: white;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px #ff1493;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { text-shadow: 0 0 20px #ff1493; }
+            to { text-shadow: 0 0 30px #ff8c00, 0 0 40px #ff1493; }
+        }
+        #container {
+            position: relative;
+            width: 90vw;
+            height: 70vh;
+            max-width: 800px;
+            max-height: 600px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.3);
+        }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        #rollBtn {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            font-size: 1.5em;
+            font-weight: bold;
+            background: linear-gradient(45deg, #00e676, #00b0ff);
+            color: black;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,230,118,0.4);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+        #rollBtn:hover {
+            transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 15px 40px rgba(0,230,118,0.6);
+        }
+        #rollBtn:active {
+            transform: translateX(-50%) scale(0.95);
+        }
+        #result {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4em;
+            font-weight: bold;
+            color: #00ff99;
+            text-shadow: 0 0 30px #00ff99;
+            opacity: 0;
+            z-index: 100;
+            pointer-events: none;
+        }
+    </style>
 </head>
 <body>
+    <h1>🎲 DETTY DICE TEST 🎲</h1>
+    <div id="container">
+        <div id="info">
+            <div><strong>Realistic 3D Dice Physics</strong></div>
+            <div>Rolls: <span id="rollCount">0</span></div>
+            <div>Last Roll: <span id="lastRoll">-</span></div>
+        </div>
+        <button id="rollBtn">🎲 ROLL DICE 🎲</button>
+        <div id="result"></div>
+    </div>
 
-  <div class="spinner-container">
-    <div class="pointer"></div>
-    <img id="wheel" class="spinner-wheel" 
-      src="https://cdn.shopify.com/s/files/1/0962/6648/6067/files/heat-spinner.svg?v=1762454435" 
-      alt="Heat Spinner Wheel">
-  </div>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.159.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.159.0/examples/jsm/"
+            }
+        }
+    </script>
 
-  <button id="spinBtn">🔥 SPIN THE HEAT</button>
-  <div class="result" id="result">Ready?</div>
+    <script type="module">
+        import * as THREE from 'three';
+        import * as CANNON from 'https://unpkg.com/cannon-es';
+        import * as BufferGeometryUtils from 'https://unpkg.com/three@0.159.0/examples/jsm/utils/BufferGeometryUtils.js';
 
-  <script>
-    const wheel = document.getElementById("wheel");
-    const result = document.getElementById("result");
-    const spinBtn = document.getElementById("spinBtn");
+        // Dice parameters
+        const params = {
+            segments: 50,
+            edgeRadius: .07,
+            notchRadius: 0.23,
+            notchDepth: 0.1
+        };
 
-    // ✅ Your actual wheel order (clockwise from top)
-    const numbers = [
-      8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7,
-      28, 12, 53, 3, 26, 0, 32, 15, 19, 4, 21, 25, 17, 34, 6, 27, 13, 36, 11, 30
-    ];
+        // Scene setup
+        const container = document.getElementById('container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
 
-    let currentRotation = 0;
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(5, 10, 5);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        scene.add(directionalLight);
 
-    spinBtn.addEventListener("click", () => {
-      spinBtn.disabled = true;
-      result.textContent = "Spinning... 🔥";
+        // Physics world
+        const world = new CANNON.World();
+        world.gravity.set(0, -30, 0);
+        world.defaultContactMaterial.restitution = 0.4;
+        world.defaultContactMaterial.friction = 0.3;
 
-      // Pick a random number
-      const randomIndex = Math.floor(Math.random() * numbers.length);
-      const chosenNumber = numbers[randomIndex];
+        // Floor
+        const floorGeometry = new THREE.PlaneGeometry(50, 50);
+        const floorMaterial = new THREE.ShadowMaterial({ opacity: 0.2 });
+        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = -2;
+        floor.receiveShadow = true;
+        scene.add(floor);
 
-      // Calculate segment angle
-      const segmentAngle = 360 / numbers.length;
-      // Compute target angle so the chosen number lands at the top (pointer)
-      const targetAngle = (numbers.length - randomIndex) * segmentAngle;
+        const floorBody = new CANNON.Body({ mass: 0 });
+        floorBody.addShape(new CANNON.Plane());
+        floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+        world.addBody(floorBody);
 
-      // Add multiple full rotations for smooth spin
-      const spins = 6 * 360;
-      const finalRotation = currentRotation + spins + targetAngle;
+        // Dice creation functions
+        function createDiceGeometry() {
+            let boxGeometry = new THREE.BoxGeometry(1, 1, 1, params.segments, params.segments, params.segments);
+            const positionAttribute = boxGeometry.attributes.position;
 
-      // Spin animation
-      wheel.style.transform = `rotate(${finalRotation}deg)`;
+            const subCubeHalfSize = .5 - params.edgeRadius;
+            const offset = .23;
 
-      // Save for next spin offset
-      currentRotation = finalRotation;
+            for (let i = 0; i < positionAttribute.count; i++) {
+                let position = new THREE.Vector3().fromBufferAttribute(positionAttribute, i);
 
-      setTimeout(() => {
-        result.textContent = `🔥 Landed on ${chosenNumber}`;
-        spinBtn.disabled = false;
-      }, 5200);
-    });
-  </script>
+                const subCube = new THREE.Vector3(
+                    Math.sign(position.x), 
+                    Math.sign(position.y), 
+                    Math.sign(position.z)
+                ).multiplyScalar(subCubeHalfSize);
+                const addition = new THREE.Vector3().subVectors(position, subCube);
+
+                if (Math.abs(position.x) > subCubeHalfSize && 
+                    Math.abs(position.y) > subCubeHalfSize && 
+                    Math.abs(position.z) > subCubeHalfSize) {
+                    addition.normalize().multiplyScalar(params.edgeRadius);
+                    position = subCube.add(addition);
+                } else if (Math.abs(position.x) > subCubeHalfSize && Math.abs(position.y) > subCubeHalfSize) {
+                    addition.z = 0;
+                    addition.normalize().multiplyScalar(params.edgeRadius);
+                    position.x = subCube.x + addition.x;
+                    position.y = subCube.y + addition.y;
+                } else if (Math.abs(position.x) > subCubeHalfSize && Math.abs(position.z) > subCubeHalfSize) {
+                    addition.y = 0;
+                    addition.normalize().multiplyScalar(params.edgeRadius);
+                    position.x = subCube.x + addition.x;
+                    position.z = subCube.z + addition.z;
+                } else if (Math.abs(position.y) > subCubeHalfSize && Math.abs(position.z) > subCubeHalfSize) {
+                    addition.x = 0;
+                    addition.normalize().multiplyScalar(params.edgeRadius);
+                    position.y = subCube.y + addition.y;
+                    position.z = subCube.z + addition.z;
+                }
+
+                const notchWave = (v) => {
+                    v = (1 / params.notchRadius) * v;
+                    v = Math.PI * Math.max(-1, Math.min(1, v));
+                    return params.notchDepth * (Math.cos(v) + 1.);
+                };
+                const notch = (pos) => notchWave(pos[0]) * notchWave(pos[1]);
+
+                if (position.y === .5) {
+                    position.y -= notch([position.x, position.z]);
+                } else if (position.x === .5) {
+                    position.x -= notch([position.y + offset, position.z + offset]);
+                    position.x -= notch([position.y - offset, position.z - offset]);
+                } else if (position.z === .5) {
+                    position.z -= notch([position.x - offset, position.y + offset]);
+                    position.z -= notch([position.x, position.y]);
+                    position.z -= notch([position.x + offset, position.y - offset]);
+                } else if (position.z === -.5) {
+                    position.z += notch([position.x + offset, position.y + offset]);
+                    position.z += notch([position.x + offset, position.y - offset]);
+                    position.z += notch([position.x - offset, position.y + offset]);
+                    position.z += notch([position.x - offset, position.y - offset]);
+                } else if (position.x === -.5) {
+                    position.x += notch([position.y + offset, position.z + offset]);
+                    position.x += notch([position.y + offset, position.z - offset]);
+                    position.x += notch([position.y, position.z]);
+                    position.x += notch([position.y - offset, position.z + offset]);
+                    position.x += notch([position.y - offset, position.z - offset]);
+                } else if (position.y === -.5) {
+                    position.y += notch([position.x + offset, position.z + offset]);
+                    position.y += notch([position.x + offset, position.z]);
+                    position.y += notch([position.x + offset, position.z - offset]);
+                    position.y += notch([position.x - offset, position.z + offset]);
+                    position.y += notch([position.x - offset, position.z]);
+                    position.y += notch([position.x - offset, position.z - offset]);
+                }
+
+                positionAttribute.setXYZ(i, position.x, position.y, position.z);
+            }
+
+            boxGeometry.deleteAttribute('normal');
+            boxGeometry.deleteAttribute('uv');
+            boxGeometry = boxGeometry.clone();
+            boxGeometry.computeVertexNormals();
+            return boxGeometry;
+        }
+
+        function createDice() {
+            const diceGroup = new THREE.Group();
+            
+            // Outer dice
+            const outerGeometry = createDiceGeometry();
+            const outerMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xf0f0f0, 
+                metalness: 0.1,
+                roughness: 0.3
+            });
+            const outerMesh = new THREE.Mesh(outerGeometry, outerMaterial);
+            outerMesh.castShadow = true;
+            diceGroup.add(outerMesh);
+
+            // Inner black notches
+            const innerGeometry = new THREE.PlaneGeometry(0.8, 0.8);
+            const innerMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x111111, 
+                side: THREE.DoubleSide 
+            });
+            
+            // Add notches to each face (simplified)
+            for (let i = 0; i < 6; i++) {
+                const innerMesh = new THREE.Mesh(innerGeometry, innerMaterial);
+                diceGroup.add(innerMesh);
+            }
+
+            return diceGroup;
+        }
+
+        // Create two dice
+        const dice1 = createDice();
+        const dice2 = createDice();
+        dice1.position.set(-1, 1, 0);
+        dice2.position.set(1, 1, 0);
+        scene.add(dice1);
+        scene.add(dice2);
+
+        // Physics bodies
+        const dice1Body = new CANNON.Body({ mass: 1 });
+        dice1Body.addShape(new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5)));
+        const dice2Body = new CANNON.Body({ mass: 1 });
+        dice2Body.addShape(new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5)));
+        world.addBody(dice1Body);
+        world.addBody(dice2Body);
+
+        // Camera position
+        camera.position.set(0, 3, 6);
+        camera.lookAt(0, 0, 0);
+
+        // Roll counter
+        let rollCount = 0;
+        const rollBtn = document.getElementById('rollBtn');
+        const rollCountEl = document.getElementById('rollCount');
+        const lastRollEl = document.getElementById('lastRoll');
+        const resultEl = document.getElementById('result');
+
+        rollBtn.addEventListener('click', rollDice);
+
+        function rollDice() {
+            rollCount++;
+            rollCountEl.textContent = rollCount;
+            lastRollEl.textContent = '...';
+
+            // Reset dice
+            dice1Body.position.set(-2, 5 + Math.random(), -1 + Math.random() * 2);
+            dice1Body.velocity.set(0, 0, 0);
+            dice1Body.angularVelocity.set(0, 0, 0);
+            dice2Body.position.set(2, 5 + Math.random(), -1 + Math.random() * 2);
+            dice2Body.velocity.set(0, 0, 0);
+            dice2Body.angularVelocity.set(0, 0, 0);
+
+            // Apply random forces
+            const force1 = new CANNON.Vec3(
+                (-8 - Math.random() * 4),
+                15 + Math.random() * 10,
+                (-5 + Math.random() * 10)
+            );
+            const force2 = new CANNON.Vec3(
+                (8 + Math.random() * 4),
+                15 + Math.random() * 10,
+                (-5 + Math.random() * 10)
+            );
+            
+            dice1Body.applyImpulse(force1, dice1Body.position);
+            dice2Body.applyImpulse(force2, dice2Body.position);
+
+            // Random spin
+            dice1Body.angularVelocity.set(
+                Math.random() * 20,
+                Math.random() * 20,
+                Math.random() * 20
+            );
+            dice2Body.angularVelocity.set(
+                Math.random() * 20,
+                Math.random() * 20,
+                Math.random() * 20
+            );
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            world.step(1/60);
+            
+            // Sync meshes with physics
+            dice1.position.copy(dice1Body.position);
+            dice1.quaternion.copy(dice1Body.quaternion);
+            dice2.position.copy(dice2Body.position);
+            dice2.quaternion.copy(dice2Body.quaternion);
+            
+            // Rotate camera slightly for better view
+            const time = Date.now() * 0.0001;
+            camera.position.x = Math.sin(time * 0.3) * 6;
+            camera.position.z = Math.cos(time * 0.3) * 6;
+            camera.lookAt(0, 0, 0);
+            
+            renderer.render(scene, camera);
+        }
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        });
+
+        animate();
+    </script>
 </body>
 </html>
