@@ -231,6 +231,111 @@ body.game-mode {
   width: 100%;
   flex-shrink: 0;
 }
+/* ==== CUTE LEADERBOARD BUTTON ==== */
+.cute-leaderboard-btn {
+  --hue: 45;                     /* base hue – orange-gold */
+  --sat: 90%;
+  --lit: 70%;
+
+  position: relative;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1;
+  overflow: hidden;
+  border-radius: 20px;
+  width: 180px;                 /* adjust as you wish */
+  height: 48px;
+  transition: transform .15s ease;
+}
+
+/* ---- 3-D “pillow” base ---- */
+.cute-leaderboard-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--hue), var(--sat), calc(var(--lit) + 15%)) 0%,
+    hsl(var(--hue), var(--sat), var(--lit)) 100%
+  );
+  border-radius: 20px;
+  box-shadow:
+    0 4px 8px rgba(0,0,0,.25),
+    inset 0 2px 4px hsla(0,0%,100%,.3),
+    inset 0 -2px 4px hsla(0,0%,0%,.2);
+  transition: all .2s ease;
+}
+
+/* ---- Hover lift + sparkle ---- */
+.cute-leaderboard-btn:hover::before {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 16px rgba(0,0,0,.3),
+    inset 0 2px 6px hsla(0,0%,100%,.4),
+    inset 0 -2px 6px hsla(0,0%,0%,.25);
+}
+
+/* ---- Pressed “squish” ---- */
+.cute-leaderboard-btn:active::before {
+  transform: translateY(1px);
+  box-shadow:
+    0 2px 4px rgba(0,0,0,.25),
+    inset 0 1px 2px hsla(0,0%,100%,.2),
+    inset 0 -1px 2px hsla(0,0%,0%,.3);
+}
+
+/* ---- Inner content (text + icon) ---- */
+.btn-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 6px;
+  color: #111;
+  text-shadow: 0 1px 1px rgba(255,255,255,.5);
+}
+
+/* ---- Cute little trophy with bounce ---- */
+.btn-icon {
+  font-size: 20px;
+  animation: trophyBounce 1.8s ease-in-out infinite;
+}
+
+/* ---- Sparkles that appear on hover ---- */
+.cute-leaderboard-btn::after {
+  content: "Sparkle Sparkle Sparkle";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.6) 0%, transparent 50%),
+              radial-gradient(circle at 70% 70%, rgba(255,255,255,.6) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity .3s ease;
+  pointer-events: none;
+}
+.cute-leaderboard-btn:hover::after { opacity: 1; }
+
+/* ---- Bouncy trophy animation ---- */
+@keyframes trophyBounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* ---- Optional: tiny confetti on click (pure CSS) ---- */
+.cute-leaderboard-btn:active .btn-icon {
+  animation: trophyPop .4s ease;
+}
+@keyframes trophyPop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.3) rotate(10deg); }
+  100% { transform: scale(1); }
+}
 </style>
 </head>
 <body>
@@ -369,20 +474,13 @@ body.game-mode {
       </div>
   </div>
 
-  <!-- LEADERBOARD BUTTON -->
-  <button id="leaderboardBtn" 
-    style="
-      padding:10px 14px;
-      border-radius:10px;
-      background:linear-gradient(90deg,#FFD700,#FF8C00);
-      color:#111;font-weight:800;
-      border:none;cursor:pointer;
-      font-size:14px;
-    "
-  >
-    Leaderboard 🏆
-  </button>
-
+<!-- LEADERBOARD BUTTON – SUPER CUTE & UNIQUE -->
+<button id="leaderboardBtn" class="cute-leaderboard-btn">
+  <span class="btn-inner">
+    <span class="btn-text">Leaderboard</span>
+    <span class="btn-icon">Trophy</span>
+  </span>
+</button>
 </div>
   
   
