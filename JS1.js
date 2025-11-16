@@ -3593,42 +3593,43 @@ function showHighlightsModal(videos) {
   searchWrap.appendChild(toggleBtn);
   modal.appendChild(searchWrap);
 
-    // === DOPE X BUTTON — SMALL, LOWER, INSIDE INTRO PANEL ===
+  // === DOPE X BUTTON — NO PAD, OG EFFECT, INSIDE PANEL ===
   const closeBtn = document.createElement("div");
   closeBtn.innerHTML = `
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M18 6L6 18M6 6L18 18" stroke="#ff006e" stroke-width="2.5" stroke-linecap="round"/>
     </svg>`;
   Object.assign(closeBtn.style, {
     position: "absolute",
-    top: "12px",           // Lower than before
-    right: "12px",         // Tucked inside panel
-    width: "32px",
-    height: "32px",
+    top: "14px",
+    right: "16px",
+    width: "24px",
+    height: "24px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
     zIndex: "1002",
-    background: "rgba(255,255,255,0.08)",
-    borderRadius: "50%",
-    backdropFilter: "blur(4px)",
-    transition: "all 0.2s ease",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
+    transition: "transform 0.2s ease",
+    filter: "drop-shadow(0 0 6px rgba(255,0,110,0.3))"
   });
+
+  // OG DOPE EFFECT: Rotate + Scale
   closeBtn.onmouseenter = () => {
-    closeBtn.style.transform = "scale(1.1)";
-    closeBtn.style.background = "rgba(255,0,110,0.3)";
+    closeBtn.style.transform = "rotate(90deg) scale(1.15)";
   };
   closeBtn.onmouseleave = () => {
-    closeBtn.style.transform = "scale(1)";
-    closeBtn.style.background = "rgba(255,255,255,0.08)";
+    closeBtn.style.transform = "rotate(0deg) scale(1)";
   };
-  closeBtn.onclick = () => modal.remove();
+  closeBtn.onclick = (e) => {
+    e.stopPropagation();
+    closeBtn.style.transform = "rotate(180deg) scale(1.3)";
+    setTimeout(() => modal.remove(), 180);
+  };
 
-  // Attach X to the intro panel (not modal)
+  // Attach to intro panel
   intro.querySelector("div").appendChild(closeBtn);
-
+  
   // === HORIZONTAL CONTENT ===
   const content = document.createElement("div");
   Object.assign(content.style, {
