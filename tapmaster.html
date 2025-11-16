@@ -1250,6 +1250,101 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+document.addEventListener("DOMContentLoaded", () => {
+
+  // URL of your custom star SVG hosted on Shopify
+  const customStarURL = "https://cdn.shopify.com/s/files/1/0962/6648/6067/files/starssvg.svg?v=1761770774";
+
+  // Replace stars in text nodes with SVG + floating stars (invisible)
+  function replaceStarsWithSVG(root = document.body) {
+    if (!root) return;
+
+    const walker = document.createTreeWalker(
+      root,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: node => {
+          if (node.nodeValue.includes("⭐") || node.nodeValue.includes("⭐️")) {
+            return NodeFilter.FILTER_ACCEPT;
+          }
+          return NodeFilter.FILTER_REJECT;
+        }
+      }
+    );
+
+    const nodesToReplace = [];
+    while (walker.nextNode()) nodesToReplace.push(walker.currentNode);
+
+    nodesToReplace.forEach(textNode => {
+      const parent = textNode.parentNode;
+      if (!parent) return;
+
+      const fragments = textNode.nodeValue.split(/⭐️?|⭐/);
+
+      fragments.forEach((frag, i) => {
+        if (frag) parent.insertBefore(document.createTextNode(frag), textNode);
+
+        if (i < fragments.length - 1) {
+          // Inline star
+          const span = document.createElement("span");
+          span.style.display = "inline-flex";
+          span.style.alignItems = "center";
+          span.style.position = "relative";
+
+          const inlineStar = document.createElement("img");
+          inlineStar.src = customStarURL;
+          inlineStar.alt = "⭐";
+          inlineStar.style.width = "1.2em";
+          inlineStar.style.height = "1.2em";
+          inlineStar.style.display = "inline-block";
+          inlineStar.style.verticalAlign = "text-bottom";
+          inlineStar.style.transform = "translateY(0.15em) scale(1.2)";
+
+          span.appendChild(inlineStar);
+          parent.insertBefore(span, textNode);
+
+          // Floating star (fully invisible)
+          const floatingStar = document.createElement("img");
+          floatingStar.src = customStarURL;
+          floatingStar.alt = "⭐";
+          floatingStar.style.width = "40px";
+          floatingStar.style.height = "40px";
+          floatingStar.style.position = "absolute";
+          floatingStar.style.pointerEvents = "none";
+          floatingStar.style.zIndex = "9999";
+          floatingStar.style.opacity = "0";
+          floatingStar.style.transform = "translate(-50%, -50%)";
+
+          const rect = inlineStar.getBoundingClientRect();
+          floatingStar.style.top = `${rect.top + rect.height / 2 + window.scrollY}px`;
+          floatingStar.style.left = `${rect.left + rect.width / 2 + window.scrollX}px`;
+
+          document.body.appendChild(floatingStar);
+
+          setTimeout(() => floatingStar.remove(), 1);
+        }
+      });
+
+      parent.removeChild(textNode);
+    });
+  }
+
+  // Observe dynamic content
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(m => {
+      m.addedNodes.forEach(node => {
+        if (node.nodeType === Node.TEXT_NODE) replaceStarsWithSVG(node.parentNode);
+        else if (node.nodeType === Node.ELEMENT_NODE) replaceStarsWithSVG(node);
+      });
+    });
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // Initial run
+  replaceStarsWithSVG();
+
+});
 </script>
 </body>
 </html>
