@@ -3483,7 +3483,7 @@ highlightsBtn.onclick = async () => {
   }
 };
 
-/* ---------- Highlights Modal ---------- */
+/* ---------- Highlights Modal (DOPE EDITION) ---------- */
 function showHighlightsModal(videos) {
   document.getElementById("highlightsModal")?.remove();
 
@@ -3495,93 +3495,130 @@ function showHighlightsModal(videos) {
     left: 0,
     width: "100vw",
     height: "100vh",
-    background: "rgba(0,0,0,0.9)",
+    background: "radial-gradient(circle at center, #0a0a0a 0%, #000 100%)",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "flex-start",
     zIndex: "999999",
     overflowY: "auto",
-    padding: "20px",
-    boxSizing: "border-box"
+    padding: "16px",
+    boxSizing: "border-box",
+    fontFamily: "'Inter', sans-serif",
+    scrollbarWidth: "thin",
+    scrollbarColor: "#ff006e #1a1a1a"
   });
 
-  // Sticky intro
+  // Sticky Neon Intro
   const intro = document.createElement("div");
   intro.innerHTML = `
-    <div style="text-align:center;color:#ccc;max-width:640px;margin:0 auto;line-height:1.6;font-size:14px;
-      background:rgba(255,255,255,0.06);padding:14px 20px;border-radius:10px;backdrop-filter:blur(5px);
-      box-shadow:0 0 12px rgba(255,255,255,0.08);">
-      <p style="margin:0;">🎬 <b>Highlights</b> are exclusive creator moments.<br>
-      Unlock premium clips with ⭐ Stars to support your favorite creators.</p>
+    <div style="text-align:center;color:#e0e0e0;max-width:680px;margin:0 auto;line-height:1.7;font-size:15px;
+      background:linear-gradient(135deg, rgba(255,0,110,0.15), rgba(255,100,0,0.1));
+      padding:16px 22px;border-radius:16px;backdrop-filter:blur(12px);
+      border:1px solid rgba(255,0,110,0.3);box-shadow:0 8px 32px rgba(255,0,110,0.15);">
+      <p style="margin:0;font-weight:600;">
+        <span style="background:linear-gradient(90deg,#ff006e,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+          🎬 EXCLUSIVE HIGHLIGHTS
+        </span><br>
+        <span style="font-size:13px;color:#aaa;">Unlock premium creator moments with ⭐ Stars</span>
+      </p>
     </div>`;
-  Object.assign(intro.style, { position: "sticky", top: "10px", zIndex: "1001", marginBottom: "12px", transition: "opacity 0.3s ease" });
+  Object.assign(intro.style, {
+    position: "sticky",
+    top: "12px",
+    zIndex: "1001",
+    marginBottom: "16px",
+    transition: "all 0.3s cubic-bezier(0.4,0,0.2,1)",
+    transform: "translateY(0)"
+  });
   modal.appendChild(intro);
 
   modal.addEventListener("scroll", () => {
-    intro.style.opacity = modal.scrollTop > 50 ? "0.7" : "1";
+    const scrolled = modal.scrollTop > 60;
+    intro.style.transform = scrolled ? "translateY(-8px) scale(0.98)" : "translateY(0) scale(1)";
+    intro.style.opacity = scrolled ? "0.85" : "1";
   });
 
-  // Search + toggle container (vertical stack)
-  const searchWrap = document.createElement("div");
-  Object.assign(searchWrap.style, {
+  // Search + Toggle Bar
+  const controlsBar = document.createElement("div");
+  Object.assign(controlsBar.style, {
     position: "sticky",
-    top: "84px",
+    top: "96px",
     zIndex: "1001",
     marginBottom: "20px",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "6px"
+    gap: "10px",
+    width: "100%",
+    maxWidth: "640px"
   });
 
-  // Search input
+  // Search Input with Glow
   const searchInputWrap = document.createElement("div");
   searchInputWrap.style.cssText = `
-    display:flex;
-    align-items:center;
-    background:rgba(255,255,255,0.08);
-    border-radius:30px;
-    padding:8px 14px;
-    width:280px;
-    backdrop-filter:blur(6px);
-    box-shadow:0 0 10px rgba(0,0,0,0.25);
+    display:flex;align-items:center;
+    background:linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+    border:1px solid rgba(255,0,110,0.4);
+    border-radius:30px;padding:10px 16px;width:320px;
+    backdrop-filter:blur(10px);box-shadow:0 4px 20px rgba(255,0,110,0.2);
+    transition:all 0.3s ease;
   `;
   searchInputWrap.innerHTML = `
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M15 15L21 21M10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10C17 13.866 13.866 17 10 17Z" stroke="#999999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right:10px;">
+      <path d="M15 15L21 21M10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10C17 13.866 13.866 17 10 17Z" 
+            stroke="url(#gradientSearch)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <defs>
+        <linearGradient id="gradientSearch" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#ff006e"/>
+          <stop offset="1" stop-color="#ff8c00"/>
+        </linearGradient>
+      </defs>
     </svg>
-    <input id="highlightSearchInput" type="text" placeholder="Search by creator..." style="flex:1;background:transparent;border:none;outline:none;color:#fff;font-size:13px;letter-spacing:0.3px;"/>
+    <input id="highlightSearchInput" type="text" placeholder="Search creators or titles..." 
+           style="flex:1;background:transparent;border:none;outline:none;color:#fff;font-size:14px;letter-spacing:0.4px;"/>
   `;
-  searchWrap.appendChild(searchInputWrap);
+  controlsBar.appendChild(searchInputWrap);
 
-  // Tiny toggle button below
+  // Toggle Button
   const toggleBtn = document.createElement("button");
   toggleBtn.id = "toggleLocked";
-  toggleBtn.textContent = "Show Unlocked";
+  toggleBtn.textContent = "Show Unlocked Only";
   Object.assign(toggleBtn.style, {
-    padding: "4px 10px",
-    borderRadius: "6px",
-    background: "#444",
+    padding: "6px 16px",
+    borderRadius: "30px",
+    background: "linear-gradient(135deg, #333, #222)",
     color: "#fff",
-    border: "none",
-    fontSize: "12px",
-    cursor: "pointer"
+    border: "1px solid rgba(255,255,255,0.1)",
+    fontSize: "13px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
   });
-  searchWrap.appendChild(toggleBtn);
-  modal.appendChild(searchWrap);
+  toggleBtn.onmouseenter = () => {
+    toggleBtn.style.background = "linear-gradient(135deg, #ff006e, #ff8c00)";
+    toggleBtn.style.transform = "translateY(-1px)";
+    toggleBtn.style.boxShadow = "0 4px 16px rgba(255,0,110,0.4)";
+  };
+  toggleBtn.onmouseleave = () => {
+    toggleBtn.style.background = "linear-gradient(135deg, #333, #222)";
+    toggleBtn.style.transform = "translateY(0)";
+    toggleBtn.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
+  };
+  controlsBar.appendChild(toggleBtn);
+  modal.appendChild(controlsBar);
 
-  // Content container
+  // Video Grid
   const content = document.createElement("div");
   Object.assign(content.style, {
-    display:"flex",
-    gap:"16px",
-    flexWrap:"nowrap",
-    overflowX:"auto",
-    paddingBottom:"40px",
-    scrollBehavior:"smooth",
-    width:"100%",
-    justifyContent:"flex-start"
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+    gap: "20px",
+    padding: "10px 0 60px",
+    width: "100%",
+    maxWidth: "1200px",
+    justifyItems: "center"
   });
   modal.appendChild(content);
 
@@ -3593,108 +3630,196 @@ function showHighlightsModal(videos) {
     const filtered = videosToRender.filter(v => !showUnlockedOnly || unlockedVideos.includes(v.id));
 
     filtered.forEach(video => {
+      const isUnlocked = unlockedVideos.includes(video.id);
+
       const card = document.createElement("div");
-      Object.assign(card.style, {
-        minWidth: "230px", maxWidth: "230px", background: "#1b1b1b", borderRadius: "12px",
-        overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between",
-        cursor: "pointer", flexShrink: 0, boxShadow: "0 2px 12px rgba(0,0,0,0.5)", transition: "transform 0.2s ease"
-      });
-      card.onmouseenter = () => card.style.transform = "scale(1.03)";
-      card.onmouseleave = () => card.style.transform = "scale(1)";
-      card.classList.add("videoCard");
+      card.className = "videoCard";
       card.setAttribute("data-uploader", video.uploaderName || "Anonymous");
       card.setAttribute("data-title", video.title || "");
+      Object.assign(card.style, {
+        width: "100%",
+        maxWidth: "260px",
+        background: "linear-gradient(145deg, #1a1a1a, #111)",
+        borderRadius: "16px",
+        overflow: "hidden",
+        position: "relative",
+        cursor: "pointer",
+        transition: "all 0.4s cubic-bezier(0.25,0.8,0.25,1)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+        border: "1px solid rgba(255,255,255,0.05)"
+      });
+      card.onmouseenter = () => {
+        card.style.transform = "translateY(-12px) scale(1.02)";
+        card.style.boxShadow = "0 20px 40px rgba(255,0,110,0.25)";
+      };
+      card.onmouseleave = () => {
+        card.style.transform = "translateY(0) scale(1)";
+        card.style.boxShadow = "0 8px 32px rgba(0,0,0,0.6)";
+      };
 
+      // Video Container
       const videoContainer = document.createElement("div");
-      Object.assign(videoContainer.style, { height: "320px", overflow: "hidden", position: "relative" });
+      Object.assign(videoContainer.style, {
+        height: "340px",
+        position: "relative",
+        overflow: "hidden",
+        borderRadius: "16px 16px 0 0"
+      });
 
       const videoEl = document.createElement("video");
       videoEl.src = video.previewClip || video.highlightVideo;
-      videoEl.muted = true; videoEl.controls = false; videoEl.loop = true; videoEl.preload = "metadata";
-      videoEl.poster = video.thumbnail || `https://image-thumbnails-service/?video=${encodeURIComponent(video.highlightVideo)}&blur=10`;
-      Object.assign(videoEl.style, { width: "100%", height: "100%", objectFit: "cover" });
+      videoEl.muted = true;
+      videoEl.loop = true;
+      videoEl.preload = "metadata";
+      videoEl.poster = video.thumbnail || `https://image-thumbnails-service/?video=${encodeURIComponent(video.highlightVideo)}&blur=15`;
+      videoEl.style.cssText = `
+        width:100%;height:100%;object-fit:cover;
+        filter: ${isUnlocked ? 'none' : 'blur(8px)'};
+        transition:filter 0.5s ease;
+      `;
+
+      // Lock Overlay (only if locked)
+      if (!isUnlocked) {
+        const lockOverlay = document.createElement("div");
+        lockOverlay.innerHTML = `
+          <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,0,0,0.7),rgba(255,0,110,0.3));
+                      display:flex;align-items:center;justify-content:center;z-index:2;">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C9.2 2 7 4.2 7 7V11H6C4.9 11 4 11.9 4 13V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V13C20 11.9 19.1 11 18 11H17V7C17 4.2 14.8 2 12 2ZM12 4C13.7 4 15 5.3 15 7V11H9V7C9 5.3 10.3 4 12 4Z" fill="#ff006e"/>
+            </svg>
+          </div>`;
+        videoContainer.appendChild(lockOverlay);
+      }
+
       videoContainer.appendChild(videoEl);
+      card.appendChild(videoContainer);
 
-      videoContainer.onmouseenter = () => { if(!unlockedVideos.includes(video.id)) videoEl.play(); };
-      videoContainer.onmouseleave = () => { videoEl.pause(); videoEl.currentTime = 0; };
+      // Hover play only if locked
+      if (!isUnlocked) {
+        videoContainer.onmouseenter = () => videoEl.play().catch(() => {});
+        videoContainer.onmouseleave = () => {
+          videoEl.pause();
+          videoEl.currentTime = 0;
+        };
+      }
 
-      videoContainer.onclick = (e) => {
+      // Info Panel
+      const infoPanel = document.createElement("div");
+      Object.assign(infoPanel.style, {
+        padding: "14px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "6px",
+        background: "rgba(17,17,17,0.95)"
+      });
+
+      const title = document.createElement("div");
+      title.textContent = video.title || "Untitled Highlight";
+      title.style.cssText = "font-weight:700;color:#fff;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+
+      const uploader = document.createElement("div");
+      uploader.textContent = `by @${video.uploaderName || "anon"}`;
+      uploader.style.cssText = "font-size:13px;color:#ff006e;font-weight:500;";
+
+      const unlockBtn = document.createElement("button");
+      unlockBtn.textContent = isUnlocked
+        ? "✓ Unlocked"
+        : `Unlock • ${video.highlightVideoPrice || 100} ⭐`;
+      Object.assign(unlockBtn.style, {
+        marginTop: "8px",
+        padding: "10px",
+        borderRadius: "12px",
+        fontWeight: "700",
+        fontSize: "14px",
+        border: "none",
+        cursor: isUnlocked ? "default" : "pointer",
+        background: isUnlocked
+          ? "linear-gradient(135deg, #2a2a2a, #1f1f1f)"
+          : "linear-gradient(135deg, #ff006e, #ff4500)",
+        color: "#fff",
+        boxShadow: isUnlocked
+          ? "inset 0 2px 8px rgba(0,0,0,0.3)"
+          : "0 4px 16px rgba(255,0,110,0.4)",
+        transition: "all 0.3s ease",
+        position: "relative",
+        overflow: "hidden"
+      });
+
+      if (!isUnlocked) {
+        unlockBtn.onmouseenter = () => {
+          unlockBtn.style.transform = "translateY(-2px)";
+          unlockBtn.style.boxShadow = "0 8px 24px rgba(255,0,110,0.6)";
+        };
+        unlockBtn.onmouseleave = () => {
+          unlockBtn.style.transform = "translateY(0)";
+          unlockBtn.style.boxShadow = "0 4px 16px rgba(255,0,110,0.4)";
+        };
+        unlockBtn.onclick = (e) => {
+          e.stopPropagation();
+          showUnlockConfirm(video, () => renderCards(videos));
+        };
+      } else {
+        unlockBtn.disabled = true;
+      }
+
+      infoPanel.append(title, uploader, unlockBtn);
+      card.appendChild(infoPanel);
+
+      // Click to play (unlocked) or unlock (locked)
+      card.onclick = (e) => {
         e.stopPropagation();
-        if (unlockedVideos.includes(video.id)) playFullVideo(video);
+        if (isUnlocked) playFullVideo(video);
         else showUnlockConfirm(video, () => renderCards(videos));
       };
 
-      const infoPanel = document.createElement("div");
-      Object.assign(infoPanel.style, { background: "#111", padding: "10px", display: "flex", flexDirection: "column", textAlign: "left", gap: "4px" });
-
-      const vidTitle = document.createElement("div");
-      vidTitle.textContent = video.title || "Untitled";
-      Object.assign(vidTitle.style, { fontWeight: "700", color: "#fff", fontSize: "14px" });
-
-      const uploader = document.createElement("div");
-      uploader.textContent = `By: ${video.uploaderName || "Anonymous"}`;
-      Object.assign(uploader.style, { fontSize: "12px", color: "#bbb" });
-
-      const unlockBtn = document.createElement("button");
-      const unlocked = unlockedVideos.includes(video.id);
-      unlockBtn.textContent = unlocked ? "Unlocked ✅" : `Unlock ${video.highlightVideoPrice || 100} ⭐`;
-      Object.assign(unlockBtn.style, {
-        background: unlocked ? "#444" : "#ff006e",
-        border: "none",
-        borderRadius: "6px",
-        padding: "8px 0",
-        fontWeight: "600",
-        color: "#fff",
-        cursor: unlocked ? "default" : "pointer",
-        transition: "background 0.2s"
-      });
-
-      if (!unlocked) {
-        unlockBtn.addEventListener("mouseenter", () => unlockBtn.style.background = "#ff3385");
-        unlockBtn.addEventListener("mouseleave", () => unlockBtn.style.background = "#ff006e");
-        unlockBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          if (!currentUser?.uid) return showGoldAlert("Please log in to unlock content 🔒");
-          showUnlockConfirm(video, () => {
-            unlockedVideos = JSON.parse(localStorage.getItem("userUnlockedVideos") || "[]");
-            renderCards(videos);
-          });
-        });
-      } else unlockBtn.disabled = true;
-
-      infoPanel.append(vidTitle, uploader, unlockBtn);
-      card.append(videoContainer, infoPanel);
       content.appendChild(card);
     });
   }
 
   renderCards(videos);
 
-  // Search filter
-  searchInputWrap.querySelector("#highlightSearchInput").addEventListener("input", e => {
-    const term = e.target.value.trim().toLowerCase();
+  // Search Logic
+  const searchInput = searchInputWrap.querySelector("#highlightSearchInput");
+  searchInput.addEventListener("input", (e) => {
+    const term = e.target.value.toLowerCase();
     content.querySelectorAll(".videoCard").forEach(card => {
-      const uploader = card.getAttribute("data-uploader")?.toLowerCase() || "";
-      const title = card.getAttribute("data-title")?.toLowerCase() || "";
-      card.style.display = (uploader.includes(term) || title.includes(term)) ? "flex" : "none";
+      const uploader = (card.getAttribute("data-uploader") || "").toLowerCase();
+      const title = (card.getAttribute("data-title") || "").toLowerCase();
+      card.style.display = (uploader.includes(term) || title.includes(term)) ? "block" : "none";
     });
   });
 
-  // Toggle button
+  // Toggle Unlocked Only
   toggleBtn.addEventListener("click", () => {
     showUnlockedOnly = !showUnlockedOnly;
-    toggleBtn.textContent = showUnlockedOnly ? "Show All" : "Show Unlocked";
+    toggleBtn.textContent = showUnlockedOnly ? "Show All Videos" : "Show Unlocked Only";
     renderCards(videos);
   });
 
-  // Close button
+  // Close Button (Neon X)
   const closeBtn = document.createElement("div");
-  closeBtn.innerHTML = "&times;";
-  Object.assign(closeBtn.style, { position: "fixed", top: "20px", right: "28px", fontSize: "32px", color: "#fff", fontWeight: "700", cursor: "pointer", zIndex: "1000000" });
+  closeBtn.innerHTML = `
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18 6L6 18M6 6L18 18" stroke="#ff006e" stroke-width="3" stroke-linecap="round"/>
+    </svg>`;
+  Object.assign(closeBtn.style, {
+    position: "fixed",
+    top: "20px",
+    right: "24px",
+    cursor: "pointer",
+    zIndex: "1000000",
+    filter: "drop-shadow(0 0 8px rgba(255,0,110,0.5))",
+    transition: "transform 0.2s ease"
+  });
+  closeBtn.onmouseenter = () => closeBtn.style.transform = "rotate(90deg) scale(1.1)";
+  closeBtn.onmouseleave = () => closeBtn.style.transform = "rotate(0) scale(1)";
   closeBtn.onclick = () => modal.remove();
   modal.appendChild(closeBtn);
 
   document.body.appendChild(modal);
+
+  // Auto-focus search
+  setTimeout(() => searchInput.focus(), 300);
 }
 
 /* ---------- Sorting helper ---------- */
