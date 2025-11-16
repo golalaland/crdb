@@ -133,6 +133,11 @@ body {display:flex;justify-content:center;align-items:flex-start;padding:18px 0 
 /* small helpers */
 .hidden { display:none!important; }
 button, input { font-size:16px; } /* prevents iOS zoom on tap */
+.active-tab {
+  background: linear-gradient(90deg,#FF1493,#FF8C00);
+  color: #fff;
+  font-weight: bold;
+}
 </style>
 </head>
 <body>
@@ -922,31 +927,30 @@ async function fetchLeaderboard(period = "daily", top = 10) {
 }
 
 /* ----------------- SWITCH PERIOD ----------------- */
+// ---------- Period Tabs (Daily / Weekly / Monthly) ----------
 periodTabs.forEach(tab => {
   tab.addEventListener("click", () => {
     const period = tab.dataset.period;
 
-    // hide all sliders
-    document.querySelectorAll(".leaderboard-slide").forEach(slide => slide.style.display = "none");
+    // Remove active class from all
+    periodTabs.forEach(t => t.classList.remove("active-tab"));
 
-    // show selected
-    const activeSlider = document.querySelector(`.leaderboard-slide[data-period="${period}"]`);
-    if (activeSlider) activeSlider.style.display = "block";
+    // Add active class to clicked tab
+    tab.classList.add("active-tab");
 
-    // highlight tab
-    periodTabs.forEach(t => t.classList.remove("active"));
-    periodTabs.forEach(t => t.style.background = "#555");
-    tab.classList.add("active");
-    tab.style.background = "#FF8C00";
-
-    // fetch leaderboard
+    // Load leaderboard for selected period
     fetchLeaderboard(period);
 
-    // start slider for that period
-    startSlider(period);
+    // Swap images for that period
+    updateLeaderboardSlider(period);
 
-    // daily countdown visibility
-    document.getElementById("dailyCountdown").style.display = period==="daily"? "block":"none";
+    // Show timer only for daily
+    if (period === "daily") {
+      dailyTimerContainer.style.display = "block";
+      startDailyCountdown();
+    } else {
+      dailyTimerContainer.style.display = "none";
+    }
   });
 });
 
@@ -985,7 +989,7 @@ function startSlider(period) {
 
 /* ----------------- DAILY COUNTDOWN ----------------- */
 function startDailyCountdown() {
-  const countdownEl = document.getElementById("dailyCountdown");
+  const countdownEl = document.getElementById("dailyTimerValue");
 
   function updateCountdown() {
     const now = new Date();
