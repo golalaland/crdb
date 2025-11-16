@@ -228,6 +228,17 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
 
   </div> <!-- end gamePage -->
 
+  <!-- Fixed bottom profile + leaderboard button -->
+  <div id="bottomBar" style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:1000;">
+    <div class="profile-card" style="background:rgba(255,255,255,0.04);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);text-align:center;">
+      <div class="profile-name" id="profileName">GUEST 0000</div>
+      <div class="profile-info">STARS COLLECTED: <span id="starCount">50</span>⭐</div>
+      <div class="profile-info">CASH EARNED: <span id="cashCount">0</span></div>
+    </div>
+    <button id="leaderboardBtn" style="padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#FFD700,#FF8C00);color:#111;font-weight:800;border:none;cursor:pointer;font-size:14px;">View Leaderboard 🏆</button>
+  </div>
+  
+  
   <!-- Leaderboard Modal -->
 <div id="leaderboardModal" class="modal-backdrop" role="dialog" aria-modal="true"
      style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
