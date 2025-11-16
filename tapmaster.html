@@ -898,10 +898,8 @@ async function endSessionRecord() {
   }
 }
 
-
-
 // ======================================================
-//   TAP HANDLER — NOW PERFECTLY LOCKED
+//   TAP HANDLER — NOW WITH COOL VIBES (Android) & iOS-SAFE
 // ======================================================
 tapButton?.addEventListener(tapEvent, async e => {
 
@@ -942,7 +940,13 @@ tapButton?.addEventListener(tapEvent, async e => {
 
   flashTapGlow();
   try { tapSound.currentTime = 0; tapSound.play().catch(()=>{}); } catch {}
-  navigator.vibrate?.(12);
+
+  // COOL VIBRATION UPGRADE
+  if ('vibrate' in navigator) {
+    // Android: Snappy pattern for that premium tap feel
+    navigator.vibrate([10, 5, 10]);
+  }
+  // iOS: Gracefully does nothing (no haptics possible via web)
 
   updateUI();
   updateBonusBar();
