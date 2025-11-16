@@ -190,6 +190,17 @@ body {display:flex;justify-content:center;align-items:flex-start;padding:18px 0 
 @keyframes burst {
   to { transform: translateY(-30px); opacity: 0; }
 }
+
+#tapButton::before {
+  /* Your existing pulse... */
+  filter: hue-rotate(0deg);
+  animation: pulse var(--pulse) infinite, hueShift 3s linear infinite;
+}
+@keyframes hueShift {
+  0%, 100% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+#tapButton:hover::before { animation-duration: 1s; }
 /* leaderboard button */
 #leaderboardBtn {
   margin-top:14px;
