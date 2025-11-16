@@ -220,61 +220,87 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
   z-index: 100;           
 }
 
-/* 🔥 Chat input area */
+/* 🔥 Send Area – Fixed Bottom Bar */
 .send-area {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
   display: flex;
-  align-items: center;
+  align-items: flex-end;           /* Align growing textarea to bottom */
   gap: 8px;
   background: var(--card, #111);
   padding: 10px;
-  position: sticky;   /* sticky inside container */
-  bottom: 0;          /* always at bottom */
-  z-index: 10;
   border-radius: 999px;
-  width: 100%;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
   box-sizing: border-box;
-  border-top: 1px solid rgba(255,255,255,0.04);
+  z-index: 100;
+  transition: transform 0.2s ease;
 }
 
-.send-area input {
+/* 🔥 Textarea Input (Multi-line, Auto-grow) */
+.send-input {
   flex: 1;
-  padding: 12px 16px;       /* your preferred size */
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background-color: #0e0e0e;
+  min-height: 44px;                /* Matches single-line input height */
+  max-height: 140px;               /* ~5–6 lines before scroll */
+  padding: 12px 16px;
+  background: #0e0e0e;
   color: #fff;
   font-size: 16px;
+  line-height: 1.4;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
   outline: none;
+  resize: none;
+  overflow-y: auto;                /* Inner scroll when max-height exceeded */
+  field-sizing: content;           /* Auto-grow to content (modern browsers) */
   transition: all 0.2s ease-in-out;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
 }
 
-.send-area input::placeholder {
+/* Fallback for browsers without field-sizing */
+@supports not (field-sizing: content) {
+  .send-input {
+    height: 44px;
+  }
+}
+
+/* Placeholder */
+.send-input::placeholder {
   color: var(--muted, #aaa);
   opacity: 0.7;
 }
 
-.send-area input:focus {
+/* Focus State */
+.send-input:focus {
   border-color: var(--accent, #FF1493);
   box-shadow: 0 0 12px rgba(255, 20, 147, 0.15);
 }
 
-.send-btn {
+/* 🔥 Send Button */
+.send-btn,
+.buzz-btn {
   padding: 10px 16px;
   border-radius: 999px;
   background-color: var(--accent, #FF1493);
   color: #000;
-  cursor: pointer;
   font-weight: 700;
-  border: none;
   font-size: 14px;
+  border: none;
+  cursor: pointer;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
-.send-btn:hover {
+.send-btn:hover,
+.buzz-btn:hover {
   background-color: #ff33a1;
   transform: scale(1.05);
 }
-
 
 #postLoginLoader {
   position: fixed;
@@ -1750,11 +1776,12 @@ html,body{height:100%;margin:0;font-family:'XiXi',Inter,system-ui,Segoe UI,Robot
 <div id="messages"></div>
 
 
-<div class="send-area" id="sendArea" style="display:none;">
-  <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" />
-  <button id="buzzBtn" class="buzz-btn" title="Send BUZZ 🚨">🚨</button>
+<div class="send-area" id="sendArea">
+  <textarea id="messageInput" class="send-input" placeholder="Type your message..." rows="1"></textarea>
+  <button id="buzzBtn" class="buzz-btn" title="Send BUZZ">BUZZ</button>
   <button id="sendBtn" class="send-btn">Send</button>
 </div>
+        
     </div>
 <div class="profile" id="profileBox">
   <div class="profile-card">
