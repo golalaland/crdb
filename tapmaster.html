@@ -547,38 +547,121 @@ const starCountEl = document.getElementById('starCount');
 const cashCountEl = document.getElementById('cashCount');
 const profileNameEl = document.getElementById('profileName');
 
-// ---------- END GAME MODAL ----------
+// ---------- ENHANCED END GAME MODAL (CREATIVE & DYNAMIC) ----------
 const endGameModal = document.createElement('div');
 endGameModal.id = "endGameModal";
 endGameModal.style = `
   position:fixed; top:0; left:0; width:100%; height:100%;
-  background:rgba(0,0,0,0.9); color:#fff; display:none;
-  justify-content:center; align-items:center; z-index:9999; font-family:sans-serif;
+  background:linear-gradient(135deg, rgba(10,0,30,0.95), rgba(0,20,60,0.9));
+  color:#fff; display:none; justify-content:center; align-items:center;
+  z-index:9999; font-family:'Poppins', sans-serif; overflow:hidden;
+  backdrop-filter: blur(8px);
 `;
 endGameModal.innerHTML = `
-  <div style="background:#111; padding:30px; border-radius:15px; text-align:center; width:300px;">
-    <h2>Game Over</h2>
-    <p>Taps: <span id="endTaps">0</span></p>
-    <p>Earnings: ₦<span id="endEarnings">0</span></p>
-    <p>Bonus Level: <span id="endBonus">0</span></p>
-    <p>Speed: x<span id="endSpeed">0</span></p>
-    <button id="closeEndGame" style="margin-top:15px; padding:10px 20px; border:none; border-radius:8px; background:#0f0; color:#000; font-weight:bold; cursor:pointer;">Close</button>
+  <div style="
+    background:linear-gradient(145deg, #1a1a2e, #16213e);
+    padding:35px; border-radius:20px; text-align:center;
+    width:320px; max-width:90%; box-shadow:0 20px 40px rgba(0,0,0,0.6);
+    border:2px solid rgba(0,255,150,0.3); position:relative;
+    animation: modalPop 0.6s ease-out;
+  ">
+    <!-- Floating Particles Background -->
+    <div style="position:absolute; top:0; left:0; width:100%; height:100%; overflow:hidden; border-radius:20px; pointer-events:none;">
+      ${Array(12).fill().map(() => `
+        <div style="
+          position:absolute; width:6px; height:6px; background:#0f0;
+          border-radius:50%; opacity:0.7; animation: float 3s infinite ease-in-out;
+          left:${Math.random()*100}%; top:${Math.random()*100}%;
+          animation-delay:${Math.random()*3}s;
+        "></div>
+      `).join('')}
+    </div>
+
+    <h2 style="
+      margin:0 0 20px; font-size:28px; background:linear-gradient(90deg, #0f0, #0ff);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      text-shadow:0 0 10px rgba(0,255,0,0.4);
+    ">🎮 TAP MASTER ROUND OVER! 🎮</h2>
+
+    <div id="creativeMessage" style="
+      font-size:18px; margin:20px 0; line-height:1.6;
+      background:rgba(0,255,150,0.1); padding:15px; border-radius:12px;
+      border-left:4px solid #0f0; color:#fff; min-height:80px;
+    "></div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:20px 0; font-size:14px;">
+      <div style="background:rgba(0,255,150,0.15); padding:10px; border-radius:10px;">
+        <strong>⚡ Speed</strong><br>x<span id="endSpeed">0</span>
+      </div>
+      <div style="background:rgba(0,200,255,0.15); padding:10px; border-radius:10px;">
+        <strong>🎁 Bonus Level</strong><br><span id="endBonus">0</span>
+      </div>
+    </div>
+
+    <button id="closeEndGame" style="
+      margin-top:20px; padding:12px 28px; border:none; border-radius:12px;
+      background:linear-gradient(45deg, #0f0, #0c0); color:#000;
+      font-weight:bold; cursor:pointer; font-size:16px;
+      box-shadow:0 4px 15px rgba(0,255,0,0.4); transition:all 0.3s;
+    " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+      🚀 PLAY AGAIN & DOMINATE!
+    </button>
   </div>
+
+  <style>
+    @keyframes modalPop {
+      0% { transform:scale(0.7); opacity:0; }
+      100% { transform:scale(1); opacity:1; }
+    }
+    @keyframes float {
+      0%, 100% { transform:translateY(0) rotate(0deg); }
+      50% { transform:translateY(-20px) rotate(180deg); }
+    }
+  </style>
 `;
 document.body.appendChild(endGameModal);
 
-const endTapsEl = document.getElementById('endTaps');
-const endEarningsEl = document.getElementById('endEarnings');
-const endBonusEl = document.getElementById('endBonus');
+// Elements
+const creativeMessageEl = document.getElementById('creativeMessage');
 const endSpeedEl = document.getElementById('endSpeed');
+const endBonusEl = document.getElementById('endBonus');
 const closeEndGameBtn = document.getElementById('closeEndGame');
 
+// Creative message generator
+function generateCreativeMessage(username, taps, earnings) {
+  const messages = [
+    `${username}, you unleashed <strong>${taps}</strong> lightning taps and snatched <strong>₦${earnings.toLocaleString()}</strong> from the cash vault! The leaderboard trembles in your presence—keep tapping to claim the crown! 👑`,
+    `Holy taps, ${username}! You hammered <strong>${taps}</strong> times and looted <strong>₦${earnings.toLocaleString()}</strong> from the money box! The top spot is calling—answer with more fury! 💥`,
+    `🔥 ${username} went FULL BEAST MODE: <strong>${taps}</strong> taps, <strong>₦${earnings.toLocaleString()}</strong> earned! The cash box is crying. Time to make the leaderboard your throne!`,
+    `Whoa, ${username}! <strong>${taps}</strong> taps in one round? You just robbed the cash box blind—<strong>₦${earnings.toLocaleString()}</strong> richer! Stay savage, stay on top! 🦁`,
+    `${username}, your fingers are on FIRE! <strong>${taps}</strong> taps = <strong>₦${earnings.toLocaleString()}</strong> looted. The leaderboard? It's begging for your name at #1. Tap harder! ⚡`,
+    `💰 CHA-CHING! ${username} smashed <strong>${taps}</strong> taps and walked away with <strong>₦${earnings.toLocaleString()}</strong>! The cash box needs therapy. Dominate the next round!`,
+    `Legendary performance, ${username}! <strong>${taps}</strong> taps turned into <strong>₦${earnings.toLocaleString()}</strong> cold hard cash. The leaderboard is your kingdom—defend it! 🏆`,
+    `${username}, you didn't tap—you TELEPORTED! <strong>${taps}</strong> hits, <strong>₦${earnings.toLocaleString()}</strong> collected. The cash box is empty. Time to refill it... with YOUR name on top!`
+  ];
+
+  // Pick random creative message
+  return messages[Math.floor(Math.random() * messages.length)];
+}
+
+// Update & show modal with dynamic data
+function showEndGameModal({ taps, earnings, bonusLevel, speed, username = "Player" }) {
+  creativeMessageEl.innerHTML = generateCreativeMessage(username, taps, earnings);
+  endSpeedEl.textContent = speed.toFixed(1);
+  endBonusEl.textContent = bonusLevel;
+  endGameModal.style.display = "flex";
+}
+
+// Close button
 closeEndGameBtn.addEventListener('click', () => {
   endGameModal.style.display = "none";
   gamePage.style.display = "none";
   startPage.style.display = "block";
-  if(posterImg) posterImg.style.display = "block";
+  if (posterImg) posterImg.style.display = "block";
 });
+
+// Example usage:
+// showEndGameModal({ taps: 156, earnings: 7800, bonusLevel: 3, speed: 4.2, username: "@doctortantra" });
 
 // ---------- CONFIG ----------
 const STAR_COST = 10;
