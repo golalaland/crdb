@@ -884,10 +884,9 @@ function startSession() {
 
 
 // ======================================================
-//   INSTANT END — UI FREEZE, BLOCK TAPS
+//   INSTANT END — UI FREEZE, BLOCK TAPS (FIXED!)
 // ======================================================
 function endSessionImmediate() {
-
   running = false;
   tapLocked = true;
   tapButton.disabled = true;
@@ -897,19 +896,22 @@ function endSessionImmediate() {
     intervalId = null;
   }
 
-  // Fill modal
-  endTapsEl.textContent = taps;
-  endEarningsEl.textContent = formatNumber(earnings.toFixed(2));
-  endBonusEl.textContent = bonusLevel;
-
+  // Calculate speed
   const elapsed = SESSION_DURATION - timer;
   const speed = elapsed > 0 ? taps / elapsed : 0;
-  endSpeedEl.textContent = speed.toFixed(2);
 
-  // Show modal immediately
-  endGameModal.style.display = "flex";
+  // Use NEW showEndGameModal() with all data
+  showEndGameModal({
+    taps: taps,
+    earnings: earnings,
+    bonusLevel: bonusLevel,
+    speed: speed,
+    username: currentUser?.handle || "Tap Master"  // Fallback if no user
+  });
+
+  // Optional: Play epic sound
+  // playSound('game-over-epic.mp3');
 }
-
 
 
 // ======================================================
