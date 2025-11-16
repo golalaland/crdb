@@ -3725,7 +3725,7 @@ function showHighlightsModal(videos) {
       Object.assign(uploader.style, { fontSize: "12px", color: "#ff006e" });
 
       const unlockBtn = document.createElement("button");
-      unlockBtn.textContent = isUnlocked ? "Unlocked" : `Unlock with ${video.highlightVideoPrice || 100} ⭐`;
+      unlockBtn.textContent = isUnlocked ? "Unlocked" : `Unlock ${video.highlightVideoPrice || 100} ⭐`;
       Object.assign(unlockBtn.style, {
         background: isUnlocked ? "#333" : "linear-gradient(135deg, #ff006e, #ff4500)",
         border: "none",
