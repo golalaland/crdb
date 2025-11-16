@@ -228,67 +228,69 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
 
   </div> <!-- end gamePage -->
 
-  <!-- Fixed bottom profile + leaderboard button -->
-  <div id="bottomBar" style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:1000;">
-    <div class="profile-card" style="background:rgba(255,255,255,0.04);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);text-align:center;">
-      <div class="profile-name" id="profileName">GUEST 0000</div>
-      <div class="profile-info">STARS COLLECTED: <span id="starCount">50</span>⭐</div>
-      <div class="profile-info">CASH EARNED: <span id="cashCount">0</span></div>
-    </div>
-    <button id="leaderboardBtn" style="padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#FFD700,#FF8C00);color:#111;font-weight:800;border:none;cursor:pointer;font-size:14px;">View Leaderboard 🏆</button>
-  </div>
+  <!-- Leaderboard Modal -->
+<div id="leaderboardModal" class="modal-backdrop" role="dialog" aria-modal="true"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,0.6);backdrop-filter:blur(3px);
+            justify-content:center;align-items:center;z-index:9999;">
 
-<!-- Leaderboard Modal -->
-<div id="leaderboardModal" class="modal-backdrop" style="display:none;">
-  <div class="modal" style="max-width:480px;width:90%;background:#111;padding:15px;border-radius:12px;overflow-y:auto;max-height:85vh;">
+  <div class="modal"
+       style="width:92%;max-width:420px;max-height:90vh;overflow:hidden;
+              background:#111;border-radius:14px;padding:15px;
+              box-shadow:0 0 15px rgba(0,0,0,0.4);display:flex;flex-direction:column;">
 
-    <!-- PERIOD TABS -->
-    <div id="periodTabs" style="display:flex;gap:8px;margin-bottom:12px;">
-      <button class="period-tab active" data-period="daily"
-        style="flex:1;padding:8px;border-radius:8px;border:none;font-weight:700;background:#FF8C00;color:#111;">Daily</button>
+    <!-- Tabs -->
+    <div id="leaderboardTabs" style="display:flex;gap:10px;margin-bottom:12px;">
+      <button class="lb-tab active" data-period="daily"
+        style="flex:1;padding:8px 0;border-radius:8px;border:none;
+               background:#ff1493;color:#fff;font-weight:700;cursor:pointer;">
+        Daily
+      </button>
 
-      <button class="period-tab" data-period="weekly"
-        style="flex:1;padding:8px;border-radius:8px;border:none;font-weight:700;background:#555;color:white;">Weekly</button>
+      <button class="lb-tab" data-period="weekly"
+        style="flex:1;padding:8px 0;border-radius:8px;border:none;
+               background:#222;color:#ccc;font-weight:700;cursor:pointer;">
+        Weekly
+      </button>
 
-      <button class="period-tab" data-period="monthly"
-        style="flex:1;padding:8px;border-radius:8px;border:none;font-weight:700;background:#555;color:white;">Monthly</button>
-    </div>
-
-    <!-- SLIDERS (NOW INSIDE MODAL!) -->
-    <div id="leaderboardSliders">
-      <div class="leaderboard-slide" data-period="daily">
-        <img src="https://via.placeholder.com/400x180?text=Daily+1" class="slide-img">
-        <img src="https://via.placeholder.com/400x180?text=Daily+2" class="slide-img" style="display:none;">
-        <img src="https://via.placeholder.com/400x180?text=Daily+3" class="slide-img" style="display:none;">
-      </div>
-
-      <div class="leaderboard-slide" data-period="weekly" style="display:none;">
-        <img src="https://via.placeholder.com/400x180?text=Weekly+1" class="slide-img">
-        <img src="https://via.placeholder.com/400x180?text=Weekly+2" class="slide-img" style="display:none;">
-        <img src="https://via.placeholder.com/400x180?text=Weekly+3" class="slide-img" style="display:none;">
-      </div>
-
-      <div class="leaderboard-slide" data-period="monthly" style="display:none;">
-        <img src="https://via.placeholder.com/400x180?text=Monthly+1" class="slide-img">
-        <img src="https://via.placeholder.com/400x180?text=Monthly+2" class="slide-img" style="display:none;">
-        <img src="https://via.placeholder.com/400x180?text=Monthly+3" class="slide-img" style="display:none;">
-      </div>
+      <button class="lb-tab" data-period="monthly"
+        style="flex:1;padding:8px 0;border-radius:8px;border:none;
+               background:#222;color:#ccc;font-weight:700;cursor:pointer;">
+        Monthly
+      </button>
     </div>
 
-    <!-- Daily countdown -->
-    <div id="dailyCountdown" style="text-align:center;font-weight:700;margin-top:6px;color:#FFD700;"></div>
+    <!-- DAILY TIMER -->
+    <div id="dailyTimer" style="text-align:center;font-size:14px;font-weight:600;color:#ff8c00;margin-bottom:10px;display:block;">
+      Reset in: <span id="dailyTimerValue">23:59:59</span>
+    </div>
+
+    <!-- Image Slider -->
+    <div id="leaderboardImageSlider"
+         style="position:relative;width:100%;height:180px;overflow:hidden;border-radius:8px;margin-bottom:10px;touch-action:pan-y;">
+      <img src="https://via.placeholder.com/400x180?text=Daily+Image+1" class="leaderboard-slide" style="width:100%;height:100%;object-fit:cover;display:block;">
+      <img src="https://via.placeholder.com/400x180?text=Daily+Image+2" class="leaderboard-slide" style="width:100%;height:100%;object-fit:cover;display:none;">
+      <img src="https://via.placeholder.com/400x180?text=Daily+Image+3" class="leaderboard-slide" style="width:100%;height:100%;object-fit:cover;display:none;">
+    </div>
 
     <!-- Description -->
-    <div id="leaderboardDescription" style="margin:8px 0;font-size:14px;color:#ccc;text-align:center;">
-      Who will top the leaderboard today?
-    </div>
+    <p id="leaderboardDescription"
+       style="font-size:14px;color:#ccc;line-height:1.4;margin-bottom:10px;">
+      Today's top tappers dominate the hourly board. Tap fast and stay ahead!
+    </p>
 
-    <!-- List -->
-    <ol id="leaderboardList" style="list-style:none;padding-left:0;margin:0;"></ol>
+    <!-- Scrollable List -->
+    <ol id="leaderboardList"
+        style="list-style:none;padding-left:0;margin:0;flex:1;overflow-y:auto;
+               border-top:1px solid #222;padding-top:10px;">
+    </ol>
 
+    <!-- Close Button -->
     <div style="margin-top:12px;text-align:right;">
       <button id="closeLeaderboard"
-        style="padding:8px 14px;border-radius:10px;border:none;background:linear-gradient(90deg,#FF1493,#FF8C00);color:#fff;font-weight:800;cursor:pointer;">
+        style="padding:8px 12px;border-radius:8px;border:none;
+               background:linear-gradient(90deg,#FF1493,#FF8C00);
+               color:#fff;font-weight:800;cursor:pointer;">
         Close
       </button>
     </div>
@@ -300,6 +302,9 @@ button, input { font-size:16px; } /* prevents iOS zoom on tap */
 <!-- Audio -->
 <audio id="tapSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
 
+<audio id="gameMusic" loop preload="auto">
+  <source src="night_city_jazz.mp3" type="audio/mpeg">
+</audio>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
@@ -1002,6 +1007,19 @@ leaderboardBtn?.addEventListener("click", () => {
   // Fetch default leaderboard
   fetchLeaderboard("daily");
 });
+let musicStarted = false;
+
+function startGameMusic() {
+  if (!musicStarted) {
+    const audio = document.getElementById("gameMusic");
+    audio.volume = 0.45; // perfect level behind tapping
+    audio.play().catch(()=>{});
+    musicStarted = true;
+  }
+}
+
+document.addEventListener("click", startGameMusic);
+document.addEventListener("touchstart", startGameMusic);
 </script>
 </body>
 </html>
