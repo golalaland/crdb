@@ -326,15 +326,64 @@ body.game-mode {
 
   </div> <!-- end gamePage -->
 
-  <!-- Fixed bottom profile + leaderboard button -->
-  <div id="bottomBar" style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:90%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:1000;">
-    <div class="profile-card" style="background:rgba(255,255,255,0.04);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);text-align:center;">
-      <div class="profile-name" id="profileName">GUEST 0000</div>
-      <div class="profile-info">STARS COLLECTED: <span id="starCount">50</span>⭐</div>
-      <div class="profile-info">CASH EARNED: <span id="cashCount">0</span></div>
-    </div>
-    <button id="leaderboardBtn" style="padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#FFD700,#FF8C00);color:#111;font-weight:800;border:none;cursor:pointer;font-size:14px;">View Leaderboard 🏆</button>
+ <!-- Fixed bottom profile + leaderboard button -->
+<div id="bottomBar" style="
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:90%;max-width:480px;display:flex;flex-direction:column;
+  align-items:center;gap:6px;z-index:1000;
+">
+
+  <!-- GLASS PROFILE CARD (unchanged) -->
+  <div class="profile-card" 
+    style="
+      background:rgba(255,255,255,0.04);
+      padding:10px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.04);
+      text-align:center;
+      backdrop-filter:blur(8px);
+      -webkit-backdrop-filter:blur(8px);
+      width:100%;
+    "
+  >
+      <div class="profile-name" id="profileName" style="font-size:15px;color:#fff;">
+        GUEST 0000
+      </div>
+
+      <div class="profile-info" style="margin-top:6px;font-size:14px;">
+        <strong style="background:linear-gradient(90deg,#00e676,#00b0ff);
+                       -webkit-background-clip:text;
+                       -webkit-text-fill-color:transparent;">
+          STARS COLLECTED:
+        </strong>
+        <span id="starCount" style="color:#fff;">50</span>⭐
+      </div>
+
+      <div class="profile-info" style="margin-top:2px;font-size:14px;">
+        <strong style="background:linear-gradient(90deg,#00e676,#00b0ff);
+                       -webkit-background-clip:text;
+                       -webkit-text-fill-color:transparent;">
+          CASH EARNED:
+        </strong>
+        <span id="cashCount" style="color:#fff;">0</span>
+      </div>
   </div>
+
+  <!-- LEADERBOARD BUTTON -->
+  <button id="leaderboardBtn" 
+    style="
+      padding:10px 14px;
+      border-radius:10px;
+      background:linear-gradient(90deg,#FFD700,#FF8C00);
+      color:#111;font-weight:800;
+      border:none;cursor:pointer;
+      font-size:14px;
+    "
+  >
+    Leaderboard 🏆
+  </button>
+
+</div>
   
   
   <!-- Leaderboard Modal -->
