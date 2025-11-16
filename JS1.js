@@ -3511,7 +3511,7 @@ function showHighlightsModal(videos) {
   intro.innerHTML = `
     <div style="text-align:center;color:#ccc;max-width:640px;margin:0 auto;line-height:1.6;font-size:14px;
       background:linear-gradient(135deg,rgba(255,0,110,0.12),rgba(255,100,0,0.08));
-      padding:14px 20px;border-radius:10px;backdrop-filter:blur(8px);
+            padding:14px 48px 14px 20px;  /* right padding for X */
       border:1px solid rgba(255,0,110,0.3);box-shadow:0 0 16px rgba(255,0,110,0.15);">
       <p style="margin:0;">
         <span style="background:linear-gradient(90deg,#ff006e,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700;">
@@ -3593,27 +3593,41 @@ function showHighlightsModal(videos) {
   searchWrap.appendChild(toggleBtn);
   modal.appendChild(searchWrap);
 
-  // === X BUTTON — EDGE OF MODAL, ZERO PADDING, ORIGINAL POSITION ===
+    // === DOPE X BUTTON — SMALL, LOWER, INSIDE INTRO PANEL ===
   const closeBtn = document.createElement("div");
   closeBtn.innerHTML = `
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M18 6L6 18M6 6L18 18" stroke="#ff006e" stroke-width="3" stroke-linecap="round"/>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18 6L6 18M6 6L18 18" stroke="#ff006e" stroke-width="2.5" stroke-linecap="round"/>
     </svg>`;
   Object.assign(closeBtn.style, {
-    position: "fixed",
-    top: "20px",
-    right: "20px",
+    position: "absolute",
+    top: "12px",           // Lower than before
+    right: "12px",         // Tucked inside panel
+    width: "32px",
+    height: "32px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     cursor: "pointer",
-    zIndex: "1000000",
-    padding: "0",
-    margin: "0",
-    transition: "transform 0.2s ease",
-    filter: "drop-shadow(0 0 8px rgba(255,0,110,0.4))"
+    zIndex: "1002",
+    background: "rgba(255,255,255,0.08)",
+    borderRadius: "50%",
+    backdropFilter: "blur(4px)",
+    transition: "all 0.2s ease",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
   });
-  closeBtn.onmouseenter = () => closeBtn.style.transform = "rotate(90deg) scale(1.1)";
-  closeBtn.onmouseleave = () => closeBtn.style.transform = "rotate(0) scale(1)";
+  closeBtn.onmouseenter = () => {
+    closeBtn.style.transform = "scale(1.1)";
+    closeBtn.style.background = "rgba(255,0,110,0.3)";
+  };
+  closeBtn.onmouseleave = () => {
+    closeBtn.style.transform = "scale(1)";
+    closeBtn.style.background = "rgba(255,255,255,0.08)";
+  };
   closeBtn.onclick = () => modal.remove();
-  modal.appendChild(closeBtn);
+
+  // Attach X to the intro panel (not modal)
+  intro.querySelector("div").appendChild(closeBtn);
 
   // === HORIZONTAL CONTENT ===
   const content = document.createElement("div");
